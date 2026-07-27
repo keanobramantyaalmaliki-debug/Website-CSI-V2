@@ -44,3 +44,6 @@ next-env.d.ts
 /Photo-reference-office/
 /Front-desk-Photo/
 /reference/
+
+# model 3D hasil export (besar, di-generate dari Blender — jangan di-track)
+export-test/*.glb
