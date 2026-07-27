@@ -3,9 +3,35 @@
 Dokumentasi progres pembuatan 3D office tour ala [basement.studio](https://basement.studio) untuk **cogniti.id**.
 Terakhir diupdate: **27 Juli 2026**.
 
-**Status ringkas:** 2 ruangan (Lounge/Billiard + Smoking) sudah ~95% jadi — semua furniture & dekorasi selesai. **Semua bake prosedural SELESAI** (termasuk `M_SM_Rug_Grey` karpet smoking) — 0 material prosedural tersisa. Ruangan ke-3 **Office Area berkembang pesat**: scan import + blockout kerangka + **11 desk pod detail `ODesk_*`** + **elektronik meja (7 iMac + Magic Keyboard/Mouse)** + lunch table + bar stool + kursi kerja + rak buku/dinding + tanaman + socket dinding + whiteboard beroda + **dinding kaca `GWO_*` (lounge↔office) & `GWL_*` (partisi frosted)** + **pantry cabinet L (`OP_Pantry`) + printer + shredder + wardrobe** ✅ jadi. Ruangan ke-4 **MEETING ROOM hampir lengkap (23–24 Jul)**: meja konferensi kaki V-frame + cekungan cable tray, TV 98" frameless + cabinet TV, replika Logitech Rally Camera, Apple TV + remote + Magic Keyboard + Trackpad, **9 kursi meeting `MR_Chair_*`, 4 Rally Mic Pod replika `MR_MicPod_*`, snake plant, pintu kaca dibuka** ✅.
+**Status ringkas:** **5 ruangan sudah ~95% jadi** dan seluruhnya sudah jalan di browser (lihat MVP 1 di bawah):
+- **Lounge/Billiard** (§2) & **Function Room** (eks Smoking, §3) — furniture & dekorasi lengkap
+- **Office Area** (§3b) — 11 desk pod `ODesk_*`, elektronik meja (7 iMac + Magic KB/Mouse), lunch table, bar stool, kursi kerja, rak, tanaman, socket, whiteboard, dinding kaca `GWL_*`/`GWO_*`, pantry cabinet L, printer/shredder/wardrobe/microwave, track lighting + LED strip lantai
+- **Meeting Room** (§3c) — meja V-frame, TV 98" frameless + cabinet, replika Rally Camera & Mic Pod ×4, Apple TV/remote/KB/trackpad, 9 kursi, snake plant, 6 downlight
+- **West Room / Pantry wing** — counter, sink, bar table, rak
 
-**🎉 MVP1 EXPORTED (27 Jul):** Seluruh scene (4 ruangan) berhasil di-export ke `export-test/office-mvp1*.glb` + viewer `mvp1.html` (5 tombol view: Office/Lounge/Meeting/Pantry/Function). **Pre-export blocker audit BERES** (§4d): 0 material prosedural, 0 CURVE, 0 AREA light, 0 image unpacked, 0 objek tanpa UV. **Optimasi poly** (§4c): 1.008M → **760.871 tris (−24.5%)**. **Resize texture** (§4c): 134.4 MP → **52.9 MP (−61%)**, 0 file >1024, .blend 102.8 → **78.5 MB**. Ukuran GLB akhir: raw **35 MB**, **WebP 6.6 MB** (dipakai viewer), Draco 21 MB. **Karakter PS1** (§7d) diputuskan: low-poly ≤2.5k tris vertex-color via Mixamo.
+**0 material prosedural** tersisa (semua sudah di-bake ke image texture).
+
+## 🎉 MVP 1 SELESAI (27 Jul) — **50-60 FPS di browser**
+
+Seluruh scene (5 ruangan) jalan mulus di browser: **`export-test/office-mvp1-baked.glb` 8,0 MB, 401 draw call, 0 lampu realtime** (semua cahaya + bayangan di-bake ke lightmap). Serve `export-test/` → buka `http://localhost:8137`.
+
+| Metrik | Awal | Final |
+|---|---|---|
+| Ukuran GLB | 35 MB | **8,0 MB** |
+| Draw call | 2.522 | **401** |
+| Lampu realtime | 39 | **0** (baked) |
+| FPS | 1-2 | **50-60** ✅ |
+
+Tahapan yang menghasilkannya — masing-masing ada sub-bab detailnya:
+1. **Pre-export audit** (§4d): 0 material prosedural, 0 CURVE, 0 AREA light, 0 image unpacked, 0 objek tanpa UV
+2. **Optimasi poly** (§4c): 1.008M → 760.871 tris
+3. **Resize texture** (§4c): 134,4 → 52,9 MP (−61%); temuan besar: Magic Keyboard sendirian 62% beban texture
+4. **Merge objek** (§4f): 2.522 → 401 draw call — *ini yang paling menentukan FPS*
+5. **Bake lightmap** (§4g): 39 lampu realtime → 0
+
+**Pelajaran utama:** bottleneck-nya **draw call & lampu realtime**, BUKAN poly count. 995k tris tetap 50-60 fps setelah draw call ditekan dan lampu dibake. Urutan diagnosa yang benar ada di §4e.
+
+**Berikutnya:** Karakter PS1 (§6b) — low-poly ≤2.5k tris vertex-color via Mixamo.
 
 **Pekerjaan aktif:** melengkapi & menata furniture/aksesori office. Semua furniture office sudah **dirapikan ke sub-collection** di bawah `Office_Plan`. **Utang teknis import mentah BERES** — `OP_Electronics` diciutkan 1424 → **131 objek** (semua junk `Object_*/Node_*/pCube*/pPlane*/RootNode*` dibuang; part di-rename bersih: `OMagic_KB_/Mouse_`, `OMon_AOC_`). **11 kursi kantor Sketchfab di-rename `OChair_Office_*` & dipindah ke `OP_Seating`.** Furniture office terkini (22 Jul): **pantry cabinet L-shape `OP_Pantry` (56 part: base unit + tower + wall unit + worktop)** di pojok barat laut, **printer `OP_Printer` + shredder `OP_Shredder`** (di pojok, `OP_Electronics`), **wardrobe/kabinet rendah `OP_Ward_*`** (11 part, di `OP_Shelves`), **microwave `OP_Microwave` + bar table `OP_BarTable_*`** (pojok barat daya, di atas pantry base). **Pencahayaan office SUDAH ADA (22 Jul)** — track lighting `OP_TrackL/TrackLV_*` (8 SPOT) + lunch pendant `OP_LunchLight_*` (3 POINT), collection `OP_Lighting`. Collection sudah dirapikan (0 loose). Scene total ~**1391 objek, 254 material**.
 
@@ -122,7 +148,7 @@ Histogram strip dinding gagal (scan nutup rapat). Yang berhasil: **peta okupansi
 
 ---
 
-## 3b. Ruangan 3: Office Area 🚧 (DIMULAI 17 Jul — kini interior lengkap, tinggal pencahayaan & bake)
+## 3b. Ruangan 3: Office Area ✅ (~95%) (DIMULAI 17 Jul — interior, pencahayaan & bake lightmap SELESAI 27 Jul)
 
 Capture ke-3, ruangan besar penghubung. Scan diimport (`OfficeScan`, collection `Scan_Office`). Extent blockout: **X −19.75..−2.05, Y −8.35..5.75, Z 0..3.6** — membentang ke barat dari dinding kiri lounge.
 
@@ -282,10 +308,34 @@ Ruangan di balik bukaan barat laut blok utama office. Scan `MeetingScan` diimpor
 - ~~Kursi meeting~~ ✅ 24 Jul (9 kursi `MR_Chair_*`)
 - ~~Ceiling + lampu~~ ✅ 24 Jul (`OP_MR_Ceiling` z2.94 + 6 downlight)
 - ~~Grup `MR_*` ke sub-collection sendiri~~ ✅ 24 Jul (semua `MR_*` + AirVent ×4 → `OP_MeetingRoom`, 71 obj)
+- ~~Plafon tembus dinding timur~~ ✅ 27 Jul (lihat §3d)
 - Dinding/kerangka ruangan (masih pakai scan sebagai acuan — cek apakah perlu dinding remodel sendiri)
 - Deco tambahan + verifikasi vs scan/foto
 - Rename `AirVent_01..04` → `MR_AirVent_*` biar konsisten prefix
 - Convert kabel mic pod (CURVE) sebelum export; pertimbangkan geser/hapus 1 pod yang mepet
+
+---
+
+## 3d. Bug Model Lama yang Ketahuan saat Review MVP1 (27 Jul)
+
+Bug-bug ini **sudah ada di file Blender sejak sesi 22-24 Jul**, bukan akibat proses export. Baru ketahuan saat scene dilihat dari sudut-sudut baru di viewer web.
+
+| Bug | Detail | Fix |
+|---|---|---|
+| **Plafon MR tembus dinding** | `OP_MR_Ceiling` melebar sampai X=−14.45, dinding kaca `GWM_WallAbove` ada di X=−14.65 → menonjol **20 cm**. Tiga sisi lain (barat −21.70, utara 1.77, selatan −2.60) sudah pas. | Vertex sisi timur digeser ke −14.65 |
+| **Lensa track light yatim** | `OP_TrackL_Lens_N0.001` mengambang tanpa Spot/Mount (jarak ke housing 0,41 m; normalnya 0,03 m) — sisa duplikasi lama | Dihapus |
+| **5 spot tanpa lensa** | `OP_TrackL_Spot_N0.001/.002/.003`, `S1.002/.003` punya selongsong tapi lampunya tidak ada | Dibuatkan lensa (copy linked mesh dari pasangan yang benar) |
+| **2 lensa meleset 39 mm** | `S1.002`/`S1.003` — **kesalahan saat membuat lensa pengganti**: offset disalin dari spot `N0`, padahal `S1` menghadap arah berlawanan (rot Z 180°). Offset benar untuk S1 = `(0, −0.0186, −0.0695)` | Offset dihitung ulang dari pasangan `S1` yang benar |
+
+**Cara verifikasi pasangan lensa-spot yang ANDAL:** ukur **lateral offset terhadap sumbu selongsong**, bukan jarak titik-tengah (jarak titik-tengah menyesatkan — bisa terlihat "pas" padahal melenceng ke samping). Sumbu spot dicari lewat SVD dari vertex-nya:
+```python
+u, s, vt = np.linalg.svd(verts_spot - center); ax = vt[0]/norm(vt[0])
+d = center_lens - center_spot
+lateral = norm(d - (d@ax)*ax)      # harus < 5 mm
+```
+Hasil akhir: **14/14 lensa lateral offset = 0.0000**.
+
+**Pelajaran proses:** saat review, kumpulkan temuan jadi daftar dulu baru perbaiki sekaligus — lebih baik daripada tambal satu-per-satu, karena pola yang sama sering muncul di beberapa objek.
 
 ---
 
@@ -337,27 +387,105 @@ cd export-test && python3 -m http.server 8137
 
 ---
 
-## 4e. MVP1 Export — Seluruh Scene ✅ (27 Jul)
+## 4e. MVP1 Export — Seluruh Scene ✅ SELESAI (27 Jul) — **50-60 FPS**
 
-Export penuh 4 ruangan pertama kali. 3 varian GLB dibuat dari scene yang sama untuk membandingkan ukuran:
-| File | Ukuran | Metode |
-|---|---|---|
-| `office-mvp1.glb` | **35 MB** | Raw, tanpa kompresi |
-| `office-mvp1-draco.glb` | **21 MB** | Draco geometry compression (`-cc`) |
-| `office-mvp1-webp.glb` | **6.6 MB** | Texture → WebP (**dipakai viewer**, menang telak) |
+Export penuh 5 ruangan. Perjalanan ukuran & performa dari raw sampai final:
 
-**Keputusan:** WebP jauh lebih kecil (−81% vs raw) karena beban terbesar scene = texture, bukan geometry. Draco cuma menekan geometry. Bisa dikombinasikan (Draco + WebP) untuk fase berikutnya kalau perlu lebih kecil lag.
+| Tahap | Ukuran | Draw call | FPS | Metode |
+|---|---|---|---|---|
+| Raw | 35 MB | 2.522 | — | tanpa kompresi |
+| + Draco | 21 MB | 2.522 | 1-2 | kompresi geometry |
+| + WebP | 6.6 MB | 2.522 | 1-2 | texture PNG → WebP |
+| + Merge | 5.2 MB | **403** | 14-16 | join per (zona × material) |
+| **+ Baked lightmap** | **8.0 MB** | **401** | **50-60** ✅ | 39 lampu realtime → 0 |
 
-### Viewer `export-test/mvp1.html` (three@0.166)
-- **5 tombol view** teleport kamera: Office area / Lounge / Meeting room / Pantry / Function room (koordinat pakai helper `bl(x,y,z)` = konversi Blender→three Y-up)
-- **`DRACOLoader` wajib di-set** walau viewer load varian WebP (biar bisa switch ke `office-mvp1-draco.glb` tanpa ubah kode)
-- **Shadow di-cap 4 lampu pertama** (`shadowCasters < 4`) — 39 lampu total, kalau semua cast shadow → shadow buffer meledak. Sisanya `castShadow=false` (cukup menerangi)
-- Mesh dalam radius 0.45m dari lampu → `castShadow=false` (housing/cage bikin motif jaring)
-- Emissive mesh → `emissiveIntensity ≥ 2.5` biar keangkat bloom
-- Settingan lain sama resep §4 (exposure 0.55, RoomEnvironment 0.25, bloom threshold 1.0, dll)
-- Stats overlay live: load ms, jumlah mesh, tris, lights (shadow), FPS
+**File final: `export-test/office-mvp1-baked.glb`** (di-serve sebagai `index.html`).
 
-**Serve:** `cd export-test && python3 -m http.server 8137` → buka `http://localhost:8137/mvp1.html`
+### Pelajaran urutan diagnosa (PENTING — jangan langsung tuduh poly)
+1. **Ukur draw call dulu** (`renderer.info.render.calls`). Patokan web: <300. Scene ini awalnya **2.522** — itu biang keroknya, bukan 760k tris (segitu ringan untuk desktop).
+2. Kalau draw call sudah sehat tapi masih berat → **hitung lampu realtime**. Three.js forward rendering: cost fragment shader ~linear terhadap jumlah lampu. Terbukti: 0 lampu lancar, 15 lampu → 14-16 fps.
+3. Baru terakhir curigai poly/texture.
+
+### Ukuran GLB — urutan dampak
+PNG→WebP paling besar (texture 17 → 2.6 MB), Draco untuk geometry (35 → 21 MB), lalu merge. ⚠️ File `.blend` (78 MB) **TIDAK sama** dengan ukuran GLB (8 MB) — .blend menyimpan scan referensi + backup `_ORIG` yang tidak ikut export.
+
+### Viewer `export-test/index.html` (three@0.166)
+- **5 tombol view** teleport kamera: Office / Lounge / Meeting / Pantry / Function (helper `bl(x,y,z)` = konversi Blender→three Y-up)
+- **`DRACOLoader` WAJIB di-set** — tanpa ini GLB ber-Draco gagal load total
+- **Shadow map OFF total** (`renderer.shadowMap.enabled = false`) — bayangan sudah di lightmap
+- Slider live: Lightmap (0-3×), Exposure, Ambient, Pendar lampu (0-4×)
+- HUD diagnostik: fps · draw call · tris · jumlah lightmap · jumlah AO asli yang dijaga
+- ⚠️ **JANGAN clamp `emissiveIntensity`.** Viewer lama punya `Math.max(m.emissiveIntensity, 2.0)` — GLB sekarang sudah bawa `KHR_materials_emissive_strength` (bohlam 12, LED strip 8), jadi clamp itu justru MENURUNKAN nilainya jadi 2.0 → lampu terlihat redup/mati. Set juga `m.toneMapped = false` supaya pendar tidak diredam ACES saat exposure rendah.
+
+**Serve:** `cd export-test && python3 -m http.server 8137` → buka `http://localhost:8137`
+
+Varian lain di folder: `office-mvp1.glb` (raw), `-draco.glb`, `-merged.glb` (realtime light), `lounge-v1.html` + `lounge.glb` (viewer lama 13 Jul).
+
+---
+
+## 4f. Merge Objek untuk Draw Call ✅ (27 Jul) — 2.522 → **401**
+
+Draw call = jumlah perintah CPU→GPU per frame. 1.462 objek terpisah = CPU tercekik, GPU menganggur. Solusi: gabung objek di Blender, **non-destruktif** lewat collection `Export_Merged` (objek di-copy; collection kerja tidak disentuh, di-exclude saat modeling).
+
+### Aturan merge (jangan asal join semua)
+1. **JANGAN join mesh multi-user** — instancing menghemat 427k tris di VRAM. Kalau semua di-join VRAM naik **+128%**. Join hanya objek unik + instanced KECIL (<200 tris, instancing tak sepadan untuk mesh mini). Hasil: 1.366 join + 95 instanced dipertahankan.
+2. **Group per (ZONA × material), bukan global** — kalau seluruh gedung jadi 1 objek, frustum culling mati dan GPU render ruangan yang tak terlihat. Zona ditentukan dari koordinat bbox dunia (Office/Lounge/Function/MeetingWest/WestRoom/PantryWing), bukan collection (banyak collection isinya campur).
+3. **Nama grup harus UNIK** — dua grup dengan material-set beda tapi material pertama sama akan bentrok & saling menimpa (kasus `MG_WestRoom_BLACK_PLASTIC`, 1 objek sempat hilang).
+
+### 4 BUG MERGE yang wajib diantisipasi (semua kena di sesi ini)
+1. **Parent hilang** → 69 objek merged masih menempel ke parent (`FD_Root`, `EP_Root`, `BS555_BarStool`) yang tidak ikut export → knob emas berserakan di lantai, panel meja terlepas. **Fix:** lepas parent + bekukan transform dunia ke geometri (`j.parent=None; j.matrix_world=mw; j.data.transform(j.matrix_world); j.matrix_world=Identity`). Untuk instanced yang tak boleh diubah: ikutkan 9 empty parent-nya ke collection export.
+2. **Modifier hilang** — `bpy.ops.object.join()` MEMBUANG modifier objek yang digabung. 229 objek terdampak (8 Wireframe, 216 Bevel, 5 Subsurf) → lampu cage jadi gumpalan padat, semua tepi berbevel jadi tajam. **Fix:** ambil mesh hasil evaluasi sebelum join — `ev = o.evaluated_get(depsgraph); c.data = bpy.data.meshes.new_from_object(ev)`.
+3. **UVMap asli tertimpa** — saat menyiapkan UV lightmap jangan `while me.uv_layers: remove(...)`. UVMap lantai punya rentang `u[-3.19,1.06]` (texture ter-tile berkali-kali); kalau ditimpa jadi 0-1, ubin diregangkan 1× sepanjang ruangan. **Fix:** pertahankan UVMap, TAMBAHKAN UVLightmap sebagai layer kedua; objek tanpa UV dibuatkan UVMap kosong di index 0 saat merge.
+4. **Kontaminasi MG_** — objek hasil merge ikut terbaca sebagai objek sumber (karena `Export_Merged` sempat di-include untuk pengecekan) → hasil merge ter-merge lagi, lensa track light jadi 11 bukan 10. **Fix:** guard eksplisit sebelum bangun rencana:
+   ```python
+   assert not any(o.name.startswith('MG_') for o in src), "KONTAMINASI MG_!"
+   ```
+
+### Atlas material — Magic Keyboard
+12 keyboard × 79 material = **948 draw call (71% dari total)**. Sama akarnya dengan temuan texture: 1 keycap = 1 material. **Fix:** susun 79 texture jadi atlas 1152² (grid 9×9 × tile 128), remap UV per-face berdasarkan `material_index` (`uv_baru = (gx + u)/grid`), lalu 1 material. Huruf keycap tetap presisi. Cari kasus serupa lewat rasio **material per objek**.
+
+---
+
+## 4g. Bake Lightmap ✅ (27 Jul) — 39 lampu realtime → **0**
+
+Mengikuti pendekatan basement.studio (§4b): semua cahaya + bayangan dipanggang jadi texture, runtime nyaris tanpa lampu. Hasilnya BUKAN cuma lebih cepat — kualitas juga lebih baik (global illumination, bayangan lembut alami, occlusion sudut).
+
+### Bake PER OBJEK, bukan atlas bersama
+Dua percobaan gagal sebelum ketemu cara yang benar:
+- **Per zona → GAGAL.** Node `BAKE_TARGET` disimpan di MATERIAL, jadi 1 material tak bisa punya 2 lightmap. Di scene ini **44 material dipakai lintas zona** (`M_SM_Wall_Cream` di 5 zona) → bake antar-zona saling menimpa; zona yang di-setup belakangan menang. Gejala: lightmap zona awal terisi 7-15%, zona lain 66-80%.
+- **Atlas global 291 objek → GAGAL.** UV coverage cuma **0,55%** — `pack_islands` di Edit Mode multi-objek membiarkan UV antar-objek saling menumpuk.
+- **Per objek → BERHASIL.** Coverage **64,7%**, seluruh masalah packing lenyap.
+
+### Resep yang terbukti
+- Bake hanya objek **luas ≥ 8 m²** → 37-41 objek, sudah mencakup **90% luas permukaan**. Objek kecil cukup ambient+envmap.
+- Resolusi proporsional: `res = 2**round(log2(sqrt(luas) * 40))`, clamp 256–1024 → ~50 px/m untuk lantai besar. (Patokan arsitektur cukup 8-16 px/m.)
+- Cycles GPU: `prefs.compute_device_type='METAL'` + `cycles.device='GPU'` — **default-nya CPU, cek dulu, ini beda 6×**.
+- **Matikan caustics + pangkas bounces**: `caustics_reflective/refractive=False`, `max_bounces=4, diffuse=3, glossy=1`. Ini memangkas **89 detik → 10,7 detik** per bake (8×). Total 37 objek = **~1 menit**.
+- Tiap `bpy.ops.object.bake` membangun ulang BVH SELURUH scene — objek 38 tris pun bayar ongkos penuh. Karena itu setelan di atas krusial.
+- ⚠️ Bake >120 detik akan lepas dari MCP jadi background task — hasilnya TETAP jadi di Blender, cek `bpy.data.images` alih-alih menganggapnya gagal.
+
+### ⚠️ SHADOW LAMPU HARUS ON saat bake
+Sisa perf-fix EEVEE 23 Jul: 29 dari 39 lampu `use_shadow=False`. Di Blender 4.x+, `use_shadow` berlaku untuk EEVEE **DAN Cycles** — bake pertama menghasilkan cahaya yang menembus meja & dinding. Setelah semua shadow ON: lantai office **31% lebih gelap** (mean 0.474 → 0.326), kontras p90/p10 **22-120×** di seluruh permukaan. Sekalian naikkan `eevee.shadow_pool_size` ke `'1024'` (maksimum; STRING enum) supaya viewport tidak error "shadow buffer full".
+
+### Menyelundupkan lightmap ke glTF (tak ada slot resmi)
+Pakai node group **`glTF Material Output`** socket **Occlusion** → keluar sebagai `occlusionTexture` → dibaca three.js sebagai `aoMap` → diubah jadi `lightMap` di viewer (kalau tidak, teksturnya MENGGELAPKAN alih-alih menerangi). Material yang dipakai lintas objek WAJIB di-copy dulu (`m.copy()`) karena lightmap-nya per objek — 38-43 material perlu dipisah.
+
+**DUA BUG yang nyaris lolos (selalu verifikasi struktur GLB, jangan asumsi):**
+1. **texCoord harus 1.** glTF `texCoord` = INDEX uv layer. 19 objek (dinding/plafon polos) tidak punya `UVMap` sama sekali, jadi UVLightmap menempati index 0 → lightmap menempel di UV base color. Fix: pastikan urutan `UVMap`(0) + `UVLightmap`(1).
+2. **JANGAN ubah SEMUA `aoMap` jadi `lightMap`.** 5 material punya AO asli bawaan aset (`lamp_01`, `Oven`, `ASSET_MAT_MR`, dll) — kalau ikut dikonversi, objeknya salah nyala. Pembeda ANDAL = **`texture.channel === 1`**, BUKAN nama: glTF hasil export Blender **tidak menyimpan `texture.name`** (0 dari 107), namanya cuma ada di `image.name`.
+
+### Export settings final (baked)
+```python
+bpy.ops.export_scene.gltf(
+    filepath=out, export_format='GLB', use_visible=True, export_apply=True,
+    export_lights=False,          # semua lampu OFF — cahaya sudah di lightmap
+    export_cameras=False, export_yup=True,
+    export_draco_mesh_compression_enable=True, export_draco_mesh_compression_level=6,
+    export_draco_position_quantization=14, export_draco_normal_quantization=10,
+    export_draco_texcoord_quantization=12,
+    export_image_format='WEBP', export_image_quality=85)
+```
+⚠️ Export WebP **GAGAL DIAM-DIAM** untuk image `depth < 24` (grayscale/paletted) — menghasilkan `{"extensions":{}}` kosong yang bikin Three.js crash `reading 'uri'`. Fix: rebuild image jadi RGBA 32-bit sebelum export.
 
 ---
 
@@ -413,6 +541,8 @@ Backup `*_ORIG` (fake_user): `MR_TrackPad`, `OMacbook`, `OMagic_Mouse`, `OP_Shre
 ### Sisa poly (10 terberat, total 760.871 tris)
 `OMacbook` 32.7k×5, `MR_TrackPad` 20.4k, `OChair_Gaming` 20.3k×3, `MR_AppleTV` 18.5k (SKIP), `OP_Shredder` 15.1k, `OP_LetterTray` 11.4k.
 
+> **CATATAN:** setelah merge (§4f) tris ter-render jadi **995k** — naik karena modifier Wireframe/Bevel kini terpanggang sejak awal (dulu ditambahkan belakangan saat export). Bukan regresi. Dan poly TERBUKTI bukan bottleneck: dengan 995k tris + 0 lampu realtime, FPS tetap **50-60**. Optimasi poly lanjutan **tidak mendesak**.
+
 ### Texture ✅ SELESAI (27 Jul) — 134.4 MP → **52.9 MP (−61%)**, .blend 102.8 → **78.5 MB**
 135 image ikut export, **0 file >1024**, 0 unpacked, 0 colorspace salah.
 - **Resep resize massal:** `i.scale(nw, nh)` → **`i.pack()` LANGSUNG** setelahnya. ⚠️ **JEBAKAN:** menyetel `i.colorspace_settings.name` (bahkan ke nilai yang SAMA) **memicu reload dari file packed → ukuran BALIK ke asli**. Selalu cek jumlah image `>1024` SESUDAH loop, jangan percaya counter.
@@ -444,10 +574,10 @@ Repo mereka open source: [basementstudio/website-2k25](https://github.com/baseme
 - **SEMUA lighting di-bake di Blender** → puluhan `bake-XX-lightmap.exr` + `bake-XX-ao.jpg`. Scene web nyaris tanpa realtime light
 - Material custom shader: baca lightmap (EXR, UV2) + AO map (JPG) dikali base color — bukan MeshStandardMaterial
 
-**Rencana adopsi buat proyek ini (fase web nanti):**
-1. Post-processing retro = lapisan opsional, tinggal tambah render target + fullscreen shader di viewer — pipeline export TIDAK berubah
-2. **Bake lightmap patut ditiru** — ini jawaban buat PR "performa 3 ruangan + shadow banyak lampu": bake sekali di Blender (Cycles), buang semua realtime light & shadow di web
-3. Pecah GLB per ruangan (lounge / smoking / office) buat lazy-load pas tour
+**Status adopsi:**
+1. Post-processing retro = lapisan opsional, tinggal tambah render target + fullscreen shader di viewer — pipeline export TIDAK berubah. **Belum dikerjakan.**
+2. ~~Bake lightmap patut ditiru~~ ✅ **SUDAH DIKERJAKAN 27 Jul** (§4g) — terbukti jadi jawaban PR performa: 39 lampu realtime → 0, FPS 14-16 → **50-60**. Bedanya dari mereka: kita selundupkan lightmap lewat slot `occlusionTexture` glTF + `MeshStandardMaterial.lightMap` bawaan three, bukan custom shader + EXR terpisah. Lebih sederhana, hasilnya cukup.
+3. Pecah GLB per ruangan buat lazy-load — **belum perlu**: 8,0 MB masih ringan & FPS sudah 50-60. Simpan sebagai opsi kalau nanti scene bertambah besar.
 
 ---
 
@@ -470,11 +600,19 @@ Repo mereka open source: [basementstudio/website-2k25](https://github.com/baseme
 7. **Interior Office Area (finishing)** — 11 kursi kantor + bar counter + dispenser Brio + rak & meja tambahan ✅ ditempatkan; **cleanup asset import mentah ✅ SELESAI (2551→1189 objek)**; **pantry cabinet L + printer + shredder + wardrobe + microwave + bar table ✅ jadi (22 Jul)**; **pencahayaan office ✅ (track lighting + lunch pendant, 22 Jul)**; **collection dirapikan ✅ (0 loose, Brio di-flatten)**; **LED strip lantai ✅ + cubby join/oak + pintu oak (24 Jul)**. Sisa: isi pantry, verifikasi vs foto
 7b. **Meeting Room** (§3c) — meja + TV 98" + cabinet + Rally Camera + Apple devices ✅ (23 Jul); kursi ×9 + mic pod ×4 + snake plant + pintu dibuka ✅ (24 Jul); **ceiling z2.94 + 6 downlight + frost UV + grouping `OP_MeetingRoom` ✅ (24 Jul)**. Sisa: kerangka dinding, deco kecil, rename AirVent
 7c. **Optimasi poly + texture untuk web** (§4c) ✅ SELESAI 27 Jul — geometry −24.5% (760.871 tris), texture −61% (52.9 MP), curve convert, relink duplikat. Backup `*_ORIG` tinggal hapus saat final
-7d. **Pre-export audit + MVP1 export** (§4d, §4e) ✅ SELESAI 27 Jul — 0 blocker, 3 varian GLB (WebP 6.6 MB dipakai), viewer `mvp1.html` dengan 5 view teleport
-8. ~~Export GLB seluruh scene~~ ✅ **MVP1 27 Jul.** Berikutnya: pecah GLB per ruangan buat lazy-load (ala basement.studio) kalau perlu
-9. Integrasi ke web (project Next.js ini): scroll/tour navigation, interaksi (flip billiard), post-processing PS1, polish ⬅️ **BERIKUTNYA**
-10. **Karakter PS1** (§6b) — low-poly via Mixamo, sofa lounge dulu
+7d. **Pre-export audit + MVP1 export** (§4d, §4e) ✅ SELESAI 27 Jul — 0 blocker
+7e. **Merge objek** (§4f) ✅ SELESAI 27 Jul — draw call 2.522 → **401**
+7f. **Bake lightmap** (§4g) ✅ SELESAI 27 Jul — 39 lampu realtime → **0**
+8. ~~Export GLB seluruh scene~~ ✅ **MVP1 SELESAI 27 Jul — 8,0 MB, 50-60 FPS.** Pecah GLB per ruangan belum perlu
+9. **Karakter PS1** (§6b) — low-poly via Mixamo, sofa lounge dulu ⬅️ **BERIKUTNYA**
+10. Integrasi ke web (project Next.js ini): scroll/tour navigation, interaksi (flip billiard), post-processing PS1, polish
 11. Dekorasi tambahan (tanaman via Sketchfab kalau integrasi di-enable)
+
+### Polish opsional (tidak mendesak, MVP1 sudah jalan)
+- Hapus backup mesh `*_ORIG` (5 objek) saat semua final
+- Rename `AirVent_01..04` → `MR_AirVent_*`
+- 4 spot track light lain yang masih tanpa lensa (kalau ketemu saat review)
+- Post-processing PS1 (§4b) — lapisan opsional di viewer
 
 ## 6b. Karakter (fase C3) 🚧 (diputuskan 27 Jul)
 
@@ -489,10 +627,12 @@ Karakter low-poly gaya **PS1** untuk mengisi tour. Keputusan & temuan:
 
 ## 7. Alat & Setup
 
-- **Blender 5.1.2** + blender-mcp (reconnect: N-panel → Connect to Claude, lalu `/mcp`). File kerja: `~/Documents/Livingroom.blend` (78.5 MB per 27 Jul)
+- **Blender 5.1.2** + blender-mcp (reconnect: N-panel → Connect to Claude, lalu `/mcp`). File kerja: `~/Documents/Livingroom.blend` (~78 MB per 27 Jul)
+  - Collection `Export_Merged` = hasil merge untuk export (§4f). **Di-exclude saat modeling**, di-include saat export. Objek asli di collection kerja tidak pernah disentuh.
+  - Cycles: **GPU Metal** (`prefs.compute_device_type='METAL'` + `cycles.device='GPU'`) — cek tiap sesi, default-nya CPU
 - **Polycam** untuk scanning (GLB)
 - **Next.js + pnpm** (project web ini) — masih fase asset, MVP1 GLB sudah siap diintegrasikan berikutnya
-- **Kompresi GLB:** WebP texture (`gltf-transform` / gltfpack) menang telak vs Draco untuk scene ini — beban terbesar = texture. `npx gltfpack -i in.glb -o out.glb -cc` untuk Draco geometry
+- **Kompresi GLB:** WebP texture + Draco geometry, keduanya lewat exporter Blender bawaan (`export_image_format='WEBP'` + `export_draco_mesh_compression_enable=True`). WebP menang telak vs Draco kalau harus pilih satu — beban terbesar = texture
 - Integrasi Sketchfab & Hyper3D di BlenderMCP: sebagian besar prosedural, tapi **ada asset Sketchfab + FBX/OBJ Apple (Magic KB/Mouse, monitor) di `OP_Electronics` + 3 kursi kantor Sketchfab loose** diimport untuk elektronik & seating office. Import ini bawa banyak node sampah (empty hierarki, mesh terpisah) — perlu dibersihkan sebelum export
 
 ### Sumber Asset 3D
