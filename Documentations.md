@@ -467,6 +467,23 @@ Dua percobaan gagal sebelum ketemu cara yang benar:
 ### ⚠️ SHADOW LAMPU HARUS ON saat bake
 Sisa perf-fix EEVEE 23 Jul: 29 dari 39 lampu `use_shadow=False`. Di Blender 4.x+, `use_shadow` berlaku untuk EEVEE **DAN Cycles** — bake pertama menghasilkan cahaya yang menembus meja & dinding. Setelah semua shadow ON: lantai office **31% lebih gelap** (mean 0.474 → 0.326), kontras p90/p10 **22-120×** di seluruh permukaan. Sekalian naikkan `eevee.shadow_pool_size` ke `'1024'` (maksimum; STRING enum) supaya viewport tidak error "shadow buffer full".
 
+### ⚠️ NOISE BINTIK — `bpy.ops.object.bake` TIDAK memakai denoiser (fix 27 Jul)
+
+Gejala: saat lightmap dinyalakan, dinding/meja/plafon penuh bintik halus. `scene.cycles.use_denoising=True` itu untuk **render**, bukan bake — jadi noise 32-samples masuk mentah ke texture (terukur 0.042–0.072; patokan bersih <0.01).
+
+Menaikkan samples saja **tidak cukup**: 32 → 256 (8× lipat, 8× lebih lama) cuma memangkas noise 36%.
+
+**Solusi: blur gaussian numerik setelah bake.** Lightmap = data cahaya low-frequency, jadi blur ringan tidak menghilangkan informasi — detail tajam ada di base color texture, bukan di lightmap.
+
+| | noise | kecerahan |
+|---|---|---|
+| Sebelum | 0.0556 | — |
+| **Sesudah** (σ 1.6 @512 / 2.4 @1024) | **0.0046** (−92%) | −0.3% |
+
+Prosesnya cuma 1,1 detik untuk 37 lightmap. Resep final: **bake 128 samples + resolusi minimum 512** (jangan 256) **+ gaussian blur**.
+
+⚠️ Setelah bake ulang, **relink node `LM_TEX`** — image datablock di-recreate sehingga node lama menunjuk datablock yang sudah dihapus.
+
 ### Menyelundupkan lightmap ke glTF (tak ada slot resmi)
 Pakai node group **`glTF Material Output`** socket **Occlusion** → keluar sebagai `occlusionTexture` → dibaca three.js sebagai `aoMap` → diubah jadi `lightMap` di viewer (kalau tidak, teksturnya MENGGELAPKAN alih-alih menerangi). Material yang dipakai lintas objek WAJIB di-copy dulu (`m.copy()`) karena lightmap-nya per objek — 38-43 material perlu dipisah.
 
