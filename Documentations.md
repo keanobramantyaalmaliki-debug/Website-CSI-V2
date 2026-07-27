@@ -1,9 +1,11 @@
 # Documentations — Cogniti Office 3D Tour
 
 Dokumentasi progres pembuatan 3D office tour ala [basement.studio](https://basement.studio) untuk **cogniti.id**.
-Terakhir diupdate: **24 Juli 2026**.
+Terakhir diupdate: **27 Juli 2026**.
 
-**Status ringkas:** 2 ruangan (Lounge/Billiard + Smoking) sudah ~95% jadi — semua furniture & dekorasi selesai. **Semua bake prosedural SELESAI** (termasuk `M_SM_Rug_Grey` karpet smoking) — 0 material prosedural tersisa. Ruangan ke-3 **Office Area berkembang pesat**: scan import + blockout kerangka + **11 desk pod detail `ODesk_*`** + **elektronik meja (7 iMac + Magic Keyboard/Mouse)** + lunch table + bar stool + kursi kerja + rak buku/dinding + tanaman + socket dinding + whiteboard beroda + **dinding kaca `GWO_*` (lounge↔office) & `GWL_*` (partisi frosted)** + **pantry cabinet L (`OP_Pantry`) + printer + shredder + wardrobe** ✅ jadi. Ruangan ke-4 **MEETING ROOM hampir lengkap (23–24 Jul)**: meja konferensi kaki V-frame + cekungan cable tray, TV 98" frameless + cabinet TV, replika Logitech Rally Camera, Apple TV + remote + Magic Keyboard + Trackpad, **9 kursi meeting `MR_Chair_*`, 4 Rally Mic Pod replika `MR_MicPod_*`, snake plant, pintu kaca dibuka** ✅. **Optimasi poly untuk web DIMULAI 24 Jul** (§4c): shredder −92%, macbook −62%, trackpad −53%.
+**Status ringkas:** 2 ruangan (Lounge/Billiard + Smoking) sudah ~95% jadi — semua furniture & dekorasi selesai. **Semua bake prosedural SELESAI** (termasuk `M_SM_Rug_Grey` karpet smoking) — 0 material prosedural tersisa. Ruangan ke-3 **Office Area berkembang pesat**: scan import + blockout kerangka + **11 desk pod detail `ODesk_*`** + **elektronik meja (7 iMac + Magic Keyboard/Mouse)** + lunch table + bar stool + kursi kerja + rak buku/dinding + tanaman + socket dinding + whiteboard beroda + **dinding kaca `GWO_*` (lounge↔office) & `GWL_*` (partisi frosted)** + **pantry cabinet L (`OP_Pantry`) + printer + shredder + wardrobe** ✅ jadi. Ruangan ke-4 **MEETING ROOM hampir lengkap (23–24 Jul)**: meja konferensi kaki V-frame + cekungan cable tray, TV 98" frameless + cabinet TV, replika Logitech Rally Camera, Apple TV + remote + Magic Keyboard + Trackpad, **9 kursi meeting `MR_Chair_*`, 4 Rally Mic Pod replika `MR_MicPod_*`, snake plant, pintu kaca dibuka** ✅.
+
+**🎉 MVP1 EXPORTED (27 Jul):** Seluruh scene (4 ruangan) berhasil di-export ke `export-test/office-mvp1*.glb` + viewer `mvp1.html` (5 tombol view: Office/Lounge/Meeting/Pantry/Function). **Pre-export blocker audit BERES** (§4d): 0 material prosedural, 0 CURVE, 0 AREA light, 0 image unpacked, 0 objek tanpa UV. **Optimasi poly** (§4c): 1.008M → **760.871 tris (−24.5%)**. **Resize texture** (§4c): 134.4 MP → **52.9 MP (−61%)**, 0 file >1024, .blend 102.8 → **78.5 MB**. Ukuran GLB akhir: raw **35 MB**, **WebP 6.6 MB** (dipakai viewer), Draco 21 MB. **Karakter PS1** (§7d) diputuskan: low-poly ≤2.5k tris vertex-color via Mixamo.
 
 **Pekerjaan aktif:** melengkapi & menata furniture/aksesori office. Semua furniture office sudah **dirapikan ke sub-collection** di bawah `Office_Plan`. **Utang teknis import mentah BERES** — `OP_Electronics` diciutkan 1424 → **131 objek** (semua junk `Object_*/Node_*/pCube*/pPlane*/RootNode*` dibuang; part di-rename bersih: `OMagic_KB_/Mouse_`, `OMon_AOC_`). **11 kursi kantor Sketchfab di-rename `OChair_Office_*` & dipindah ke `OP_Seating`.** Furniture office terkini (22 Jul): **pantry cabinet L-shape `OP_Pantry` (56 part: base unit + tower + wall unit + worktop)** di pojok barat laut, **printer `OP_Printer` + shredder `OP_Shredder`** (di pojok, `OP_Electronics`), **wardrobe/kabinet rendah `OP_Ward_*`** (11 part, di `OP_Shelves`), **microwave `OP_Microwave` + bar table `OP_BarTable_*`** (pojok barat daya, di atas pantry base). **Pencahayaan office SUDAH ADA (22 Jul)** — track lighting `OP_TrackL/TrackLV_*` (8 SPOT) + lunch pendant `OP_LunchLight_*` (3 POINT), collection `OP_Lighting`. Collection sudah dirapikan (0 loose). Scene total ~**1391 objek, 254 material**.
 
@@ -290,6 +292,7 @@ Ruangan di balik bukaan barat laut blok utama office. Scan `MeetingScan` diimpor
 ## 4. Export Pipeline Blender → Three.js ✅ TERBUKTI
 
 Tes end-to-end 13 Jul: `export-test/lounge.glb` — **1.28 MB, 192 mesh, ~30k tris, load ~130ms**. Enteng banget buat web.
+**Update 27 Jul:** seluruh scene (4 ruangan) sudah di-export ke MVP1 — lihat §4e (varian GLB + viewer) dan §4d (audit pre-export).
 
 ### Checklist di Blender SEBELUM export
 1. **Bake material prosedural** ke image texture packed — glTF tidak bawa node Brick/Noise/ColorRamp (gejala: lantai jadi putih polos)
@@ -329,12 +332,59 @@ cd export-test && python3 -m http.server 8137
 - Kalau kaca kelihatan **noise/bintik pasir di viewport Blender**: itu `surface_render_method='DITHERED'` (default EEVEE Blender 5.x) — set ke `'BLENDED'`. Murni urusan display Blender, tidak ngaruh ke export
 
 ### Belum dites
-- Performa 3 ruangan + shadow banyak lampu — kalau drop: shadow hanya lampu utama / bake ke texture
-- Draco compression — belum perlu, file masih kecil
+- Performa 3 ruangan + shadow banyak lampu — kalau drop: shadow hanya lampu utama / bake ke texture ✅ **teruji di MVP1** (shadow di-cap 4 lampu, sisanya castShadow=false — lihat §4e)
+- ~~Draco compression~~ ✅ dicoba di MVP1, tapi **WebP menang** (6.6 MB vs Draco 21 MB) — lihat §4e
 
 ---
 
-## 4c. Optimasi Poly untuk Web 🚧 (DIMULAI 24 Jul)
+## 4e. MVP1 Export — Seluruh Scene ✅ (27 Jul)
+
+Export penuh 4 ruangan pertama kali. 3 varian GLB dibuat dari scene yang sama untuk membandingkan ukuran:
+| File | Ukuran | Metode |
+|---|---|---|
+| `office-mvp1.glb` | **35 MB** | Raw, tanpa kompresi |
+| `office-mvp1-draco.glb` | **21 MB** | Draco geometry compression (`-cc`) |
+| `office-mvp1-webp.glb` | **6.6 MB** | Texture → WebP (**dipakai viewer**, menang telak) |
+
+**Keputusan:** WebP jauh lebih kecil (−81% vs raw) karena beban terbesar scene = texture, bukan geometry. Draco cuma menekan geometry. Bisa dikombinasikan (Draco + WebP) untuk fase berikutnya kalau perlu lebih kecil lag.
+
+### Viewer `export-test/mvp1.html` (three@0.166)
+- **5 tombol view** teleport kamera: Office area / Lounge / Meeting room / Pantry / Function room (koordinat pakai helper `bl(x,y,z)` = konversi Blender→three Y-up)
+- **`DRACOLoader` wajib di-set** walau viewer load varian WebP (biar bisa switch ke `office-mvp1-draco.glb` tanpa ubah kode)
+- **Shadow di-cap 4 lampu pertama** (`shadowCasters < 4`) — 39 lampu total, kalau semua cast shadow → shadow buffer meledak. Sisanya `castShadow=false` (cukup menerangi)
+- Mesh dalam radius 0.45m dari lampu → `castShadow=false` (housing/cage bikin motif jaring)
+- Emissive mesh → `emissiveIntensity ≥ 2.5` biar keangkat bloom
+- Settingan lain sama resep §4 (exposure 0.55, RoomEnvironment 0.25, bloom threshold 1.0, dll)
+- Stats overlay live: load ms, jumlah mesh, tris, lights (shadow), FPS
+
+**Serve:** `cd export-test && python3 -m http.server 8137` → buka `http://localhost:8137/mvp1.html`
+
+---
+
+## 4d. Pre-Export Blocker Audit ✅ (27 Jul)
+
+Sebelum export MVP1, dijalankan audit sistematis untuk mendeteksi 5 blocker yang bikin GLB rusak di Three.js. **Semua clear**: 0 material prosedural, 0 CURVE, 0 AREA light, 0 image unpacked, 0 objek tanpa UV.
+
+### Cara audit (jalankan sebelum tiap export)
+Scan lewat bpy:
+- `bpy.data.materials` → node bertipe `TEX_NOISE/TEX_WAVE/VALTORGB/MIX/BUMP/MATH` (kandidat prosedural)
+- semua LIGHT → `o.data.type == 'AREA'` (di-drop diam-diam oleh glTF)
+- `o.type == 'CURVE'` (tidak ikut export tanpa convert)
+- `o.visible_get() == False` (kena skip `use_visible=True`)
+- `im.packed_file is None` (image belum di-pack)
+
+### Gotcha penting (dari eksekusi 27 Jul)
+1. **Banyak FALSE POSITIVE prosedural.** Material hasil import glTF/Sketchfab selalu punya pola `MATH + SEPARATE_COLOR` (`Metallic = SeparateColor.Blue * 0.0`, `Roughness = SeparateColor.Green`) — itu **round-trip glTF normal, BUKAN prosedural**. Cukup unlink MATH & set Metallic=0 eksplisit, TIDAK perlu bake. Dari 12 material yang ke-flag, cuma **6 yang beneran prosedural**. Selalu telusuri node tree per-input Principled dulu.
+2. **Alpha cutout import**: pola `1 - (tex.Alpha < 0.05)` → ganti Alpha langsung dari image + `blend_method='CLIP'` (= glTF alphaMode MASK).
+3. **GOTCHA pack image Non-Color** — urutan WAJIB: (1) `images.new()` → (2) set `colorspace_settings.name='Non-Color'` → (3) `pixels.foreach_set()` → (4) `update()` → (5) `pack()`. Kalau colorspace di-set SETELAH pack, `has_data` jadi False & pack batal diam-diam (tanpa error). Kena di `T_FabricNormal`, harus rebuild dari nol.
+4. **Convert CURVE: turunkan resolusi dulu.** 17 curve dengan `resolution_u` 12-16 + `bevel_resolution` 6-12 = ~226k verts kalau convert apa adanya. Set `resolution_u=6, bevel_resolution=3` (16 sisi keliling, cukup halus untuk tube 20mm) → jadi **9.3k verts**, visual identik. Backup `curve.copy()` + `use_fake_user=True` dulu. `export_apply=True` TIDAK meng-convert curve.
+5. **UV mesh multi-user**: kalau 2 objek share mesh, UV world-space bikin salah satu meleset. Pakai koordinat LOKAL × `obj.scale` — instancing tetap terjaga, tidak perlu `make_single_user`.
+
+Texture baru hasil audit: `T_ODesk_Oak/OakV`, `T_SinkMarble`, `T_GrassRug`, `T_FabricNormal`, `T_ChairFrame_Black` (semua 1024 packed).
+
+---
+
+## 4c. Optimasi Poly untuk Web 🚧 (DIMULAI 24 Jul, LANJUT 27 Jul)
 
 Kekhawatiran: scene berat saat di-export ke website. **Audit 24 Jul** (tanpa scan Reference/Scan_Office yang memang tidak ikut export): 873 unique mesh, 1143 objek mesh, **~431k unique verts** (file GLB) / **~1.11 juta instanced verts** (beban render GPU per frame — linked duplicates digambar berulang).
 
@@ -345,26 +395,33 @@ Kekhawatiran: scene berat saat di-export ke website. **Audit 24 Jul** (tanpa sca
 4. Backup mesh asli sebagai `*_ORIG` (fake_user) sebelum ubah; hapus setelah user approve final
 5. Decimate/dissolve tidak bisa langsung di multi-user mesh → copy mesh → proses → relink ke semua user
 
-### Hasil sejauh ini
+### Hasil geometry — total scene 1.008M → **760.871 tris (−24.5%)**
 | Objek | Sebelum | Sesudah | Metode | Status |
 |---|---|---|---|---|
-| `OP_Shredder` | 126.672 | **10.634** (−92%) | Decimate 0.06 + smooth 35° (aman: bentuk kotak, texture bawa detail) | ✅ user approve |
-| `OMacbook` ×5 | 82.044 | **31.089** (−62%) | Limited dissolve 1° (Decimate 21k sempat merusak keycap → restore → ganti metode) | ✅ user approve |
-| `MR_TrackPad` | 28.407 | **13.225** (−53%) | Limited dissolve 1° | ✅ user approve |
-| `MR_AppleTV` | 24.740 | 24.740 (0%) | **SKIP** — 15.5k/18.5k face = `Glass dark` glossy baked normals; 3 percobaan dissolve semua bikin logo smear → restored full | ⛔ tidak bisa dikecilkan aman |
+| `OP_Shredder` | 126.672 | **10.634** (−92%) | Decimate 0.06 + smooth 35° (aman: bentuk kotak, texture bawa detail) | ✅ 24 Jul |
+| `OMacbook` ×5 | 82k verts | 32.7k **tris** (−26% dari 44k tris) | Limited dissolve + Decimate 0.75 (0.5 DITOLAK: keycap robek) | ✅ 27 Jul |
+| `MR_TrackPad` | 28.407 | **13.225** (−53%) | Limited dissolve 1° | ✅ 24 Jul |
+| `OMagic_Mouse` ×11 | 21k | **6.6k** (−68.5%) | Dissolve 1° + Decimate 0.35. Custom normals + glossy ternyata AMAN (uji grazing angle) | ✅ 27 Jul |
+| `OMagic_Mouse_Dup2` | 21k | **relink** (gratis) | Mesh `Node_0_Mat_0.001` = PERMUTASI IDENTIK mesh utama → relink | ✅ 27 Jul |
+| `OP_WoodSlat_Wall` | 33.5k | **8.2k** (−75%) | Decimate 0.25 — panel DATAR, slat-nya texture bukan geometri | ✅ 27 Jul |
+| `MR_AppleTV` | 24.740 | 24.740 (0%) | **SKIP** — 15.5k/18.5k face = `Glass dark` glossy baked normals; dissolve bikin logo smear | ⛔ tidak bisa aman |
 
-Scene unique verts: 431k → **~250k**. Backup tersisa: `OP_Shredder_ORIG`, `OMacbook_ORIG`, `MR_TrackPad_ORIG` (hapus setelah final).
+**Pelajaran 27 Jul:** (a) "glossy + custom normals" BUKAN larangan mutlak — Magic Mouse aman, AppleTV gagal karena hal lain; tetap uji di mesh copy dulu. (b) Cek permutasi mesh identik: sort koordinat `np.lexsort` lalu bandingkan — `np.allclose` mentah bilang "beda" padahal identik (beda urutan vertex). (c) Blender tolak `modifier_apply` di mesh multi-user → putus sharing dulu, apply, relink. (d) Setelah apply modifier non-pertama, modifier tetap NEMPEL → wajib `o.modifiers.remove()`, kalau tidak decimate jalan 2× saat export.
 
-### Kandidat berikutnya (urut prioritas render load)
-- `OMagic_Mouse_0` 14.1k ×11 = 156k render load — ⚠️ shell glossy putih, **cek normals dulu** (risiko kasus Apple TV)
-- `OP_WoodSlat_Wall` 16.4k, `OChair_Gaming_0` 12.8k ×3, `OP_LetterTray` 10.8k, `MR_AppleRemote` 8.9k
-- **Relink duplikat mesh** (gratis, tanpa risiko): `OMagic_Mouse_Dup2` & `OMagic_KB_Dup2` punya mesh data sendiri padahal identik dgn yang dipakai 11 objek — relink hemat 18k
-- **17 CURVE** harus convert ke mesh sebelum export (stool pipes, BS555 footrest, SMK chair loop, mic pod cable)
+Backup `*_ORIG` (fake_user): `MR_TrackPad`, `OMacbook`, `OMagic_Mouse`, `OP_Shredder`, `OP_WoodSlat_Wall` — hapus saat final.
 
-### Texture (belum dieksekusi)
-- **91 file 2048px** (16.8MB raw each, mayoritas asset Sketchfab) → downscale 1024 utk props web
-- 4K yang ikut export: `OMacbook` (3× ASSET_MAT_MR), `Dyson_Fan` (3), `Shredder` (1) → 1024
-- Draco/gltfpack saat export → geometry 5–10× lebih kecil lagi (`npx gltfpack -i in.glb -o out.glb -cc`)
+### Sisa poly (10 terberat, total 760.871 tris)
+`OMacbook` 32.7k×5, `MR_TrackPad` 20.4k, `OChair_Gaming` 20.3k×3, `MR_AppleTV` 18.5k (SKIP), `OP_Shredder` 15.1k, `OP_LetterTray` 11.4k.
+
+### Texture ✅ SELESAI (27 Jul) — 134.4 MP → **52.9 MP (−61%)**, .blend 102.8 → **78.5 MB**
+135 image ikut export, **0 file >1024**, 0 unpacked, 0 colorspace salah.
+- **Resep resize massal:** `i.scale(nw, nh)` → **`i.pack()` LANGSUNG** setelahnya. ⚠️ **JEBAKAN:** menyetel `i.colorspace_settings.name` (bahkan ke nilai yang SAMA) **memicu reload dari file packed → ukuran BALIK ke asli**. Selalu cek jumlah image `>1024` SESUDAH loop, jangan percaya counter.
+- **SKIP texture milik scan** (`OfficeScan*`/`MeetingScan`/`SmokingScan` — 9 file 4096²): objek referensi hidden, tidak ikut export. Deteksi: petakan image→material→object, skip kalau pemakainya ⊆ himpunan objek scan. Kalau tidak dipisah, angka audit menyesatkan.
+- **TEMUAN BESAR — Magic Keyboard**: `MR_MagicKB`/`OMagic_KB_*` (12 unit) punya **79 material, tiap keycap 1 texture 1024²** = 82.8 MP untuk objek 2.354 tris — sendirian **62% beban texture seluruh scene**. Isinya nyaris polos. Di-resize ke **128²** → 1.29 MP (−98%), huruf keycap tetap TAJAM (extreme closeup). Aset Sketchfab multi-material begini: cari lewat rasio **MP per 1k tris** (keyboard 35 vs normal ~3).
+- Verifikasi visual 1024px: keycap Macbook masih terbaca, pola mesh Shredder masih rapi. **1024 aman untuk semua aset office.**
+
+### CURVE convert ✅ (27 Jul)
+17 CURVE (stool pipes, BS555 footrest, SMK chair loop, mic pod cable) → convert ke mesh, resolusi diturunkan dulu (226k → 9.3k verts). 0 CURVE tersisa saat export.
 
 ---
 
@@ -412,16 +469,30 @@ Repo mereka open source: [basementstudio/website-2k25](https://github.com/baseme
 6. ~~Interior office: desk pod, elektronik (iMac/Magic KB/Mouse), lunch table+stool, bar stool, rak, tanaman, socket, partisi kaca `GWL_*`~~ ✅ 20–21 Jul + collection dirapikan
 7. **Interior Office Area (finishing)** — 11 kursi kantor + bar counter + dispenser Brio + rak & meja tambahan ✅ ditempatkan; **cleanup asset import mentah ✅ SELESAI (2551→1189 objek)**; **pantry cabinet L + printer + shredder + wardrobe + microwave + bar table ✅ jadi (22 Jul)**; **pencahayaan office ✅ (track lighting + lunch pendant, 22 Jul)**; **collection dirapikan ✅ (0 loose, Brio di-flatten)**; **LED strip lantai ✅ + cubby join/oak + pintu oak (24 Jul)**. Sisa: isi pantry, verifikasi vs foto
 7b. **Meeting Room** (§3c) — meja + TV 98" + cabinet + Rally Camera + Apple devices ✅ (23 Jul); kursi ×9 + mic pod ×4 + snake plant + pintu dibuka ✅ (24 Jul); **ceiling z2.94 + 6 downlight + frost UV + grouping `OP_MeetingRoom` ✅ (24 Jul)**. Sisa: kerangka dinding, deco kecil, rename AirVent
-7c. **Optimasi poly untuk web** (§4c) — shredder/macbook/trackpad ✅; sisa: mouse, texture downscale, relink duplikat, convert curves ⬅️ **AKTIF**
-8. Export GLB (per ruangan: lounge/smoking/office/meeting) — pas user minta
-9. Integrasi ke web (project Next.js ini): scroll/tour navigation, interaksi (flip billiard), polish
-10. Dekorasi tambahan (tanaman via Sketchfab kalau integrasi di-enable)
+7c. **Optimasi poly + texture untuk web** (§4c) ✅ SELESAI 27 Jul — geometry −24.5% (760.871 tris), texture −61% (52.9 MP), curve convert, relink duplikat. Backup `*_ORIG` tinggal hapus saat final
+7d. **Pre-export audit + MVP1 export** (§4d, §4e) ✅ SELESAI 27 Jul — 0 blocker, 3 varian GLB (WebP 6.6 MB dipakai), viewer `mvp1.html` dengan 5 view teleport
+8. ~~Export GLB seluruh scene~~ ✅ **MVP1 27 Jul.** Berikutnya: pecah GLB per ruangan buat lazy-load (ala basement.studio) kalau perlu
+9. Integrasi ke web (project Next.js ini): scroll/tour navigation, interaksi (flip billiard), post-processing PS1, polish ⬅️ **BERIKUTNYA**
+10. **Karakter PS1** (§6b) — low-poly via Mixamo, sofa lounge dulu
+11. Dekorasi tambahan (tanaman via Sketchfab kalau integrasi di-enable)
+
+## 6b. Karakter (fase C3) 🚧 (diputuskan 27 Jul)
+
+Karakter low-poly gaya **PS1** untuk mengisi tour. Keputusan & temuan:
+- **⚠️ Ready Player Me MATI** (shutdown 31 Jan 2026, `*.readyplayer.me` = NXDOMAIN). Rencana "avatar dari foto staff" DIBATALKAN — di resolusi target wajah asli hilang jadi gumpalan; bonus tidak perlu consent staff.
+- **Pengganti** kalau perlu: Avaturn (avaturn.me, tier gratis, GLB) atau Avatar SDK/MetaPerson.
+- **Pilihan user:** sumber **Mixamo** (rig + animasi gratis, lalu decimate), gaya kasual realistis, warna **vertex color** (buang semua texture, ala basement), animasi idle loop halus. Karakter pertama di **sofa lounge**.
+- **Target teknis:** ≤2.500 tris & ≤150 KB per karakter.
+- **Bukti dari repo basement** (`character-model-*.glb` dibedah): TOTAL 4.860 tris untuk SEMUA karakter, `images: []` (NOL texture, warna via `COLOR_0`), head cuma 484 tris, STRUKTUR MODULAR (1 body dipakai bersama, beda per orang cuma rambut & kacamata). Look PS1 = post-processing terpisah, bukan dari model.
+- **Anchor dudukan (terverifikasi):** `SofaB_Seat_0` (sofa dinding kiri lounge, bantalan kiri). Permukaan duduk z=0.48, center (−1.41, 4.38), badan hadap +X.
+- **Gotcha:** download Mixamo **FBX Binary (.fbx)**, BUKAN varian 2013/6100 (Blender 5 min. 7100). Mesin ini tidak punya converter FBX.
 
 ## 7. Alat & Setup
 
-- **Blender 5.1.2** + blender-mcp (reconnect: N-panel → Connect to Claude, lalu `/mcp`)
+- **Blender 5.1.2** + blender-mcp (reconnect: N-panel → Connect to Claude, lalu `/mcp`). File kerja: `~/Documents/Livingroom.blend` (78.5 MB per 27 Jul)
 - **Polycam** untuk scanning (GLB)
-- **Next.js + pnpm** (project web ini) — belum tersentuh, masih fase asset
+- **Next.js + pnpm** (project web ini) — masih fase asset, MVP1 GLB sudah siap diintegrasikan berikutnya
+- **Kompresi GLB:** WebP texture (`gltf-transform` / gltfpack) menang telak vs Draco untuk scene ini — beban terbesar = texture. `npx gltfpack -i in.glb -o out.glb -cc` untuk Draco geometry
 - Integrasi Sketchfab & Hyper3D di BlenderMCP: sebagian besar prosedural, tapi **ada asset Sketchfab + FBX/OBJ Apple (Magic KB/Mouse, monitor) di `OP_Electronics` + 3 kursi kantor Sketchfab loose** diimport untuk elektronik & seating office. Import ini bawa banyak node sampah (empty hierarki, mesh terpisah) — perlu dibersihkan sebelum export
 
 ### Sumber Asset 3D

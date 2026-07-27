@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSI Office Tour — MVP 1 (Baked)</title>
+<style>
+  body { margin:0; overflow:hidden; background:#111; font:12px/1.5 -apple-system,sans-serif; }
+  #hud { position:fixed; top:10px; left:10px; z-index:10; color:#eee;
+         background:rgba(0,0,0,.72); padding:10px 12px; border-radius:8px;
+         width:290px; backdrop-filter:blur(6px); }
+  #hud b { color:#ffd479; }
+  #stats { display:block; margin:6px 0; color:#9fd; white-space:pre-line;
+           font-variant-numeric:tabular-nums; }
+  #fps { font-size:22px; font-weight:600; }
+  .good{color:#7d8}.warn{color:#f96}
+  .row{display:flex;align-items:center;gap:6px;margin:4px 0}
+  .row label{flex:1;color:#bbb}
+  .row input[type=range]{width:110px}
+  .row .val{width:38px;text-align:right;color:#ffd479}
+  button{background:#2a2a2e;color:#ddd;border:1px solid #444;border-radius:5px;
+         padding:3px 8px;margin:2px 3px 0 0;font-size:11px;cursor:pointer}
+  button:hover{background:#3a3a40}
+  button.on{background:#4a7;color:#fff;border-color:#5b8}
+  hr{border:0;border-top:1px solid #333;margin:8px 0}
+</style>
+</head>
+<body>
+<div id="hud">
+  <b>CSI Office Tour — Baked</b>
+  <span id="stats">loading…</span>
+  <hr>
+  <div class="row">
+    <label>Lightmap</label>
+    <input type="range" id="lm" min="0" max="300" value="100">
+    <span class="val" id="lmv">1.0</span>
+  </div>
+  <div class="row">
+    <label>Exposure</label>
+    <input type="range" id="expo" min="20" max="250" value="100">
+    <span class="val" id="expov">1.0</span>
+  </div>
+  <div class="row">
+    <label>Ambient</label>
+    <input type="range" id="amb" min="0" max="100" value="12">
+    <span class="val" id="ambv">.12</span>
+  </div>
+  <div class="row">
+    <label>Pendar lampu</label>
+    <input type="range" id="emi" min="0" max="400" value="100">
+    <span class="val" id="emiv">1.0</span>
+  </div>
+  <div>
+    <button id="bBloom" class="on">Bloom</button>
+    <button id="bLM" class="on">Lightmap</button>
+  </div>
+  <hr>
+  <div id="views"></div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.166.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = false;      // baked: tidak perlu shadow realtime
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0a0c);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.18;
+
+const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.05, 120);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+const bl = (x,y,z) => new THREE.Vector3(x, z, -y);
+const VIEWS = {
+  'Office':  { pos: bl(-6.0,-4.0,1.6),  tgt: bl(-11.0,-3.0,1.1) },
+  'Lounge':  { pos: bl( 0.3,-7.3,1.55), tgt: bl(  0.0, 3.0,1.1) },
+  'Meeting': { pos: bl(-16.2,-0.4,1.6), tgt: bl(-20.5,-0.4,1.3) },
+  'Pantry':  { pos: bl(-15.5,-5.5,1.7), tgt: bl(-17.5,-3.2,1.2) },
+  'Function':{ pos: bl( 0.0, 7.6,1.6),  tgt: bl( -0.5,10.5,1.2) },
+};
+function goTo(n){ camera.position.copy(VIEWS[n].pos); controls.target.copy(VIEWS[n].tgt); controls.update(); }
+const vbox=document.getElementById('views');
+Object.keys(VIEWS).forEach(n=>{const b=document.createElement('button');
+  b.textContent=n;b.onclick=()=>goTo(n);vbox.appendChild(b);});
+
+const amb = new THREE.AmbientLight(0xffffff, 0.12);
+scene.add(amb);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight), 0.4, 0.5, 0.95);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+let useBloom = true;
+
+const draco = new DRACOLoader();
+draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.166.0/examples/jsm/libs/draco/');
+const loader = new GLTFLoader(); loader.setDRACOLoader(draco);
+
+let lmMats = [], emissiveMats = [], baseInfo = '', lmIntensity = 1.0, emiBoost = 1.0;
+
+const t0 = performance.now();
+loader.load('./office-mvp1-baked.glb', (gltf) => {
+  const ms = (performance.now()-t0).toFixed(0);
+  const root = gltf.scene; scene.add(root); root.updateMatrixWorld(true);
+
+  let meshes=0, tris=0, lights=0, withLM=0, keptAO=0, noUV1=0, emiCount=0;
+  root.traverse(o => {
+    if (o.isLight) {
+      lights++;
+      // lampu sisa (kalau ada) diredam — cahaya utama sudah di lightmap
+      o.intensity = Math.min(o.intensity, 2);
+      o.castShadow = false;
+    }
+    if (o.isMesh) {
+      meshes++;
+      const g=o.geometry;
+      tris += (g.index?g.index.count:g.attributes.position.count)/3;
+      o.castShadow = o.receiveShadow = false;
+
+      const m = o.material;
+      if (m) {
+        // Lightmap diselundupkan lewat slot occlusion glTF -> three.js baca sbg aoMap.
+        // Pembeda yang ANDAL: lightmap kita di-export dgn texCoord=1 (UV2), sedangkan
+        // aoMap bawaan aset (lamp_01, Oven, dll) di texCoord 0/3 — itu harus DIBIARKAN,
+        // kalau ikut diubah jadi lightMap, objeknya salah nyala.
+        // Nama texture tidak bisa dipakai: glTF ini tidak menyimpan texture.name.
+        const ao = m.aoMap;
+        const isOurs = ao && ao.channel === 1;
+        if (isOurs && !m.lightMap) {
+          m.lightMap = ao;
+          m.lightMap.channel = 1;
+          m.aoMap = null;
+          const g = o.geometry;
+          if (!g.attributes.uv1) {
+            const src = g.attributes.uv2 || g.attributes.uv3 || g.attributes.uv;
+            if (src) g.setAttribute('uv1', src);
+          }
+          m.needsUpdate = true;
+        }
+        if (m.aoMap) keptAO++;
+        if (m.lightMap) {
+          withLM++;
+          if (!o.geometry.attributes.uv1) noUV1++;
+          m.lightMapIntensity = lmIntensity;
+          lmMats.push(m);
+        }
+        // JANGAN clamp emissiveIntensity. GLB sudah bawa KHR_materials_emissive_strength
+        // (bohlam 12, LED strip 8, dst) — Math.max(...,2.0) versi lama justru MENURUNKAN
+        // nilai itu jadi 2.0 sehingga lampu terlihat redup/mati.
+        if (m.emissive && (m.emissive.r+m.emissive.g+m.emissive.b) > 0.01) {
+          emissiveMats.push(m);
+          m.userData.baseEmissive = m.emissiveIntensity;
+          m.emissiveIntensity *= emiBoost;
+          m.toneMapped = false;   // biar tidak ikut diredam ACES saat exposure rendah
+        }
+      }
+    }
+  });
+  baseInfo = `load ${ms}ms · ${meshes} mesh · ${Math.round(tris).toLocaleString()} tris\n`
+           + `${withLM} lightmap · ${emissiveMats.length} emissive · ${keptAO} AO asli`
+           + (noUV1 ? ` · ⚠ ${noUV1} tanpa uv1` : '');
+  console.log(`[lightmap] terpasang=${withLM} aoAsliDijaga=${keptAO} tanpaUV1=${noUV1}`);
+  console.log('[emissive] ' + emissiveMats.map(m =>
+    `${m.name}=${m.userData.baseEmissive.toFixed(1)}`).join('  '));
+  goTo('Office');
+}, (p)=>{ if(p.total) document.getElementById('stats').textContent =
+    `loading ${(p.loaded/1048576).toFixed(1)}/${(p.total/1048576).toFixed(1)} MB`; },
+   (e)=>{ document.getElementById('stats').textContent='GAGAL: '+e.message; });
+
+const $ = id=>document.getElementById(id);
+$('lm').oninput = e => { lmIntensity = +e.target.value/100; $('lmv').textContent = lmIntensity.toFixed(1);
+                         lmMats.forEach(m => m.lightMapIntensity = lmIntensity); };
+$('expo').oninput = e => { const v=+e.target.value/100;
+                           renderer.toneMappingExposure=v; $('expov').textContent=v.toFixed(2); };
+$('amb').oninput = e => { const v=+e.target.value/100; amb.intensity=v; $('ambv').textContent=v.toFixed(2); };
+$('emi').oninput = e => { emiBoost=+e.target.value/100; $('emiv').textContent=emiBoost.toFixed(1);
+  emissiveMats.forEach(m => m.emissiveIntensity = m.userData.baseEmissive * emiBoost); };
+$('bBloom').onclick = e => { useBloom=!useBloom; e.target.classList.toggle('on',useBloom); };
+$('bLM').onclick = e => { const on = lmMats[0]?.lightMapIntensity === 0;
+  lmMats.forEach(m => m.lightMapIntensity = on ? lmIntensity : 0);
+  e.target.classList.toggle('on', on); };
+
+let frames=0,last=performance.now(),fps=0;
+renderer.setAnimationLoop(()=>{
+  frames++; const now=performance.now();
+  if(now-last>=500){ fps=Math.round(frames*1000/(now-last)); frames=0; last=now; }
+  controls.update();
+  if(useBloom) composer.render(); else renderer.render(scene,camera);
+  if(frames===0){
+    const i=renderer.info.render;
+    $('stats').innerHTML = `<span id="fps" class="${fps>=50?'good':(fps>=25?'':'warn')}">${fps} fps</span> `
+      + `<span style="color:#999">draw ${i.calls} · tri ${(i.triangles/1000).toFixed(0)}k</span>\n${baseInfo}`;
+  }
+});
+addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight); composer.setSize(innerWidth,innerHeight); });
+</script>
+</body>
+</html>
