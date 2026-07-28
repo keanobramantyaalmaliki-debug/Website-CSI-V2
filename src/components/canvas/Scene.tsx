@@ -2,13 +2,16 @@
 
 import { Canvas } from "@react-three/fiber";
 import { Html, useProgress } from "@react-three/drei";
-import { EffectComposer, Bloom } from "@react-three/postprocessing";
+import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import { ACESFilmicToneMapping } from "three";
 import { Suspense } from "react";
 import Office from "./Office";
+import Screens from "./Screens";
 import SceneEnvironment from "./SceneEnvironment";
 import CharacterLights from "./CharacterLights";
 import CameraController from "./CameraController";
+import DustMotes from "./DustMotes";
+import { PS1Effect } from "./PS1Effect";
 
 // Posisi awal (Office) — CameraController snap ke sini saat mount.
 const START_POS: [number, number, number] = [-6.0, 1.6, 4.0];
@@ -46,7 +49,12 @@ export default function Scene() {
 
       <Suspense fallback={<Loader />}>
         <Office />
+        {/* Idle glow untuk mesh layar (TV/iMac). Struktur siap-isi:
+            VideoTexture/RenderTexture tinggal dipasang ke material.map. */}
+        <Screens />
       </Suspense>
+
+      <DustMotes />
 
       <EffectComposer>
         {/* Bloom BUKAN sekadar hiasan di scene ini: LED strip lantai & bohlam
@@ -63,6 +71,17 @@ export default function Scene() {
             threshold 0.95 = hanya emissive yang berpendar. Kalau diturunkan,
             lantai & permukaan terang ikut glow seperti lava. */}
         <Bloom intensity={1.6} luminanceThreshold={0.95} mipmapBlur />
+
+        {/* Vignette — gelapkan tepi layar supaya mata tertuju ke tengah dan
+            ruangan terasa lebih sinematik. Murni operasi 2D di ruang layar
+            (bukan cahaya scene), jadi TIDAK mempengaruhi FPS/lightmap/bloom.
+            offset 0.3 = mulai gelap agak jauh dari tepi; darkness 0.55 =
+            cukup terasa tanpa menutup sudut ruangan yang berisi objek. */}
+        <Vignette offset={0.3} darkness={0.55} />
+
+        {/* PS1 retro look — HARUS terakhir (setelah Bloom) supaya glow ikut
+            ter-pixelate & menyatu. Memberi identitas visual basement.studio. */}
+        <PS1Effect pixelSize={0.10} colorLevels={32} scanline={0.18} grain={0.06} />
       </EffectComposer>
     </Canvas>
   );

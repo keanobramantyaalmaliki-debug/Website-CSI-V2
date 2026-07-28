@@ -19,6 +19,16 @@ export const ACTIVE_KEYS = VIEW_KEYS.filter((k) => !VIEWS[k].disabled) as RoomKe
 
 const TWEEN_MS = 1400;
 
+// Parallax: seberapa jauh kamera bergeser mengikuti mouse (meter, di ruang
+// lokal kamera). Kecil saja — ini "bernafas", bukan orbit.
+const PARALLAX_X = 0.12;
+const PARALLAX_Y = 0.08;
+// Idle sway: goyang halus terus-menerus supaya frame diam tidak terasa mati.
+const SWAY_AMP = 0.015;
+const SWAY_SPEED = 0.0006; // rad per ms
+// Damping parallax (0..1 per frame ~60fps) — makin kecil makin lembut.
+const PARALLAX_DAMP = 0.05;
+
 function ease(t: number) {
   return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
 }
@@ -37,9 +47,17 @@ export default function CameraController() {
   const toTgt          = useRef(new Vector3());
   const lookTarget     = useRef(new Vector3());
 
+  // Posisi "logis" kamera (hasil tween/hash) — TERPISAH dari camera.position.
+  // Parallax & idle sway ditambahkan sebagai offset di atas basePos tiap frame,
+  // jadi navigasi tetap akurat sementara kamera terasa hidup.
+  const basePos        = useRef(new Vector3());
+  const mouse          = useRef({ x: 0, y: 0 }); // -1..1
+  const parallax       = useRef({ x: 0, y: 0 }); // damped
+
   // snap to start on mount
   useEffect(() => {
     const v = VIEWS["Office"];
+    basePos.current.copy(v.pos);
     camera.position.copy(v.pos);
     lookTarget.current.copy(v.tgt);
     camera.lookAt(v.tgt);
@@ -51,7 +69,7 @@ export default function CameraController() {
       if (animating.current) return;
       if (name === currentRoomRef.current) return;
 
-      fromPos.current.copy(camera.position);
+      fromPos.current.copy(basePos.current);
       fromTgt.current.copy(lookTarget.current);
       toPos.current.copy(VIEWS[name].pos);
       toTgt.current.copy(VIEWS[name].tgt);
@@ -63,7 +81,7 @@ export default function CameraController() {
       const hash = name === "Office" ? "" : `#${name.toLowerCase()}`;
       history.pushState(null, "", window.location.pathname + hash);
     },
-    [camera, setCurrentRoom],
+    [setCurrentRoom],
   );
 
   // register goTo in store so RoomNav (outside Canvas) can call it
@@ -94,6 +112,16 @@ export default function CameraController() {
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
   }, [gl, nextRoom, prevRoom]);
+
+  // mouse position for parallax (normalized -1..1, center = 0)
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      mouse.current.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.current.y = (e.clientY / window.innerHeight) * 2 - 1;
+    };
+    window.addEventListener("mousemove", onMove);
+    return () => window.removeEventListener("mousemove", onMove);
+  }, []);
 
   // keyboard
   useEffect(() => {
@@ -130,6 +158,7 @@ export default function CameraController() {
       if (key && !VIEWS[key].disabled) {
         currentRoomRef.current = key;
         setCurrentRoom(key);
+        basePos.current.copy(VIEWS[key].pos);
         camera.position.copy(VIEWS[key].pos);
         lookTarget.current.copy(VIEWS[key].tgt);
         camera.lookAt(VIEWS[key].tgt);
@@ -148,13 +177,33 @@ export default function CameraController() {
   }, [camera, goTo, setCurrentRoom]);
 
   useFrame(() => {
-    if (!animating.current) return;
-    const t = Math.min((performance.now() - tweenStart.current) / TWEEN_MS, 1);
-    const e = ease(t);
-    camera.position.lerpVectors(fromPos.current, toPos.current, e);
-    lookTarget.current.lerpVectors(fromTgt.current, toTgt.current, e);
+    const now = performance.now();
+
+    // 1) posisi logis dari tween (kalau sedang berpindah ruangan)
+    if (animating.current) {
+      const t = Math.min((now - tweenStart.current) / TWEEN_MS, 1);
+      const e = ease(t);
+      basePos.current.lerpVectors(fromPos.current, toPos.current, e);
+      lookTarget.current.lerpVectors(fromTgt.current, toTgt.current, e);
+      if (t >= 1) animating.current = false;
+    }
+
+    // 2) parallax mengejar mouse dengan damping (lembut, tidak patah)
+    parallax.current.x += (mouse.current.x - parallax.current.x) * PARALLAX_DAMP;
+    parallax.current.y += (mouse.current.y - parallax.current.y) * PARALLAX_DAMP;
+
+    // 3) idle sway — sinus halus supaya frame diam tetap "bernafas"
+    const swayX = Math.sin(now * SWAY_SPEED) * SWAY_AMP;
+    const swayY = Math.cos(now * SWAY_SPEED * 0.8) * SWAY_AMP;
+
+    // Pasang posisi & orientasi dari nilai logis, lalu geser di sumbu lokal
+    // kamera (right/up). Menggeser SETELAH lookAt = viewpoint bergeser tapi
+    // tetap mengarah ke target → efek parallax, bukan orbit. basePos tak
+    // pernah ikut bergeser jadi tidak ada drift antar frame.
+    camera.position.copy(basePos.current);
     camera.lookAt(lookTarget.current);
-    if (t >= 1) animating.current = false;
+    camera.translateX(parallax.current.x * PARALLAX_X + swayX);
+    camera.translateY(-parallax.current.y * PARALLAX_Y + swayY);
   });
 
   return null;
