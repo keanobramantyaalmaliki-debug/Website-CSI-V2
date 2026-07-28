@@ -6,7 +6,9 @@ import { useThree } from "@react-three/fiber";
 import type * as THREE from "three";
 import { Mesh, MeshStandardMaterial, Light } from "three";
 
-const MODEL_URL = "/3d/models/office.glb";
+// TODO(deploy): salin office-mvp1-baked.glb ke public/3d/models/ sebelum deploy produksi.
+// Saat ini dilayani via symlink public/export-test → ../export-test (dev only).
+const MODEL_URL = "/export-test/office-mvp1-baked.glb";
 
 /**
  * Kuat pencahayaan baked. 1 = sesuai hasil bake di Blender.
@@ -16,7 +18,7 @@ const MODEL_URL = "/3d/models/office.glb";
  * environment 0.18 dari Scene.tsx. Berguna untuk membuktikan lightmap bekerja;
  * kembalikan ke 1 untuk tampilan normal.
  */
-const LIGHTMAP_INTENSITY = 1;
+const LIGHTMAP_INTENSITY = 0;
 
 /**
  * Kantor Cogniti — hasil bake lightmap (lihat Documentations.md §4g).
@@ -151,3 +153,4 @@ export default function Office() {
 }
 
 useGLTF.preload(MODEL_URL);
+
