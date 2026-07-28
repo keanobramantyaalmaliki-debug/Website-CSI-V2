@@ -1,7 +1,10 @@
-/**
- * SERVICES — real content from V1 (Apa-ini/index.html, 9 services).
- * Plain grid for now — V1 had a 3D conveyor + flip cards; V2 gets its own treatment later.
- */
+"use client";
+
+import { motion } from "motion/react";
+import LineMask from "@/components/motion/LineMask";
+import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
+
+const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 const SERVICES: { num: string; title: string; desc: string; subs?: string[] }[] = [
   {
@@ -56,17 +59,26 @@ export default function Services() {
   return (
     <section id="services" className="border-y border-zinc-900 bg-zinc-950/50">
       <div className="px-6 py-24 sm:px-10 sm:py-32">
-        <p className="text-xs tracking-widest text-zinc-400 uppercase">Our Services</p>
+        {/* T6 — eyebrow */}
+        <motion.p
+          className="text-xs tracking-widest text-zinc-400 uppercase"
+          initial={{ opacity: 0, x: -8 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, ease: EASE }}
+        >
+          Our Services
+        </motion.p>
+
+        {/* T1 — line-mask heading */}
         <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
-          Building Intelligent Digital Solutions
+          <LineMask>Building Intelligent Digital Solutions</LineMask>
         </h2>
 
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {/* T2 — stagger service cards */}
+        <FadeUpList className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {SERVICES.map((s) => (
-            <article
-              key={s.num}
-              className="group rounded-lg border border-zinc-900 bg-zinc-950 p-6 transition-colors hover:border-zinc-700"
-            >
+            <FadeUpItem key={s.num} tag="article" className="group rounded-lg border border-zinc-900 bg-zinc-950 p-6 transition-colors hover:border-zinc-700">
               <span className="text-xs text-zinc-600 tabular-nums">{s.num}</span>
               <h3 className="mt-3 font-medium text-zinc-100 transition-colors group-hover:text-white">
                 {s.title}
@@ -84,9 +96,9 @@ export default function Services() {
                   ))}
                 </ul>
               )}
-            </article>
+            </FadeUpItem>
           ))}
-        </div>
+        </FadeUpList>
       </div>
     </section>
   );

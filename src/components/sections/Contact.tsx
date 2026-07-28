@@ -1,38 +1,66 @@
-/**
- * CONTACT — CTA closing the page. Real content from V1 (Apa-ini/index.html).
- * Will later be "twinned" with the meeting-room CTA inside the 3D tour (B6).
- */
+"use client";
 
+import LineMask from "@/components/motion/LineMask";
+import { motion } from "motion/react";
+
+const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
+// TODO(content): update to cogniti social handles — issue pending
 const SOCIALS = [
-  { label: "Instagram", href: "https://instagram.com/baliinteraktifperkasa" }, // TODO: update to cogniti handle
-  { label: "LinkedIn", href: "https://linkedin.com/company/bali-interaktif-perkasa" }, // TODO: update to cogniti page
+  { label: "Instagram", href: "https://instagram.com/baliinteraktifperkasa" },
+  { label: "LinkedIn", href: "https://linkedin.com/company/bali-interaktif-perkasa" },
 ];
 
 export default function Contact() {
   return (
     <section id="contact" className="px-6 py-24 sm:px-10 sm:py-32">
-      <p className="text-xs tracking-widest text-zinc-400 uppercase">Contact</p>
-      <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-5xl">
-        Let&apos;s Start A Conversation.
-      </h2>
-      <p className="mt-4 max-w-lg text-sm leading-relaxed text-zinc-500 sm:text-base">
-        We typically respond within one business day.
-      </p>
+      {/* T6 — eyebrow */}
+      <motion.p
+        className="text-xs tracking-widest text-zinc-400 uppercase"
+        initial={{ opacity: 0, x: -8 }}
+        whileInView={{ opacity: 1, x: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, ease: EASE }}
+      >
+        Contact
+      </motion.p>
 
-      <div className="mt-10 flex flex-wrap items-center gap-4">
+      {/* T1 — line-mask heading */}
+      <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-5xl">
+        <LineMask>Let&apos;s Start A Conversation.</LineMask>
+      </h2>
+
+      <motion.p
+        className="mt-4 max-w-lg text-sm leading-relaxed text-zinc-500 sm:text-base"
+        initial={{ opacity: 0, y: 8 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
+      >
+        We typically respond within one business day.
+      </motion.p>
+
+      {/* T7 — CTA links with hover underline wipe */}
+      <motion.div
+        className="mt-10 flex flex-wrap items-center gap-4"
+        initial={{ opacity: 0, y: 8 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, ease: EASE, delay: 0.25 }}
+      >
         <a
           href="mailto:hello@cogniti.id"
-          className="rounded-full bg-white px-6 py-3 text-sm font-medium text-black transition-colors hover:bg-zinc-200"
+          className="group relative rounded-full bg-white px-6 py-3 text-sm font-medium text-black transition-colors hover:bg-zinc-200"
         >
           hello@cogniti.id
         </a>
         <a
           href="#office"
-          className="rounded-full border border-zinc-800 px-6 py-3 text-sm text-zinc-300 transition-colors hover:border-zinc-600"
+          className="relative rounded-full border border-zinc-800 px-6 py-3 text-sm text-zinc-300 transition-colors hover:border-zinc-600 after:absolute after:bottom-3 after:left-6 after:h-px after:w-0 after:bg-zinc-300 after:transition-[width] after:duration-300 after:content-[''] hover:after:w-[calc(100%-3rem)]"
         >
           ↑ Back to the office
         </a>
-      </div>
+      </motion.div>
 
       <footer className="mt-24 border-t border-zinc-900 pt-6 text-xs text-zinc-600">
         <div className="flex flex-wrap items-center justify-between gap-4">

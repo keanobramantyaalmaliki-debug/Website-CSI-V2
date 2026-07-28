@@ -1,7 +1,10 @@
-/**
- * DEPLOYMENTS — real content from V1 (Apa-ini/index.html).
- * Plain layout for now — animations/effects will be rebuilt for V2 later.
- */
+"use client";
+
+import { motion } from "motion/react";
+import LineMask from "@/components/motion/LineMask";
+import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
+
+const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 const DEPLOYMENTS = [
   {
@@ -39,14 +42,30 @@ const DEPLOYMENTS = [
 export default function Deployments() {
   return (
     <section id="deployments" className="px-6 py-24 sm:px-10 sm:py-32">
-      <p className="text-xs tracking-widest text-zinc-400 uppercase">Deployments</p>
+      {/* T6 — eyebrow */}
+      <motion.p
+        className="text-xs tracking-widest text-zinc-400 uppercase"
+        initial={{ opacity: 0, x: -8 }}
+        whileInView={{ opacity: 1, x: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, ease: EASE }}
+      >
+        Deployments
+      </motion.p>
+
+      {/* T1 — line-mask heading */}
       <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
-        Built for real-world environments where decisions matter.
+        <LineMask>Built for real-world environments where decisions matter.</LineMask>
       </h2>
 
-      <div className="mt-12 divide-y divide-zinc-900 border-y border-zinc-900">
+      {/* T2 — stagger deployment rows */}
+      <FadeUpList className="mt-12 divide-y divide-zinc-900 border-y border-zinc-900">
         {DEPLOYMENTS.map((d) => (
-          <article key={d.num} className="group grid gap-2 py-6 sm:grid-cols-[4rem_1fr_1fr] sm:gap-6">
+          <FadeUpItem
+            key={d.num}
+            tag="article"
+            className="group grid gap-2 py-6 sm:grid-cols-[4rem_1fr_1fr] sm:gap-6"
+          >
             <span className="text-sm text-zinc-600 tabular-nums">{d.num}</span>
             <div>
               <h3 className="font-medium text-zinc-100 transition-colors group-hover:text-white">
@@ -55,9 +74,9 @@ export default function Deployments() {
               <p className="mt-1 text-xs text-zinc-600">{d.region}</p>
             </div>
             <p className="text-sm leading-relaxed text-zinc-500">{d.desc}</p>
-          </article>
+          </FadeUpItem>
         ))}
-      </div>
+      </FadeUpList>
     </section>
   );
 }

@@ -1,4 +1,10 @@
-/** SECTION — real content from V1 */
+"use client";
+
+import { motion } from "motion/react";
+import LineMask from "@/components/motion/LineMask";
+import Marquee from "@/components/motion/Marquee";
+
+const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 const INDUSTRIES = [
   "Government & Public Sector",
@@ -20,21 +26,26 @@ export default function Industries() {
   return (
     <section id="industries" className="border-y border-zinc-900 bg-zinc-950/50">
       <div className="px-6 py-24 sm:px-10 sm:py-32">
-        <p className="text-xs tracking-widest text-zinc-400 uppercase">Industries</p>
-        <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
-          Built Across Sectors
-        </h2>
+        {/* T6 — eyebrow */}
+        <motion.p
+          className="text-xs tracking-widest text-zinc-400 uppercase"
+          initial={{ opacity: 0, x: -8 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, ease: EASE }}
+        >
+          Industries
+        </motion.p>
 
-        <div className="mt-10 flex flex-wrap gap-3">
-          {INDUSTRIES.map((name) => (
-            <span
-              key={name}
-              className="rounded-full border border-zinc-800 bg-zinc-950 px-4 py-2 text-sm text-zinc-400"
-            >
-              {name}
-            </span>
-          ))}
-        </div>
+        {/* T1 — line-mask heading */}
+        <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
+          <LineMask>Built Across Sectors</LineMask>
+        </h2>
+      </div>
+
+      {/* T5 — marquee strip (outside padded container for full-bleed) */}
+      <div className="pb-24 sm:pb-32">
+        <Marquee items={INDUSTRIES} speed={30} />
       </div>
     </section>
   );
