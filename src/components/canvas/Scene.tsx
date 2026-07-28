@@ -11,6 +11,7 @@ import SceneEnvironment from "./SceneEnvironment";
 import CharacterLights from "./CharacterLights";
 import CameraController from "./CameraController";
 import DustMotes from "./DustMotes";
+import LedFlow from "./LedFlow";
 import { PS1Effect } from "./PS1Effect";
 
 // Posisi awal (Office) — CameraController snap ke sini saat mount.
@@ -49,9 +50,11 @@ export default function Scene() {
 
       <Suspense fallback={<Loader />}>
         <Office />
-        {/* Idle glow untuk mesh layar (TV/iMac). Struktur siap-isi:
-            VideoTexture/RenderTexture tinggal dipasang ke material.map. */}
+        {/* Layar TV/iMac beranimasi (canvas texture di dalam pipeline WebGL,
+            ikut kena Bloom + PS1). */}
         <Screens />
+        {/* LED strip lantai mengalir — hero visual Office. */}
+        <LedFlow />
       </Suspense>
 
       <DustMotes />
