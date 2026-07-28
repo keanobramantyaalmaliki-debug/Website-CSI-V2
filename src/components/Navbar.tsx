@@ -13,6 +13,8 @@ const ROOMS: { key: RoomKey; label: string }[] = [
 const PAGE_LINKS = [
   { href: "#deployments", label: "Deployments" },
   { href: "#services",    label: "Services" },
+  { href: "#industries",  label: "Industries" },
+  { href: "#careers",     label: "Careers" },
   { href: "#vision",      label: "Vision" },
 ];
 
