@@ -44,7 +44,12 @@ export default function Navbar() {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50">
-      <nav className="grid grid-cols-[1fr_auto_1fr] items-center bg-gradient-to-b from-black/80 to-transparent px-6 py-4 sm:px-10">
+      <nav className={[
+          "grid grid-cols-[1fr_auto_1fr] items-center px-6 py-4 sm:px-10 transition-colors duration-300",
+          heroInView
+            ? "bg-gradient-to-b from-black/80 to-transparent"
+            : "bg-black/90 backdrop-blur-md border-b border-white/5",
+        ].join(" ")}>
 
         {/* Kiri — logo + room name saat di hero */}
         <a href="#office" className="justify-self-start">

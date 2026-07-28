@@ -34,6 +34,7 @@ export default function SceneEnvironment() {
     const env = new RoomEnvironment();
     const target = pmrem.fromScene(env, 0.04);
 
+    // eslint-disable-next-line react-hooks/immutability -- Three.js scene mutation required for PMREMGenerator workflow; see component docstring
     scene.environment = target.texture;
     scene.environmentIntensity = 0.18;
 
