@@ -1,30 +1,17 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Html, useProgress } from "@react-three/drei";
+import { Html, useProgress } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import { ACESFilmicToneMapping } from "three";
 import { Suspense } from "react";
 import Office from "./Office";
 import SceneEnvironment from "./SceneEnvironment";
 import CharacterLights from "./CharacterLights";
+import CameraController from "./CameraController";
 
-/**
- * Konversi koordinat Blender → three.js (glTF Y-up):
- *   three(x, y, z) = blender(x, z, -y)
- * Dipakai supaya angka waypoint bisa disalin langsung dari Blender.
- */
-const bl = (x: number, y: number, z: number): [number, number, number] => [
-  x,
-  z,
-  -y,
-];
-
-// Titik awal kamera: berdiri di office area menghadap ke barat.
-// Nanti jadi salah satu waypoint saat sistem point-and-click (B2) dibuat;
-// empat lainnya ada di export-test/index.html.
-const START_POS = bl(-6.0, -4.0, 1.6);
-const START_TARGET = bl(-11.0, -3.0, 1.1);
+// Posisi awal (Office) — CameraController snap ke sini saat mount.
+const START_POS: [number, number, number] = [-6.0, 1.6, 4.0];
 
 function Loader() {
   const { progress } = useProgress();
@@ -43,13 +30,8 @@ function Loader() {
 export default function Scene() {
   return (
     <Canvas
-      // Setelan ini disalin dari viewer yang sudah diverifikasi
-      // (export-test/index.html). Mengubahnya = hasilnya beda dari yang
-      // sudah di-approve; lihat Documentations.md §4e.
       camera={{ position: START_POS, fov: 60, near: 0.05, far: 120 }}
-      // 1.5 sudah cukup tajam di layar Retina; 2.0 = render 4× piksel.
       dpr={[1, 1.5]}
-      // TIDAK ada `shadows`: bayangan sudah dipanggang ke lightmap.
       gl={{ antialias: true, powerPreference: "high-performance" }}
       onCreated={({ gl }) => {
         gl.toneMapping = ACESFilmicToneMapping;
@@ -57,26 +39,14 @@ export default function Scene() {
       }}
     >
       <color attach="background" args={["#0a0a0c"]} />
-      {/* Sengaja TANPA fog — kantor membentang 20m+, fog placeholder yang lama
-          (near 8 / far 22) akan menutupi hampir seluruh ruangan. */}
-
-      {/* Pengisi tipis untuk sisi yang tidak kena lightmap sama sekali. */}
       <ambientLight intensity={0.12} />
       <SceneEnvironment />
       <CharacterLights />
+      <CameraController />
 
       <Suspense fallback={<Loader />}>
         <Office />
       </Suspense>
-
-      {/* Sementara: bebas orbit untuk inspeksi. Diganti sistem waypoint +
-          klik pintu + parallax mouse di B2 (lihat reference/ROADMAP.md). */}
-      <OrbitControls
-        target={START_TARGET}
-        enableDamping
-        makeDefault
-        maxDistance={40}
-      />
 
       <EffectComposer>
         {/* Bloom BUKAN sekadar hiasan di scene ini: LED strip lantai & bohlam

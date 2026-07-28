@@ -1,8 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useEffect, useRef } from "react";
+import { useSceneStore } from "@/lib/store/sceneStore";
 
-// Canvas 3D hanya jalan di client (WebGL) — skip SSR
 const Scene = dynamic(() => import("@/components/canvas/Scene"), {
   ssr: false,
   loading: () => (
@@ -12,26 +13,42 @@ const Scene = dynamic(() => import("@/components/canvas/Scene"), {
   ),
 });
 
+const RoomNav = dynamic(() => import("@/components/ui/RoomNav"), { ssr: false });
+
 /**
  * HERO — 3D office tour, satu viewport penuh.
  * 3D "selesai" di sini: scroll ke bawah = keluar dari 3D masuk konten web normal.
  */
 export default function Hero() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const setHeroInView = useSceneStore((s) => s.setHeroInView);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setHeroInView(entry.isIntersecting),
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [setHeroInView]);
+
   return (
-    <section id="office" className="relative h-dvh w-full">
-      {/* Canvas mengisi section, ikut ter-scroll bersama halaman */}
+    <section ref={sectionRef} id="office" className="relative h-dvh w-full">
       <div className="absolute inset-0">
         <Scene />
       </div>
 
-      {/* Scroll indicator — kasih tahu user ada konten di bawah */}
+      {/* Room title, nav dots, scroll-to-explore hint */}
+      <RoomNav />
+
+      {/* "see our work" — scroll ke konten di bawah hero */}
       <a
         href="#deployments"
         className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2 text-zinc-500 transition-colors hover:text-zinc-300"
       >
-        <span className="text-xs tracking-widest uppercase">
-          see our work
-        </span>
+        <span className="text-xs tracking-widest uppercase">see our work</span>
         <span className="animate-bounce text-zinc-300">↓</span>
       </a>
     </section>
