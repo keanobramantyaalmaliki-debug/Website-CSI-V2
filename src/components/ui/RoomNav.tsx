@@ -14,11 +14,15 @@ const ROOM_LABELS: Record<RoomKey, string> = {
 export default function RoomNav() {
   const currentRoom = useSceneStore((s) => s.currentRoom);
   const goTo        = useSceneStore((s) => s.goTo);
+  const heroInView  = useSceneStore((s) => s.heroInView);
 
   return (
     <>
       {/* Nav bars — right side */}
-      <nav className="fixed right-6 top-1/2 z-20 flex -translate-y-1/2 flex-col items-end gap-4">
+      <nav className={[
+        "fixed right-6 top-1/2 z-20 flex -translate-y-1/2 flex-col items-end gap-4 transition-opacity duration-300",
+        heroInView ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
+      ].join(" ")}>
         {VIEW_KEYS.map((key) => {
           const disabled = !!VIEWS[key].disabled;
           const active   = key === currentRoom;
@@ -59,8 +63,8 @@ export default function RoomNav() {
         })}
       </nav>
 
-      {/* Scroll hint — only on first room */}
-      {currentRoom === "Office" && (
+      {/* Scroll hint — only on first room, only when Hero is visible */}
+      {currentRoom === "Office" && heroInView && (
         <div className="pointer-events-none fixed bottom-7 left-1/2 z-20 -translate-x-1/2 select-none text-center">
           <p className="text-[9px] uppercase tracking-[2.5px] text-white/30">
             Scroll to Explore

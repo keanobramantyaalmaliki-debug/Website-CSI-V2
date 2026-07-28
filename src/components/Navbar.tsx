@@ -26,6 +26,7 @@ const ROOM_LABELS: Record<RoomKey, string> = {
 export default function Navbar() {
   const currentRoom = useSceneStore((s) => s.currentRoom);
   const goTo        = useSceneStore((s) => s.goTo);
+  const heroInView  = useSceneStore((s) => s.heroInView);
 
   const inHero = ROOMS.some((r) => r.key === currentRoom);
 
@@ -43,7 +44,7 @@ export default function Navbar() {
           <span className="text-lg font-semibold tracking-tight text-zinc-100">
             cogniti<span className="text-orange-500">.id</span>
           </span>
-          {inHero && (
+          {inHero && heroInView && (
             <span className="mt-0.5 block text-[9px] uppercase tracking-[2.5px] text-zinc-500 transition-all duration-300">
               {ROOM_LABELS[currentRoom]}
             </span>
