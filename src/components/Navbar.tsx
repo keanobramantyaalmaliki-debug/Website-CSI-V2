@@ -1,6 +1,7 @@
 "use client";
 
 import { useSceneStore, type RoomKey } from "@/lib/store/sceneStore";
+import { useScrollSpy } from "@/lib/hooks/useScrollSpy";
 
 const ROOMS: { key: RoomKey; label: string }[] = [
   { key: "Office",   label: "Main Office" },
@@ -15,6 +16,9 @@ const PAGE_LINKS = [
   { href: "#vision",      label: "Vision" },
 ];
 
+// id section yang di-scrollspy — urut sesuai PAGE_LINKS, referensi stabil di module scope
+const SECTION_IDS = PAGE_LINKS.map((l) => l.href.slice(1));
+
 const ROOM_LABELS: Record<RoomKey, string> = {
   Office:   "Main Office",
   Lounge:   "Lounge",
@@ -24,9 +28,12 @@ const ROOM_LABELS: Record<RoomKey, string> = {
 };
 
 export default function Navbar() {
-  const currentRoom = useSceneStore((s) => s.currentRoom);
-  const goTo        = useSceneStore((s) => s.goTo);
-  const heroInView  = useSceneStore((s) => s.heroInView);
+  const currentRoom   = useSceneStore((s) => s.currentRoom);
+  const goTo          = useSceneStore((s) => s.goTo);
+  const heroInView    = useSceneStore((s) => s.heroInView);
+  const activeSection = useSceneStore((s) => s.activeSection);
+
+  useScrollSpy(SECTION_IDS);
 
   const inHero = ROOMS.some((r) => r.key === currentRoom);
 
@@ -96,16 +103,23 @@ export default function Navbar() {
             </div>
           </li>
 
-          {PAGE_LINKS.map((l) => (
-            <li key={l.href}>
-              <a
-                href={l.href}
-                className="text-xs text-zinc-400 transition-colors hover:text-orange-500 sm:text-sm"
-              >
-                {l.label}
-              </a>
-            </li>
-          ))}
+          {PAGE_LINKS.map((l) => {
+            const active = activeSection === l.href.slice(1);
+            return (
+              <li key={l.href}>
+                <a
+                  href={l.href}
+                  aria-current={active ? "true" : undefined}
+                  className={[
+                    "text-xs transition-colors hover:text-orange-500 sm:text-sm",
+                    active ? "text-orange-500" : "text-zinc-400",
+                  ].join(" ")}
+                >
+                  {l.label}
+                </a>
+              </li>
+            );
+          })}
         </ul>
 
         {/* Kanan — CTA */}
