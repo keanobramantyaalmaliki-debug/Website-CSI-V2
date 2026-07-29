@@ -5,6 +5,7 @@ import { useSceneStore } from "@/lib/store/sceneStore";
 
 const Scene = lazy(() => import("@/components/canvas/Scene"));
 const RoomNav = lazy(() => import("@/components/ui/RoomNav"));
+const BilliardHUD = lazy(() => import("@/components/ui/BilliardHUD"));
 
 /**
  * HERO — 3D office tour, satu viewport penuh.
@@ -42,6 +43,11 @@ export default function Hero() {
       {/* Room title, nav dots, scroll-to-explore hint */}
       <Suspense fallback={null}>
         <RoomNav />
+      </Suspense>
+
+      {/* Bar tenaga + kontrol minigame billiard (muncul saat meja diklik) */}
+      <Suspense fallback={null}>
+        <BilliardHUD />
       </Suspense>
 
       {/* "see our work" — scroll ke konten di bawah hero */}

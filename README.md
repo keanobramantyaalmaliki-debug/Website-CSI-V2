@@ -2,15 +2,10 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+Project ini memakai **bun** (bukan npm/yarn/pnpm). Satu-satunya lockfile yang sah adalah `bun.lock`.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
+bun install
 bun dev
 ```
 

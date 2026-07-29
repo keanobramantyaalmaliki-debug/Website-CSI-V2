@@ -50,3 +50,9 @@ export-test/*.glb
 !public/3d/models/office.glb
 
 /.claude/
+
+# manajer paket: project ini pakai BUN. Lockfile lain jangan ikut ter-commit —
+# dua lockfile berbeda manajer bikin tiap orang install & saling menimpa.
+pnpm-lock.yaml
+package-lock.json
+yarn.lock

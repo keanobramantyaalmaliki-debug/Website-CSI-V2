@@ -1,7 +1,7 @@
 # Documentations — Cogniti Office 3D Tour
 
 Dokumentasi progres pembuatan 3D office tour ala [basement.studio](https://basement.studio) untuk **cogniti.id**.
-Terakhir diupdate: **27 Juli 2026**.
+Terakhir diupdate: **29 Juli 2026**.
 
 **Status ringkas:** **5 ruangan sudah ~95% jadi** dan seluruhnya sudah jalan di browser (lihat MVP 1 di bawah):
 - **Lounge/Billiard** (§2) & **Function Room** (eks Smoking, §3) — furniture & dekorasi lengkap
@@ -10,6 +10,15 @@ Terakhir diupdate: **27 Juli 2026**.
 - **West Room / Pantry wing** — counter, sink, bar table, rak
 
 **0 material prosedural** tersisa (semua sudah di-bake ke image texture).
+
+**Per 29 Jul** — kemajuan besar di atas MVP1:
+- **GLB sudah terintegrasi ke Next.js** (§4h) — bukan lagi cuma viewer HTML. Hero fullscreen + navigasi antar-ruangan + hash routing + scrollspy navbar. Blocker path model sudah dibetulkan.
+- **5 karakter sudah TAMPIL & BERANIMASI di web** (§6b) — Leonard (sofa lounge), Person2 & Person3 (mengetik di office), Person4 (meeting room), Person5 (function room). Sudah di-export ke `office.glb` dan `CharacterLights.tsx` sudah diisi.
+- **Minigame billiard dibangun** (§6d) — fisika **cannon-es** (bukan Rapier lagi, lihat §6d) + kamera top-down + bar tenaga. ⏸️ **Ditunda**, belum di-review di browser.
+- **Konten web V1 di-port ke V2** oleh rekan tim (§4i) — 5 section baru + animasi teks pakai `motion`.
+- **Manajer paket disatukan ke `bun`** (§7) — `pnpm-lock.yaml` dihapus, build terverifikasi lolos.
+
+**⬅️ Berikutnya: review billiard di browser** (§6d) — office 3D sudah dianggap selesai; karakter function room yang jadi syarat terakhir sudah masuk.
 
 ## 🎉 MVP 1 SELESAI (27 Jul) — **50-60 FPS di browser**
 
@@ -31,7 +40,7 @@ Tahapan yang menghasilkannya — masing-masing ada sub-bab detailnya:
 
 **Pelajaran utama:** bottleneck-nya **draw call & lampu realtime**, BUKAN poly count. 995k tris tetap 50-60 fps setelah draw call ditekan dan lampu dibake. Urutan diagnosa yang benar ada di §4e.
 
-**Berikutnya:** Karakter PS1 (§6b) — low-poly ≤2.5k tris vertex-color via Mixamo.
+**Berikutnya:** ~~Karakter PS1 (§6b)~~ ✅ **5 karakter tampil di web 29 Jul** — sekarang: review visual billiard di browser + ukur ulang FPS (§6d, §4h).
 
 **Pekerjaan aktif:** melengkapi & menata furniture/aksesori office. Semua furniture office sudah **dirapikan ke sub-collection** di bawah `Office_Plan`. **Utang teknis import mentah BERES** — `OP_Electronics` diciutkan 1424 → **131 objek** (semua junk `Object_*/Node_*/pCube*/pPlane*/RootNode*` dibuang; part di-rename bersih: `OMagic_KB_/Mouse_`, `OMon_AOC_`). **11 kursi kantor Sketchfab di-rename `OChair_Office_*` & dipindah ke `OP_Seating`.** Furniture office terkini (22 Jul): **pantry cabinet L-shape `OP_Pantry` (56 part: base unit + tower + wall unit + worktop)** di pojok barat laut, **printer `OP_Printer` + shredder `OP_Shredder`** (di pojok, `OP_Electronics`), **wardrobe/kabinet rendah `OP_Ward_*`** (11 part, di `OP_Shelves`), **microwave `OP_Microwave` + bar table `OP_BarTable_*`** (pojok barat daya, di atas pantry base). **Pencahayaan office SUDAH ADA (22 Jul)** — track lighting `OP_TrackL/TrackLV_*` (8 SPOT) + lunch pendant `OP_LunchLight_*` (3 POINT), collection `OP_Lighting`. Collection sudah dirapikan (0 loose). Scene total ~**1391 objek, 254 material**.
 
@@ -598,6 +607,124 @@ Repo mereka open source: [basementstudio/website-2k25](https://github.com/baseme
 
 ---
 
+## 4h. Integrasi ke Next.js ✅ (27–28 Jul)
+
+GLB kantor sudah tidak lagi cuma jalan di viewer HTML — dia sekarang **hero fullscreen di project Next.js ini**. Struktur halaman: `[3D office tour = hero] → Deployments → Services → Vision → Contact`.
+
+### Peta file
+
+| File | Isi |
+|---|---|
+| `src/components/sections/Hero.tsx` | Section 3D setinggi `h-dvh`. `Scene` di-load `dynamic({ssr:false})`. IntersectionObserver (threshold 0.15) → `heroInView` |
+| `src/components/canvas/Scene.tsx` | `<Canvas>`: ACESFilmic exposure 1.0, `dpr [1,1.5]`, fov 60 / near 0.05 / far 120, background `#0a0a0c`, ambient 0.12, EffectComposer + Bloom |
+| `src/components/canvas/Office.tsx` | Pemuat GLB + 3 fix-up wajib (di bawah) + klik meja billiard + fade lampu |
+| `src/components/canvas/SceneEnvironment.tsx` | `RoomEnvironment` + PMREM blur 0.04, `environmentIntensity` 0.18 |
+| `src/components/canvas/CameraController.tsx` | Navigasi antar-ruangan (tween, hash routing, wheel/keyboard/touch) + `billiardView()` + `goToView` |
+| `src/components/canvas/CharacterLights.tsx` | ✅ **terisi** — key hangat + fill dingin di layer 1, khusus karakter (§6b) |
+| `src/components/canvas/billiard/` | Minigame billiard — 6 file (§6d) |
+| `src/components/ui/RoomNav.tsx` | Bar indikator vertikal kanan + hint "Scroll to Explore" |
+| `src/components/ui/BilliardHUD.tsx` | Bar tenaga kiri + tombol reset/exit + gestur bidik (§6d) |
+| `src/lib/store/sceneStore.ts` | Zustand: `currentRoom`, `heroInView`, `activeSection`, `goTo`, `goToView` + state billiard |
+| `src/lib/hooks/useScrollSpy.ts` | IntersectionObserver untuk highlight link navbar |
+
+Stack: **Next 16.2 + React 19 + three 0.185 + @react-three/fiber 9 + drei 10 + @react-three/postprocessing 3 + zustand 5 + cannon-es 0.20 + motion 12** (cannon-es untuk billiard §6d; `motion` untuk animasi teks section §4i). **`@react-three/rapier` sudah dicopot** — alasannya di §6d.
+
+### 3 fix-up wajib di `Office.tsx`
+
+Ketiganya hasil debugging panjang; kalau meleset, visualnya rusak dengan cara yang tidak kelihatan jelas.
+
+1. **`aoMap` → `lightMap`, hanya kalau `channel === 1`.** glTF tak punya slot lightmap, jadi lightmap diselundupkan lewat `occlusionTexture` (§4g) dan three membacanya sebagai `aoMap` — yang **MENGGELAPKAN**, bukan menerangi. Pembeda andal = `texture.channel`, BUKAN nama (glTF Blender tidak menyimpan `texture.name`). AO asli bawaan aset ada di channel 0/3 dan harus dibiarkan. Sekalian salin atribut UV ke `uv1` kalau belum ada — tanpa itu lightmap tidak tergambar sama sekali.
+2. **JANGAN clamp `emissiveIntensity`.** GLB membawa `KHR_materials_emissive_strength` (bohlam 12, LED strip 8). Viewer lama punya `Math.max(intensity, 2.0)` yang justru **menurunkan** nilai itu jadi 2.0 → lampu terlihat mati. Pakai nilai aslinya, plus `toneMapped=false` supaya pendarnya tidak diredam ACES.
+3. **`needsUpdate` setelah environment terpasang.** GLB selesai dimuat SETELAH `SceneEnvironment` mount, jadi shader-nya dikompilasi tanpa envMap → permukaan glossy (lantai ubin, chrome) kehilangan refleksi, terukur **0,60× lebih gelap** dari viewer acuan. `SceneEnvironment` juga wajib pakai `useLayoutEffect`, bukan `useEffect`.
+
+**Angka verifikasi** (log dev `[office]`): `lightmap=40 aoAsliDijaga=22 tanpaUV1=0 emissive=28` — plus `skinned` (jumlah SkinnedMesh karakter) sejak 29 Jul. Kalau menyimpang jauh, fix-up gagal — cek ini dulu sebelum menyalahkan setelan lighting.
+
+### Bloom bukan hiasan
+
+`intensity 1.6`, **bukan 0.4 seperti viewer HTML**. Viewer pakai `UnrealBloomPass`, di sini `BloomEffect` dari postprocessing — algoritmanya beda jadi angkanya tidak setara. Dikalibrasi terhadap screenshot viewer sampai rasio kecerahan 0.98:
+
+| intensity | 0.4 | 0.8 | 1.2 | **1.6** |
+|---|---|---|---|---|
+| rasio kecerahan vs viewer | 0.75 | 0.85 | 0.92 | **0.98** |
+
+LED strip lantai & bohlam **mengandalkan bloom untuk terlihat menyala**. Tanpa bloom, kecerahan terukur turun ke 0.53×. `luminanceThreshold 0.95` — kalau diturunkan, lantai & permukaan terang ikut glow seperti lava.
+
+### ⚠️ `LIGHTMAP_INTENSITY = 0` — dan kenapa scene tetap terang
+
+Nilainya **0**, bukan 1. Ini konsekuensi dari temuan lightmap ter-clip 8-bit (§4g): bake Cycles menghasilkan HDR float (max 189) tapi di-export sebagai WebP 8-bit yang cuma menyimpan 0–1, jadi semua nilai >1 terpotong. Yang tersisa hanya gradasi/AO halus — plus artefak seam UV yang justru terlihat kalau dinyalakan.
+
+**Artinya cahaya scene sekarang datang dari bloom + emissive + ambient 0.12 + environment 0.18, bukan dari lightmap.** Scene tetap terlihat bagus, jadi ini bukan blocker — tapi jangan salah paham menganggap lightmap sedang bekerja. Kalau mau lightmap benar-benar jadi sumber cahaya: export sebagai EXR terpisah + custom shader (cara basement.studio), atau normalisasi bake ke 0–1 lalu naikkan `lightMapIntensity` di viewer (mis. bake dibagi 4, intensity 4).
+
+### Navigasi antar-ruangan (`CameraController.tsx`)
+
+OrbitControls **diganti** dengan navigasi tur: kamera pindah antar 5 titik pandang tetap.
+
+- `VIEWS` = 5 preset (Office, Lounge, Meeting, Function, Pantry). **Pantry `disabled: true`** — dilewati saat scroll & dot-nya abu-abu.
+- Konversi sumbu Blender→three lewat helper `bl(x,y,z) → (x, z, −y)`.
+- Tween **1400 ms cubic in-out**, dengan guard `animating` supaya input beruntun tidak melompati ruangan.
+- Input: **wheel di canvas saja** (`preventDefault`, jadi scroll halaman tidak terganggu), panah keyboard, swipe touch ≥30 px.
+- **Hash routing**: `#lounge`, `#meeting`, dst via `history.pushState` + `popstate`. Office = tanpa hash.
+- `goTo` didaftarkan ke `sceneStore` supaya `RoomNav` & `Navbar` (di luar Canvas) bisa memanggilnya.
+
+### UI yang mengikuti scroll
+
+- **`heroInView`** (IntersectionObserver di Hero, threshold 0.15) — begitu 3D keluar viewport, label ruangan di navbar & `RoomNav` di-fade habis. Tanpa ini, dot ruangan mengambang di atas konten teks.
+- **Navbar background kondisional**: gradient transparan saat di hero, `bg-black/90` + backdrop-blur + border bawah saat sudah lewat. Memakai `heroInView` yang sudah ada — tidak menambah listener baru.
+- **Scrollspy** (`useScrollSpy`) — `rootMargin −45%/−45%` mempersempit garis deteksi ke pita tipis di tengah layar, jadi section tinggi jadi active tepat saat isinya di tengah, bukan saat tepi atasnya baru menyentuh viewport. Di hero, tidak ada link yang active.
+
+### ✅ BLOCKER `MODEL_URL` — SUDAH DIBETULKAN (28 Jul)
+
+`Office.tsx` sempat memuat `/export-test/office-mvp1-baked.glb` lewat symlink `public/export-test → ../export-test`. **Symlink itu tidak pernah ada di git maupun di disk**, dan GLB-nya juga tidak ada (`export-test/*.glb` di-gitignore, isinya tinggal 4 file HTML) — jadi scene mentok di loader. Diverifikasi dengan `pnpm dev`:
+
+```
+/3d/models/office.glb                → 200
+/export-test/office-mvp1-baked.glb   → 404
+```
+
+**Sudah dikembalikan ke `/3d/models/office.glb`** (nilai aslinya di commit `ad31934`; `bc0e86c` yang menggantinya ke path symlink dev-only). File itu ter-track git (9,04 MB saat itu; **8,09 MB sejak export ber-karakter 29 Jul**) dan strukturnya memang benar: 213 mesh, 227 material, 89 image, **0 lampu**, 44 material ber-`occlusionTexture` (39 di antaranya `texCoord=1` = lightmap). Draco + WebP aktif. Komentar peringatan sudah ditulis di atas konstanta itu supaya tidak terulang.
+
+### Yang belum
+
+- Post-processing PS1 (§4b) — `@react-three/postprocessing` sudah terpasang, tinggal tambah pass
+- Interaksi klik pintu — `Bvh firstHitOnly` sudah dipasang di `Office.tsx` untuk mempercepat raycast. Klik **meja billiard** sudah jalan (§6d)
+- ~~Karakter (§6b)~~ ✅ **SELESAI 29 Jul** — 5 karakter tampil & beranimasi, `CharacterLights` terisi
+- Video di layar laptop/iMac (§6c) — masih ada blocker di Blender
+- **Review visual billiard di browser** (§6d) — sekarang jadi pekerjaan berikutnya
+
+### ⚠️ Ukur ulang FPS setelah karakter masuk
+
+Angka 50-60 FPS di MVP1 diukur **sebelum** ada 5 SkinnedMesh + 2 directional light layer-1 + `frustumCulled = false`. Secara teori dampaknya kecil (skinning di GPU, lampu layer dilewati objek statis, §6b), **tapi belum diukur ulang.** Lakukan bersamaan dengan review billiard.
+
+## 4i. Konten & Animasi Teks ✅ (29 Jul — dikerjakan rekan tim)
+
+Dikerjakan paralel di branch `feature/port-konten-v1` + `feature/text-transitions`, sudah di-merge ke `main`. **Tidak ada satu pun file yang beririsan dengan pekerjaan 3D/billiard** — jadi tidak pernah ada konflik git.
+
+**Struktur halaman final** (`src/app/page.tsx`) — 5 section bertambah jadi 9 di bawah hero:
+
+```
+Hero (3D) → Manifesto → Deployments → Services → LivingArchitecture
+          → Process → Industries → Careers → Vision → Contact
+```
+
+**4 komponen animasi** (`src/components/motion/`), semuanya pakai library `motion` v12 (`motion/react`):
+
+| Komponen | Fungsi |
+|---|---|
+| `FadeUp.tsx` | Stagger fade-up (`FadeUpList` + `FadeUpItem`), stagger 0,04 s, ease `[0.16, 1, 0.3, 1]` |
+| `LineMask.tsx` | Teks muncul dari balik mask per baris |
+| `Marquee.tsx` | Teks berjalan menyamping |
+| `ScrollHighlight.tsx` | Warna kata digerakkan progres scroll (`useScroll` + `useTransform`) |
+
+> **`useReducedMotion` dipakai di semua komponen** — kalau OS pengunjung minta kurangi animasi, elemen langsung tampil terang tanpa transisi. Ini bukan tambahan opsional; menghilangkannya membuat isi halaman tak terbaca bagi sebagian pengunjung.
+
+✅ **Lockfile sudah disatukan ke bun (29 Jul)** — lihat §7.
+
+### Percobaan WebGPU + KTX2 — di-revert (27→28 Jul)
+
+Commit `38168ce` sempat mengganti viewer ke `WebGPURenderer` (three r171, fallback WebGL2) + aset KTX2/ETC1S (`office-mvp1-final.glb`, 699 KB VRAM vs 5,59 MB). **Di-revert penuh** di `8a1e0b1` keesokan harinya. Yang bertahan dari eksperimen itu bukan kodenya, tapi **idenya** — navigasi scroll/touch/keyboard + tween 1400 ms + hash routing lahir di sana, lalu ditulis ulang sebagai komponen R3F di `bc0e86c`. Kalau nanti VRAM jadi masalah, KTX2 layak dicoba lagi (di jalur R3F, bukan viewer HTML).
+
+---
+
 ## 5. Foto Referensi
 
 | Folder | Isi |
@@ -621,9 +748,15 @@ Repo mereka open source: [basementstudio/website-2k25](https://github.com/baseme
 7e. **Merge objek** (§4f) ✅ SELESAI 27 Jul — draw call 2.522 → **401**
 7f. **Bake lightmap** (§4g) ✅ SELESAI 27 Jul — 39 lampu realtime → **0**
 8. ~~Export GLB seluruh scene~~ ✅ **MVP1 SELESAI 27 Jul — 8,0 MB, 50-60 FPS.** Pecah GLB per ruangan belum perlu
-9. **Karakter PS1** (§6b) — low-poly via Mixamo, sofa lounge dulu ⬅️ **BERIKUTNYA**
-10. Integrasi ke web (project Next.js ini): scroll/tour navigation, interaksi (flip billiard), post-processing PS1, polish
-11. Dekorasi tambahan (tanaman via Sketchfab kalau integrasi di-enable)
+9. ~~**Karakter PS1** (§6b)~~ ✅ **SELESAI** — 28 Jul 4 karakter di Blender, **29 Jul jadi 5 karakter + di-export + tampil beranimasi di web**. Rencana vertex-color diubah jadi texture 256px `Closest`
+10. **Integrasi ke web** (§4h) — 🚧 sebagian besar SELESAI 27–29 Jul: GLB jadi hero fullscreen, navigasi 5 ruangan (wheel/keyboard/touch + hash routing), navbar dropdown + scrollspy, `heroInView` gating, `MODEL_URL` dibetulkan, **karakter + CharacterLights**. **Sisa:** post-processing PS1, interaksi klik pintu
+11. ~~Minigame billiard~~ ✅ **DIBANGUN 28 Jul, engine diganti cannon-es 29 Jul** (§6d) — fisika terverifikasi lewat simulasi headless. ⏸️ Belum di-review di browser
+11b. **Konten V1 → V2 + animasi teks** ✅ **SELESAI 29 Jul** (§4i, rekan tim) — 9 section + 4 komponen `motion`
+12. **⬅️ BERIKUTNYA — review billiard di browser** (§6d): posisi stik, apakah bola terlihat resin (bukan besi), framing kamera, timing fade lampu. **Sekalian ukur ulang FPS** setelah 5 karakter masuk (§4h). Setelah itu:
+    - **a. Beresi blocker layar** (§6c) — pisah material MacBook, unwrap ulang UV iMac & SMK_TV
+    - **b. Post-processing PS1** (§4b) — pass terakhir untuk look basement.studio
+    - ~~**c. Sepakati satu lockfile**~~ ✅ **SELESAI 29 Jul — bun** (§7)
+13. Dekorasi tambahan (tanaman via Sketchfab kalau integrasi di-enable)
 
 ### Polish opsional (tidak mendesak, MVP1 sudah jalan)
 - Hapus backup mesh `*_ORIG` (5 objek) saat semua final
@@ -631,24 +764,274 @@ Repo mereka open source: [basementstudio/website-2k25](https://github.com/baseme
 - 4 spot track light lain yang masih tanpa lensa (kalau ketemu saat review)
 - Post-processing PS1 (§4b) — lapisan opsional di viewer
 
-## 6b. Karakter (fase C3) 🚧 (diputuskan 27 Jul)
+## 6b. Karakter (fase C3) ✅ SELESAI — 5 KARAKTER TAMPIL & BERANIMASI DI WEB (29 Jul)
 
-Karakter low-poly gaya **PS1** untuk mengisi tour. Keputusan & temuan:
+Karakter low-poly gaya **PS1** untuk mengisi tour.
+
+### Status: 5 karakter, sudah masuk `office.glb` dan jalan di browser
+
+| Karakter | Posisi | Action | Tris | Material |
+|---|---|---|---|---|
+| **CH_Leonard** | duduk sofa lounge (−1.42, 4.39), hadap +X | `SittingIdle` (1 frame, statis) | 2.346 | `M_Character_Tex` |
+| **CH_Person2** | mengetik di `OChair_Office_8` (−5.19, −4.00), hadap −X | `Typing_Loop` (96 frame) | 2.346 (mesh **dibagi**, 0 tris tambahan) | `M_Character_Tex` |
+| **CH_Person3** | (−10.23, −4.47), rot Z 264.8° | `Typing_Loop_P3` (96 frame) | 3.102 (827 = rambut mesh sendiri) | + `6_characters.001` |
+| **CH_Person4** | `MR_Chair_09` meeting room (−15.95, −0.39), hadap −X ke TV | `Person4_Static92` (pose beku) | 3.102 | + `M_Person4_Sweater` (hitam), `M_Person4_Hair` |
+| **CH_Person5** | function room (−1.68, 8.95) | `P5_SittingIdle_Baked` (loop) | 2.346 | `M_Character_Tex` |
+
+Masing-masing di collection sendiri. Tinggi 170 cm, rig Mixamo 65 bone prefix `mixamorig9:`. Di GLB: **5 skin, 5 klip animasi**, node per karakter dipecah jadi `_Body/_Collar/_Pants/_Shoes/_Sweater` + `_Rig`.
+
+### ✅ Export & integrasi web (29 Jul, commit `05c5a66`)
+
+`office.glb` sebelumnya **tidak memuat satu pun objek `CH_*`** — kelima karakter cuma ada di Blender dan tidak pernah tampil di web. Sekarang sudah di-export ulang berikut animasinya.
+
+**Ukuran justru TURUN meski isinya bertambah: 9,04 → 8,09 MB.** Percobaan pertama membengkak jadi **78 MB** karena setelan export tidak disamakan — begitu WebP + Draco dipakai seperti export sebelumnya, ukurannya kembali normal. Pelajarannya: setelan kompresi jangan pernah diasumsikan terbawa, selalu set eksplisit tiap export (§4g).
+
+Tiga hal di sisi React (`Office.tsx`):
+
+1. **Satu mixer cukup untuk kelima karakter.** `useAnimations(animations, scene)` — kelima klip menarget bone rig masing-masing tanpa tumpang tindih, jadi tidak perlu mixer terpisah.
+2. **Dua klip berdurasi 0,03 detik itu POSE STATIS, bukan animasi.** `SittingIdle` & `Person4_Static92` = 1 frame dari Blender. Di-loop pun tak ada yang bergerak, jadi dimainkan sekali lalu `paused = true` supaya mixer tidak menghitungnya tiap frame selamanya. Tiga klip lain di-loop dengan **offset acak** (`action.time = Math.random() * duration`) supaya idle-nya tidak serempak seperti robot.
+3. **`frustumCulled = false` wajib untuk SkinnedMesh.** Bounding box-nya dihitung dari **bind pose** dan tidak ikut diperbarui saat tulang bergerak — pose duduk membuat karakter **berkedip hilang** di sudut pandang tertentu. Ini bug yang gejalanya mudah disalahartikan sebagai masalah loading.
+
+### `CharacterLights.tsx` ✅ sudah diisi
+
+Sebelumnya `return null`. Sekarang: **key light hangat** (`#ffe9d0`, intensity 2.2, dari [3,6,4]) + **fill dingin** (`#cfe0ff`, 0.7, dari [−4,3,−3]), keduanya di **layer 1** (`CHAR_LAYER`).
+
+Kenapa harus ber-layer: scene punya **0 lampu realtime** (semua baked, §4g) — itu yang bikin 50-60 FPS. Karakter tidak bisa ikut di-bake karena bergerak, tapi menyalakan lampu scene lagi berarti balik ke 14 FPS. Lampu di layer 1 **dilewati saat merender ~300 objek statis**, jadi biayanya nyaris nol. Sisi karakter di-opt-in dari `Office.tsx`.
+
+**Duplikasi cara basement:** `n.data = o.data` — mesh data DIBAGI antar karakter (`users` 2–4), armature data di-copy (pose harus independen). Person2 menambah **0 tris**. Person3/4 punya rambut & sweater sendiri karena beda material.
+
+### Texture, bukan vertex color — rencana awal DIUBAH
+
+Rencana 27 Jul "vertex color, nol texture ala basement" **dicoba dan gagal 2×**:
+- **Vertex color** → wajah bercak acak (kulit kepala hitam Mixamo + highlight tercampur), lalu pita hitam melintang di MATA (ambang garis rambut z=1.638 kena mata di z 1.64–1.66)
+- **Cap rambut solid** → batas selalu bergerigi seperti gigi gergaji; face dahi ~2 cm terlalu besar untuk dipotong rapi
+
+**Yang benar: pertahankan texture, resize saja.** 4K → **256×256** + `interpolation='Closest'` → piksel kotak-kotak justru **menguatkan** look PS1. Rambut, mata, alis, bibir tetap ada dengan batas mulus. Nol kerja tambahan.
+
+**Metallic 0.5 bawaan Mixamo = biang glossy.** Import FBX Mixamo memberi Metallic 0.5 + normal map 4K → kulit & kain memantul seperti plastik basah, DAN membuat faset low-poly menonjol tajam. Fix: Metallic 0, Roughness 0.9, Specular 0.2, lepas link normal/roughness/specular map. Keluhan "polygon keliatan banget" dan "glossy" itu **satu penyakit**.
+
+### Animasi: yang boros itu FRAME, bukan bone
+
+Animasi Mixamo mentah **20× lebih besar dari mesh-nya sendiri** (1005 KB vs mesh ~50 KB). Buang bone diam saja cuma hemat 23%.
+
+**Pangkas frame** — cari titik loop mulus dengan merekam quaternion 8 bone acuan tiap frame, lalu cari pasangan (start, start+90..180) dengan selisih pose terkecil. Hasil: frame **130–225** (96 frame, 3,2 dtk), selisih sambungan 0.185 (<0.5 mulus, >1.0 kentara meloncat).
+
+**Buang 40 bone jari** (Thumb/Index/Middle/Ring/Pinky) → reset ke rest, tangan tetap bentuk wajar. Jari paling aktif di data tapi paling tak terlihat dari kamera tur. Hasil: 520 → **103 fcurve**, 65 → 25 bone teranimasi.
+
+**Total: 1005 KB → 39 KB (−96%).**
+
+**Performa runtime animasi hampir nol** — skinning 65 bone dihitung di GPU. Yang membebani FPS adalah draw call (§4f), bukan animasi. Yang perlu diurus hanya ukuran file.
+
+### Gotcha yang mahal
+
+- **`animation_data_clear()` MEMUTUS binding slot di Blender 5.** Action bisa di-assign dan terlihat benar di UI, tapi kurvanya **tidak pernah dievaluasi** (pose bone tetap identity). Gejala: tinggi bbox = T-pose berdiri padahal action duduk sudah terpasang. Jangan "perbaiki" dengan menyalin pose lalu `keyframe_insert` — itu MENIMPA kurva, hasilnya action bernama benar tapi isinya pose dari sumber salah (kasus nyata: Person4 bernama `Typing_Loop_P4` tapi pose-nya Leonard, ketahuan user). **Cara benar:** duplikat rig sumber UTUH (`rig.copy()` + `data.copy()`) yang otomatis membawa `animation_data` sehat, lalu pindahkan mesh anak ke rig baru.
+- **Verifikasi wajib:** bandingkan quaternion bone di beberapa frame terhadap rig SUMBER (harus 0.0) DAN terhadap rig lain (harus >0). **Nama action tidak membuktikan apa-apa.**
+- **Pose bone hilang** kalau tidak dikunci jadi Action — begitu depsgraph re-evaluate, rig balik ke rest dan karakter muncul T-POSE BERDIRI di render.
+- **Ukur arah hadap dari garis bahu** (LeftShoulder→RightShoulder, rotasi −90°), BUKAN hips→foot (kaki bisa menyilang). Kasus nyata: badan menghadap 152° bukan 180°.
+- **Arah pandang bone Head = sumbu Z lokal, BUKAN Y** (Y = sepanjang tulang ke atas kubah kepala, memberi elevasi +70° yang menyesatkan). Person4 menatap TV: leher −8° + kepala −14° → meleset 1,33°.
+- **Uji ketiga sumbu sebelum menebak.** Tangan Person4 tembus meja: X−10° cuma 56→13 vertex, **Z+10° langsung 56→2**.
+- **Jangan tumpuk rotasi quaternion untuk "reset"** — reset benar: set `rotation_quaternion=(1,0,0,0)` lalu `frame_set` bolak-balik.
+- **Skala scene tidak konsisten** — jangan pakai pintu sebagai acuan (2,45 m = 1,2× nyata); **acuan yang benar = perabot** (sofa 0,78 m, kursi meeting 1,16 m ≈ 1,0×).
+- **Body Mixamo TIDAK utuh** — sudah dipotong; `Ch31_Body` 18.340 tris isinya cuma 7 loose part (kepala+leher, 2 tangan, 2 lengan bawah, 2 mata kaki), nol vertex di z 0.2–1.3. Jangan bikin logika "hapus face tertutup baju".
+- **Hair cards: hapus saja** — `Ch31_Hair` 10.860 tris / 1.100 loose part @ ~10 tris. Decimate meruntuhkannya jadi serpihan.
+- **Variabel Python tidak bertahan antar panggilan `execute_blender_code`** — rekam + tulis harus dalam SATU blok.
+
+### ⚠️ Sketchfab BUKAN untuk karakter yang perlu animasi Mixamo
+
+Dicoba 28 Jul, gagal, dibatalkan. Model "Low poly ordinary man" (3.296 tris) bagus visualnya, tapi **nama bone-nya beda total** (`Pelvis_02`, `Torso_03` vs `mixamorig9:Hips`). 4 percobaan retarget semuanya gagal — badan terpelintir, rebah, sampai jungkir balik. **Metrik bbox BUTA ARAH**; kalau harus menilai orientasi pakai metrik anatomis (`head.z − pelvis.z` harus positif).
+
+**Aturan:** karakter butuh animasi Mixamo → ambil dari **Mixamo**. Sketchfab hanya untuk props/furnitur statis. Kalau tetap mau model Sketchfab: upload FBX-nya ke Mixamo untuk auto-rig dulu.
+
+### Keputusan awal (27 Jul) — konteks
+
 - **⚠️ Ready Player Me MATI** (shutdown 31 Jan 2026, `*.readyplayer.me` = NXDOMAIN). Rencana "avatar dari foto staff" DIBATALKAN — di resolusi target wajah asli hilang jadi gumpalan; bonus tidak perlu consent staff.
 - **Pengganti** kalau perlu: Avaturn (avaturn.me, tier gratis, GLB) atau Avatar SDK/MetaPerson.
-- **Pilihan user:** sumber **Mixamo** (rig + animasi gratis, lalu decimate), gaya kasual realistis, warna **vertex color** (buang semua texture, ala basement), animasi idle loop halus. Karakter pertama di **sofa lounge**.
+- **Pilihan user:** sumber **Mixamo** (rig + animasi gratis, lalu decimate), gaya kasual realistis, animasi idle loop halus. Karakter pertama di **sofa lounge**.
 - **Target teknis:** ≤2.500 tris & ≤150 KB per karakter.
 - **Bukti dari repo basement** (`character-model-*.glb` dibedah): TOTAL 4.860 tris untuk SEMUA karakter, `images: []` (NOL texture, warna via `COLOR_0`), head cuma 484 tris, STRUKTUR MODULAR (1 body dipakai bersama, beda per orang cuma rambut & kacamata). Look PS1 = post-processing terpisah, bukan dari model.
 - **Anchor dudukan (terverifikasi):** `SofaB_Seat_0` (sofa dinding kiri lounge, bantalan kiri). Permukaan duduk z=0.48, center (−1.41, 4.38), badan hadap +X.
 - **Gotcha:** download Mixamo **FBX Binary (.fbx)**, BUKAN varian 2013/6100 (Blender 5 min. 7100). Mesin ini tidak punya converter FBX.
 
+~~**NEXT:** export GLB + load ke Next.js, lalu isi `CharacterLights.tsx`~~ ✅ **SELESAI 29 Jul** — lihat sub-bab export & integrasi di atas.
+
+## 6c. Video/Gambar di Layar 🚧 (diputuskan 28 Jul)
+
+Pertanyaan berulang: "nambahin video di laptop & iMac itu di mana?" — **Jawaban: di THREE.JS, bukan Blender.** Blender cuma bisa bake tekstur DIAM. Untuk video berputar atau konten yang bisa diganti tanpa export ulang, pakai `THREE.VideoTexture` yang membaca frame dari elemen `<video>` HTML. Gambar statis pakai `TextureLoader` biasa.
+
+**Syarat yang harus disiapkan di Blender SEBELUM export:** material layar terpisah dari casing, nama objek jelas untuk dicari di kode, UV layar kotak penuh 0–1.
+
+| Layar | Material | Siap? |
+|---|---|---|
+| Monitor AOC `OMon_AOC_*` | `OMon_Screen` terpisah | ✅ SIAP |
+| TV meeting `MR_TV_Screen` | `MR_TVScreen` terpisah | ✅ SIAP |
+| TV smoking `SMK_TV_Screen` | `M_SM_TV_Screen` terpisah | ⚠️ **tidak punya UV** |
+| iMac `OP_iMac_Screen.*` | `iMac_Screen` terpisah | ⚠️ UV cuma u[0.125, 0.875] — perlu unwrap ulang |
+| MacBook `OMacbook_D*` | `ASSET_MAT_MR` dipakai SELURUH laptop | ⚠️ **perlu pisah material layar** |
+
+**2 blocker:** material MacBook belum terpisah, UV iMac & SMK_TV belum benar.
+
+Catatan: `OMacbook_D*` = **32.751 tris each** × 5 buah — kandidat decimate besar, jauh lebih berat dari karakter.
+
+## 6d. Minigame Billiard ✅ DIBANGUN (28 Jul) — ⏸️ ditunda, belum di-review di browser
+
+Sandbox: aim + power + tembak, bola masuk lubang hilang, auto re-rack, tombol reset. **Tanpa skor/giliran/aturan 8-ball.** Fisika **cannon-es 0.20** — dipakai LANGSUNG tanpa wrapper R3F (lihat di bawah kenapa pindah dari Rapier).
+
+**Status:** logika & fisika sudah diverifikasi (simulasi headless + typecheck/lint/build bersih). **Yang belum: penilaian visual** — posisi stik, apakah bola terlihat resin (bukan besi), framing kamera, timing fade lampu. Karakter function room (syarat terakhir office 3D) sudah masuk, jadi **review browser ini sekarang jadi pekerjaan berikutnya**.
+
+### ⚠️ PINDAH DARI RAPIER KE CANNON-ES (29 Jul) — alasannya rasa main, bukan performa
+
+`@react-three/rapier` **sudah dicopot** dari `package.json`. Penyebabnya satu hal mendasar:
+
+**Yang menentukan rasa permainan billiard adalah koefisien tiap PASANGAN benda** (bola↔bola, bola↔kain, bola↔bantalan) — masing-masing punya restitusi & friksi sendiri. cannon-es menyatakannya langsung lewat `ContactMaterial`. Rapier hanya menyimpan **satu nilai per collider** lalu menggabungkannya dengan aturan (Average/Min/Max).
+
+Perbedaan itu berkali-kali menyesatkan: **kain tertulis restitusi 0,05 tapi yang berlaku 0,485** karena dirata-rata dengan nilai bola. Di cannon-es, angka yang tertulis = angka yang berlaku. Nilai koefisiennya mengikuti referensi `elijah-atkins/Billiards` yang sudah terbukti enak dimainkan.
+
+Konsekuensi teknis dari pindah ini ada tiga, semuanya sudah ditangani — dan dua di antaranya membalik keputusan yang tertulis di sub-bab bawah:
+
+### Tidak jadi modeling di Blender — aset Sketchfab siap pakai
+
+| File | Isi | Skala |
+|---|---|---|
+| `billiard_balls.glb` (908 KB) | 16 mesh × 960 tris. `Ball1`..`Ball15` + **`Ball Clube` = bola putih** (terverifikasi dari tekstur putih polos 1 KB). Tiap bola punya material + tekstur nomor + normal map sendiri | ×0,0015055 → 57 mm |
+| `billiard_cue.glb` (96 KB) | 1 mesh, 92 tris, memanjang +Z, tip di origin | ×0,02443 → 1,45 m |
+
+Keduanya sudah disalin ke `public/3d/models/`. Material aslinya `metallic 0.4` — **diturunkan ke 0,02** saat load, kalau tidak bola terlihat seperti bola besi (scene punya `scene.environment` aktif).
+
+### Peta file
+
+```
+src/components/canvas/billiard/
+  table.ts            konstanta meja (SEMUA angka hasil ukur Blender)
+  physics.ts          dunia cannon-es: ContactMaterial, step, pocket, rack
+  Balls.tsx           16 bola (mesh; fisikanya dipegang physics.ts)
+  Cue.tsx             stik
+  lamps.ts            pemudaran lampu gantung
+  BilliardGame.tsx    siklus permainan + salin fisika→mesh + lampu layer
+src/components/ui/BilliardHUD.tsx   bar tenaga kiri + tombol (z-30)
+```
+
+**`TableColliders.tsx` sudah tidak ada** — konsekuensi #2 pindah engine. Tanpa wrapper R3F, collider tidak lagi dideklarasikan sebagai komponen JSX; semuanya dibangun imperatif di `physics.ts`. Harganya: posisi fisika harus **disalin manual ke mesh** tiap frame di `BilliardGame.tsx` (dulu `@react-three/rapier` yang mengurus).
+
+Store menambah `billiardActive`/`billiardPhase`/`aimAngle`/`shotPower`/`tableRotated` + jembatan `registerBilliard`, `cueScreen` (posisi bola putih dalam piksel, untuk HUD), dan `goToView` (tween kamera bebas, dipakai juga untuk `up` & `fov`).
+
+### Bidik dengan MEMUTAR, bukan menggeser (`BilliardHUD.tsx`)
+
+Sudut bidik dihitung dari **sudut kursor terhadap bola putih di layar**, bukan geseran mendatar — supaya gerakan ke arah mana pun terbaca seperti memutar stik sungguhan. Yang dipakai **selisih sudut sejak jari menyentuh**, bukan sudut absolut, jadi stik tidak melompat ke posisi kursor saat pertama disentuh.
+
+> ⚠️ **Nilai dibaca lewat ref, BUKAN closure.** Dengan `aimAngle` di dependency array, tiap perubahan sudut membongkar & memasang ulang semua listener — posisi jari sebelumnya ikut hilang, dan stik cuma bergeser sedikit lalu macet.
+
+`cueScreen` diperbarui **hanya saat membidik dan hanya kalau bergeser >1 px**, karena setiap pembaruan memicu render React. `RoomNav` disembunyikan saat main (tombolnya menempati sisi layar yang sama dengan HUD).
+
+### Bar tenaga — kurva kuadrat, bukan linear
+
+`IMPULSE_MIN 0,05` → `IMPULSE_MAX 1,4` (referensi `elijah-atkins/Billiards`), dipetakan `min + (max−min) × p²`. **`IMPULSE_MIN` dulu 0,25 dan itu terlalu besar** — 18% dari MAX, artinya separuh bawah bar tenaga nyaris tak ada bedanya. Bola 0,17 kg → 8,2 m/s di tenaga penuh.
+
+### Geometri meja — analitis, bukan dari mesh
+
+Di `office.glb` meja sudah digabung jadi `MG_Lounge_M_PoolTable_Body`/`_Felt` demi menekan draw call, jadi bantalan & lubangnya bukan objek terpisah lagi. Semua collider dibangun dari angka ukur (Blender → three = `(x, z, −y)`):
+
+- Felt (area main) **1,06 × 2,06 m**, permukaan z=0,807 → pusat bola y=**0,8355** (`BALL_R` 0,0285)
+- Bibir rail (0,860) **2,45 cm di atas pusat bola** → bola memantul, tidak meloncat keluar
+- 6 lubang r=0,075; sensor r=0,0607 (lebih kecil, supaya bola baru dihitung masuk kalau pusatnya sudah lewat bibir)
+- Rack 5 baris, jarak antar bola 0,05814 (gap 2% — kalau bersentuhan persis, solver mendorongnya meledak)
+
+### ⚠️ Tunneling — cannon-es TIDAK punya CCD, langkah kecil jadi satu-satunya penjaga
+
+Ini konsekuensi #1 dari pindah engine. Rapier punya continuous collision detection; **cannon-es tidak**. Jadi yang mencegah bola menembus bantalan hanya ukuran langkah. Pada kecepatan maksimum 8,2 m/s (`IMPULSE_MAX` 1,4) vs bantalan setebal 80 mm:
+
+| Langkah | Jarak tempuh/langkah | Hasil |
+|---|---|---|
+| 1/60 s | 137 mm | **TEMBUS** |
+| 1/120 s | 69 mm | aman tipis |
+| **1/180 s** | **46 mm** | **margin 43% — dipakai** |
+
+`world.step(1/180, dt, 6)`. **Angka ini kritis, jangan dinaikkan tanpa hitung ulang.** `maxSubSteps 6` supaya frame yang tersendat (atau tab yang baru aktif lagi) dikejar bertahap, bukan satu lompatan besar.
+
+Efek samping yang sama juga kena deteksi lubang: zona sensor lebarnya 122 mm sedangkan bola cepat menempuh 137 mm per frame. Uji **titik** akan melewatkannya begitu saja — itu sebabnya bola cepat kadang menembus lubang. Fix: uji **SEGMEN** dari `previousPosition` ke posisi sekarang (di-update cannon-es tiap langkah, tak perlu simpan riwayat sendiri).
+
+Deteksi lubang juga pakai uji jarak mendatar, **bukan collider sensor** — cannon-es tidak punya sensor bawaan, dan uji jarak lebih dapat diprediksi karena tidak bergantung apakah dua collider kebetulan bertemu di langkah yang sama. Syarat tambahan: bola harus **sudah turun di bawah permukaan kain** (`y < FELT.y`), andal karena collider kain benar-benar berlubang di mulut lubang.
+
+### ⚠️ Bola masuk lubang: DIHAPUS dari world (bukan dibekukan)
+
+Bug yang paling mahal di fase ini. Bola yang masuk lubang **terjun bebas tanpa dasar** (tidak ada lantai di bawah lubang; y sampai −480 m), kecepatannya tidak pernah turun, jadi pengecekan "semua bola sudah diam" tidak pernah terpenuhi → **giliran menggantung selamanya**. Terbukti lewat simulasi headless: **21 dari 36 tembakan menggantung**.
+
+**Solusinya berubah setelah pindah ke cannon-es.** Dulu bola dibekukan jadi `fixed`/STATIC. Pendekatan beku menyisakan **benda mati di dalam simulasi**: masih bisa ditumbuk bola lain, masih ikut broadphase, dan harus dilewati manual di setiap loop — sumber beberapa bug susulan. Sekarang body-nya **dihapus dari world** (`world.removeBody`), dan semua masalah itu hilang dengan sendirinya. Body-nya tetap hidup di array `balls`, tinggal dipasang lagi lewat `restoreBall` saat rack atau respot — kalau lupa, bola cuma diam mengambang dan tak bisa dipukul.
+
+> **Pelajaran:** untuk fisika web, tulis simulasi headless Node yang meniru logika komponen. Jauh lebih cepat & meyakinkan daripada mencoba-coba di browser.
+
+### Kamera: tegak lurus dari atas, dihitung dari bentuk layar
+
+Pilihan user (revisi 28 Jul; awalnya sudut serong 26° karena terhalang lampu). Meja 1,30 × 2,47 m (rasio 1,90), jadi orientasinya menyesuaikan layar — meja tegak di layar 16:9 cuma mengisi **25% layar**:
+
+| Layar | Orientasi | Kamera y | FOV | Layar terisi |
+|---|---|---|---|---|
+| desktop 16:9 | mendatar | 2,45 | 49° | 82% |
+| tablet 4:3 | mendatar | 2,45 | 62° | 61% |
+| HP 9:19.5 | tegak | 2,86 | 72° | 78% |
+
+Diuji 9 bentuk layar (21:9 → 9:21): meja selalu muat penuh, kamera selalu ≥0,34 m di atas lampu, tidak menembus plafon.
+
+### ⚠️ Kamera pernah masuk KE DALAM lampu → layar putih penuh
+
+Gejalanya seluruh layar jadi bola putih raksasa. Penyebabnya **bukan** pemudaran lampu yang gagal, tapi **posisi kamera**: hitungan framing menghasilkan y=2,08 padahal lampu membentang sampai **y=2,11** — bohlam emissive (strength 12) cuma **13 cm dari lensa**, menutupi 60% layar, lalu bloom membakarnya jadi putih.
+
+Fix: ketinggian dijepit **dua sisi** — `MIN_CAM_Y = 2,11 + 0,34` (di atas lampu) dan `CEILING_LIMIT = 3,45`. Karena jadi lebih jauh, **FOV dipersempit** (46–72°, ikut di-tween); efek sampingnya justru bagus — perspektif lebih rata, mirip biliar 2D. Urutan hitung: **ketinggian dulu (dibatasi benda fisik), FOV menyusul.**
+
+> Kalau ada objek terang menutupi layar, **cek jarak kamera ke objek itu dulu** — jangan langsung menyalahkan material atau bloom.
+
+### ⚠️ Pandangan lurus ke bawah wajib set `camera.up`
+
+Arah pandang (0,−1,0) sejajar dengan up bawaan (0,1,0), dan `lookAt()` tidak bisa menentukan orientasi dari dua vektor sejajar → **meja berputar sendiri secara acak**. Tegak: `up=(0,0,−1)`; mendatar: `up=(1,0,0)`. `goToView` ikut men-tween up & fov; `goTo` biasa mengembalikan keduanya ke normal. Arah geser bidik juga **dibalik saat meja mendatar** — kalau tidak, geser kanan justru membidik ke kiri.
+
+### Menyembunyikan lampu saat main (`lamps.ts`)
+
+Dua hal yang bikin ini tidak sesederhana `visible = false`:
+
+1. **Mesh kap lampu billiard DIGABUNG dengan lampu front desk** (`MG_Lounge_M_BilLight_Cage`, 3.300 tris) demi menekan draw call. Menyembunyikan objeknya ikut memadamkan lampu front desk. Solusi: pecah geometri jadi 2 group berdasarkan posisi. Terverifikasi: **1.980 segitiga billiard (z −2,45…−0,81) vs 1.320 lampu lain (z 4,23…5,57)**, total 3.300 tidak ada yang hilang; kedua kelompok terpisah 6,7 m jadi ambangnya aman.
+2. **Material bohlam `M_BilLight_Bulb` DIPAKAI BERSAMA 8 lampu** di seluruh kantor (front desk, lunch table) — wajib di-clone dulu.
+
+Pemilihan objek pakai **posisi dunia, bukan nama** (nama node bisa berubah saat export ulang). `transparent=true` diset permanen supaya tidak memicu kompilasi ulang shader saat transisi; objek emissive juga di-`visible=false` pada opacity ~0 karena bloom masih menangkap sisa pendarnya.
+
+### KEPUTUSAN: lampu TIDAK dinaikkan di Blender
+
+Sempat diusulkan menaikkan lampu mepet plafon supaya kode hide tak perlu. **Ditolak setelah dihitung**: kamera lihat lurus ke bawah, jadi lampu harus seluruhnya di atas kamera tertinggi (3,02 m di HP layar panjang) → kap lampu jadi y 3,07–3,46, **sisa kabel cuma 15 cm** (sekarang 149 cm) — berhenti jadi cage pendant, berubah jadi lampu plafon. Padahal desain 3 pendant itu ciri khas ruangan asli & sudah di-approve setelah 4× revisi; bayangannya juga sudah ter-bake. Catatan: setelah kamera dinaikkan ke atas lampu, hide sekarang **cuma untuk kerapian**, bukan penyelamat.
+
+### ⚠️ 2 jebakan loading GLB (bikin bola putih & stik tak muncul)
+
+1. **GLTFLoader mengganti SPASI jadi garis bawah.** Node `Ball Clube` jadi **`Ball_Clube`** setelah dimuat (`sanitizeNodeName` via `createUniqueName`). Mencocokkan nama mentah dari file → bola putih tak ketemu, dan stik ikut hilang karena posisinya mengacu ke bola putih. Fix: normalkan nama sebelum dicocokkan.
+2. **Aset Sketchfab bisa punya transform WARISAN dari rantai node induk.** Stik membawa skala 0,0254 + rotasi −90°/−90°; `mesh.clone()` ikut mewarisinya → stik jadi 1 mm & salah arah. Fix: bangun `new Mesh(src.geometry, mat)` dari geometrinya saja, dan hitung skala terhadap **geometri mentah**. Bola tidak kena masalah ini (skala dunia 1,0) — **selalu cek per aset**.
+
+> **Cara verifikasi yang benar:** cek nama node dengan **memuat GLB lewat GLTFLoader sungguhan**, bukan membaca JSON GLB mentah. Sempat "terverifikasi 16/16 cocok" dari file mentah padahal di three.js gagal. Di Node bisa dijalankan dengan tempelan `globalThis.self`, `URL.createObjectURL`, `Image`, `document.createElementNS`.
+
+### Ganti GLB kantor (mis. versi ber-karakter) TIDAK perlu ngoding ulang
+
+Kode billiard cuma bergantung 3 hal dari `office.glb`: (a) nama node mengandung **`PoolTable`**, (b) material **`M_BilLight_Cage`/`M_BilLight_Bulb`**, (c) posisi meja — **angka tetap di `table.ts`, tidak dibaca dari GLB**. Bola & stik file terpisah. Kalau nama file export tetap `office.glb` → **nol perubahan kode**.
+
+✅ **Terbukti 29 Jul:** `office.glb` sudah diganti dengan versi berisi 5 karakter — **nol baris kode billiard yang berubah.** Karakter terdekat `CH_Leonard` 1,6 m dari meja (duduk di sofa), 4 lainnya 6,9–16 m.
+
+---
+
 ## 7. Alat & Setup
 
-- **Blender 5.1.2** + blender-mcp (reconnect: N-panel → Connect to Claude, lalu `/mcp`). File kerja: `~/Documents/Livingroom.blend` (~78 MB per 27 Jul)
+- **Blender 5.1.2** + blender-mcp (reconnect: N-panel → Connect to Claude, lalu `/mcp`). File kerja: `~/Documents/Livingroom.blend` (~78 MB per 27 Jul). Scene per 28 Jul: **1.767 objek, 267 material** (naik dari 1.391/254 — selisihnya karakter + `Export_Merged` 338 objek)
   - Collection `Export_Merged` = hasil merge untuk export (§4f). **Di-exclude saat modeling**, di-include saat export. Objek asli di collection kerja tidak pernah disentuh.
   - Cycles: **GPU Metal** (`prefs.compute_device_type='METAL'` + `cycles.device='GPU'`) — cek tiap sesi, default-nya CPU
 - **Polycam** untuk scanning (GLB)
-- **Next.js + pnpm** (project web ini) — masih fase asset, MVP1 GLB sudah siap diintegrasikan berikutnya
+- **Next.js + bun** (project web ini) — **GLB sudah terintegrasi (§4h)**. Stack: Next 16.2, React 19, three 0.185, @react-three/fiber 9 + drei 10 + postprocessing 3, zustand 5, Tailwind 4, **cannon-es 0.20** (billiard, §6d), **motion 12** (animasi teks, §4i). Jalankan: `bun dev` → `http://localhost:3000`
+
+### 📦 Manajer paket: BUN (diputuskan 29 Jul) — pnpm sudah tidak dipakai
+
+Sempat ada **dua lockfile berbeda manajer** hidup berdampingan (`pnpm-lock.yaml` asli + `bun.lock` dari rekan tim). Itu bikin tiap orang install dengan alat berbeda dan lockfile-nya saling menimpa. **Diputuskan: bun.**
+
+Yang dikerjakan supaya tidak terulang:
+- `pnpm-lock.yaml` **dihapus** (dari git & disk). `bun.lock` satu-satunya yang sah.
+- `package.json` diberi `"packageManager": "bun@1.3.14"` — jadi alat lain tahu (dan Corepack menolak) kalau ada yang salah pakai.
+- `.gitignore` memblokir `pnpm-lock.yaml`, `package-lock.json`, `yarn.lock`.
+- README diganti: cuma `bun install` + `bun dev`.
+
+Diverifikasi: `bun install` bersih (468 install / 541 paket, no changes) dan `bun run build` **lolos penuh** — compile 2,7 s, TypeScript 2,0 s, 4 halaman statis ter-generate.
+
+> ⚠️ **`bun` ada di `~/.bun/bin` tapi tidak selalu ada di PATH shell non-interaktif.** PATH-nya diset di `~/.zshrc`, yang tidak dimuat oleh shell non-login. Kalau ketemu `command not found: bun` di skrip/tool, pakai `export PATH="$HOME/.bun/bin:$PATH"` dulu — bukan berarti bun-nya belum terpasang.
 - **Kompresi GLB:** WebP texture + Draco geometry, keduanya lewat exporter Blender bawaan (`export_image_format='WEBP'` + `export_draco_mesh_compression_enable=True`). WebP menang telak vs Draco kalau harus pilih satu — beban terbesar = texture
 - Integrasi Sketchfab & Hyper3D di BlenderMCP: sebagian besar prosedural, tapi **ada asset Sketchfab + FBX/OBJ Apple (Magic KB/Mouse, monitor) di `OP_Electronics` + 3 kursi kantor Sketchfab loose** diimport untuk elektronik & seating office. Import ini bawa banyak node sampah (empty hierarki, mesh terpisah) — perlu dibersihkan sebelum export
 

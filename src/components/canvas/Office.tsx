@@ -1,11 +1,18 @@
 "use client";
 
-import { useMemo, useLayoutEffect } from "react";
-import { useGLTF, Bvh } from "@react-three/drei";
-import { useThree } from "@react-three/fiber";
+import { useMemo, useLayoutEffect, useEffect, useRef } from "react";
+import { useGLTF, useAnimations, Bvh } from "@react-three/drei";
+import { useThree, useFrame, type ThreeEvent } from "@react-three/fiber";
 import type * as THREE from "three";
-import { Mesh, MeshStandardMaterial, Light } from "three";
+import { Mesh, SkinnedMesh, MeshStandardMaterial, Light, LoopRepeat } from "three";
+import { useSceneStore } from "@/lib/store/sceneStore";
+import { billiardView } from "./CameraController";
+import { prepareLampFade } from "./billiard/lamps";
+import { CHAR_LAYER } from "./CharacterLights";
 
+// GLB baked ada di public/ dan ter-track git (9 MB). Jangan kembalikan ke
+// /export-test/… — path itu mengandalkan symlink dev-only yang tidak pernah ada
+// di repo, jadi hasilnya 404 dan scene mentok di loader selamanya.
 const MODEL_URL = "/3d/models/office.glb";
 
 /**
@@ -30,8 +37,13 @@ const LIGHTMAP_INTENSITY = 0;
  * meleset visualnya rusak dengan cara yang tidak kelihatan jelas.
  */
 export default function Office() {
-  const { scene } = useGLTF(MODEL_URL);
+  const { scene, animations } = useGLTF(MODEL_URL);
   const sceneEnv = useThree((s) => s.scene.environment);
+
+  // Mixer dipasang di root GLB, bukan per-karakter: kelima klip menarget node
+  // rig-nya masing-masing (sudah dicek tidak ada bone yang dipakai dua klip),
+  // jadi satu mixer cukup dan tidak ada yang saling menimpa.
+  const { actions } = useAnimations(animations, scene);
 
   // Traverse sekali saja — useGLTF nge-cache scene-nya, jadi tanpa useMemo
   // fix-up ini akan jalan ulang tiap render.
@@ -40,6 +52,7 @@ export default function Office() {
     let keptAO = 0;
     let missingUV1 = 0;
     let emissives = 0;
+    let skinned = 0;
 
     scene.traverse((obj: THREE.Object3D) => {
       if (obj instanceof Light) {
@@ -55,6 +68,20 @@ export default function Office() {
       // Bayangan sudah di lightmap — shadow realtime cuma buang FPS.
       obj.castShadow = false;
       obj.receiveShadow = false;
+
+      // ── FIX 3: karakter jangan di-frustum-cull ───────────────────────────
+      // Bounding box SkinnedMesh dihitung dari bind pose dan TIDAK ikut
+      // diperbarui saat tulang bergerak. Pose duduk membawa mesh keluar dari
+      // kotak itu, jadi three menganggapnya di luar layar dan karakter
+      // berkedip hilang di sudut pandang tertentu. Biayanya nihil: cuma 5
+      // objek yang selalu ikut dirender.
+      if (obj instanceof SkinnedMesh) {
+        obj.frustumCulled = false;
+        // enable (bukan set): objek tetap di layer 0 supaya kamera & raycast
+        // biasa tetap melihatnya, plus ikut disinari lampu CHAR_LAYER.
+        obj.layers.enable(CHAR_LAYER);
+        skinned++;
+      }
 
       const materials: THREE.Material[] = Array.isArray(obj.material)
         ? obj.material
@@ -120,12 +147,42 @@ export default function Office() {
       // menyalahkan setelan lighting.
       console.log(
         `[office] lightmap=${lightmaps} aoAsliDijaga=${keptAO} ` +
-          `tanpaUV1=${missingUV1} emissive=${emissives}`,
+          `tanpaUV1=${missingUV1} emissive=${emissives} skinned=${skinned}`,
       );
     }
 
     return scene;
   }, [scene]);
+
+  // ── Jalankan idle animation tiap karakter ────────────────────────────────
+  // Dua dari lima klip (SittingIdle, Person4_Static92) durasinya 0.03 detik —
+  // itu pose statis 1 frame dari Blender, bukan animasi. Di-loop pun tidak ada
+  // yang bergerak, jadi cukup dievaluasi sekali lalu dibekukan (paused) supaya
+  // mixer tidak menghitungnya tiap frame selamanya.
+  useEffect(() => {
+    const started: THREE.AnimationAction[] = [];
+
+    for (const action of Object.values(actions)) {
+      if (!action) continue;
+      action.reset();
+      action.setLoop(LoopRepeat, Infinity);
+
+      if (action.getClip().duration < 0.1) {
+        // Pose statis: mainkan satu frame, tahan di situ.
+        action.play();
+        action.paused = true;
+      } else {
+        // Offset tiap karakter supaya idle-nya tidak serempak seperti robot.
+        action.time = Math.random() * action.getClip().duration;
+        action.play();
+      }
+      started.push(action);
+    }
+
+    return () => {
+      for (const a of started) a.stop();
+    };
+  }, [actions]);
 
   // GLB selesai dimuat SETELAH SceneEnvironment mount, jadi material di sini
   // punya shader yang dikompilasi tanpa envMap. Tanpa needsUpdate, permukaan
@@ -142,10 +199,52 @@ export default function Office() {
     });
   }, [prepared, sceneEnv]);
 
+  // Klik meja billiard → masuk mode main. Node meja di GLB sudah digabung jadi
+  // MG_Lounge_M_PoolTable_Body/_Felt (hasil merge draw call), jadi pengecekan
+  // dilakukan pada nama node, bukan objek PT_* yang sudah tidak ada.
+  const enterBilliard = useSceneStore((s) => s.enterBilliard);
+  const goToView = useSceneStore((s) => s.goToView);
+  const billiardActive = useSceneStore((s) => s.billiardActive);
+
+  // ── Lampu gantung memudar saat main ─────────────────────────────────────
+  // Kamera minigame melihat lurus dari atas, dan 3 lampu gantung persis
+  // menutupi meja dari sudut itu. Dipudarkan berbarengan dengan gerak kamera.
+  const fader = useMemo(() => prepareLampFade(prepared), [prepared]);
+  const lampT = useRef(1);
+
+  useFrame((_, dt) => {
+    if (!fader) return;
+    const goal = billiardActive ? 0 : 1;
+    if (Math.abs(lampT.current - goal) < 0.002) return;
+    // Laju disamakan dengan tween kamera 1400ms supaya lampu selesai hilang
+    // tepat saat kamera sampai di atas meja.
+    lampT.current += (goal - lampT.current) * Math.min(1, dt * 3.2);
+    fader.set(lampT.current);
+  });
+
+  const size = useThree((s) => s.size);
+  const setTableRotated = useSceneStore((s) => s.setTableRotated);
+
+  const onClick = (e: ThreeEvent<MouseEvent>) => {
+    if (billiardActive) return;
+    let o: THREE.Object3D | null = e.object;
+    while (o) {
+      if (o.name.includes("PoolTable")) {
+        e.stopPropagation();
+        const v = billiardView(size.width / size.height);
+        enterBilliard();
+        setTableRotated(v.rotated);
+        goToView?.(v.pos, v.tgt, v.up, v.fov);
+        return;
+      }
+      o = o.parent;
+    }
+  };
+
   // Bvh mempercepat raycast di 291 objek — dipakai nanti untuk klik pintu (B2).
   return (
     <Bvh firstHitOnly>
-      <primitive object={prepared} />
+      <primitive object={prepared} onClick={onClick} />
     </Bvh>
   );
 }

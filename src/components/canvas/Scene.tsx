@@ -9,6 +9,7 @@ import Office from "./Office";
 import SceneEnvironment from "./SceneEnvironment";
 import CharacterLights from "./CharacterLights";
 import CameraController from "./CameraController";
+import BilliardGame from "./billiard/BilliardGame";
 
 // Posisi awal (Office) — CameraController snap ke sini saat mount.
 const START_POS: [number, number, number] = [-6.0, 1.6, 4.0];
@@ -46,6 +47,7 @@ export default function Scene() {
 
       <Suspense fallback={<Loader />}>
         <Office />
+        <BilliardGame />
       </Suspense>
 
       <EffectComposer>

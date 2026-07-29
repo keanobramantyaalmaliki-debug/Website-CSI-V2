@@ -1,35 +1,55 @@
 "use client";
 
+import { useRef, useLayoutEffect } from "react";
+import type * as THREE from "three";
+
 /**
- * Slot lighting untuk objek DINAMIS (karakter) — masih kosong.
- *
- * Kenapa ini ada padahal belum dipakai:
+ * Lighting untuk objek DINAMIS (karakter).
  *
  * Scene kantor punya NOL lampu realtime — semua cahaya sudah dipanggang ke
  * lightmap (Documentations.md §4g). Itu yang bikin 50-60 FPS.
  *
  * Tapi karakter TIDAK BISA ikut di-bake karena dia bergerak (idle animation).
- * Kalau ditaruh apa adanya, karakter akan tampak gelap datar seperti stiker
- * yang ditempel — tidak menyatu dengan ruangan.
+ * Kalau dibiarkan apa adanya, karakter cuma dapat ambientLight 0.12 + envmap
+ * dan tampak gelap datar seperti stiker yang ditempel.
  *
  * Solusinya BUKAN menyalakan lampu scene lagi (itu balik ke 14 FPS), tapi
- * lampu ber-LAYER yang hanya menyinari karakter:
+ * lampu ber-LAYER yang hanya menyinari karakter. Lampu di layer ini dilewati
+ * saat merender ~300 objek statis, jadi biayanya nyaris nol.
  *
- *   const CHAR_LAYER = 1;
- *   // di sini:
- *   <directionalLight
- *     position={[2, 3, 1]}
- *     intensity={1.5}
- *     ref={(l) => l?.layers.set(CHAR_LAYER)}
- *   />
- *   // di komponen karakter:
- *   character.traverse((o) => o.layers.enable(CHAR_LAYER));
- *
- * Lampu itu dilewati saat merender 291 objek statis, jadi biayanya nyaris nol.
- *
- * Rencana isi (lihat Documentations.md §6b): 1 key light hangat mengikuti arah
- * lampu ruangan terdekat + 1 fill lembut supaya sisi gelapnya tidak mati total.
+ * Sisi karakter di-opt-in dari Office.tsx lewat CHAR_LAYER.
  */
+export const CHAR_LAYER = 1;
+
 export default function CharacterLights() {
-  return null;
+  const key = useRef<THREE.DirectionalLight>(null);
+  const fill = useRef<THREE.DirectionalLight>(null);
+
+  // layers.set() harus dipanggil setelah objek ada; ref callback dijalankan
+  // tiap render jadi pakai layout effect sekali saja.
+  useLayoutEffect(() => {
+    key.current?.layers.set(CHAR_LAYER);
+    fill.current?.layers.set(CHAR_LAYER);
+  }, []);
+
+  return (
+    <>
+      {/* Key hangat dari atas-depan, meniru arah track light & lampu gantung
+          ruangan supaya karakter tidak terlihat disinari dari arah lain. */}
+      <directionalLight
+        ref={key}
+        position={[3, 6, 4]}
+        intensity={2.2}
+        color="#ffe9d0"
+      />
+      {/* Fill dingin lembut dari sisi berlawanan — tanpa ini sisi gelapnya
+          mati total jadi hitam pekat. */}
+      <directionalLight
+        ref={fill}
+        position={[-4, 3, -3]}
+        intensity={0.7}
+        color="#cfe0ff"
+      />
+    </>
+  );
 }
