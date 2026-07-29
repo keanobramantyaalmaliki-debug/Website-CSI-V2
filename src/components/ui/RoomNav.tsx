@@ -15,13 +15,17 @@ export default function RoomNav() {
   const currentRoom = useSceneStore((s) => s.currentRoom);
   const goTo        = useSceneStore((s) => s.goTo);
   const heroInView  = useSceneStore((s) => s.heroInView);
+  // Saat main billiard, navigasi ruangan disembunyikan: tombolnya menempati
+  // sisi yang sama dengan HUD dan navigasinya memang sedang dimatikan.
+  const billiardActive = useSceneStore((s) => s.billiardActive);
+  const visible = heroInView && !billiardActive;
 
   return (
     <>
       {/* Nav bars — right side */}
       <nav className={[
         "fixed right-6 top-1/2 z-20 flex -translate-y-1/2 flex-col items-end gap-4 transition-opacity duration-300",
-        heroInView ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
+        visible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
       ].join(" ")}>
         {VIEW_KEYS.map((key) => {
           const disabled = !!VIEWS[key].disabled;
@@ -64,7 +68,7 @@ export default function RoomNav() {
       </nav>
 
       {/* Scroll hint — only on first room, only when Hero is visible */}
-      {currentRoom === "Office" && heroInView && (
+      {currentRoom === "Office" && visible && (
         <div className="pointer-events-none fixed bottom-7 left-1/2 z-20 -translate-x-1/2 select-none text-center">
           <p className="text-[9px] uppercase tracking-[2.5px] text-white/30">
             Scroll to Explore

@@ -14,6 +14,7 @@ const Scene = dynamic(() => import("@/components/canvas/Scene"), {
 });
 
 const RoomNav = dynamic(() => import("@/components/ui/RoomNav"), { ssr: false });
+const BilliardHUD = dynamic(() => import("@/components/ui/BilliardHUD"), { ssr: false });
 
 /**
  * HERO — 3D office tour, satu viewport penuh.
@@ -42,6 +43,9 @@ export default function Hero() {
 
       {/* Room title, nav dots, scroll-to-explore hint */}
       <RoomNav />
+
+      {/* Bar tenaga + kontrol minigame billiard (muncul saat meja diklik) */}
+      <BilliardHUD />
 
       {/* "see our work" — scroll ke konten di bawah hero */}
       <a
