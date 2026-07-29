@@ -5,9 +5,10 @@
   "packageManager": "bun@1.2.21",
   "trustedDependencies": ["sharp", "unrs-resolver"],
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --port 3000",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
+    "preview": "vite preview --port 3000",
+    "start": "vite preview --port 3000",
     "lint": "eslint"
   },
   "dependencies": {
