@@ -46,3 +46,7 @@ next-env.d.ts
 /reference/
 
 
+# model 3D hasil export (besar, di-generate dari Blender — jangan di-track)
+export-test/*.glb
+
+/.claude/
