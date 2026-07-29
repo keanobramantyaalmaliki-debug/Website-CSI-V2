@@ -6,9 +6,7 @@ import { useThree } from "@react-three/fiber";
 import type * as THREE from "three";
 import { Mesh, MeshStandardMaterial, Light } from "three";
 
-// TODO(deploy): salin office-mvp1-baked.glb ke public/3d/models/ sebelum deploy produksi.
-// Saat ini dilayani via symlink public/export-test → ../export-test (dev only).
-const MODEL_URL = "/export-test/office-mvp1-baked.glb";
+const MODEL_URL = "/3d/models/office.glb";
 
 /**
  * Kuat pencahayaan baked. 1 = sesuai hasil bake di Blender.
@@ -116,7 +114,7 @@ export default function Office() {
       }
     });
 
-    if (process.env.NODE_ENV === "development") {
+    if (import.meta.env.DEV) {
       // Angka acuan dari GLB per 27 Jul: 40 lightmap, 22 AO asli, 0 tanpa uv1.
       // Kalau menyimpang jauh, fix-up di atas gagal — cek dulu sebelum
       // menyalahkan setelan lighting.
