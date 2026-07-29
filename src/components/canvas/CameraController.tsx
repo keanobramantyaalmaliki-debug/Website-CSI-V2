@@ -130,7 +130,7 @@ function ease(t: number) {
 }
 
 export default function CameraController() {
-  const { camera, gl } = useThree();
+  const { camera, gl, invalidate } = useThree();
   const setCurrentRoom = useSceneStore((s) => s.setCurrentRoom);
   const registerGoTo   = useSceneStore((s) => s.registerGoTo);
   const registerGoToView = useSceneStore((s) => s.registerGoToView);
@@ -154,7 +154,8 @@ export default function CameraController() {
     camera.position.copy(v.pos);
     lookTarget.current.copy(v.tgt);
     camera.lookAt(v.tgt);
-  }, [camera]);
+    invalidate();
+  }, [camera, invalidate]);
 
   const goTo = useCallback(
     (name: RoomKey) => {
@@ -178,11 +179,12 @@ export default function CameraController() {
       animating.current  = true;
       currentRoomRef.current = name;
       setCurrentRoom(name);
+      invalidate();
 
       const hash = name === "Office" ? "" : `#${name.toLowerCase()}`;
       history.pushState(null, "", window.location.pathname + hash);
     },
-    [camera, setCurrentRoom],
+    [camera, setCurrentRoom, invalidate],
   );
 
   // register goTo in store so RoomNav (outside Canvas) can call it
@@ -210,8 +212,9 @@ export default function CameraController() {
       }
       tweenStart.current = performance.now();
       animating.current = true;
+      invalidate();
     },
-    [camera],
+    [camera, invalidate],
   );
 
   useEffect(() => {
@@ -290,6 +293,7 @@ export default function CameraController() {
         camera.position.copy(VIEWS[key].pos);
         lookTarget.current.copy(VIEWS[key].tgt);
         camera.lookAt(VIEWS[key].tgt);
+        invalidate();
       }
     }
 
@@ -302,7 +306,7 @@ export default function CameraController() {
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
-  }, [camera, goTo, setCurrentRoom]);
+  }, [camera, goTo, setCurrentRoom, invalidate]);
 
   useFrame(() => {
     if (!animating.current) return;
@@ -318,6 +322,7 @@ export default function CameraController() {
       setFov(camera, fromFov.current + (toFov.current - fromFov.current) * e);
     }
     if (t >= 1) animating.current = false;
+    else invalidate();
   });
 
   return null;
