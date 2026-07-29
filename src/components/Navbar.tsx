@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useSceneStore, type RoomKey } from "@/lib/store/sceneStore";
 import { useScrollSpy } from "@/lib/hooks/useScrollSpy";
 
@@ -56,13 +55,13 @@ export default function Navbar() {
 
         {/* Kiri — logo + room name saat di hero */}
         <a href="#office" className="justify-self-start">
-          <Image
+          <img
             src="/Assets/Logo-Final.png"
             alt="CSI Logo"
             width={80}
             height={32}
             className="object-contain"
-            priority
+            fetchPriority="high"
           />
           {inHero && heroInView && (
             <span className="mt-0.5 block text-[9px] uppercase tracking-[2.5px] text-zinc-500 transition-all duration-300">

@@ -17,7 +17,7 @@ import Contact from "@/components/sections/Contact";
  * Content ported from V1 (~/Documents/Project/Apa-ini) — plain layout for now,
  * V2 gets its own animations/effects later. Scroll never moves the camera.
  */
-export default function Home() {
+export default function App() {
   return (
     <>
       <Navbar />

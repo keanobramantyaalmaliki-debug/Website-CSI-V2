@@ -1,19 +1,10 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { useSceneStore } from "@/lib/store/sceneStore";
 
-const Scene = dynamic(() => import("@/components/canvas/Scene"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-full items-center justify-center bg-black">
-      <p className="animate-pulse text-sm text-zinc-500">Turning on the lights…</p>
-    </div>
-  ),
-});
-
-const RoomNav = dynamic(() => import("@/components/ui/RoomNav"), { ssr: false });
+const Scene = lazy(() => import("@/components/canvas/Scene"));
+const RoomNav = lazy(() => import("@/components/ui/RoomNav"));
 
 /**
  * HERO — 3D office tour, satu viewport penuh.
@@ -37,11 +28,21 @@ export default function Hero() {
   return (
     <section ref={sectionRef} id="office" className="relative h-dvh w-full">
       <div className="absolute inset-0">
-        <Scene />
+        <Suspense
+          fallback={
+            <div className="flex h-full items-center justify-center bg-black">
+              <p className="animate-pulse text-sm text-zinc-500">Turning on the lights…</p>
+            </div>
+          }
+        >
+          <Scene />
+        </Suspense>
       </div>
 
       {/* Room title, nav dots, scroll-to-explore hint */}
-      <RoomNav />
+      <Suspense fallback={null}>
+        <RoomNav />
+      </Suspense>
 
       {/* "see our work" — scroll ke konten di bawah hero */}
       <a

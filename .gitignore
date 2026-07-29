@@ -13,9 +13,8 @@
 # testing
 /coverage
 
-# next.js
-/.next/
-/out/
+# vite output
+/dist
 
 # production
 /build
@@ -38,15 +37,16 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 
 # foto & referensi (lokal saja, ukurannya besar)
 /Photo-reference-office/
 /Front-desk-Photo/
 /reference/
 
-
 # model 3D hasil export (besar, di-generate dari Blender — jangan di-track)
 export-test/*.glb
+
+# GLB di public/ harus di-track (fresh clone perlu model ini)
+!public/3d/models/office.glb
 
 /.claude/
