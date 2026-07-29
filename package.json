@@ -2,10 +2,12 @@
   "name": "cogniti-web",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "bun@1.2.21",
+  "trustedDependencies": ["sharp", "unrs-resolver"],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 4002",
     "lint": "eslint"
   },
   "dependencies": {
