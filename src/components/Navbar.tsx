@@ -56,7 +56,7 @@ export default function Navbar() {
         {/* Kiri — logo + room name saat di hero */}
         <a href="#office" className="justify-self-start">
           <img
-            src="/Assets/Logo-Final.png"
+            src="/brand/Logo-Final.png"
             alt="CSI Logo"
             width={80}
             height={32}
