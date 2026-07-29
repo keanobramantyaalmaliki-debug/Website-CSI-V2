@@ -9,7 +9,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --port 3000",
     "start": "vite preview --port 3000",
-    "lint": "eslint"
+    "lint": "eslint",
+    "deploy": "bun run build && pm2 restart Website-CSI-V2"
   },
   "dependencies": {
     "@fontsource/geist-mono": "^5.2.5",
