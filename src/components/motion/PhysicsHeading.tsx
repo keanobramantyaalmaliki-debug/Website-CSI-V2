@@ -5,7 +5,7 @@ import { useReducedMotion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
 import Matter from "matter-js";
 
-const { Engine, Runner, Bodies, Composite, Constraint, Events } = Matter;
+const { Engine, Runner, Bodies, Body, Composite, Events } = Matter;
 
 interface Props {
   text: string;
@@ -28,7 +28,7 @@ export default function PhysicsHeading({ text, className }: Props) {
     const W = containerRect.width;
     const H = containerRect.height;
 
-    // Measure each word's center relative to the container top-left
+    // Measure each word's center relative to container
     const homes: { x: number; y: number; w: number; h: number }[] = [];
     wordRefs.current.forEach((el) => {
       if (!el) return;
@@ -44,39 +44,30 @@ export default function PhysicsHeading({ text, className }: Props) {
     const engine = Engine.create({ gravity: { x: 0, y: 0 } });
     const runner = Runner.create();
 
-    // One physics body per word, sized to match its rendered bounding box
     const bodies = homes.map(({ x, y, w, h }) =>
       Bodies.rectangle(x, y, Math.max(w, 10), Math.max(h, 10), {
-        frictionAir: 0.06,
-        restitution: 0.3,
-        friction: 0.1,
+        frictionAir: 0.01,  // near-zero air drag → realistic free fall
+        restitution: 0.45,
+        friction: 0.05,
       })
     );
 
-    // Spring constraint: each body is tethered to its home position
-    const springs = bodies.map((body, i) =>
-      Constraint.create({
-        bodyA: body,
-        pointB: { x: homes[i].x, y: homes[i].y },
-        stiffness: 0.06,
-        damping: 0.3,
-        length: 0,
-      })
-    );
-
-    // Floor 220px below heading (words pile up here before snapping back)
+    // Floor 260px below heading, side walls
     const wallOpts = { isStatic: true, render: { visible: false } };
     const walls = [
-      Bodies.rectangle(W / 2, H + 220 + 25, W + 60, 50, wallOpts),
-      Bodies.rectangle(-25, H / 2, 50, H + 600, wallOpts),
-      Bodies.rectangle(W + 25, H / 2, 50, H + 600, wallOpts),
+      Bodies.rectangle(W / 2, H + 260 + 25, W + 60, 50, wallOpts),
+      Bodies.rectangle(-25, H / 2, 50, H + 700, wallOpts),
+      Bodies.rectangle(W + 25, H / 2, 50, H + 700, wallOpts),
     ];
 
-    Composite.add(engine.world, [...bodies, ...springs, ...walls]);
+    Composite.add(engine.world, [...bodies, ...walls]);
     Runner.run(runner, engine);
+
+    let physicsActive = false;
 
     // Drive span transforms directly from physics — no React re-render
     Events.on(engine, "afterUpdate", () => {
+      if (!physicsActive) return;
       bodies.forEach((body, i) => {
         const el = wordRefs.current[i];
         if (!el) return;
@@ -87,13 +78,51 @@ export default function PhysicsHeading({ text, className }: Props) {
     });
 
     const fall = () => {
-      engine.gravity.y = 2.5;
-      springs.forEach((s) => { s.stiffness = 0; });
+      if (physicsActive) return;
+      physicsActive = true;
+
+      // Clear any CSS transition so physics drives freely
+      wordRefs.current.forEach((el) => {
+        if (el) el.style.transition = "none";
+      });
+
+      // Reset to home first in case of rapid re-hover
+      bodies.forEach((body, i) => {
+        Body.setPosition(body, { x: homes[i].x, y: homes[i].y });
+        Body.setAngle(body, 0);
+      });
+
+      // Strong gravity → realistic fast fall
+      engine.gravity.y = 10;
+
+      // Give each word a random nudge + tumble so they don't fall in a column
+      bodies.forEach((body) => {
+        Body.setVelocity(body, { x: (Math.random() - 0.5) * 3, y: 0 });
+        Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.1);
+      });
     };
 
     const restore = () => {
+      if (!physicsActive) return;
+      physicsActive = false;
       engine.gravity.y = 0;
-      springs.forEach((s) => { s.stiffness = 0.06; });
+
+      // Silently teleport bodies back to home
+      bodies.forEach((body, i) => {
+        Body.setPosition(body, { x: homes[i].x, y: homes[i].y });
+        Body.setVelocity(body, { x: 0, y: 0 });
+        Body.setAngle(body, 0);
+        Body.setAngularVelocity(body, 0);
+      });
+
+      // CSS transition from current visual position back to exact origin
+      requestAnimationFrame(() => {
+        wordRefs.current.forEach((el) => {
+          if (!el) return;
+          el.style.transition = "transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)";
+          el.style.transform = "translate(0px, 0px) rotate(0rad)";
+        });
+      });
     };
 
     container.addEventListener("mouseenter", fall);
@@ -108,7 +137,6 @@ export default function PhysicsHeading({ text, className }: Props) {
     };
   }, [reduced]);
 
-  // Reduced motion: render normally with LineMask
   if (reduced) {
     return (
       <h2 className={className}>
