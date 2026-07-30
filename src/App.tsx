@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/sections/Hero";
+import HeroHandoff from "@/components/motion/HeroHandoff";
 import Manifesto from "@/components/sections/Manifesto";
 import Deployments from "@/components/sections/Deployments";
 import Services from "@/components/sections/Services";
@@ -25,6 +26,7 @@ export default function App() {
       <Navbar />
       <main className="relative z-10">
         <Hero />
+        <HeroHandoff />
         <Manifesto />
         <Deployments />
         <Services />
