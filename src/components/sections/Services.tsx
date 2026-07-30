@@ -58,7 +58,7 @@ const SERVICES: { num: string; title: string; desc: string; subs?: string[] }[] 
 
 export default function Services() {
   return (
-    <section id="services" className="border-y border-zinc-900 bg-zinc-950/50">
+    <section id="services" className="relative z-10 border-y border-white/[0.08] bg-white/[0.02]">
       <div className="px-6 py-24 sm:px-10 sm:py-32">
         {/* T6 — eyebrow */}
         <motion.p
@@ -81,18 +81,18 @@ export default function Services() {
           Grid: [number-col | title | toggle] — number is visually dominant,
           desc revealed behind Disclosure. Subs pills preserved on expand.
         */}
-        <FadeUpList tag="ul" className="mt-12 border-t border-zinc-900">
+        <FadeUpList tag="ul" className="mt-12 border-t border-white/[0.08]">
           {SERVICES.map((s) => (
             <FadeUpItem key={s.num} tag="li">
               <Disclosure
-                className="border-b border-zinc-900"
+                className="border-b border-white/[0.08]"
                 triggerClassName="group w-full text-left"
                 contentClassName="pb-6 pl-16 sm:pl-32"
                 trigger={(open) => (
                   <div className="grid w-full grid-cols-[4rem_1fr_1.5rem] items-center gap-4 py-5 sm:grid-cols-[7rem_1fr_1.5rem]">
                     {/* Large number — typographic anchor */}
                     <span
-                      className="text-4xl font-bold tabular-nums leading-none text-zinc-800 transition-colors duration-200 group-hover:text-zinc-600 sm:text-5xl"
+                      className="text-4xl font-bold tabular-nums leading-none text-zinc-600 transition-colors duration-200 group-hover:text-accent sm:text-5xl"
                       aria-hidden="true"
                     >
                       {s.num}
@@ -103,7 +103,7 @@ export default function Services() {
                     </span>
                     {/* Toggle indicator */}
                     <span
-                      className={`shrink-0 text-sm text-zinc-600 transition-transform duration-200 group-hover:text-zinc-400 ${open ? "rotate-45" : "rotate-0"}`}
+                      className={`shrink-0 text-sm text-zinc-400 transition-transform duration-200 group-hover:text-zinc-200 ${open ? "rotate-45" : "rotate-0"}`}
                       aria-hidden="true"
                     >
                       +
@@ -111,7 +111,7 @@ export default function Services() {
                   </div>
                 )}
               >
-                <p className="text-sm leading-relaxed text-zinc-500">{s.desc}</p>
+                <p className="text-sm leading-relaxed text-zinc-300">{s.desc}</p>
                 {s.subs && (
                   <ul className="mt-4 flex flex-wrap gap-2">
                     {s.subs.map((sub) => (

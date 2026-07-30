@@ -60,20 +60,20 @@ function NodeItem({
   const nameColor = useTransform(progress, [start, end], ["#52525b", "#f4f4f5"]);
 
   return (
-    <motion.li style={{ opacity }} className="border-b border-zinc-900">
+    <motion.li style={{ opacity }} className="border-b border-white/[0.08]">
       <Disclosure
         triggerClassName="group flex w-full items-center gap-6 py-5 text-left"
         contentClassName="pb-5 pl-16"
         trigger={(open) => (
           <>
-            <span className="w-10 shrink-0 text-sm tabular-nums text-zinc-600">
+            <span className="w-10 shrink-0 text-sm tabular-nums text-zinc-400">
               {String(index + 1).padStart(2, "0")}
             </span>
             <motion.h3 style={{ color: nameColor }} className="flex-1 font-medium">
               {node.name}
             </motion.h3>
             <span
-              className={`shrink-0 text-sm text-zinc-600 transition-transform duration-200 group-hover:text-zinc-400 ${open ? "rotate-45" : "rotate-0"}`}
+              className={`shrink-0 text-sm text-zinc-400 transition-transform duration-200 group-hover:text-zinc-400 ${open ? "rotate-45" : "rotate-0"}`}
               aria-hidden="true"
             >
               +
@@ -81,7 +81,7 @@ function NodeItem({
           </>
         )}
       >
-        <p className="text-sm leading-relaxed text-zinc-500">{node.desc}</p>
+        <p className="text-sm leading-relaxed text-zinc-300">{node.desc}</p>
       </Disclosure>
     </motion.li>
   );
@@ -100,7 +100,7 @@ export default function LivingArchitecture() {
     <section
       ref={sectionRef}
       id="living-architecture"
-      className="border-y border-zinc-900 bg-zinc-950/50"
+      className="relative z-10 border-y border-white/[0.08] bg-white/[0.02]"
     >
       <div className="px-6 py-24 sm:px-10 sm:py-32">
         {/* T6 — eyebrow */}
@@ -120,7 +120,7 @@ export default function LivingArchitecture() {
         </h2>
 
         <motion.p
-          className="mt-4 max-w-xl text-sm leading-relaxed text-zinc-500"
+          className="mt-4 max-w-xl text-sm leading-relaxed text-zinc-400"
           initial={{ opacity: 0, y: 8 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -132,22 +132,22 @@ export default function LivingArchitecture() {
         {/* 2-col layout: list left, flow diagram right (desktop only) */}
         <div className="mt-12 lg:grid lg:grid-cols-[1fr_200px] lg:gap-12 xl:grid-cols-[1fr_220px] xl:gap-16">
           {/* Node list */}
-          <ol className="border-t border-zinc-900">
+          <ol className="border-t border-white/[0.08]">
             {NODES.map((node, i) =>
               reduced ? (
-                <li key={node.name} className="border-b border-zinc-900">
+                <li key={node.name} className="border-b border-white/[0.08]">
                   <Disclosure
                     defaultOpen
                     triggerClassName="group flex w-full items-center gap-6 py-5 text-left"
                     contentClassName="pb-5 pl-16"
                     trigger={(open) => (
                       <>
-                        <span className="w-10 shrink-0 text-sm tabular-nums text-zinc-600">
+                        <span className="w-10 shrink-0 text-sm tabular-nums text-zinc-400">
                           {String(i + 1).padStart(2, "0")}
                         </span>
                         <h3 className="flex-1 font-medium text-zinc-100">{node.name}</h3>
                         <span
-                          className={`shrink-0 text-sm text-zinc-600 transition-transform duration-200 ${open ? "rotate-45" : "rotate-0"}`}
+                          className={`shrink-0 text-sm text-zinc-400 transition-transform duration-200 ${open ? "rotate-45" : "rotate-0"}`}
                           aria-hidden="true"
                         >
                           +
@@ -155,7 +155,7 @@ export default function LivingArchitecture() {
                       </>
                     )}
                   >
-                    <p className="text-sm leading-relaxed text-zinc-500">{node.desc}</p>
+                    <p className="text-sm leading-relaxed text-zinc-300">{node.desc}</p>
                   </Disclosure>
                 </li>
               ) : (
@@ -174,7 +174,7 @@ export default function LivingArchitecture() {
           )}
         </div>
 
-        <p className="mt-8 text-xs tracking-widest text-zinc-600 uppercase">
+        <p className="mt-8 text-xs tracking-widest text-zinc-400 uppercase">
           Signal Complete&nbsp;
           <span className="text-orange-500">→</span>
           &nbsp;From awareness to action.

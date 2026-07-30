@@ -65,23 +65,23 @@ export default function Vision() {
       </motion.p>
 
       {/* 5 verb labels — stagger entrance, detail behind Disclosure */}
-      <FadeUpList tag="ol" className="mt-6 border-t border-zinc-900">
+      <FadeUpList tag="ol" className="mt-6 border-t border-white/[0.08]">
         {MISSIONS.map((m, i) => (
           <FadeUpItem key={m.verb} tag="li">
             <Disclosure
-              className="border-b border-zinc-900"
+              className="border-b border-white/[0.08]"
               triggerClassName="group flex w-full items-center gap-5 py-5 text-left"
               contentClassName="pb-5 pl-14"
               trigger={(open) => (
                 <>
-                  <span className="w-8 shrink-0 text-xs tabular-nums text-zinc-600">
+                  <span className="w-8 shrink-0 text-xs tabular-nums text-zinc-400">
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   <span className="flex-1 text-lg font-medium text-zinc-300 transition-colors duration-200 group-hover:text-zinc-100">
                     {m.verb}
                   </span>
                   <span
-                    className={`shrink-0 text-sm text-zinc-600 transition-transform duration-200 group-hover:text-zinc-400 ${open ? "rotate-45" : "rotate-0"}`}
+                    className={`shrink-0 text-sm text-zinc-400 transition-transform duration-200 group-hover:text-zinc-400 ${open ? "rotate-45" : "rotate-0"}`}
                     aria-hidden="true"
                   >
                     +
@@ -89,7 +89,7 @@ export default function Vision() {
                 </>
               )}
             >
-              <p className="text-sm leading-relaxed text-zinc-500">{m.detail}</p>
+              <p className="text-sm leading-relaxed text-zinc-300">{m.detail}</p>
             </Disclosure>
           </FadeUpItem>
         ))}

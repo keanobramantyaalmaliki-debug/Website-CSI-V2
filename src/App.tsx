@@ -20,8 +20,10 @@ import Contact from "@/components/sections/Contact";
 export default function App() {
   return (
     <>
+      {/* Ambient depth layer — fixed, non-interactive subtle grid behind everything */}
+      <div className="ambient-grid" aria-hidden="true" />
       <Navbar />
-      <main>
+      <main className="relative z-10">
         <Hero />
         <Manifesto />
         <Deployments />

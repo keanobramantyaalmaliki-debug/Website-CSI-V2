@@ -24,7 +24,7 @@ const INDUSTRIES = [
 
 export default function Industries() {
   return (
-    <section id="industries" className="border-y border-zinc-900 bg-zinc-950/50">
+    <section id="industries" className="relative z-10 border-y border-white/[0.08] bg-white/[0.02]">
       <div className="px-6 py-24 sm:px-10 sm:py-32">
         {/* T6 — eyebrow */}
         <motion.p

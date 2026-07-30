@@ -18,11 +18,13 @@ function Word({
   const reduced = useReducedMotion();
   const start = index / total;
   const end = Math.min((index + 2) / total, 1);
-  // When reduced: both stops are bright → no animation, words appear at full opacity
+  // Comfort-first: text is ALWAYS readable. The scroll effect is a subtle emphasis
+  // (already-legible → full-bright), never a dark→light reveal that hides content.
+  // When reduced: both stops are full-bright → no animation.
   const color = useTransform(
     progress,
     [start, end],
-    reduced ? ["#f4f4f5", "#f4f4f5"] : ["#52525b", "#f4f4f5"]
+    reduced ? ["#f4f5f7", "#f4f5f7"] : ["#a9adb6", "#f4f5f7"]
   );
   return (
     <motion.span style={{ color }} className="mr-[0.25em] inline-block">

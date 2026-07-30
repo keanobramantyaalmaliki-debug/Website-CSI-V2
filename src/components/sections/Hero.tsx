@@ -31,8 +31,8 @@ export default function Hero() {
       <div className="absolute inset-0">
         <Suspense
           fallback={
-            <div className="flex h-full items-center justify-center bg-black">
-              <p className="animate-pulse text-sm text-zinc-500">Turning on the lights…</p>
+            <div className="flex h-full items-center justify-center bg-[#0d0f13]">
+              <p className="animate-pulse text-sm text-zinc-400">Turning on the lights…</p>
             </div>
           }
         >

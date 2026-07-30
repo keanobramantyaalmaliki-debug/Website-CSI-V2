@@ -85,7 +85,7 @@ export default function Manifesto() {
 
         {/* Eyebrow — anchored above text block */}
         <motion.p
-          className="mb-8 text-xs tracking-widest text-zinc-500 uppercase"
+          className="mb-8 text-xs tracking-widest text-zinc-400 uppercase"
           initial={{ opacity: 0, x: -8 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true }}

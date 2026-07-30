@@ -57,7 +57,7 @@ export default function DeploymentRow({ d }: { d: DeploymentData }) {
     <motion.article
       ref={rowRef}
       onMouseMove={onMouseMove}
-      className="group relative overflow-hidden border-t border-zinc-900 py-8"
+      className="group relative overflow-hidden border-t border-white/[0.08] py-8"
       style={reduced ? undefined : { background: spotlight }}
       variants={reduced ? itemVariantsReduced : itemVariants}
     >
@@ -85,7 +85,7 @@ export default function DeploymentRow({ d }: { d: DeploymentData }) {
       <div className="relative grid gap-3 sm:grid-cols-[5rem_1fr] sm:gap-8">
         {/* Ghost numeral */}
         <span
-          className="hidden text-5xl font-mono tabular-nums leading-none text-zinc-800 transition-colors duration-300 group-hover:text-zinc-600 sm:block sm:self-start sm:pt-1"
+          className="hidden text-5xl font-mono tabular-nums leading-none text-zinc-600 transition-colors duration-300 group-hover:text-accent sm:block sm:self-start sm:pt-1"
           aria-hidden="true"
         >
           {d.num}
@@ -100,11 +100,11 @@ export default function DeploymentRow({ d }: { d: DeploymentData }) {
               <h3 className="flex-1 text-base font-medium text-zinc-200 transition-colors duration-200 group-hover:text-white sm:text-lg">
                 {d.sector}
               </h3>
-              <span className="rounded-full border border-zinc-800 px-2.5 py-0.5 text-xs text-zinc-500 transition-colors duration-200 group-hover:border-zinc-700 group-hover:text-zinc-400">
+              <span className="rounded-full border border-white/15 px-2.5 py-0.5 text-xs text-zinc-300 transition-colors duration-200 group-hover:border-accent/50 group-hover:text-zinc-100">
                 {d.region}
               </span>
               <span
-                className={`shrink-0 text-sm text-zinc-600 transition-transform duration-200 group-hover:text-zinc-400 ${open ? "rotate-45" : "rotate-0"}`}
+                className={`shrink-0 text-sm text-zinc-400 transition-transform duration-200 group-hover:text-zinc-200 ${open ? "rotate-45" : "rotate-0"}`}
                 aria-hidden="true"
               >
                 +
@@ -112,7 +112,7 @@ export default function DeploymentRow({ d }: { d: DeploymentData }) {
             </>
           )}
         >
-          <p className="text-sm leading-relaxed text-zinc-500">{d.desc}</p>
+          <p className="text-sm leading-relaxed text-zinc-300">{d.desc}</p>
         </Disclosure>
       </div>
     </motion.article>

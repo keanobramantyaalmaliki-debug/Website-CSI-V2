@@ -37,24 +37,24 @@ export default function Process() {
       </h2>
 
       {/* Horizontal numbered flow — vertical list on mobile, arrow-connected on desktop */}
-      <ol className="mt-12 flex flex-col border-t border-zinc-900 sm:flex-row sm:items-start sm:border-0 sm:gap-3">
+      <ol className="mt-12 flex flex-col border-t border-white/[0.08] sm:flex-row sm:items-start sm:border-0 sm:gap-3">
         {STEPS.map((step, i) => (
           <Fragment key={step.num}>
             <motion.li
-              className="flex items-center gap-4 border-b border-zinc-900 py-5 last:border-0 sm:flex-1 sm:flex-col sm:items-start sm:border-0 sm:py-0 sm:gap-1.5"
+              className="flex items-center gap-4 border-b border-white/[0.08] py-5 last:border-0 sm:flex-1 sm:flex-col sm:items-start sm:border-0 sm:py-0 sm:gap-1.5"
               initial={reduced ? false : { opacity: 0, y: 8 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.45, delay: i * 0.07, ease: EASE }}
             >
-              <span className="shrink-0 text-xs tabular-nums text-zinc-600 sm:mb-0.5">
+              <span className="shrink-0 text-xs tabular-nums text-zinc-400 sm:mb-0.5">
                 {step.num}
               </span>
               <h3 className="text-sm font-medium text-zinc-300">{step.title}</h3>
             </motion.li>
             {i < STEPS.length - 1 && (
               <span
-                className="hidden sm:flex sm:items-start sm:pt-0.5 shrink-0 select-none text-zinc-700"
+                className="hidden sm:flex sm:items-start sm:pt-0.5 shrink-0 select-none text-zinc-600"
                 aria-hidden="true"
               >
                 →
