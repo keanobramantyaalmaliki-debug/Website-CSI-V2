@@ -96,20 +96,14 @@ export default function PhysicsHeading({ text, className }: Props) {
       springs.forEach((s) => { s.stiffness = 0.06; });
     };
 
-    container.addEventListener("mousedown", fall);
-    container.addEventListener("touchstart", fall, { passive: true });
-    window.addEventListener("mouseup", restore);
-    window.addEventListener("touchend", restore);
+    container.addEventListener("mouseenter", fall);
     container.addEventListener("mouseleave", restore);
 
     return () => {
       Events.off(engine, "afterUpdate");
       Runner.stop(runner);
       Engine.clear(engine);
-      container.removeEventListener("mousedown", fall);
-      container.removeEventListener("touchstart", fall);
-      window.removeEventListener("mouseup", restore);
-      window.removeEventListener("touchend", restore);
+      container.removeEventListener("mouseenter", fall);
       container.removeEventListener("mouseleave", restore);
     };
   }, [reduced]);
@@ -124,7 +118,7 @@ export default function PhysicsHeading({ text, className }: Props) {
   }
 
   return (
-    <div ref={containerRef} style={{ cursor: "pointer" }}>
+    <div ref={containerRef}>
       <h2 className={className}>
         {words.map((word, i) => (
           <span
