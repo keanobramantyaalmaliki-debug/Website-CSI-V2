@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "motion/react";
-import LineMask from "@/components/motion/LineMask";
+import CharReveal from "@/components/motion/CharReveal";
+import CursorSpotlight from "@/components/motion/CursorSpotlight";
 import Disclosure from "@/components/motion/Disclosure";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 
@@ -59,7 +60,7 @@ const SERVICES: { num: string; title: string; desc: string; subs?: string[] }[] 
 export default function Services() {
   return (
     <section id="services" className="relative z-10 border-y border-white/[0.08] bg-white/[0.02]">
-      <div className="px-6 py-24 sm:px-10 sm:py-32">
+      <CursorSpotlight className="px-6 py-24 sm:px-10 sm:py-32">
         {/* T6 — eyebrow */}
         <motion.p
           className="text-xs tracking-widest text-zinc-400 uppercase"
@@ -71,9 +72,9 @@ export default function Services() {
           Our Services
         </motion.p>
 
-        {/* T1 — line-mask heading */}
+        {/* T7 — per-character reveal heading */}
         <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
-          <LineMask>Building Intelligent Digital Solutions</LineMask>
+          <CharReveal text="Building Intelligent Digital Solutions" />
         </h2>
 
         {/*
@@ -89,7 +90,7 @@ export default function Services() {
                 triggerClassName="group w-full text-left"
                 contentClassName="pb-6 pl-16 sm:pl-32"
                 trigger={(open) => (
-                  <div className="grid w-full grid-cols-[4rem_1fr_1.5rem] items-center gap-4 py-5 sm:grid-cols-[7rem_1fr_1.5rem]">
+                  <div className="relative grid w-full grid-cols-[4rem_1fr_1.5rem] items-center gap-4 py-5 sm:grid-cols-[7rem_1fr_1.5rem]">
                     {/* Large number — typographic anchor */}
                     <span
                       className="text-4xl font-bold tabular-nums leading-none text-zinc-600 transition-colors duration-200 group-hover:text-accent sm:text-5xl"
@@ -97,8 +98,8 @@ export default function Services() {
                     >
                       {s.num}
                     </span>
-                    {/* Title */}
-                    <span className="font-medium text-zinc-300 transition-colors duration-200 group-hover:text-zinc-100">
+                    {/* Title — subtle shift toward number on hover */}
+                    <span className="font-medium text-zinc-300 transition-[color,transform] duration-200 group-hover:translate-x-1 group-hover:text-zinc-100">
                       {s.title}
                     </span>
                     {/* Toggle indicator */}
@@ -108,6 +109,11 @@ export default function Services() {
                     >
                       +
                     </span>
+                    {/* Accent wipe — left→right on hover */}
+                    <span
+                      className="absolute inset-x-0 bottom-0 h-px origin-left scale-x-0 bg-accent transition-transform duration-300 ease-out group-hover:scale-x-100"
+                      aria-hidden="true"
+                    />
                   </div>
                 )}
               >
@@ -128,7 +134,7 @@ export default function Services() {
             </FadeUpItem>
           ))}
         </FadeUpList>
-      </div>
+      </CursorSpotlight>
     </section>
   );
 }
