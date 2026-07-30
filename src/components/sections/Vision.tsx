@@ -2,16 +2,32 @@
 
 import { motion } from "motion/react";
 import ScrollHighlight from "@/components/motion/ScrollHighlight";
+import Disclosure from "@/components/motion/Disclosure";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-const MISSIONS = [
-  "Deliver innovative and high-quality software solutions.",
-  "Accelerate digital transformation through intelligent technologies.",
-  "Integrate Artificial Intelligence into practical business applications.",
-  "Build long-term partnerships based on trust, collaboration, and excellence.",
-  "Continuously innovate to help organizations thrive in the digital era.",
+const MISSIONS: { verb: string; detail: string }[] = [
+  {
+    verb: "Deliver",
+    detail: "Innovative and high-quality software solutions.",
+  },
+  {
+    verb: "Accelerate",
+    detail: "Digital transformation through intelligent technologies.",
+  },
+  {
+    verb: "Integrate",
+    detail: "Artificial Intelligence into practical business applications.",
+  },
+  {
+    verb: "Partner",
+    detail: "Long-term relationships built on trust, collaboration, and excellence.",
+  },
+  {
+    verb: "Innovate",
+    detail: "Continuously help organizations thrive in the digital era.",
+  },
 ];
 
 const VISION =
@@ -31,7 +47,7 @@ export default function Vision() {
         Our Vision
       </motion.p>
 
-      {/* T3 — scroll word-highlight (bookend with Manifesto) */}
+      {/* T3 — scroll word-highlight bookend */}
       <ScrollHighlight
         text={VISION}
         className="mt-3 max-w-2xl text-2xl font-semibold leading-snug tracking-tight sm:text-3xl"
@@ -48,14 +64,33 @@ export default function Vision() {
         Our Mission
       </motion.p>
 
-      {/* T2 — stagger missions */}
-      <FadeUpList tag="ol" className="mt-6 space-y-4">
+      {/* 5 verb labels — stagger entrance, detail behind Disclosure */}
+      <FadeUpList tag="ol" className="mt-6 border-t border-zinc-900">
         {MISSIONS.map((m, i) => (
-          <FadeUpItem key={m} tag="li" className="flex gap-4 border-b border-zinc-900 pb-4">
-            <span className="text-sm text-zinc-600 tabular-nums">
-              {String(i + 1).padStart(2, "0")}
-            </span>
-            <p className="text-sm leading-relaxed text-zinc-300 sm:text-base">{m}</p>
+          <FadeUpItem key={m.verb} tag="li">
+            <Disclosure
+              className="border-b border-zinc-900"
+              triggerClassName="group flex w-full items-center gap-5 py-5 text-left"
+              contentClassName="pb-5 pl-14"
+              trigger={(open) => (
+                <>
+                  <span className="w-8 shrink-0 text-xs tabular-nums text-zinc-600">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span className="flex-1 text-lg font-medium text-zinc-300 transition-colors duration-200 group-hover:text-zinc-100">
+                    {m.verb}
+                  </span>
+                  <span
+                    className={`shrink-0 text-sm text-zinc-600 transition-transform duration-200 group-hover:text-zinc-400 ${open ? "rotate-45" : "rotate-0"}`}
+                    aria-hidden="true"
+                  >
+                    +
+                  </span>
+                </>
+              )}
+            >
+              <p className="text-sm leading-relaxed text-zinc-500">{m.detail}</p>
+            </Disclosure>
           </FadeUpItem>
         ))}
       </FadeUpList>

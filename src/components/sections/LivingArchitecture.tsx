@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { motion, useScroll, useTransform, useReducedMotion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
+import Disclosure from "@/components/motion/Disclosure";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -39,8 +40,7 @@ const NODES: { name: string; desc: string }[] = [
 
 /**
  * T4 (simplified) — scroll-activated node reveal.
- * Each node progressively lights up as the section scrolls through the viewport.
- * Full sticky-pin (T4 spec) deferred; this delivers the same "sequence unfolding" feel.
+ * Name lights up progressively; desc is hidden behind Disclosure until opened.
  */
 function NodeItem({
   node,
@@ -55,24 +55,33 @@ function NodeItem({
   const start = index / n;
   const end = Math.min((index + 1.5) / n, 1);
 
-  const opacity = useTransform(progress, [start, end], [0.15, 1]);
+  const opacity = useTransform(progress, [start, end], [0.2, 1]);
   const nameColor = useTransform(progress, [start, end], ["#52525b", "#f4f4f5"]);
-  const descColor = useTransform(progress, [start, end], ["#27272a", "#71717a"]);
 
   return (
-    <motion.li
-      style={{ opacity }}
-      className="grid gap-2 py-6 sm:grid-cols-[4rem_12rem_1fr] sm:gap-6"
-    >
-      <span className="text-sm text-zinc-600 tabular-nums">
-        {String(index + 1).padStart(2, "0")}
-      </span>
-      <motion.h3 style={{ color: nameColor }} className="font-medium">
-        {node.name}
-      </motion.h3>
-      <motion.p style={{ color: descColor }} className="text-sm leading-relaxed">
-        {node.desc}
-      </motion.p>
+    <motion.li style={{ opacity }} className="border-b border-zinc-900">
+      <Disclosure
+        triggerClassName="group flex w-full items-center gap-6 py-5 text-left"
+        contentClassName="pb-5 pl-16"
+        trigger={(open) => (
+          <>
+            <span className="w-10 shrink-0 text-sm tabular-nums text-zinc-600">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <motion.h3 style={{ color: nameColor }} className="flex-1 font-medium">
+              {node.name}
+            </motion.h3>
+            <span
+              className={`shrink-0 text-sm text-zinc-600 transition-transform duration-200 group-hover:text-zinc-400 ${open ? "rotate-45" : "rotate-0"}`}
+              aria-hidden="true"
+            >
+              +
+            </span>
+          </>
+        )}
+      >
+        <p className="text-sm leading-relaxed text-zinc-500">{node.desc}</p>
+      </Disclosure>
     </motion.li>
   );
 }
@@ -81,7 +90,6 @@ export default function LivingArchitecture() {
   const sectionRef = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
 
-  // Track scroll progress through the full section height
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start 0.7", "end 0.3"],
@@ -111,26 +119,41 @@ export default function LivingArchitecture() {
         </h2>
 
         <motion.p
-          className="mt-4 max-w-2xl text-sm leading-relaxed text-zinc-500"
+          className="mt-4 max-w-xl text-sm leading-relaxed text-zinc-500"
           initial={{ opacity: 0, y: 8 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
         >
-          We connect signals, context, knowledge, and workflows into adaptive systems that help
-          organizations move from awareness to action.
+          Signals, context, and knowledge — adaptive systems that move organizations from awareness to action.
         </motion.p>
 
-        {/* Nodes — scroll-activated if motion allowed, static fallback if reduced */}
-        <ol className="mt-12 divide-y divide-zinc-900 border-y border-zinc-900">
+        {/* Nodes — scroll-activated if motion allowed, static + defaultOpen if reduced */}
+        <ol className="mt-12 border-t border-zinc-900">
           {NODES.map((node, i) =>
             reduced ? (
-              <li key={node.name} className="grid gap-2 py-6 sm:grid-cols-[4rem_12rem_1fr] sm:gap-6">
-                <span className="text-sm text-zinc-600 tabular-nums">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <h3 className="font-medium text-zinc-100">{node.name}</h3>
-                <p className="text-sm leading-relaxed text-zinc-500">{node.desc}</p>
+              <li key={node.name} className="border-b border-zinc-900">
+                <Disclosure
+                  defaultOpen
+                  triggerClassName="group flex w-full items-center gap-6 py-5 text-left"
+                  contentClassName="pb-5 pl-16"
+                  trigger={(open) => (
+                    <>
+                      <span className="w-10 shrink-0 text-sm tabular-nums text-zinc-600">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <h3 className="flex-1 font-medium text-zinc-100">{node.name}</h3>
+                      <span
+                        className={`shrink-0 text-sm text-zinc-600 transition-transform duration-200 ${open ? "rotate-45" : "rotate-0"}`}
+                        aria-hidden="true"
+                      >
+                        +
+                      </span>
+                    </>
+                  )}
+                >
+                  <p className="text-sm leading-relaxed text-zinc-500">{node.desc}</p>
+                </Disclosure>
               </li>
             ) : (
               <NodeItem key={node.name} node={node} index={i} progress={scrollYProgress} />

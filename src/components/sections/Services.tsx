@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
+import Disclosure from "@/components/motion/Disclosure";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -75,27 +76,45 @@ export default function Services() {
           <LineMask>Building Intelligent Digital Solutions</LineMask>
         </h2>
 
-        {/* T2 — stagger service cards */}
-        <FadeUpList className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Numbered index — stagger entrance, desc behind Disclosure */}
+        <FadeUpList tag="ul" className="mt-12 border-t border-zinc-900">
           {SERVICES.map((s) => (
-            <FadeUpItem key={s.num} tag="article" className="group rounded-lg border border-zinc-900 bg-zinc-950 p-6 transition-colors hover:border-zinc-700">
-              <span className="text-xs text-zinc-600 tabular-nums">{s.num}</span>
-              <h3 className="mt-3 font-medium text-zinc-100 transition-colors group-hover:text-white">
-                {s.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-500">{s.desc}</p>
-              {s.subs && (
-                <ul className="mt-4 flex flex-wrap gap-2">
-                  {s.subs.map((sub) => (
-                    <li
-                      key={sub}
-                      className="rounded-full border border-zinc-800 px-3 py-1 text-xs text-zinc-400"
+            <FadeUpItem key={s.num} tag="li">
+              <Disclosure
+                className="border-b border-zinc-900"
+                triggerClassName="group flex w-full items-center gap-4 py-5 text-left"
+                contentClassName="pb-5 pl-12"
+                trigger={(open) => (
+                  <>
+                    <span className="w-8 shrink-0 text-xs tabular-nums text-zinc-600">
+                      {s.num}
+                    </span>
+                    <span className="flex-1 font-medium text-zinc-300 transition-colors duration-200 group-hover:text-zinc-100">
+                      {s.title}
+                    </span>
+                    <span
+                      className={`shrink-0 text-sm text-zinc-600 transition-transform duration-200 group-hover:text-zinc-400 ${open ? "rotate-45" : "rotate-0"}`}
+                      aria-hidden="true"
                     >
-                      {sub}
-                    </li>
-                  ))}
-                </ul>
-              )}
+                      +
+                    </span>
+                  </>
+                )}
+              >
+                <p className="text-sm leading-relaxed text-zinc-500">{s.desc}</p>
+                {s.subs && (
+                  <ul className="mt-4 flex flex-wrap gap-2">
+                    {s.subs.map((sub) => (
+                      <li
+                        key={sub}
+                        className="rounded-full border border-zinc-800 px-3 py-1 text-xs text-zinc-400"
+                      >
+                        {sub}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Disclosure>
             </FadeUpItem>
           ))}
         </FadeUpList>
