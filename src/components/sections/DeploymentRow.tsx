@@ -7,7 +7,6 @@ import {
   useMotionTemplate,
   useReducedMotion,
 } from "motion/react";
-import Disclosure from "@/components/motion/Disclosure";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -91,29 +90,18 @@ export default function DeploymentRow({ d }: { d: DeploymentData }) {
           {d.num}
         </span>
 
-        {/* Sector + region chip + desc behind Disclosure */}
-        <Disclosure
-          triggerClassName="group/row flex w-full items-center gap-3 text-left"
-          contentClassName="mt-3"
-          trigger={(open) => (
-            <>
-              <h3 className="flex-1 text-base font-medium text-zinc-200 transition-colors duration-200 group-hover:text-white sm:text-lg">
-                {d.sector}
-              </h3>
-              <span className="rounded-full border border-white/15 px-2.5 py-0.5 text-xs text-zinc-300 transition-colors duration-200 group-hover:border-accent/50 group-hover:text-zinc-100">
-                {d.region}
-              </span>
-              <span
-                className={`shrink-0 text-sm text-zinc-400 transition-transform duration-200 group-hover:text-zinc-200 ${open ? "rotate-45" : "rotate-0"}`}
-                aria-hidden="true"
-              >
-                +
-              </span>
-            </>
-          )}
-        >
-          <p className="text-sm leading-relaxed text-zinc-300">{d.desc}</p>
-        </Disclosure>
+        {/* Sector + region chip + desc always visible (comfort: no click to read) */}
+        <div>
+          <div className="flex items-center gap-3">
+            <h3 className="flex-1 text-base font-medium text-zinc-100 transition-colors duration-200 group-hover:text-white sm:text-lg">
+              {d.sector}
+            </h3>
+            <span className="rounded-full border border-white/15 px-2.5 py-0.5 text-xs text-zinc-300 transition-colors duration-200 group-hover:border-accent/50 group-hover:text-zinc-100">
+              {d.region}
+            </span>
+          </div>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400">{d.desc}</p>
+        </div>
       </div>
     </motion.article>
   );

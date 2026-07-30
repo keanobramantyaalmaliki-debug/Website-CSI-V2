@@ -2,7 +2,6 @@
 
 import { motion } from "motion/react";
 import ScrollHighlight from "@/components/motion/ScrollHighlight";
-import Disclosure from "@/components/motion/Disclosure";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -64,33 +63,19 @@ export default function Vision() {
         Our Mission
       </motion.p>
 
-      {/* 5 verb labels — stagger entrance, detail behind Disclosure */}
+      {/* 5 mission verbs — verb + detail on one row, always visible (comfort) */}
       <FadeUpList tag="ol" className="mt-6 border-t border-white/[0.08]">
         {MISSIONS.map((m, i) => (
-          <FadeUpItem key={m.verb} tag="li">
-            <Disclosure
-              className="border-b border-white/[0.08]"
-              triggerClassName="group flex w-full items-center gap-5 py-5 text-left"
-              contentClassName="pb-5 pl-14"
-              trigger={(open) => (
-                <>
-                  <span className="w-8 shrink-0 text-xs tabular-nums text-zinc-400">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <span className="flex-1 text-lg font-medium text-zinc-300 transition-colors duration-200 group-hover:text-zinc-100">
-                    {m.verb}
-                  </span>
-                  <span
-                    className={`shrink-0 text-sm text-zinc-400 transition-transform duration-200 group-hover:text-zinc-400 ${open ? "rotate-45" : "rotate-0"}`}
-                    aria-hidden="true"
-                  >
-                    +
-                  </span>
-                </>
-              )}
-            >
-              <p className="text-sm leading-relaxed text-zinc-300">{m.detail}</p>
-            </Disclosure>
+          <FadeUpItem key={m.verb} tag="li" className="border-b border-white/[0.08]">
+            <div className="grid grid-cols-[2rem_1fr] items-baseline gap-5 py-5 sm:grid-cols-[2rem_10rem_1fr]">
+              <span className="text-xs tabular-nums text-zinc-400">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span className="text-lg font-medium text-zinc-100">{m.verb}</span>
+              <p className="col-span-2 text-sm leading-relaxed text-zinc-400 sm:col-span-1">
+                {m.detail}
+              </p>
+            </div>
           </FadeUpItem>
         ))}
       </FadeUpList>
