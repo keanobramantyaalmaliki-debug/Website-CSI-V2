@@ -52,7 +52,7 @@ export default function Hero() {
 
       {/* "see our work" — scroll ke konten di bawah hero */}
       <a
-        href="#deployments"
+        href="#manifesto"
         className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2 text-zinc-500 transition-colors hover:text-zinc-300"
       >
         <span className="text-xs tracking-widest uppercase">see our work</span>

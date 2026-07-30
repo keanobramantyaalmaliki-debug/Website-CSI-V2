@@ -74,7 +74,7 @@ export default function Manifesto() {
     <section
       id="manifesto"
       ref={sectionRef}
-      className="relative overflow-hidden px-6 py-24 sm:px-10 sm:py-32"
+      className="relative overflow-hidden px-6 pb-24 pt-40 sm:px-10 sm:pb-32 sm:pt-35"
     >
       {/* Particle field — absolute behind text */}
       <ManifestoField progress={scrollYProgress} />
