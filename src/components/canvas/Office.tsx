@@ -23,7 +23,7 @@ const MODEL_URL = "/3d/models/office.glb";
  * environment 0.18 dari Scene.tsx. Berguna untuk membuktikan lightmap bekerja;
  * kembalikan ke 1 untuk tampilan normal.
  */
-const LIGHTMAP_INTENSITY = 0;
+const LIGHTMAP_INTENSITY = 1;
 
 /**
  * Kantor Cogniti — hasil bake lightmap (lihat Documentations.md §4g).
@@ -53,6 +53,7 @@ export default function Office() {
     let missingUV1 = 0;
     let emissives = 0;
     let skinned = 0;
+    let ledStrips = 0;
 
     scene.traverse((obj: THREE.Object3D) => {
       if (obj instanceof Light) {
@@ -138,6 +139,33 @@ export default function Office() {
           // Tanpa ini pendar lampu ikut diredam ACES saat exposure rendah.
           mat.toneMapped = false;
         }
+
+        // ── FIX 4: LED strip lantai jangan ikut pass bayangan ────────────────
+        // ContactShadowsRig.tsx merender scene dengan MeshDepthMaterial. LED
+        // strip ada di y 0,002..0,31 — di dalam band bayangannya — jadi secara
+        // hitungan ia menjatuhkan garis gelap di lantai (alpha 0,83–0,93),
+        // padahal ia sumber cahaya. `allowOverride=false` membuat renderer
+        // melewatinya saat overrideMaterial aktif (WebGLRenderer:
+        // `material.allowOverride === true && overrideMaterial !== null`).
+        //
+        // ⚠️ DIBATALKAN (30 Jul) — dulu di sini ada
+        // `if (mat.name === "M_LEDStrip") mat.allowOverride = false;`
+        // dan itu MERUGIKAN, bukan cuma sia-sia. Dua pengukuran:
+        //
+        // 1. Tidak ada gunanya. Diukur A/B di titik LED yang benar-benar di
+        //    dalam catcher Office: mematikan flag hanya mengubah kecerahan
+        //    60,55 → 60,92 — di bawah noise. Strip-nya emissive +
+        //    `toneMapped=false` + kena bloom, jadi ia menimpa bayangan tipis
+        //    di bawahnya sendiri.
+        // 2. Justru MENGHILANGKAN bayangan. `MG_Office_M_LEDStrip` membentang
+        //    x −18,84..0,96 / z −2,94..7,13 — jauh melampaui area office, dan
+        //    ia MENAUNGI lantai meeting room. Karena dikecualikan dari pass
+        //    depth, lantai di bawahnya tidak dapat bayangan sama sekali; itu
+        //    salah satu sebab bayangan meeting room sempat hilang total.
+        //
+        // Jangan dipasang ulang tanpa mengukur DUA-DUANYA: apakah garis
+        // gelapnya benar-benar terlihat, DAN apa yang ikut kehilangan bayangan.
+        ledStrips += mat.name === "M_LEDStrip" ? 1 : 0;
       }
     });
 
@@ -145,9 +173,13 @@ export default function Office() {
       // Angka acuan dari GLB per 27 Jul: 40 lightmap, 22 AO asli, 0 tanpa uv1.
       // Kalau menyimpang jauh, fix-up di atas gagal — cek dulu sebelum
       // menyalahkan setelan lighting.
+      //
+      // ledStrip HARUS 1. Kalau 0, nama materialnya berubah dan FIX 4 tidak
+      // kena sasaran — LED strip akan menjatuhkan garis gelap di lantai.
       console.log(
         `[office] lightmap=${lightmaps} aoAsliDijaga=${keptAO} ` +
-          `tanpaUV1=${missingUV1} emissive=${emissives} skinned=${skinned}`,
+          `tanpaUV1=${missingUV1} emissive=${emissives} skinned=${skinned} ` +
+          `ledStrip=${ledStrips}`,
       );
     }
 
