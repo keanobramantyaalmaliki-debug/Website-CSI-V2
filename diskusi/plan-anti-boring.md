@@ -122,18 +122,23 @@ tidak dikerjakan sekarang, didokumentasikan agar tidak hilang saat sesi berakhir
 - Tidak menambah GSAP/lib berat. Tidak mengubah urutan Hero. Tidak menyentuh 3D office/kamera.
 - Tidak menghapus konten — hanya menyembunyikan/mengubah bentuknya. Tidak white-canvas.
 
-## Urутan kerja
+## Urutan kerja
 
-> ⚠️ Git state: branch `feature/manifesto-redesign` masih ada perubahan uncommitted
-> (`Deployments.tsx`, `Hero.tsx`, `Manifesto.tsx` + `DeploymentsField`/`DeploymentRow` untracked).
-> **Selesaikan/commit + tunggu konfirmasi merge dulu**, baru branch baru dari `main`.
+> ✅ Branch `feature/content-anti-boring` dibuat dari `feature/manifesto-redesign` (commit `851a22b`).
 
-1. Branch `feature/content-anti-boring` dari `main` (setelah manifesto settle).
-2. **Fase A** — `Disclosure.tsx` (+ test bila Vitest disetujui) → terapkan trim: Services,
-   LivingArch, Deployments, Vision, Process. Konsolidasi opsional setelah konfirmasi.
-3. `bun run build` + `bun run lint` hijau → **lapor + tunggu konfirmasi** (rilis Fase A bisa mandiri).
-4. **Fase B** — `FlowDiagram.tsx` (LivingArch) → Services editorial → Deployments metrik/chip.
-5. Verifikasi manual lengkap → lapor ringkasan + hasil build + nama branch. **Tunggu konfirmasi merge.**
+1. ~~Branch `feature/content-anti-boring` dari `main` (setelah manifesto settle).~~ **DONE**
+2. ~~**Fase A** — `Disclosure.tsx` + trim: Services, LivingArch, DeploymentRow, Vision, Process.~~ **DONE** — commit `851a22b`
+   - `Disclosure.tsx`: click + keyboard + aria-expanded/controls + useReducedMotion ✅
+   - Services: numbered index 01–09, desc behind Disclosure, subs pills on expand ✅
+   - LivingArchitecture: scroll-animated names kept, desc → Disclosure, intro trimmed ✅
+   - DeploymentRow: sector (lg) + region chip, desc → Disclosure ✅
+   - Vision: 5 verb labels (Deliver/Accelerate/Integrate/Partner/Innovate) + Disclosure ✅
+   - Process: horizontal flow + `→` connectors (desktop), vertical list (mobile) ✅
+   - `bun run build` ✅ | lint error pre-existing (eslint-config-next missing, bukan dari perubahan ini)
+   - **Menunggu konfirmasi user** sebelum lanjut Fase B.
+   - Test Disclosure (`toggle`, `aria-expanded`, keyboard) → **usul pasang Vitest + RTL** (tanya user).
+3. **Fase B** — `FlowDiagram.tsx` (LivingArch) → Services editorial → Deployments metrik/chip.
+4. Verifikasi manual lengkap → lapor ringkasan + hasil build + nama branch. **Tunggu konfirmasi merge.**
 
 ## Risiko & catatan
 
