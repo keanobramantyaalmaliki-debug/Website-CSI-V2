@@ -3,7 +3,7 @@
 import { motion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
 import DeploymentRow, { type DeploymentData } from "@/components/sections/DeploymentRow";
-import DeploymentsField from "@/components/motion/DeploymentsMatterField";
+import DeploymentsMatterField from "@/components/motion/DeploymentsMatterField";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -55,9 +55,6 @@ export default function Deployments() {
           "linear-gradient(to bottom, rgba(9,9,11,0.4) 0%, transparent 100%)",
       }}
     >
-      {/* Ambient drifting particle field */}
-      <DeploymentsField />
-
       {/* T6: eyebrow */}
       <motion.p
         className="relative text-xs tracking-widest text-zinc-400 uppercase"
@@ -74,9 +71,12 @@ export default function Deployments() {
         <LineMask>Built for real-world environments where decisions matter.</LineMask>
       </h2>
 
+      {/* Interactive physics strip — grab and throw the numbered balls */}
+      <DeploymentsMatterField />
+
       {/* Deployment rows with stagger entrance */}
       <motion.div
-        className="relative mt-12"
+        className="relative mt-8"
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, margin: "0px 0px -60px 0px" }}
