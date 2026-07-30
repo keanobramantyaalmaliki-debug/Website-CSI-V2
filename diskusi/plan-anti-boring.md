@@ -137,7 +137,13 @@ tidak dikerjakan sekarang, didokumentasikan agar tidak hilang saat sesi berakhir
    - `bun run build` ✅ | lint error pre-existing (eslint-config-next missing, bukan dari perubahan ini)
    - **Menunggu konfirmasi user** sebelum lanjut Fase B.
    - Test Disclosure (`toggle`, `aria-expanded`, keyboard) → **usul pasang Vitest + RTL** (tanya user).
-3. **Fase B** — `FlowDiagram.tsx` (LivingArch) → Services editorial → Deployments metrik/chip.
+3. ~~**Fase B** — `FlowDiagram.tsx` (LivingArch) → Services editorial → Deployments metrik/chip.~~ **DONE** — branch `feature/content-show-dont-tell` commit `fcd331c`
+   - `FlowDiagram.tsx`: SVG spine 7 node, `strokeDashoffset` per line, node color via `useTransform`, reduced-motion static ✅
+   - LivingArchitecture: 2-col grid `lg:[1fr_200px]`, FlowDiagram sticky `top-24` di kanan ✅
+   - Services: large number `text-4xl/5xl` sebagai jangkar tipografi, 3-col grid trigger ✅
+   - Deployments: tidak diubah — tidak ada angka asli (Rule 15: no fabricated metrics) ✅
+   - `bun run build` ✅
+   - **Menunggu konfirmasi + verifikasi visual user** sebelum merge.
 4. Verifikasi manual lengkap → lapor ringkasan + hasil build + nama branch. **Tunggu konfirmasi merge.**
 
 ## Risiko & catatan
