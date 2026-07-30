@@ -11,7 +11,6 @@ import Careers from "@/components/sections/Careers";
 import Vision from "@/components/sections/Vision";
 import Contact from "@/components/sections/Contact";
 import { Routes, Route } from "react-router-dom";
-import MatterLab from "@/components/lab/MatterLab";
 
 /**
  * Page structure (decided 2026-07-07, see reference/ROADMAP.md B5):
@@ -47,8 +46,6 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
-      {/* Lab uji-coba fisika Matter.js — terpisah dari landing */}
-      <Route path="/matterjs-lab" element={<MatterLab />} />
     </Routes>
   );
 }
