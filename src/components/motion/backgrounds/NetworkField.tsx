@@ -10,6 +10,7 @@ import {
   distance2,
   linkOpacity,
   driftOffset,
+  type FieldVariant,
 } from "@/lib/field/fieldMath";
 
 /**
@@ -25,6 +26,8 @@ import {
  */
 
 export interface NetworkFieldProps {
+  /** Resting layout — the section's "character". One system, different params. */
+  variant?: FieldVariant;
   count?: number;
   seed?: number;
   /** Node/line color as "r, g, b". */
@@ -49,6 +52,7 @@ const DRIFT_AMP = 0.02;
 const DRIFT_SPEED = 0.25;
 
 export default function NetworkField({
+  variant = "scatter",
   count = 70,
   seed = 7,
   color = "180, 190, 205",
@@ -69,7 +73,7 @@ export default function NetworkField({
     if (!ctx) return;
 
     const rng = mulberry32(seed);
-    const home = generateHomePositions("scatter", count, rng);
+    const home = generateHomePositions(variant, count, rng);
     const pos = new Float32Array(home);
     const vel = new Float32Array(count * 2);
     const phase = new Float32Array(count);
@@ -254,7 +258,7 @@ export default function NetworkField({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerleave", onLeave);
     };
-  }, [reduced, count, seed, color, accent, maxOpacity]);
+  }, [reduced, variant, count, seed, color, accent, maxOpacity]);
 
   if (reduced) {
     return (

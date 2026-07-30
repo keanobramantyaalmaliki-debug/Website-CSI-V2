@@ -2,7 +2,7 @@
 
 **Tanggal:** 2026-07-30
 **Branch:** `feature/interactive-section-bg`
-**Status:** Prototype disepakati (Network + glow cursor). Belum di-commit, belum di-roll-out ke semua section.
+**Status:** Terpasang di **Vision saja** (Network + glow cursor, `variant="scatter"`). Prototype lain sudah dihapus. Section lain **tidak** pakai sistem ini — akan dibuat animasi/pemanis berbeda per-section secara terpisah.
 
 ---
 
@@ -66,15 +66,19 @@ Glow dikecilkan & difokuskan:
 |---|---|
 | `src/lib/field/fieldMath.ts` | Math murni framework-free: `mulberry32` (seeded RNG), `generateHomePositions` (variant scatter/grid/flow/gather), `repelForce`, `stepAxis` (damped spring), `distance2`, `linkOpacity`, `driftOffset` (ambient self-motion). |
 | `src/lib/field/fieldMath.test.ts` | 20 unit test untuk semua fungsi math. |
-| `src/components/motion/backgrounds/NetworkField.tsx` | **Prototype terpilih.** Constellation + drift + repulsion + glow cursor (spring-lerped) + node/garis nyala accent dekat cursor. |
-| `src/components/motion/backgrounds/AuroraField.tsx` | Prototype (kandidat, belum dipakai). |
-| `src/components/motion/backgrounds/SpotlightField.tsx` | Prototype (kandidat, belum dipakai). |
-| `src/components/motion/InteractiveField.tsx` | Versi awal (titik repulsion polos) — digantikan NetworkField, kandidat dihapus. |
+| `src/components/motion/backgrounds/NetworkField.tsx` | **Komponen final.** Constellation + drift + repulsion + glow cursor (spring-lerped) + node/garis nyala accent dekat cursor. Punya prop `variant` (`scatter`/`grid`/`flow`/`gather`) — Vision pakai `scatter`. |
+
+### Dihapus (prototype yang tidak dipilih)
+| File | Alasan |
+|---|---|
+| `src/components/motion/backgrounds/AuroraField.tsx` | Kandidat ditolak. |
+| `src/components/motion/backgrounds/SpotlightField.tsx` | Kandidat ditolak. |
+| `src/components/motion/InteractiveField.tsx` | Versi awal (titik repulsion polos) — digantikan NetworkField. |
 
 ### Diubah
 | File | Perubahan |
 |---|---|
-| `src/components/sections/Vision.tsx` | Dipasang switcher 3 prototype + wrapper `relative z-10` untuk konten. **Sementara** (dev-only), harus dibersihkan saat roll-out. |
+| `src/components/sections/Vision.tsx` | Switcher + import prototype dibuang. Terpasang `<NetworkField variant="scatter" />` permanen; konten tetap di wrapper `relative z-10` (teks di atas background). |
 
 ---
 
@@ -95,12 +99,19 @@ Glow dikecilkan & difokuskan:
 
 ---
 
+## Sudah dikerjakan
+
+1. ✅ Buang switcher + import prototype di Vision; hapus `AuroraField`, `SpotlightField`, `InteractiveField`.
+2. ✅ Vision pakai `<NetworkField variant="scatter" />` permanen. Test 26/26, typecheck 0, lint 0.
+
+## Keputusan scope (revisi user)
+
+**Sistem Network ini khusus Vision.** Rencana "karakter per-section (Services=grid, Process=flow, dst)" **dibatalkan** — section lain akan dibuat animasi/pemanis background **berbeda** secara terpisah, bukan variasi dari sistem ini. Prop `variant` tetap ada di `NetworkField` kalau nanti mau dipakai ulang, tapi tidak dipasang ke section manapun selain Vision.
+
 ## Langkah selanjutnya (belum dikerjakan)
 
-1. Buang switcher + wrapper sementara di Vision; hapus prototype `AuroraField`, `SpotlightField`, `InteractiveField` yang tidak dipakai.
-2. Pasang **karakter per-section** pakai basis Network (rencana: Services=grid, Process=flow, Vision=scatter, dst) — 1 sistem, param beda.
-3. Commit ke branch `feature/interactive-section-bg`.
-4. Ekstrak jadi **skill `interactive-section-bg`** khusus project (kodifikasi palet, aturan comfort, pola math+test terpisah, checklist perf) — agar diwariskan lintas sesi.
+1. Commit ke branch `feature/interactive-section-bg`.
+2. Ekstrak jadi **skill `interactive-section-bg`** khusus project (kodifikasi palet, aturan comfort, pola math+test terpisah, checklist perf) — agar diwariskan lintas sesi.
 
 ## Catatan lingkungan
 

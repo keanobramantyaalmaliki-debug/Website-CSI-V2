@@ -1,23 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { motion } from "motion/react";
 import ScrollHighlight from "@/components/motion/ScrollHighlight";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 import NetworkField from "@/components/motion/backgrounds/NetworkField";
-import AuroraField from "@/components/motion/backgrounds/AuroraField";
-import SpotlightField from "@/components/motion/backgrounds/SpotlightField";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
-
-// PROTOTYPE-ONLY: lets us compare the 3 background directions live in Vision.
-// Removed once a direction is chosen. (2026-07-30)
-type Proto = "network" | "aurora" | "spotlight";
-const PROTOS: { id: Proto; label: string }[] = [
-  { id: "network", label: "1 · Network" },
-  { id: "aurora", label: "2 · Aurora" },
-  { id: "spotlight", label: "3 · Spotlight" },
-];
 
 const MISSIONS: { verb: string; detail: string }[] = [
   {
@@ -46,31 +34,10 @@ const VISION =
   "To become a trusted technology partner that empowers organizations through intelligent digital innovation — creating sustainable value for businesses and communities worldwide.";
 
 export default function Vision() {
-  const [proto, setProto] = useState<Proto>("network");
-
   return (
     <section id="vision" className="relative overflow-hidden px-6 py-24 sm:px-10 sm:py-32">
-      {/* PROTOTYPE background — one of three directions, switchable below. */}
-      {proto === "network" && <NetworkField className="-z-0" />}
-      {proto === "aurora" && <AuroraField className="-z-0" />}
-      {proto === "spotlight" && <SpotlightField className="-z-0" />}
-
-      {/* PROTOTYPE switcher — floating chips, top-right. Remove after decision. */}
-      <div className="absolute right-4 top-4 z-20 flex gap-1.5">
-        {PROTOS.map((p) => (
-          <button
-            key={p.id}
-            onClick={() => setProto(p.id)}
-            className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-              proto === p.id
-                ? "border-accent/60 bg-accent/15 text-zinc-100"
-                : "border-white/10 bg-white/[0.03] text-zinc-400 hover:text-zinc-200"
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
+      {/* Scatter constellation — "space / vision". Text stays above at z-10. */}
+      <NetworkField variant="scatter" className="-z-0" />
 
       <div className="relative z-10">
       {/* T6 — eyebrow */}
