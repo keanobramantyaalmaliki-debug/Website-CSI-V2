@@ -52,12 +52,13 @@ export default function PhysicsHeading({ text, className }: Props) {
       })
     );
 
-    // Floor 260px below heading, side walls
+    // Floor at mt-12 gap below heading (~48px) = where the first row border sits
+    const FLOOR = H + 48;
     const wallOpts = { isStatic: true, render: { visible: false } };
     const walls = [
-      Bodies.rectangle(W / 2, H + 260 + 25, W + 60, 50, wallOpts),
-      Bodies.rectangle(-25, H / 2, 50, H + 700, wallOpts),
-      Bodies.rectangle(W + 25, H / 2, 50, H + 700, wallOpts),
+      Bodies.rectangle(W / 2, FLOOR + 25, W + 60, 50, wallOpts),
+      Bodies.rectangle(-25, H / 2, 50, FLOOR + 100, wallOpts),
+      Bodies.rectangle(W + 25, H / 2, 50, FLOOR + 100, wallOpts),
     ];
 
     Composite.add(engine.world, [...bodies, ...walls]);
@@ -144,7 +145,7 @@ export default function PhysicsHeading({ text, className }: Props) {
   }
 
   return (
-    <div ref={containerRef}>
+    <div ref={containerRef} style={{ maxWidth: "36rem" }}>
       <h2 className={className}>
         {words.map((word, i) => (
           <span
