@@ -3,7 +3,14 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
 import { Vector3, type Camera, type PerspectiveCamera } from "three";
-import { useSceneStore, VIEW_KEYS, type RoomKey, type Vec3 } from "@/lib/store/sceneStore";
+import {
+  useSceneStore,
+  VIEW_KEYS,
+  START_ROOM,
+  hashFor,
+  type RoomKey,
+  type Vec3,
+} from "@/lib/store/sceneStore";
 
 const bl = (x: number, y: number, z: number) => new Vector3(x, z, -y);
 
@@ -150,7 +157,7 @@ export default function CameraController() {
   const registerGoTo   = useSceneStore((s) => s.registerGoTo);
   const registerGoToView = useSceneStore((s) => s.registerGoToView);
 
-  const currentRoomRef = useRef<RoomKey>("Office");
+  const currentRoomRef = useRef<RoomKey>(START_ROOM);
   const animating      = useRef(false);
   const tweenStart     = useRef(0);
   const fromPos        = useRef(new Vector3());
@@ -165,7 +172,7 @@ export default function CameraController() {
 
   // snap to start on mount
   useEffect(() => {
-    const v = VIEWS["Office"];
+    const v = VIEWS[START_ROOM];
     camera.position.copy(v.pos);
     lookTarget.current.copy(v.tgt);
     camera.lookAt(v.tgt);
@@ -194,8 +201,7 @@ export default function CameraController() {
       currentRoomRef.current = name;
       setCurrentRoom(name);
 
-      const hash = name === "Office" ? "" : `#${name.toLowerCase()}`;
-      history.pushState(null, "", window.location.pathname + hash);
+      history.pushState(null, "", window.location.pathname + hashFor(name));
     },
     [camera, setCurrentRoom],
   );
@@ -268,9 +274,10 @@ export default function CameraController() {
 
     const onPop = () => {
       const h   = window.location.hash.replace("#", "");
+      // Tanpa hash = kembali ke titik awal tur, lihat hashFor() di store.
       const key = (h
         ? VIEW_KEYS.find((k) => k.toLowerCase() === h)
-        : "Office") as RoomKey | undefined;
+        : START_ROOM) as RoomKey | undefined;
       if (key && !VIEWS[key]?.disabled) goTo(key);
     };
     window.addEventListener("popstate", onPop);

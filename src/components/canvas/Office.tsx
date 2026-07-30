@@ -8,6 +8,7 @@ import { Mesh, SkinnedMesh, MeshStandardMaterial, Light, LoopRepeat } from "thre
 import { useSceneStore } from "@/lib/store/sceneStore";
 import { billiardView } from "./CameraController";
 import { prepareLampFade } from "./billiard/lamps";
+import { prepareRevealSweep } from "./revealSweep";
 import { CHAR_LAYER } from "./CharacterLights";
 
 // GLB baked ada di public/ dan ter-track git (9 MB). Jangan kembalikan ke
@@ -24,6 +25,43 @@ const MODEL_URL = "/3d/models/office.glb";
  * kembalikan ke 1 untuk tampilan normal.
  */
 const LIGHTMAP_INTENSITY = 1;
+
+/**
+ * Emissive strength LED strip lantai (`M_LEDStrip`), menimpa nilai dari GLB.
+ *
+ * Blender mengekspornya 8 lewat KHR_materials_emissive_strength — paling panas
+ * di scene setelah bohlam (12). Dengan `toneMapped=false` di bawah, angka itu
+ * masuk ke composer apa adanya dan melewati ambang Bloom 0.95 (Scene.tsx)
+ * dengan margin ~8×, jadi pendarnya jauh lebih tebal dari lampu lain.
+ *
+ * INI SATU-SATUNYA material yang emissive-nya ditimpa; lihat FIX 2 di bawah
+ * soal kenapa clamp menyeluruh justru merusak. Ini pengecualian bertarget,
+ * bukan pembatalan aturan itu.
+ *
+ * Turunkan angkanya untuk mengurangi bloom garis LED TANPA menyentuh
+ * <Bloom intensity> yang global — bohlam & track light tetap seperti sekarang.
+ * Di bawah ~1.0 strip berhenti berpendar sama sekali (jatuh di bawah ambang)
+ * dan tinggal jadi garis warna biasa.
+ *
+ * Catatan: cahaya LED yang JATUH DI LANTAI sudah di-bake ke lightmap dan tidak
+ * ikut berubah di sini — yang berubah cuma pendar strip-nya sendiri. Jadi
+ * lantainya tetap kena tumpahan warnanya, tidak mendadak gelap.
+ */
+const LED_STRIP_EMISSIVE = 3;
+
+/**
+ * Lama sapuan "kantor terbentuk" (detik) — lihat revealSweep.ts.
+ *
+ * 2,6 s untuk membentang 24,25 m ≈ 9 m/detik. Terasa seperti gerakan yang punya
+ * bobot, bukan kilatan. Jangan jauh lebih panjang: sapuan ini berjalan SEBELUM
+ * pengunjung bisa berinteraksi, dan menahan orang di depan kantor yang belum
+ * jadi lebih lama dari ~3 detik terbaca sebagai lambat, bukan sinematik.
+ */
+const REVEAL_MS = 2600;
+
+/** Jeda sebelum sapuan mulai (detik), memberi satu tarikan napas setelah
+ *  layar loader hilang supaya awalnya tidak bertabrakan dengan fade-out-nya. */
+const REVEAL_DELAY_MS = 150;
 
 /**
  * Kantor Cogniti — hasil bake lightmap (lihat Documentations.md §4g).
@@ -133,6 +171,10 @@ export default function Office() {
         // (bohlam 12, LED strip 8, track light 8). Versi viewer lama punya
         // Math.max(intensity, 2.0) yang justru MENURUNKAN nilai itu jadi 2.0
         // sehingga lampu terlihat redup/mati. Pakai nilai aslinya apa adanya.
+        //
+        // Satu pengecualian bertarget: M_LEDStrip diturunkan di FIX 4 di bawah.
+        // Itu tidak membatalkan aturan ini — yang dilarang adalah clamp
+        // MENYELURUH yang menyeret semua lampu ke satu angka.
         const e = mat.emissive;
         if (e && e.r + e.g + e.b > 0.01) {
           emissives++;
@@ -165,7 +207,13 @@ export default function Office() {
         //
         // Jangan dipasang ulang tanpa mengukur DUA-DUANYA: apakah garis
         // gelapnya benar-benar terlihat, DAN apa yang ikut kehilangan bayangan.
-        ledStrips += mat.name === "M_LEDStrip" ? 1 : 0;
+        if (mat.name === "M_LEDStrip") {
+          ledStrips++;
+          // GLTFLoader menaruh KHR_materials_emissive_strength (8) di
+          // emissiveIntensity. Diturunkan supaya pendarnya tidak setebal
+          // sekarang — lihat LED_STRIP_EMISSIVE di atas.
+          mat.emissiveIntensity = LED_STRIP_EMISSIVE;
+        }
       }
     });
 
@@ -230,6 +278,97 @@ export default function Office() {
       }
     });
   }, [prepared, sceneEnv]);
+
+  // ── Sapuan "kantor terbentuk" ────────────────────────────────────────────
+  // Dijalankan sekali saat GLB selesai dimuat. Lihat revealSweep.ts untuk
+  // mekanismenya; di sini hanya pemasangan & penggeraknya.
+  //
+  // Dipakai useLayoutEffect, bukan useEffect: patch harus terpasang SEBELUM
+  // frame pertama digambar. Dengan useEffect ada satu frame di mana kantor
+  // tampil penuh sebelum sapuan mengambil alih — kedipan yang justru merusak
+  // maksudnya.
+  //
+  // Catatan soal `needsUpdate` di efek envmap tepat di atas: ia TIDAK merusak
+  // patch ini, dan urutan keduanya tidak perlu dijaga. `needsUpdate` hanya
+  // memaksa three mengambil ulang program, dan pengambilan itu memanggil
+  // `onBeforeCompile` lagi — yang saat itu masih menunjuk ke patch kita, jadi
+  // patch-nya ikut terpasang ulang. Tiap kompilasi juga berangkat dari sumber
+  // ShaderLib yang bersih, sehingga tidak ada risiko sisipan ganda.
+  const sweepRef = useRef<ReturnType<typeof prepareRevealSweep>>(null);
+  const revealDone = useRef(false);
+  /** Waktu mulai sapuan, disetel di useFrame — lihat catatan tersendat di sana. */
+  const startRef = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    const sweep = prepareRevealSweep(prepared);
+    // null = tidak ada material yang cocok. Anggap sudah selesai supaya scene
+    // tampil apa adanya, bukan menggantung di kantor yang tak pernah muncul.
+    if (!sweep) {
+      revealDone.current = true;
+      return;
+    }
+    sweep.set(0);
+    sweepRef.current = sweep;
+    revealDone.current = false;
+    startRef.current = null;
+
+    return () => {
+      sweep.dispose();
+      sweepRef.current = null;
+    };
+  }, [prepared]);
+
+  useFrame((_, dt) => {
+    const sweep = sweepRef.current;
+    if (!sweep || revealDone.current) return;
+
+    const now = performance.now();
+
+    // ── Jangan mulai menghitung sebelum frame mengalir wajar ────────────────
+    // Frame PERTAMA setelah GLB siap selalu diikuti tersendat besar: three baru
+    // mengompilasi shader untuk 233 material dan mengunggah 91 texture, dan itu
+    // memblokir thread utama. TERUKUR di mesin ini (30 Jul, dev build):
+    //
+    //   traverse GLB selesai  → +0,88 s
+    //   frame PERTAMA tergambar → +3,20 s
+    //   ────────────────────────────────── tersendat 2,32 s
+    //
+    // Tersendat itu SUDAH ADA sebelum sapuan ini (diukur A/B dengan patch
+    // dimatikan: 2,32 s tanpa vs 2,37 s dengan — jadi sapuan menambah ~50 ms,
+    // bukan penyebabnya). Tapi ia MERUSAK animasinya kalau tidak ditangani:
+    // hitungan dimulai di frame 1, frame 2 baru datang 2,4 detik kemudian, dan
+    // sapuan langsung meloncat ke 87% — praktis tak terlihat, persis gejala
+    // yang muncul saat pertama dicoba.
+    //
+    // Karena itu jamnya baru dimulai setelah ada frame yang jaraknya wajar.
+    // Ambang 0,25 s: jauh di atas frame normal (0,008–0,033 s) tapi jauh di
+    // bawah tersendat kompilasi. Ini sekaligus menangani hitchan lain dengan
+    // sebab sama — pindah tab, GC besar — tanpa perlu kasus khusus.
+    if (startRef.current === null || dt > 0.25) {
+      startRef.current = now;
+      return;
+    }
+
+    const t = (now - startRef.current - REVEAL_DELAY_MS) / REVEAL_MS;
+    if (t <= 0) return;
+
+    if (t >= 1) {
+      revealDone.current = true;
+      // Lepas patch begitu selesai: tanpa ini setiap fragmen di seluruh kantor
+      // terus menghitung dither + discard selamanya untuk hasil yang sudah
+      // pasti "tampil penuh".
+      sweep.dispose();
+      sweepRef.current = null;
+      return;
+    }
+
+    // easeOutCubic: cepat di awal lalu melambat mendekati akhir. Dipilih supaya
+    // ruangan pertama (Lounge, tempat kamera berada) muncul segera dan
+    // pengunjung tidak menunggu, sementara ekor sapuan di ruangan jauh punya
+    // waktu untuk terbaca.
+    const e = 1 - Math.pow(1 - t, 3);
+    sweep.set(e);
+  });
 
   // Klik meja billiard → masuk mode main. Node meja di GLB sudah digabung jadi
   // MG_Lounge_M_PoolTable_Body/_Felt (hasil merge draw call), jadi pengecekan

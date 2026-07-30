@@ -8,14 +8,18 @@ import { Suspense } from "react";
 import Office from "./Office";
 import SceneEnvironment from "./SceneEnvironment";
 import CharacterLights from "./CharacterLights";
-import CameraController from "./CameraController";
+import CameraController, { VIEWS } from "./CameraController";
+import { START_ROOM } from "@/lib/store/sceneStore";
 import BilliardGame from "./billiard/BilliardGame";
 import Waypoints from "./Waypoints";
-import LightCones from "./LightCones";
 import ContactShadowsRig from "./ContactShadowsRig";
 
-// Posisi awal (Office) — CameraController snap ke sini saat mount.
-const START_POS: [number, number, number] = [-6.0, 1.6, 4.0];
+// Posisi awal kamera. DIAMBIL dari VIEWS[START_ROOM], bukan angka yang ditulis
+// ulang: sebelumnya di sini ada tuple hardcode [-6.0, 1.6, 4.0] yang bahkan
+// TIDAK cocok dengan VIEWS.Office ([-3.97, 1.13, 2.48]) — jadi frame pertama
+// selalu dari tempat yang salah sampai CameraController men-snap-nya. Dengan
+// diturunkan begini, memindahkan START_ROOM cukup di satu tempat.
+const START_POS = VIEWS[START_ROOM].pos.toArray() as [number, number, number];
 
 function Loader() {
   const { progress } = useProgress();
@@ -61,11 +65,23 @@ export default function Scene() {
 
       <Suspense fallback={<Loader />}>
         <Office />
-        {/* Kerucut cahaya volumetrik palsu. Baru SATU lampu (officeA) yang
-            dinyalakan — look-nya dimatangkan di situ dulu, baru disebar lewat
-            prop `lamps`. Efek ini tidak menyinari apa pun; cahaya di lantai
-            sudah ada di lightmap, kerucut cuma mengisi udaranya. */}
-        <LightCones lamps={["officeA"]} />
+        {/* Kerucut cahaya volumetrik (LightCone/LightCones) DIHAPUS 30 Jul.
+            Kalau nanti dibuat lagi, dua catatan yang mahal didapat:
+
+            1. Kerucut 360° tidak bisa MENJAMIN sinar seimbang kiri-kanan.
+               Potongan noise yang menghadap kamera ditentukan azimut kamera,
+               jadi tiap view dapat potongan berbeda dan ada yang kebetulan
+               berat sebelah. Seed/frekuensi/lantai-sinar cuma menggeser
+               peluang. Yang menyelesaikan: setengah cangkang (180°) yang
+               selalu menghadap kamera + uv.x dicerminkan → kiri == kanan
+               secara matematis.
+            2. Radius kerucut tampak = KERUCUT DALAM Blender, yaitu
+               spot_size × (1 − spot_blend), bukan spot_size penuh. Yang penuh
+               itu batas terluar tempat cahaya sudah habis meredup; memakainya
+               memberi bentuk kipas mekar, bukan berkas sorot.
+
+            Versi terakhir tersimpan di git stash ("light cone WIP 30 Jul")
+            kalau butuh rujukan. */}
         {/* Bayangan kontak — "gelap di bawah meja". Harus DI DALAM Suspense:
             ia memanggang bayangan dari geometri GLB, yang baru ada setelah
             model dimuat. Di luar Suspense hasilnya bake kosong.
