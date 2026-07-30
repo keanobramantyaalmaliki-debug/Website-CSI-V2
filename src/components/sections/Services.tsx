@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import CharReveal from "@/components/motion/CharReveal";
-import CursorSpotlight from "@/components/motion/CursorSpotlight";
+import GrainVeil from "@/components/motion/GrainVeil";
 import Disclosure from "@/components/motion/Disclosure";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 
@@ -59,8 +59,11 @@ const SERVICES: { num: string; title: string; desc: string; subs?: string[] }[] 
 
 export default function Services() {
   return (
-    <section id="services" className="relative z-10 border-y border-white/[0.08] bg-white/[0.02]">
-      <CursorSpotlight className="px-6 py-24 sm:px-10 sm:py-32">
+    <section id="services" className="relative z-10 overflow-hidden border-y border-white/[0.08] bg-white/[0.02]">
+      {/* Ambient grain veil — atmospheric texture, non-interactive */}
+      <GrainVeil className="-z-0" />
+
+      <div className="relative z-10 px-6 py-24 sm:px-10 sm:py-32">
         {/* T6 — eyebrow */}
         <motion.p
           className="text-xs tracking-widest text-zinc-400 uppercase"
@@ -134,7 +137,7 @@ export default function Services() {
             </FadeUpItem>
           ))}
         </FadeUpList>
-      </CursorSpotlight>
+      </div>
     </section>
   );
 }
