@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/sections/Hero";
+import HeroHandoff from "@/components/motion/HeroHandoff";
 import Manifesto from "@/components/sections/Manifesto";
 import Deployments from "@/components/sections/Deployments";
 import Services from "@/components/sections/Services";
@@ -20,9 +21,12 @@ import Contact from "@/components/sections/Contact";
 export default function App() {
   return (
     <>
+      {/* Ambient depth layer — fixed, non-interactive subtle grid behind everything */}
+      <div className="ambient-grid" aria-hidden="true" />
       <Navbar />
-      <main>
+      <main className="relative z-10">
         <Hero />
+        <HeroHandoff />
         <Manifesto />
         <Deployments />
         <Services />

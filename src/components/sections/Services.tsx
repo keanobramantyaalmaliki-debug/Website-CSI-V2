@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
+import Disclosure from "@/components/motion/Disclosure";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -57,7 +58,7 @@ const SERVICES: { num: string; title: string; desc: string; subs?: string[] }[] 
 
 export default function Services() {
   return (
-    <section id="services" className="border-y border-zinc-900 bg-zinc-950/50">
+    <section id="services" className="relative z-10 border-y border-white/[0.08] bg-white/[0.02]">
       <div className="px-6 py-24 sm:px-10 sm:py-32">
         {/* T6 — eyebrow */}
         <motion.p
@@ -75,27 +76,55 @@ export default function Services() {
           <LineMask>Building Intelligent Digital Solutions</LineMask>
         </h2>
 
-        {/* T2 — stagger service cards */}
-        <FadeUpList className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {/*
+          Editorial index: large number as typographic anchor.
+          Grid: [number-col | title | toggle] — number is visually dominant,
+          desc revealed behind Disclosure. Subs pills preserved on expand.
+        */}
+        <FadeUpList tag="ul" className="mt-12 border-t border-white/[0.08]">
           {SERVICES.map((s) => (
-            <FadeUpItem key={s.num} tag="article" className="group rounded-lg border border-zinc-900 bg-zinc-950 p-6 transition-colors hover:border-zinc-700">
-              <span className="text-xs text-zinc-600 tabular-nums">{s.num}</span>
-              <h3 className="mt-3 font-medium text-zinc-100 transition-colors group-hover:text-white">
-                {s.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-500">{s.desc}</p>
-              {s.subs && (
-                <ul className="mt-4 flex flex-wrap gap-2">
-                  {s.subs.map((sub) => (
-                    <li
-                      key={sub}
-                      className="rounded-full border border-zinc-800 px-3 py-1 text-xs text-zinc-400"
+            <FadeUpItem key={s.num} tag="li">
+              <Disclosure
+                className="border-b border-white/[0.08]"
+                triggerClassName="group w-full text-left"
+                contentClassName="pb-6 pl-16 sm:pl-32"
+                trigger={(open) => (
+                  <div className="grid w-full grid-cols-[4rem_1fr_1.5rem] items-center gap-4 py-5 sm:grid-cols-[7rem_1fr_1.5rem]">
+                    {/* Large number — typographic anchor */}
+                    <span
+                      className="text-4xl font-bold tabular-nums leading-none text-zinc-600 transition-colors duration-200 group-hover:text-accent sm:text-5xl"
+                      aria-hidden="true"
                     >
-                      {sub}
-                    </li>
-                  ))}
-                </ul>
-              )}
+                      {s.num}
+                    </span>
+                    {/* Title */}
+                    <span className="font-medium text-zinc-300 transition-colors duration-200 group-hover:text-zinc-100">
+                      {s.title}
+                    </span>
+                    {/* Toggle indicator */}
+                    <span
+                      className={`shrink-0 text-sm text-zinc-400 transition-transform duration-200 group-hover:text-zinc-200 ${open ? "rotate-45" : "rotate-0"}`}
+                      aria-hidden="true"
+                    >
+                      +
+                    </span>
+                  </div>
+                )}
+              >
+                <p className="text-sm leading-relaxed text-zinc-300">{s.desc}</p>
+                {s.subs && (
+                  <ul className="mt-4 flex flex-wrap gap-2">
+                    {s.subs.map((sub) => (
+                      <li
+                        key={sub}
+                        className="rounded-full border border-zinc-800 px-3 py-1 text-xs text-zinc-400"
+                      >
+                        {sub}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Disclosure>
             </FadeUpItem>
           ))}
         </FadeUpList>

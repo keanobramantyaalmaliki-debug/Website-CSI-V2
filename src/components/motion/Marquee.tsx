@@ -22,7 +22,7 @@ export default function Marquee({
         {items.map((item) => (
           <span
             key={item}
-            className="rounded-full border border-zinc-800 bg-zinc-950 px-4 py-2 text-sm text-zinc-400"
+            className="rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-sm text-zinc-200"
           >
             {item}
           </span>
@@ -47,7 +47,7 @@ export default function Marquee({
         {[...items, ...items].map((item, i) => (
           <span
             key={i}
-            className="whitespace-nowrap rounded-full border border-zinc-800 bg-zinc-950 px-4 py-2 text-sm text-zinc-400"
+            className="whitespace-nowrap rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-sm text-zinc-200"
           >
             {item}
           </span>

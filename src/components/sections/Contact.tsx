@@ -31,7 +31,7 @@ export default function Contact() {
       </h2>
 
       <motion.p
-        className="mt-4 max-w-lg text-sm leading-relaxed text-zinc-500 sm:text-base"
+        className="mt-4 max-w-lg text-sm leading-relaxed text-zinc-300 sm:text-base"
         initial={{ opacity: 0, y: 8 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
@@ -56,13 +56,13 @@ export default function Contact() {
         </a>
         <a
           href="#office"
-          className="relative rounded-full border border-zinc-800 px-6 py-3 text-sm text-zinc-300 transition-colors hover:border-zinc-600 after:absolute after:bottom-3 after:left-6 after:h-px after:w-0 after:bg-zinc-300 after:transition-[width] after:duration-300 after:content-[''] hover:after:w-[calc(100%-3rem)]"
+          className="relative rounded-full border border-white/15 px-6 py-3 text-sm text-zinc-200 transition-colors hover:border-white/30 after:absolute after:bottom-3 after:left-6 after:h-px after:w-0 after:bg-zinc-200 after:transition-[width] after:duration-300 after:content-[''] hover:after:w-[calc(100%-3rem)]"
         >
           ↑ Back to the office
         </a>
       </motion.div>
 
-      <footer className="mt-24 border-t border-zinc-900 pt-6 text-xs text-zinc-600">
+      <footer className="mt-24 border-t border-white/[0.08] pt-6 text-xs text-zinc-400">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <span>
             © {new Date().getFullYear()} Cognitiva Solusi Indonesia. All rights reserved.

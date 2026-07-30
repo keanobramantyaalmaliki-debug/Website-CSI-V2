@@ -6,12 +6,27 @@ import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-const MISSIONS = [
-  "Deliver innovative and high-quality software solutions.",
-  "Accelerate digital transformation through intelligent technologies.",
-  "Integrate Artificial Intelligence into practical business applications.",
-  "Build long-term partnerships based on trust, collaboration, and excellence.",
-  "Continuously innovate to help organizations thrive in the digital era.",
+const MISSIONS: { verb: string; detail: string }[] = [
+  {
+    verb: "Deliver",
+    detail: "Innovative and high-quality software solutions.",
+  },
+  {
+    verb: "Accelerate",
+    detail: "Digital transformation through intelligent technologies.",
+  },
+  {
+    verb: "Integrate",
+    detail: "Artificial Intelligence into practical business applications.",
+  },
+  {
+    verb: "Partner",
+    detail: "Long-term relationships built on trust, collaboration, and excellence.",
+  },
+  {
+    verb: "Innovate",
+    detail: "Continuously help organizations thrive in the digital era.",
+  },
 ];
 
 const VISION =
@@ -31,7 +46,7 @@ export default function Vision() {
         Our Vision
       </motion.p>
 
-      {/* T3 — scroll word-highlight (bookend with Manifesto) */}
+      {/* T3 — scroll word-highlight bookend */}
       <ScrollHighlight
         text={VISION}
         className="mt-3 max-w-2xl text-2xl font-semibold leading-snug tracking-tight sm:text-3xl"
@@ -48,14 +63,19 @@ export default function Vision() {
         Our Mission
       </motion.p>
 
-      {/* T2 — stagger missions */}
-      <FadeUpList tag="ol" className="mt-6 space-y-4">
+      {/* 5 mission verbs — verb + detail on one row, always visible (comfort) */}
+      <FadeUpList tag="ol" className="mt-6 border-t border-white/[0.08]">
         {MISSIONS.map((m, i) => (
-          <FadeUpItem key={m} tag="li" className="flex gap-4 border-b border-zinc-900 pb-4">
-            <span className="text-sm text-zinc-600 tabular-nums">
-              {String(i + 1).padStart(2, "0")}
-            </span>
-            <p className="text-sm leading-relaxed text-zinc-300 sm:text-base">{m}</p>
+          <FadeUpItem key={m.verb} tag="li" className="border-b border-white/[0.08]">
+            <div className="grid grid-cols-[2rem_1fr] items-baseline gap-5 py-5 sm:grid-cols-[2rem_10rem_1fr]">
+              <span className="text-xs tabular-nums text-zinc-400">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span className="text-lg font-medium text-zinc-100">{m.verb}</span>
+              <p className="col-span-2 text-sm leading-relaxed text-zinc-400 sm:col-span-1">
+                {m.detail}
+              </p>
+            </div>
           </FadeUpItem>
         ))}
       </FadeUpList>
