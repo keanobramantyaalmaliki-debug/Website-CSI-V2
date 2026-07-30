@@ -39,9 +39,9 @@ interface SceneStore {
   ) => void;
 
   // ── Minigame billiard ────────────────────────────────────────────────────
-  /** true = pemain sedang di meja. Dipakai CameraController untuk MEMATIKAN
-   *  navigasi wheel/panah/swipe — kalau tidak, geser-untuk-membidik ikut
-   *  berpindah ruangan. */
+  /** true = pemain sedang di meja. Dipakai Waypoints untuk MENYEMBUNYIKAN
+   *  waypoint — kalau tidak, geser-untuk-membidik bisa mengenai waypoint dan
+   *  pemain terlempar ke ruangan lain di tengah permainan. */
   billiardActive: boolean;
   billiardPhase: BilliardPhase;
   enterBilliard: () => void;

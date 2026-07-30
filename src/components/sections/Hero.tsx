@@ -4,7 +4,6 @@ import { lazy, Suspense, useEffect, useRef } from "react";
 import { useSceneStore } from "@/lib/store/sceneStore";
 
 const Scene = lazy(() => import("@/components/canvas/Scene"));
-const RoomNav = lazy(() => import("@/components/ui/RoomNav"));
 const BilliardHUD = lazy(() => import("@/components/ui/BilliardHUD"));
 
 /**
@@ -40,10 +39,9 @@ export default function Hero() {
         </Suspense>
       </div>
 
-      {/* Room title, nav dots, scroll-to-explore hint */}
-      <Suspense fallback={null}>
-        <RoomNav />
-      </Suspense>
+      {/* Navigasi antar ruangan sekarang lewat waypoint 3D di dalam Canvas
+          (Waypoints.tsx), bukan tombol DOM. Lompat cepat tetap tersedia di
+          dropdown "Office" pada Navbar. */}
 
       {/* Bar tenaga + kontrol minigame billiard (muncul saat meja diklik) */}
       <Suspense fallback={null}>

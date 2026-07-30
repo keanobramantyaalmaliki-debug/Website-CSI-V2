@@ -7,12 +7,27 @@ import { useSceneStore, VIEW_KEYS, type RoomKey, type Vec3 } from "@/lib/store/s
 
 const bl = (x: number, y: number, z: number) => new Vector3(x, z, -y);
 
+/**
+ * Pandangan tiap ruangan.
+ *
+ * Angka-angka ini DIAMBIL LANGSUNG dari viewport Blender (29 Jul) — kamera
+ * diarahkan manual sampai framing-nya pas, lalu posisi & arah pandangnya
+ * dibaca dan dikonversi. Jangan diubah dengan cara menebak: sedikit saja
+ * bergeser, kamera bisa menembus tembok atau kehilangan objek utamanya.
+ *
+ * Saat mengambil ulang, samakan dulu FOV kamera Blender ke 60° vertikal
+ * (lens 20,78 mm pada sensor tinggi 24 mm) supaya bingkai di Blender sama
+ * persis dengan yang muncul di browser — lihat DEFAULT_FOV di bawah.
+ */
 export const VIEWS: Record<RoomKey, { pos: Vector3; tgt: Vector3; disabled?: true }> = {
-  Office:   { pos: bl(-6.0,  -4.0, 1.6),  tgt: bl(-11.0, -3.0, 1.1) },
-  Lounge:   { pos: bl( 0.3,  -7.3, 1.55), tgt: bl(  0.0,  3.0, 1.1) },
-  Meeting:  { pos: bl(-16.2, -0.4, 1.6),  tgt: bl(-20.5, -0.4, 1.3) },
-  Function: { pos: bl( 0.0,   7.6, 1.6),  tgt: bl( -0.5, 10.5, 1.2) },
-  Pantry:   { pos: bl(-15.5, -5.5, 1.7),  tgt: bl(-17.5, -3.2, 1.2), disabled: true },
+  Office:   { pos: bl( -3.97, -2.48, 1.13), tgt: bl( -7.80, -3.60, 0.79) },
+  // Dimajukan 0,9 m dari titik yang diambil di Blender: posisi aslinya
+  // menyisakan panel listrik (MG_Lounge_M_EP_*, di x≈2,3 z≈4,6–5,2) menempel
+  // di tepi kanan layar.
+  Lounge:   { pos: bl(  1.65, -4.98, 1.60), tgt: bl(  0.01, -2.37, 1.25) },
+  Meeting:  { pos: bl(-14.91,  0.83, 1.37), tgt: bl(-18.46, -0.93, 0.81) },
+  Function: { pos: bl(  1.46,  7.51, 1.37), tgt: bl( -1.08, 10.59, 1.05) },
+  Pantry:   { pos: bl(-15.5,  -5.5,  1.7),  tgt: bl(-17.5,  -3.2,  1.2), disabled: true },
 };
 
 export const ACTIVE_KEYS = VIEW_KEYS.filter((k) => !VIEWS[k].disabled) as RoomKey[];
@@ -130,7 +145,7 @@ function ease(t: number) {
 }
 
 export default function CameraController() {
-  const { camera, gl } = useThree();
+  const { camera } = useThree();
   const setCurrentRoom = useSceneStore((s) => s.setCurrentRoom);
   const registerGoTo   = useSceneStore((s) => s.registerGoTo);
   const registerGoToView = useSceneStore((s) => s.registerGoToView);
@@ -219,65 +234,23 @@ export default function CameraController() {
     return () => registerGoToView(() => {});
   }, [goToView, registerGoToView]);
 
-  const nextRoom = useCallback(() => {
-    const idx  = ACTIVE_KEYS.indexOf(currentRoomRef.current);
-    const next = ACTIVE_KEYS[(idx + 1) % ACTIVE_KEYS.length];
-    goTo(next);
-  }, [goTo]);
-
-  const prevRoom = useCallback(() => {
-    const idx  = ACTIVE_KEYS.indexOf(currentRoomRef.current);
-    const prev = ACTIVE_KEYS[(idx - 1 + ACTIVE_KEYS.length) % ACTIVE_KEYS.length];
-    goTo(prev);
-  }, [goTo]);
-
-  // Semua handler navigasi di bawah dibaca lewat ref, BUKAN lewat nilai state
-  // langsung: listener-nya dipasang sekali dan tidak ikut re-subscribe tiap
-  // kali mode billiard berubah.
-  const billiardRef = useRef(false);
-  const billiardActive = useSceneStore((s) => s.billiardActive);
-  useEffect(() => { billiardRef.current = billiardActive; }, [billiardActive]);
-
-  // wheel on canvas only — page scroll unaffected
-  useEffect(() => {
-    const el = gl.domElement;
-    const onWheel = (e: WheelEvent) => {
-      if (billiardRef.current) return;
-      e.preventDefault();
-      if (e.deltaY > 0) nextRoom(); else prevRoom();
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, [gl, nextRoom, prevRoom]);
-
-  // keyboard
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (billiardRef.current) return;
-      if (e.key === "ArrowDown" || e.key === "ArrowRight") nextRoom();
-      if (e.key === "ArrowUp"   || e.key === "ArrowLeft")  prevRoom();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [nextRoom, prevRoom]);
-
-  // touch swipe
-  useEffect(() => {
-    let startY = 0;
-    const onStart = (e: TouchEvent) => { startY = e.touches[0].clientY; };
-    const onEnd   = (e: TouchEvent) => {
-      if (billiardRef.current) return;
-      const dy = startY - e.changedTouches[0].clientY;
-      if (Math.abs(dy) < 30) return;
-      if (dy > 0) nextRoom(); else prevRoom();
-    };
-    window.addEventListener("touchstart", onStart, { passive: true });
-    window.addEventListener("touchend",   onEnd,   { passive: true });
-    return () => {
-      window.removeEventListener("touchstart", onStart);
-      window.removeEventListener("touchend",   onEnd);
-    };
-  }, [nextRoom, prevRoom]);
+  /**
+   * TIDAK ADA navigasi berbasis gerakan atau tombol di sini — dengan sengaja.
+   *
+   * Perpindahan ruangan hanya lewat DUA jalur: klik waypoint 3D
+   * (Waypoints.tsx) dan dropdown ruangan di Navbar. Scroll wheel, swipe layar,
+   * dan panah keyboard semuanya dihapus 30 Jul.
+   *
+   * Alasannya: scroll & swipe punya arti ganda — di atas canvas ia memindah
+   * ruangan, di luar canvas ia menggulir halaman, dan pemain tidak bisa
+   * menebak yang mana yang akan terjadi. Panah keyboard tidak punya masalah
+   * itu, tapi ikut dihapus supaya tidak ada jalur tersembunyi yang tidak
+   * terlihat di layar: satu-satunya cara berpindah harus yang tergambar.
+   *
+   * Konsekuensi yang perlu diingat kalau menambah ruangan: setiap ruangan
+   * WAJIB punya minimal satu waypoint keluar yang benar-benar terlihat dari
+   * VIEWS-nya. Tidak ada lagi next/prev room sebagai jaring pengaman.
+   */
 
   // hash routing on load
   useEffect(() => {
