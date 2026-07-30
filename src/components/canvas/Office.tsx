@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useLayoutEffect, useEffect, useRef } from "react";
-import { useGLTF, useAnimations, Bvh } from "@react-three/drei";
+import { useGLTF, useAnimations, useTexture, Bvh } from "@react-three/drei";
 import { useThree, useFrame, type ThreeEvent } from "@react-three/fiber";
 import type * as THREE from "three";
 import { Mesh, SkinnedMesh, MeshStandardMaterial, Light, LoopRepeat } from "three";
@@ -9,6 +9,7 @@ import { useSceneStore } from "@/lib/store/sceneStore";
 import { billiardView } from "./CameraController";
 import { prepareLampFade } from "./billiard/lamps";
 import { prepareRevealSweep } from "./revealSweep";
+import { applyScreens, SCREENS } from "./screens";
 import { CHAR_LAYER } from "./CharacterLights";
 
 // GLB baked ada di public/ dan ter-track git (9 MB). Jangan kembalikan ke
@@ -77,6 +78,19 @@ const REVEAL_DELAY_MS = 150;
 export default function Office() {
   const { scene, animations } = useGLTF(MODEL_URL);
   const sceneEnv = useThree((s) => s.scene.environment);
+
+  // Gambar untuk layar monitor/laptop — lihat screens.ts. useTexture ikut
+  // Suspense yang sama dengan GLB, jadi teksturnya dijamin sudah ada sebelum
+  // frame pertama; tidak ada kedipan layar hitam lalu berisi.
+  const screenUrls = useMemo(() => SCREENS.map((s) => s.url), []);
+  const screenTexList = useTexture(screenUrls);
+  const screenTextures = useMemo(() => {
+    const map: Record<string, THREE.Texture> = {};
+    screenUrls.forEach((url, i) => {
+      map[url] = screenTexList[i];
+    });
+    return map;
+  }, [screenUrls, screenTexList]);
 
   // Mixer dipasang di root GLB, bukan per-karakter: kelima klip menarget node
   // rig-nya masing-masing (sudah dicek tidak ada bone yang dipakai dua klip),
@@ -217,7 +231,21 @@ export default function Office() {
       }
     });
 
+    // ── Konten layar ─────────────────────────────────────────────────────────
+    // WAJIB di sini, di dalam useMemo yang sama — bukan di useEffect terpisah.
+    // applyScreens() meng-CLONE material layar (lihat screens.ts), dan clone
+    // itu harus sudah ada saat prepareRevealSweep() mengumpulkan material untuk
+    // dipatch. Kalau dipasang belakangan, layarnya tidak ikut tersapu dan
+    // tampil utuh sejak frame pertama di tengah kantor yang belum terbentuk.
+    const screens = applyScreens(scene, screenTextures);
+
     if (import.meta.env.DEV) {
+      // screens HARUS sama dengan SCREENS.length. Kalau kurang, nama node di
+      // screens.ts tidak cocok dengan yang ada di GLB — layarnya akan diam
+      // hitam tanpa error apa pun.
+      console.log(
+        `[office] layar terisi=${screens}/${SCREENS.length}`,
+      );
       // Angka acuan dari GLB per 27 Jul: 40 lightmap, 22 AO asli, 0 tanpa uv1.
       // Kalau menyimpang jauh, fix-up di atas gagal — cek dulu sebelum
       // menyalahkan setelan lighting.
@@ -232,7 +260,7 @@ export default function Office() {
     }
 
     return scene;
-  }, [scene]);
+  }, [scene, screenTextures]);
 
   // ── Jalankan idle animation tiap karakter ────────────────────────────────
   // Dua dari lima klip (SittingIdle, Person4_Static92) durasinya 0.03 detik —
