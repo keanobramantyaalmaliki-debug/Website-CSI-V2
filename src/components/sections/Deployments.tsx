@@ -1,9 +1,9 @@
 "use client";
 
 import { motion } from "motion/react";
-import LineMask from "@/components/motion/LineMask";
 import DeploymentRow, { type DeploymentData } from "@/components/sections/DeploymentRow";
 import DeploymentsMatterField from "@/components/motion/DeploymentsMatterField";
+import PhysicsHeading from "@/components/motion/PhysicsHeading";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -66,10 +66,11 @@ export default function Deployments() {
         Deployments
       </motion.p>
 
-      {/* T1: line-mask heading */}
-      <h2 className="relative mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
-        <LineMask>Built for real-world environments where decisions matter.</LineMask>
-      </h2>
+      {/* T1: physics heading — click to fall, leave/release to spring back */}
+      <PhysicsHeading
+        text="Built for real-world environments where decisions matter."
+        className="relative mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl"
+      />
 
       {/* Interactive physics strip — grab and throw the numbered balls */}
       <DeploymentsMatterField />
