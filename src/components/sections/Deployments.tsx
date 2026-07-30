@@ -3,7 +3,7 @@
 import { motion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
 import DeploymentRow, { type DeploymentData } from "@/components/sections/DeploymentRow";
-import DeploymentsField from "@/components/motion/DeploymentsField";
+import DeploymentsField from "@/components/motion/DeploymentsMatterField";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
