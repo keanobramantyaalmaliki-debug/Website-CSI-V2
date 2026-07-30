@@ -1,9 +1,8 @@
 "use client";
 
 import { motion } from "motion/react";
-import LineMask from "@/components/motion/LineMask";
 import DeploymentRow, { type DeploymentData } from "@/components/sections/DeploymentRow";
-import DeploymentsField from "@/components/motion/DeploymentsField";
+import PhysicsHeading from "@/components/motion/PhysicsHeading";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -55,9 +54,6 @@ export default function Deployments() {
           "linear-gradient(to bottom, rgba(9,9,11,0.4) 0%, transparent 100%)",
       }}
     >
-      {/* Ambient drifting particle field */}
-      <DeploymentsField />
-
       {/* T6: eyebrow */}
       <motion.p
         className="relative text-xs tracking-widest text-zinc-400 uppercase"
@@ -69,10 +65,11 @@ export default function Deployments() {
         Deployments
       </motion.p>
 
-      {/* T1: line-mask heading */}
-      <h2 className="relative mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
-        <LineMask>Built for real-world environments where decisions matter.</LineMask>
-      </h2>
+      {/* T1: physics heading — click to fall, leave/release to spring back */}
+      <PhysicsHeading
+        text="Built for real-world environments where decisions matter."
+        className="relative mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl"
+      />
 
       {/* Deployment rows with stagger entrance */}
       <motion.div

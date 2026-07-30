@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import ScrollHighlight from "@/components/motion/ScrollHighlight";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
+import NetworkField from "@/components/motion/backgrounds/NetworkField";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -34,7 +35,11 @@ const VISION =
 
 export default function Vision() {
   return (
-    <section id="vision" className="px-6 py-24 sm:px-10 sm:py-32">
+    <section id="vision" className="relative overflow-hidden px-6 py-24 sm:px-10 sm:py-32">
+      {/* Scatter constellation — "space / vision". Text stays above at z-10. */}
+      <NetworkField variant="scatter" className="-z-0" />
+
+      <div className="relative z-10">
       {/* T6 — eyebrow */}
       <motion.p
         className="text-xs tracking-widest text-zinc-400 uppercase"
@@ -79,6 +84,7 @@ export default function Vision() {
           </FadeUpItem>
         ))}
       </FadeUpList>
+      </div>
     </section>
   );
 }

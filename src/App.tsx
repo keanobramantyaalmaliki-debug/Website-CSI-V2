@@ -10,6 +10,8 @@ import Industries from "@/components/sections/Industries";
 import Careers from "@/components/sections/Careers";
 import Vision from "@/components/sections/Vision";
 import Contact from "@/components/sections/Contact";
+import { Routes, Route } from "react-router-dom";
+import MatterLab from "@/components/lab/MatterLab";
 
 /**
  * Page structure (decided 2026-07-07, see reference/ROADMAP.md B5):
@@ -18,7 +20,7 @@ import Contact from "@/components/sections/Contact";
  * Content ported from V1 (~/Documents/Project/Apa-ini) — plain layout for now,
  * V2 gets its own animations/effects later. Scroll never moves the camera.
  */
-export default function App() {
+function Landing() {
   return (
     <>
       {/* Ambient depth layer — fixed, non-interactive subtle grid behind everything */}
@@ -38,5 +40,15 @@ export default function App() {
         <Contact />
       </main>
     </>
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      {/* Lab uji-coba fisika Matter.js — terpisah dari landing */}
+      <Route path="/matterjs-lab" element={<MatterLab />} />
+    </Routes>
   );
 }

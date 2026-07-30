@@ -58,3 +58,11 @@ package-lock.json
 yarn.lock
 
 /.agents/
+
+# lab / prototype pages — dev-only, tidak masuk production
+lab.html
+matterjs-lab.html
+/src/lab/
+/src/components/lab/
+/src/lib/lab/
+/src/lib/hooks/useMatterLab.ts
