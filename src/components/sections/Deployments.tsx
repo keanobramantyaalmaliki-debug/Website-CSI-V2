@@ -2,7 +2,6 @@
 
 import { motion } from "motion/react";
 import DeploymentRow, { type DeploymentData } from "@/components/sections/DeploymentRow";
-import DeploymentsMatterField from "@/components/motion/DeploymentsMatterField";
 import PhysicsHeading from "@/components/motion/PhysicsHeading";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -72,12 +71,9 @@ export default function Deployments() {
         className="relative mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl"
       />
 
-      {/* Interactive physics strip — grab and throw the numbered balls */}
-      <DeploymentsMatterField />
-
       {/* Deployment rows with stagger entrance */}
       <motion.div
-        className="relative mt-8"
+        className="relative mt-12"
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, margin: "0px 0px -60px 0px" }}

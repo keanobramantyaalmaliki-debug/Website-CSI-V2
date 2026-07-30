@@ -92,13 +92,11 @@ export default function PhysicsHeading({ text, className }: Props) {
         Body.setAngle(body, 0);
       });
 
-      // Strong gravity → realistic fast fall
-      engine.gravity.y = 10;
+      engine.gravity.y = 3.5;
 
-      // Give each word a random nudge + tumble so they don't fall in a column
       bodies.forEach((body) => {
-        Body.setVelocity(body, { x: (Math.random() - 0.5) * 3, y: 0 });
-        Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.1);
+        Body.setVelocity(body, { x: (Math.random() - 0.5) * 1.5, y: 0 });
+        Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.06);
       });
     };
 
