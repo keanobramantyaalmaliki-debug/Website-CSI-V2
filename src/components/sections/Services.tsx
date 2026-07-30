@@ -76,29 +76,39 @@ export default function Services() {
           <LineMask>Building Intelligent Digital Solutions</LineMask>
         </h2>
 
-        {/* Numbered index — stagger entrance, desc behind Disclosure */}
+        {/*
+          Editorial index: large number as typographic anchor.
+          Grid: [number-col | title | toggle] — number is visually dominant,
+          desc revealed behind Disclosure. Subs pills preserved on expand.
+        */}
         <FadeUpList tag="ul" className="mt-12 border-t border-zinc-900">
           {SERVICES.map((s) => (
             <FadeUpItem key={s.num} tag="li">
               <Disclosure
                 className="border-b border-zinc-900"
-                triggerClassName="group flex w-full items-center gap-4 py-5 text-left"
-                contentClassName="pb-5 pl-12"
+                triggerClassName="group w-full text-left"
+                contentClassName="pb-6 pl-16 sm:pl-32"
                 trigger={(open) => (
-                  <>
-                    <span className="w-8 shrink-0 text-xs tabular-nums text-zinc-600">
+                  <div className="grid w-full grid-cols-[4rem_1fr_1.5rem] items-center gap-4 py-5 sm:grid-cols-[7rem_1fr_1.5rem]">
+                    {/* Large number — typographic anchor */}
+                    <span
+                      className="text-4xl font-bold tabular-nums leading-none text-zinc-800 transition-colors duration-200 group-hover:text-zinc-600 sm:text-5xl"
+                      aria-hidden="true"
+                    >
                       {s.num}
                     </span>
-                    <span className="flex-1 font-medium text-zinc-300 transition-colors duration-200 group-hover:text-zinc-100">
+                    {/* Title */}
+                    <span className="font-medium text-zinc-300 transition-colors duration-200 group-hover:text-zinc-100">
                       {s.title}
                     </span>
+                    {/* Toggle indicator */}
                     <span
                       className={`shrink-0 text-sm text-zinc-600 transition-transform duration-200 group-hover:text-zinc-400 ${open ? "rotate-45" : "rotate-0"}`}
                       aria-hidden="true"
                     >
                       +
                     </span>
-                  </>
+                  </div>
                 )}
               >
                 <p className="text-sm leading-relaxed text-zinc-500">{s.desc}</p>

@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { motion, useScroll, useTransform, useReducedMotion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
 import Disclosure from "@/components/motion/Disclosure";
+import FlowDiagram from "@/components/motion/FlowDiagram";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -128,38 +129,50 @@ export default function LivingArchitecture() {
           Signals, context, and knowledge — adaptive systems that move organizations from awareness to action.
         </motion.p>
 
-        {/* Nodes — scroll-activated if motion allowed, static + defaultOpen if reduced */}
-        <ol className="mt-12 border-t border-zinc-900">
-          {NODES.map((node, i) =>
-            reduced ? (
-              <li key={node.name} className="border-b border-zinc-900">
-                <Disclosure
-                  defaultOpen
-                  triggerClassName="group flex w-full items-center gap-6 py-5 text-left"
-                  contentClassName="pb-5 pl-16"
-                  trigger={(open) => (
-                    <>
-                      <span className="w-10 shrink-0 text-sm tabular-nums text-zinc-600">
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
-                      <h3 className="flex-1 font-medium text-zinc-100">{node.name}</h3>
-                      <span
-                        className={`shrink-0 text-sm text-zinc-600 transition-transform duration-200 ${open ? "rotate-45" : "rotate-0"}`}
-                        aria-hidden="true"
-                      >
-                        +
-                      </span>
-                    </>
-                  )}
-                >
-                  <p className="text-sm leading-relaxed text-zinc-500">{node.desc}</p>
-                </Disclosure>
-              </li>
-            ) : (
-              <NodeItem key={node.name} node={node} index={i} progress={scrollYProgress} />
-            )
+        {/* 2-col layout: list left, flow diagram right (desktop only) */}
+        <div className="mt-12 lg:grid lg:grid-cols-[1fr_200px] lg:gap-12 xl:grid-cols-[1fr_220px] xl:gap-16">
+          {/* Node list */}
+          <ol className="border-t border-zinc-900">
+            {NODES.map((node, i) =>
+              reduced ? (
+                <li key={node.name} className="border-b border-zinc-900">
+                  <Disclosure
+                    defaultOpen
+                    triggerClassName="group flex w-full items-center gap-6 py-5 text-left"
+                    contentClassName="pb-5 pl-16"
+                    trigger={(open) => (
+                      <>
+                        <span className="w-10 shrink-0 text-sm tabular-nums text-zinc-600">
+                          {String(i + 1).padStart(2, "0")}
+                        </span>
+                        <h3 className="flex-1 font-medium text-zinc-100">{node.name}</h3>
+                        <span
+                          className={`shrink-0 text-sm text-zinc-600 transition-transform duration-200 ${open ? "rotate-45" : "rotate-0"}`}
+                          aria-hidden="true"
+                        >
+                          +
+                        </span>
+                      </>
+                    )}
+                  >
+                    <p className="text-sm leading-relaxed text-zinc-500">{node.desc}</p>
+                  </Disclosure>
+                </li>
+              ) : (
+                <NodeItem key={node.name} node={node} index={i} progress={scrollYProgress} />
+              )
+            )}
+          </ol>
+
+          {/* Flow diagram — desktop only, sticky so it tracks scroll alongside the list */}
+          {!reduced && (
+            <aside className="hidden lg:block">
+              <div className="sticky top-24 pt-1">
+                <FlowDiagram progress={scrollYProgress} />
+              </div>
+            </aside>
           )}
-        </ol>
+        </div>
 
         <p className="mt-8 text-xs tracking-widest text-zinc-600 uppercase">
           Signal Complete&nbsp;
