@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export const VIEW_KEYS = ["Office", "Lounge", "Meeting", "Function", "Pantry"] as const;
+export const VIEW_KEYS = ["Lounge", "Office", "Meeting", "Function", "Pantry"] as const;
 export type RoomKey = (typeof VIEW_KEYS)[number];
 
 /**
