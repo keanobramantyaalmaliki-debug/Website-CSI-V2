@@ -124,14 +124,37 @@ export default function Hero() {
   }, [reduced, setSceneReady]);
 
   return (
-    <section ref={sectionRef} id="office" className="relative h-dvh w-full">
-      <div className="absolute inset-0">
-        {/* fallback null: overlay LoadingScreen (di App.tsx) yang menutupi
-            layar selama chunk ini diunduh, jadi fallback di sini cuma akan
-            berkedip di belakangnya tanpa pernah terlihat. */}
+    // 180dvh scroll track — the extra ~80dvh is the "pin runway" where 3D
+    // stays on screen and content slides up over it.
+    <section ref={heroTrackRef} id="office" className="relative h-[180dvh] w-full">
+      {/* Sticky viewport — stays fixed at top while track scrolls past */}
+      <div ref={stickyRef} className="sticky top-0 h-dvh w-full">
+        {/* Canvas wrapper — CSS transforms only, camera is never touched */}
+        <motion.div
+          className="absolute inset-0"
+          style={{ opacity: canvasOpacity, scale: canvasScale, y: canvasY }}
+        >
+          {/* fallback null: overlay LoadingScreen (di SiteLayout) yang menutupi
+              layar selama chunk ini diunduh, jadi fallback di sini cuma akan
+              berkedip di belakangnya tanpa pernah terlihat. */}
+          <Suspense fallback={null}>
+            <Scene />
+          </Suspense>
+        </motion.div>
+
+        {/* Bar tenaga + kontrol minigame billiard (muncul saat meja diklik) */}
         <Suspense fallback={null}>
-          <Scene />
+          <BilliardHUD />
         </Suspense>
+
+        {/* "see our work" — scroll ke konten di bawah hero */}
+        <a
+          href="#manifesto"
+          className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2 text-zinc-400 transition-colors hover:text-zinc-200"
+        >
+          <span className="text-xs tracking-widest uppercase">see our work</span>
+          <span className="animate-bounce text-zinc-300">↓</span>
+        </a>
       </div>
     </section>
   );

@@ -1,4 +1,5 @@
 import { Outlet } from "react-router-dom";
+import LoadingScreen from "@/components/loader/LoadingScreen";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/sections/Hero";
 import HeroHandoff from "@/components/motion/HeroHandoff";
@@ -14,6 +15,7 @@ import RoomRouteSync from "./RoomRouteSync";
 export default function SiteLayout() {
   return (
     <>
+      <LoadingScreen />
       <div className="ambient-grid" aria-hidden="true" />
       <Navbar />
       <Hero />
