@@ -52,7 +52,13 @@ function Landing() {
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Landing />} />
+      <Route element={<SiteLayout />}>
+        <Route path="/"         element={<RoomContent room="Lounge" />} />
+        <Route path="/office"   element={<RoomContent room="Office" />} />
+        <Route path="/meeting"  element={<RoomContent room="Meeting" />} />
+        <Route path="/function" element={<RoomContent room="Function" />} />
+        <Route path="*"         element={<Navigate to="/" replace />} />
+      </Route>
     </Routes>
   );
 }

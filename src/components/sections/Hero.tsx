@@ -1,7 +1,7 @@
 "use client";
 
 import { lazy, Suspense, useEffect, useRef } from "react";
-import { useReducedMotion } from "motion/react";
+import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { useSceneStore } from "@/lib/store/sceneStore";
 
 const Scene = lazy(() => import("@/components/canvas/Scene"));
@@ -47,13 +47,17 @@ function StaticHero() {
 }
 
 export default function Hero() {
-  const sectionRef = useRef<HTMLElement>(null);
+  const heroTrackRef = useRef<HTMLElement>(null);
+  const stickyRef = useRef<HTMLDivElement>(null);
   const setHeroInView = useSceneStore((s) => s.setHeroInView);
   const setSceneReady = useSceneStore((s) => s.setSceneReady);
   const reduced = useReducedMotion();
 
+  // Anchor heroInView to the sticky viewport (h-dvh inner div), not the
+  // 180dvh track, so Navbar transparency and Waypoints unmount keep their
+  // current timing — they depend on when the 3D is actually visible on screen.
   useEffect(() => {
-    const el = sectionRef.current;
+    const el = reduced ? heroTrackRef.current : stickyRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
       ([entry]) => setHeroInView(entry.isIntersecting),
@@ -61,7 +65,39 @@ export default function Hero() {
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [setHeroInView]);
+  }, [setHeroInView, reduced]);
+
+  // Canvas recede: opacity 1→0, scale 1→0.96, y drift upward over last 40% of
+  // the scroll track. CSS transforms on the canvas wrapper don't wake R3F's
+  // frameloop="demand" — purely GPU-composited, camera untouched.
+  const { scrollYProgress } = useScroll({
+    target: heroTrackRef,
+    offset: ["start start", "end start"],
+  });
+  const canvasOpacity = useTransform(scrollYProgress, [0.6, 1.0], [1, 0]);
+  const canvasScale   = useTransform(scrollYProgress, [0.6, 1.0], [1, 0.96]);
+  const canvasY       = useTransform(scrollYProgress, [0.6, 1.0], [0, -20]);
+
+  // Reduced-motion: revert to original h-dvh normal-flow hero, no pin/recede.
+  if (reduced) {
+    return (
+      <section ref={heroTrackRef} id="office" className="relative h-dvh w-full">
+        <div className="absolute inset-0">
+          <StaticHero />
+        </div>
+        <Suspense fallback={null}>
+          <BilliardHUD />
+        </Suspense>
+        <a
+          href="#manifesto"
+          className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2 text-zinc-400 transition-colors hover:text-zinc-200"
+        >
+          <span className="text-xs tracking-widest uppercase">see our work</span>
+          <span className="text-zinc-300">↓</span>
+        </a>
+      </section>
+    );
+  }
 
   // ── Jaring pengaman: reduced-motion tetap menyalakan sceneReady ──────────
   // Saat ini efek ini TIDAK PERNAH menyala, karena <Scene/> selalu di-mount
@@ -97,24 +133,6 @@ export default function Hero() {
           <Scene />
         </Suspense>
       </div>
-
-      {/* Navigasi antar ruangan sekarang lewat waypoint 3D di dalam Canvas
-          (Waypoints.tsx), bukan tombol DOM. Lompat cepat tetap tersedia di
-          dropdown "Office" pada Navbar. */}
-
-      {/* Bar tenaga + kontrol minigame billiard (muncul saat meja diklik) */}
-      <Suspense fallback={null}>
-        <BilliardHUD />
-      </Suspense>
-
-      {/* "see our work" — scroll ke konten di bawah hero */}
-      <a
-        href="#manifesto"
-        className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2 text-zinc-400 transition-colors hover:text-zinc-200"
-      >
-        <span className="text-xs tracking-widest uppercase">see our work</span>
-        <span className={reduced ? "text-zinc-300" : "animate-bounce text-zinc-300"}>↓</span>
-      </a>
     </section>
   );
 }

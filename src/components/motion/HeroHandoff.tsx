@@ -1,59 +1,31 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useScroll, useTransform, useReducedMotion } from "motion/react";
+import { useReducedMotion } from "motion/react";
 
 /**
- * Cinematic bridge between the 3D hero and the first content section.
- * Purpose (one sentence): make "leaving the office" feel continuous instead of
- * a hard cut — the dark scene color melts into the lifted content base as you
- * scroll out of the hero.
- *
- * Comfort/restraint: purely scroll-linked opacity on a gradient (no pin, no
- * hijack, GPU-safe transform/opacity only). Under reduced motion it renders as
- * a plain static gradient seam — no scroll coupling.
+ * Opaque seam between the pinned 3D hero and the first content section.
+ * Full-motion: -mt-32 pulls it up into the sticky hero zone (slides over the
+ * receding canvas). z-20 > canvas, < Navbar z-50. Reduced-motion: normal-flow,
+ * no overlap.
  */
 export default function HeroHandoff() {
-  const ref = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
 
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start end", "end start"],
-  });
-
-  // Faint guide line + label strengthen as the seam enters, then fade — a beat
-  // that reads as "transition", not decoration.
-  const lineOpacity = useTransform(scrollYProgress, [0.2, 0.5, 0.8], [0, 0.5, 0]);
-  const labelOpacity = useTransform(scrollYProgress, [0.25, 0.5, 0.75], [0, 1, 0]);
-  const labelY = useTransform(scrollYProgress, [0.25, 0.5], [12, 0]);
+  if (reduced) {
+    return (
+      <div
+        aria-hidden="true"
+        className="h-20 w-full"
+        style={{ background: "linear-gradient(to bottom, #0a0a0c 0%, #14161b 100%)" }}
+      />
+    );
+  }
 
   return (
     <div
-      ref={ref}
       aria-hidden="true"
-      className="relative h-40 w-full overflow-hidden sm:h-52"
-      style={{
-        background:
-          "linear-gradient(to bottom, #0a0a0c 0%, #0f1116 45%, #14161b 100%)",
-      }}
-    >
-      {reduced ? null : (
-        <>
-          {/* center guide line */}
-          <motion.div
-            style={{ opacity: lineOpacity }}
-            className="absolute left-1/2 top-1/2 h-16 w-px -translate-x-1/2 -translate-y-1/2 bg-gradient-to-b from-transparent via-accent/60 to-transparent"
-          />
-          {/* transition label */}
-          <motion.p
-            style={{ opacity: labelOpacity, y: labelY }}
-            className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-[10px] uppercase tracking-[0.35em] text-zinc-500"
-          >
-            Leaving the office
-          </motion.p>
-        </>
-      )}
-    </div>
+      className="relative z-20 -mt-32 h-20 w-full rounded-t-3xl border-t border-white/10"
+      style={{ background: "linear-gradient(to bottom, #0a0a0c 0%, #14161b 100%)" }}
+    />
   );
 }

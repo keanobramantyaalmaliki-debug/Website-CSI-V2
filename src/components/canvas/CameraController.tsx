@@ -7,7 +7,7 @@ import {
   useSceneStore,
   VIEW_KEYS,
   START_ROOM,
-  hashFor,
+  roomFromPath,
   type RoomKey,
   type Vec3,
 } from "@/lib/store/sceneStore";
@@ -258,7 +258,8 @@ export default function CameraController() {
    * VIEWS-nya. Tidak ada lagi next/prev room sebagai jaring pengaman.
    */
 
-  // hash routing on load
+  // Snap kamera ke room yang diminta pathname saat pertama mount (deep-link).
+  // Back/forward browser ditangani React Router → RoomRouteSync memanggil goTo.
   useEffect(() => {
     const hash = window.location.hash.replace("#", "");
     if (hash) {
