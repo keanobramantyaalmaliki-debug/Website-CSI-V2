@@ -346,6 +346,9 @@ export default function Office() {
     };
   }, [prepared]);
 
+  /** Sudah mengabari store bahwa frame nyata pertama tergambar? */
+  const readySent = useRef(false);
+
   useFrame((_, dt) => {
     const sweep = sweepRef.current;
     if (!sweep || revealDone.current) return;
@@ -375,6 +378,45 @@ export default function Office() {
     if (startRef.current === null || dt > 0.25) {
       startRef.current = now;
       return;
+    }
+
+    // ── Kabari loader bahwa frame NYATA pertama sudah tergambar ─────────────
+    // Sampai di baris ini artinya gerbang di atas lolos: ada frame dengan jarak
+    // wajar, jadi stall kompilasi sudah lewat dan kantor benar-benar terlihat.
+    // Ini sinyal yang dipakai LoadingScreen untuk memulai outro — jauh lebih
+    // jujur daripada useProgress, yang mencapai 100% 2,3 detik lebih awal.
+    //
+    // Dijaga ref supaya set-nya sekali saja: memanggil setter zustand tiap
+    // frame akan memicu render ulang tiap frame di semua komponen yang
+    // membacanya. Norma yang sama dipakai di BilliardGame.tsx:267.
+    if (!readySent.current) {
+      readySent.current = true;
+      useSceneStore.getState().setSceneReady(true);
+    }
+
+    // ── Tahan sapuan sampai overlay loader benar-benar hilang ───────────────
+    // Berurutan, bukan tumpang tindih: sapuan "kantor terbentuk" adalah babak
+    // pembuka kantor, dan akan terbuang percuma kalau berjalan di balik
+    // lingkaran loader yang masih menutupi layar.
+    //
+    // Dibaca lewat getState(), bukan hook: ini di dalam useFrame, dan
+    // berlangganan store di sini akan memicu render ulang tiap kali ada nilai
+    // lain di store yang berubah.
+    //
+    // startRef ikut digeser tiap frame selama menunggu, sehingga saat gerbang
+    // akhirnya terbuka jamnya mulai dari nol — bukan langsung meloncat ke
+    // tengah sapuan sebesar durasi loader tadi.
+    //
+    // Batas 3 detik itu jaring pengaman, bukan bagian dari koreografi. Tanpa
+    // itu, satu bug di LoadingScreen (worker mati, komponen tidak ter-mount)
+    // membuat loaderDone tidak pernah true — dan karena sapuan menahan kantor
+    // di progress 0, kantornya TIDAK AKAN PERNAH TAMPIL. Kegagalan yang jauh
+    // lebih buruk daripada sekadar animasi yang bertabrakan.
+    if (!useSceneStore.getState().loaderDone) {
+      if (now - startRef.current < 3000) {
+        startRef.current = now;
+        return;
+      }
     }
 
     const t = (now - startRef.current - REVEAL_DELAY_MS) / REVEAL_MS;

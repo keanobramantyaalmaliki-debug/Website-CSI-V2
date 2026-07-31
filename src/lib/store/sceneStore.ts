@@ -49,6 +49,33 @@ interface BilliardApi {
 }
 
 interface SceneStore {
+  /**
+   * true setelah frame NYATA pertama tergambar — bukan setelah aset selesai
+   * diunduh.
+   *
+   * Bedanya besar dan itu inti dari keberadaan flag ini. `useProgress` drei
+   * mencapai 100% saat GLB selesai diunduh, tapi three masih memblokir main
+   * thread ~2,3 detik untuk mengompilasi 233 shader dan mengunggah 91 texture
+   * (terukur, lihat Office.tsx:352-372). Loader yang percaya pada useProgress
+   * akan hilang 2,3 detik terlalu cepat dan meninggalkan layar beku.
+   *
+   * Disetel dari useFrame di Office.tsx, sekali, saat ada frame yang jaraknya
+   * wajar untuk pertama kalinya.
+   */
+  sceneReady: boolean;
+  setSceneReady: (ready: boolean) => void;
+
+  /**
+   * true setelah overlay loading benar-benar hilang dari layar.
+   *
+   * Ini yang membuka gerbang sapuan "kantor terbentuk" (revealSweep). Keduanya
+   * sengaja BERURUTAN, bukan tumpang tindih: sapuan adalah babak pembuka kantor
+   * dan akan terbuang percuma kalau berjalan di balik lingkaran loader yang
+   * masih menutupi layar.
+   */
+  loaderDone: boolean;
+  setLoaderDone: (done: boolean) => void;
+
   currentRoom: RoomKey;
   setCurrentRoom: (room: RoomKey) => void;
   heroInView: boolean;
@@ -108,6 +135,12 @@ interface SceneStore {
 }
 
 export const useSceneStore = create<SceneStore>((set) => ({
+  sceneReady: false,
+  setSceneReady: (sceneReady) => set({ sceneReady }),
+
+  loaderDone: false,
+  setLoaderDone: (loaderDone) => set({ loaderDone }),
+
   currentRoom: START_ROOM,
   setCurrentRoom: (room) => set({ currentRoom: room }),
   heroInView: true,

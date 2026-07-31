@@ -1,4 +1,5 @@
 import Navbar from "@/components/Navbar";
+import LoadingScreen from "@/components/loader/LoadingScreen";
 import Hero from "@/components/sections/Hero";
 import Manifesto from "@/components/sections/Manifesto";
 import Deployments from "@/components/sections/Deployments";
@@ -20,6 +21,9 @@ import Contact from "@/components/sections/Contact";
 export default function App() {
   return (
     <>
+      {/* Di luar <main> dan sebelum Navbar: ia overlay fixed z-[60] yang
+          menutupi SEMUANYA (navbar z-50 termasuk) sampai kantor siap. */}
+      <LoadingScreen />
       <Navbar />
       <main>
         <Hero />

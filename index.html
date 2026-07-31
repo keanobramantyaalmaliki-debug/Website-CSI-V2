@@ -8,7 +8,20 @@
     <link rel="icon" href="/favicon.ico" />
   </head>
   <body class="min-h-full flex flex-col">
-    <div id="root"></div>
+    <!--
+      Latar putih statis untuk frame-frame PERTAMA, sebelum React sempat mount.
+
+      body berlatar #000 (src/index.css) sedangkan loading screen berlatar
+      putih, jadi tanpa ini ada kedipan hitam→putih tepat di pandangan pertama.
+      Ditulis inline, bukan lewat class Tailwind: CSS-nya sendiri masih dimuat
+      pada saat ini, jadi class apa pun belum berlaku.
+
+      Tidak perlu dibersihkan — React menimpa seluruh isi #root saat render
+      pertama, dan overlay LoadingScreen langsung mengambil alih latarnya.
+    -->
+    <div id="root">
+      <div style="position: fixed; inset: 0; background: #fff"></div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
