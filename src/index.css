@@ -1,17 +1,69 @@
 @import "tailwindcss";
 
 :root {
-  --background: #000000;
-  --foreground: #ededed;
+  /* Base — dark but NOT pure black. Lifted, slightly warm-neutral slate so it
+     reads calm & premium instead of oppressive/suram. Higher tiers = more raised. */
+  --background: #14161b;
+  --foreground: #f4f5f7;
+
   --font-geist-sans: "Geist Sans", sans-serif;
   --font-geist-mono: "Geist Mono", monospace;
+
+  /* Surface elevation scale — depth via lifted neutrals, not new hues. */
+  --surface-0: #14161b;
+  --surface-1: #191c22;
+  --surface-2: #1f232a;
+  --surface-3: #262b33;
+
+  /* Text scale — high-contrast by default (comfort). Stop using low-contrast grays
+     for body. -muted only for genuinely secondary meta, still >= AA. */
+  --text-primary: #f4f5f7;
+  --text-secondary: #c3c7cf;
+  --text-muted: #9aa0ab;
+
+  /* Hairlines — soft, tinted to light not pure white */
+  --line-1: rgba(255, 255, 255, 0.07);
+  --line-2: rgba(255, 255, 255, 0.12);
+
+  /* Single locked accent (orange, matches existing brand usage) */
+  --accent: #f97316;
+  --accent-soft: rgba(249, 115, 22, 0.14);
+
+  /* Elevation — inner highlight (physical edge), not black drop shadow */
+  --elevation-1: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --elevation-2: inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 20px 60px rgba(0, 0, 0, 0.4);
+
+  /* Glass — surgical use only (nav, overlays, floating controls) */
+  --glass-bg: rgba(20, 22, 27, 0.72);
+  --glass-blur: blur(16px) saturate(160%);
+
+  /* Motion — single shared curve + durations (matches ease used across primitives) */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 0.2s;
+  --dur-base: 0.4s;
+  --dur-slow: 0.7s;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line-1: var(--line-1);
+  --color-line-2: var(--line-2);
+  --color-accent: var(--accent);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --ease-out: var(--ease-out);
 }
 
 html,
@@ -27,4 +79,45 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Ambient depth layer — ultra-subtle grid, GPU-safe, fixed & non-interactive.
+   Radial mask fades it toward edges so it reads as atmosphere, not a wireframe. */
+.ambient-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 20%, transparent 80%);
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 20%, transparent 80%);
+}
+
+/* Glass surface utility — for nav / overlays only. Solid fallback when the
+   user prefers reduced transparency (a11y). */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--elevation-1);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: #1a1d23;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* Honor reduced-motion globally for CSS-driven smooth scroll */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }

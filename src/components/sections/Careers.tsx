@@ -41,7 +41,7 @@ export default function Careers() {
       </h2>
 
       {/* T7 — role rows with hover underline wipe */}
-      <FadeUpList className="mt-12 divide-y divide-zinc-900 border-y border-zinc-900">
+      <FadeUpList className="mt-12 divide-y divide-white/[0.08] border-y border-white/[0.08]">
         {ROLES.map((role) => (
           <FadeUpItem
             key={role.title}
@@ -53,7 +53,7 @@ export default function Careers() {
               <h3 className="relative w-fit font-medium text-zinc-100 after:absolute after:bottom-0 after:left-0 after:h-px after:w-0 after:bg-zinc-100 after:transition-[width] after:duration-300 after:content-[''] group-hover:after:w-full">
                 {role.title}
               </h3>
-              <p className="mt-1 text-xs text-zinc-500">
+              <p className="mt-1 text-xs text-zinc-400">
                 {role.type} · {role.mode}
               </p>
             </div>

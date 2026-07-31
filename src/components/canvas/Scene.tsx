@@ -38,6 +38,7 @@ const START_POS = VIEWS[START_ROOM].pos.toArray() as [number, number, number];
 export default function Scene() {
   return (
     <Canvas
+      frameloop="demand"
       camera={{ position: START_POS, fov: 60, near: 0.05, far: 120 }}
       dpr={[1, 1.5]}
       gl={{ antialias: true, powerPreference: "high-performance" }}

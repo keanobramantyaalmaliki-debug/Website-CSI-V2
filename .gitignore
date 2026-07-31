@@ -61,6 +61,16 @@ pnpm-lock.yaml
 package-lock.json
 yarn.lock
 
+/.agents/
+
+# lab / prototype pages — dev-only, tidak masuk production
+lab.html
+matterjs-lab.html
+/src/lab/
+/src/components/lab/
+/src/lib/lab/
+/src/lib/hooks/useMatterLab.ts
+
 # Screenshot sumber untuk konten layar (src/components/canvas/screens.ts).
 # Isinya tangkapan layar akun pribadi — nama akun, playlist, riwayat dengar —
 # dan repo ini publik. Yang di-commit HANYA hasil pixelasinya di public/screens/
