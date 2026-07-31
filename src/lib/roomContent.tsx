@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { RoomKey } from "@/lib/store/sceneStore";
 
 // ── Section imports ──────────────────────────────────────────────────────────
+import CsiHero from "@/components/sections/CsiHero";
 import Manifesto from "@/components/sections/Manifesto";
 import Deployments from "@/components/sections/Deployments";
 import Services from "@/components/sections/Services";
@@ -20,12 +21,13 @@ import Contact from "@/components/sections/Contact";
  *   masuk room mana dengan memindah entri di sini.
  *
  * Page structure (decided 2026-07-07, see reference/ROADMAP.md B5):
- * Hero → Manifesto → Deployments → Services → LivingArchitecture
+ * Hero → CsiHero → Manifesto → Deployments → Services → LivingArchitecture
  *      → Process → Industries → Careers → Vision → Contact
  */
 export const ROOM_CONTENT: Record<RoomKey, ReactNode> = {
   Lounge: (
     <>
+      <CsiHero />
       <Manifesto />
       <Deployments />
       <Services />
