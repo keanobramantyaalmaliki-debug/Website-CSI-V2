@@ -3,19 +3,24 @@
 import { useRef, useMemo, useEffect } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { useReducedMotion } from "motion/react";
-import type { MotionValue } from "motion/react";
 import * as THREE from "three";
 
 const PARTICLE_COUNT = 1000;
+const LETTERS = ["C", "S", "I"] as const;
+
+// Autoplay timeline: converge onto a letter, hold, disperse back to scatter, next letter.
+const CONVERGE_MS = 1300;
+const HOLD_MS = 1800;
+const DISPERSE_MS = 900;
 
 // Text-sampling canvas — sized to match the target bounding box below.
 const SAMPLE_CANVAS_WIDTH = 860;
 const SAMPLE_CANVAS_HEIGHT = 550;
 
 // Target bounding box in Three.js space (mirrors ManifestoField's lattice extent).
-const TARGET_WIDTH = 2.15;
-const TARGET_HEIGHT = 1.375;
-const TARGET_CENTER_X = 1.0;
+const TARGET_WIDTH = 6.6;
+const TARGET_HEIGHT = 4.275;
+const TARGET_CENTER_X = 1.8;
 
 // Scatter: random sphere, radius 3-5 (right side bias)
 function scatterPosition(): [number, number, number] {
@@ -106,11 +111,57 @@ function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }
 
-function Particles({ progress }: { progress: MotionValue<number> }) {
+function easeInOutQuad(t: number) {
+  return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+}
+
+export interface TimelineSegment {
+  from: Float32Array;
+  to: Float32Array;
+  duration: number;
+  hold: boolean;
+}
+
+// scatter → letter (converge) → hold → letter → scatter (disperse), repeated per letter.
+export function buildTimeline(scatter: Float32Array, letterTargets: Float32Array[]): TimelineSegment[] {
+  const segments: TimelineSegment[] = [];
+  for (const target of letterTargets) {
+    segments.push({ from: scatter, to: target, duration: CONVERGE_MS, hold: false });
+    segments.push({ from: target, to: target, duration: HOLD_MS, hold: true });
+    segments.push({ from: target, to: scatter, duration: DISPERSE_MS, hold: false });
+  }
+  return segments;
+}
+
+// Elapsed time is wrapped modulo the timeline's total duration, so the sequence loops forever.
+export function sampleTimeline(
+  segments: TimelineSegment[],
+  elapsedMs: number,
+): { from: Float32Array; to: Float32Array; eased: number } {
+  const total = segments.reduce((sum, s) => sum + s.duration, 0);
+  if (total <= 0 || segments.length === 0) {
+    const empty = new Float32Array(0);
+    return { from: empty, to: empty, eased: 0 };
+  }
+
+  let t = elapsedMs % total;
+  for (const seg of segments) {
+    if (t <= seg.duration) {
+      const localT = seg.duration === 0 ? 1 : t / seg.duration;
+      return { from: seg.from, to: seg.to, eased: seg.hold ? 1 : easeInOutQuad(localT) };
+    }
+    t -= seg.duration;
+  }
+
+  const last = segments[segments.length - 1];
+  return { from: last.from, to: last.to, eased: 1 };
+}
+
+function Particles({ active }: { active: boolean }) {
   const { invalidate } = useThree();
   const pointsRef = useRef<THREE.Points>(null);
 
-  const { scatter, target, opacities } = useMemo(() => {
+  const { scatter, opacities, timeline } = useMemo(() => {
     const scatter = new Float32Array(PARTICLE_COUNT * 3);
     const opacities = new Float32Array(PARTICLE_COUNT);
 
@@ -122,35 +173,46 @@ function Particles({ progress }: { progress: MotionValue<number> }) {
       opacities[i] = 0.25 + Math.random() * 0.25;
     }
 
-    const target = sampleTextPoints("CSI", PARTICLE_COUNT);
-    return { scatter, target, opacities };
+    const letterTargets = LETTERS.map((letter) => sampleTextPoints(letter, PARTICLE_COUNT));
+    return { scatter, opacities, timeline: buildTimeline(scatter, letterTargets) };
   }, []);
 
-  const positions = useMemo(() => new Float32Array(PARTICLE_COUNT * 3), []);
+  const positions = useMemo(() => new Float32Array(scatter), [scatter]);
+
+  const elapsedRef = useRef(0);
+  const lastTsRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const unsub = progress.on("change", (t) => {
-      if (!pointsRef.current) return;
-      const geo = pointsRef.current.geometry;
-      const pos = geo.attributes.position as THREE.BufferAttribute;
-      const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // ease in-out quad
-
-      for (let i = 0; i < PARTICLE_COUNT; i++) {
-        pos.array[i * 3] = lerp(scatter[i * 3], target[i * 3], eased);
-        pos.array[i * 3 + 1] = lerp(scatter[i * 3 + 1], target[i * 3 + 1], eased);
-        pos.array[i * 3 + 2] = lerp(scatter[i * 3 + 2], target[i * 3 + 2], eased);
-      }
-      pos.needsUpdate = true;
-      invalidate();
-    });
-    return unsub;
-  }, [progress, scatter, target, invalidate]);
-
-  useMemo(() => {
-    for (let i = 0; i < PARTICLE_COUNT * 3; i++) {
-      positions[i] = scatter[i];
+    if (!active) {
+      lastTsRef.current = null;
+      return;
     }
-  }, [positions, scatter]);
+
+    let rafId: number;
+    const tick = (ts: number) => {
+      if (lastTsRef.current !== null) {
+        elapsedRef.current += ts - lastTsRef.current;
+      }
+      lastTsRef.current = ts;
+
+      const pos = pointsRef.current?.geometry.attributes.position as THREE.BufferAttribute | undefined;
+      if (pos) {
+        const { from, to, eased } = sampleTimeline(timeline, elapsedRef.current);
+        for (let i = 0; i < PARTICLE_COUNT * 3; i++) {
+          pos.array[i] = lerp(from[i], to[i], eased);
+        }
+        pos.needsUpdate = true;
+        invalidate();
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      lastTsRef.current = null;
+    };
+  }, [active, timeline, invalidate]);
 
   return (
     <points ref={pointsRef}>
@@ -180,7 +242,7 @@ function Particles({ progress }: { progress: MotionValue<number> }) {
   );
 }
 
-export default function CsiParticleField({ progress }: { progress: MotionValue<number> }) {
+export default function CsiParticleField({ active }: { active: boolean }) {
   const reduced = useReducedMotion();
 
   // No-WebGL / reduced-motion: render subtle gradient instead
@@ -209,7 +271,7 @@ export default function CsiParticleField({ progress }: { progress: MotionValue<n
         }}
         style={{ width: "100%", height: "100%" }}
       >
-        <Particles progress={progress} />
+        <Particles active={active} />
       </Canvas>
     </div>
   );

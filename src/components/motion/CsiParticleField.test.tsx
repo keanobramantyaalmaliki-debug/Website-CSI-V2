@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render } from "@testing-library/react";
-import { useMotionValue } from "motion/react";
 
 // jsdom lacks ResizeObserver; @react-three/fiber's Canvas needs it to mount.
 class ResizeObserverStub {
@@ -19,11 +18,6 @@ vi.mock("motion/react", async (importOriginal) => {
 
 const { default: CsiParticleField } = await import("./CsiParticleField");
 
-function Wrapper() {
-  const progress = useMotionValue(0);
-  return <CsiParticleField progress={progress} />;
-}
-
 beforeEach(() => {
   mockReduced = false;
 });
@@ -31,15 +25,15 @@ beforeEach(() => {
 describe("CsiParticleField", () => {
   it("reduced-motion: renders gradient fallback, no Canvas", () => {
     mockReduced = true;
-    const { container } = render(<Wrapper />);
+    const { container } = render(<CsiParticleField active={true} />);
     const field = container.firstChild as HTMLElement;
     expect(field.getAttribute("aria-hidden")).toBe("true");
     expect(field.style.background).toContain("radial-gradient");
     expect(container.querySelector("canvas")).toBeNull();
   });
 
-  it("full-motion: renders a Canvas wrapper", () => {
-    const { container } = render(<Wrapper />);
+  it("full-motion: renders a Canvas wrapper regardless of active state", () => {
+    const { container } = render(<CsiParticleField active={false} />);
     const field = container.firstChild as HTMLElement;
     expect(field.getAttribute("aria-hidden")).toBe("true");
     expect(container.querySelector("canvas")).not.toBeNull();

@@ -1,23 +1,20 @@
 "use client";
 
 import { useRef } from "react";
-import { motion, useScroll } from "motion/react";
+import { motion, useInView } from "motion/react";
 import CsiParticleField from "@/components/motion/CsiParticleField";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 export default function CsiHero() {
   const sectionRef = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start 0.9", "end 0.2"],
-  });
+  const inView = useInView(sectionRef, { once: false, margin: "-10% 0px -10% 0px" });
 
   return (
     <section
       id="csi"
       ref={sectionRef}
-      className="relative overflow-hidden bg-background px-6 py-24 sm:px-10 sm:py-32"
+      className="relative overflow-hidden bg-background px-6 py-16 sm:px-10 sm:py-20"
     >
       <div className="relative z-10 lg:grid lg:grid-cols-2 lg:gap-12">
         <div>
@@ -48,8 +45,8 @@ export default function CsiHero() {
         </div>
 
         <aside className="relative hidden lg:block">
-          <div className="sticky top-24 h-[26rem]">
-            <CsiParticleField progress={scrollYProgress} />
+          <div className="h-[20rem]">
+            <CsiParticleField active={inView} />
           </div>
         </aside>
       </div>
