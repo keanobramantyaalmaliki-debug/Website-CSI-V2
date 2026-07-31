@@ -1,7 +1,6 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { Html, useProgress } from "@react-three/drei";
 import { EffectComposer, Bloom, N8AO } from "@react-three/postprocessing";
 import { ACESFilmicToneMapping } from "three";
 import { Suspense } from "react";
@@ -21,20 +20,21 @@ import ContactShadowsRig from "./ContactShadowsRig";
 // diturunkan begini, memindahkan START_ROOM cukup di satu tempat.
 const START_POS = VIEWS[START_ROOM].pos.toArray() as [number, number, number];
 
-function Loader() {
-  const { progress } = useProgress();
-  return (
-    <Html center>
-      <div className="flex flex-col items-center gap-2 text-center">
-        <p className="text-sm text-zinc-400">Turning on the lights…</p>
-        <p className="font-mono text-xs text-zinc-600 tabular-nums">
-          {progress.toFixed(0)}%
-        </p>
-      </div>
-    </Html>
-  );
-}
-
+/**
+ * ⚠️ TIDAK ADA fallback loading di sini lagi, dan itu disengaja.
+ *
+ * Dulu di tempat ini ada <Html> + useProgress dari drei. Dua alasan ia dicabut:
+ *
+ * 1. Ia BOHONG soal kapan kantor siap. `useProgress` mencapai 100% saat GLB
+ *    selesai diunduh, padahal three masih memblokir main thread ~2,3 detik
+ *    untuk mengompilasi 233 shader (terukur, lihat Office.tsx:352-372). Loader
+ *    hilang, lalu pengunjung menatap layar beku.
+ * 2. <Html> hidup DI DALAM Canvas, jadi ia baru bisa tampil setelah konteks
+ *    WebGL jadi — mustahil menutupi fase pra-WebGL.
+ *
+ * Penggantinya overlay DOM di luar Canvas: src/components/loader/LoadingScreen.tsx,
+ * yang menunggu sinyal `sceneReady` dari frame nyata pertama.
+ */
 export default function Scene() {
   return (
     <Canvas
@@ -64,7 +64,7 @@ export default function Scene() {
       <CharacterLights />
       <CameraController />
 
-      <Suspense fallback={<Loader />}>
+      <Suspense fallback={null}>
         <Office />
         {/* Kerucut cahaya volumetrik (LightCone/LightCones) DIHAPUS 30 Jul.
             Kalau nanti dibuat lagi, dua catatan yang mahal didapat:

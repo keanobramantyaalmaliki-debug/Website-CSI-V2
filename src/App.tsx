@@ -1,4 +1,5 @@
 import Navbar from "@/components/Navbar";
+import LoadingScreen from "@/components/loader/LoadingScreen";
 import Hero from "@/components/sections/Hero";
 import HeroHandoff from "@/components/motion/HeroHandoff";
 import Manifesto from "@/components/sections/Manifesto";
@@ -22,8 +23,9 @@ import { Routes, Route } from "react-router-dom";
 function Landing() {
   return (
     <>
-      {/* Ambient depth layer — fixed, non-interactive subtle grid behind everything */}
-      <div className="ambient-grid" aria-hidden="true" />
+      {/* Di luar <main> dan sebelum Navbar: ia overlay fixed z-[60] yang
+          menutupi SEMUANYA (navbar z-50 termasuk) sampai kantor siap. */}
+      <LoadingScreen />
       <Navbar />
       <main className="relative z-10">
         <Hero />

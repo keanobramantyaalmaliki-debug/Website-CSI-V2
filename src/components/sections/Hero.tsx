@@ -55,19 +55,12 @@ export default function Hero() {
   return (
     <section ref={sectionRef} id="office" className="relative h-dvh w-full">
       <div className="absolute inset-0">
-        {reduced ? (
-          <StaticHero />
-        ) : (
-          <Suspense
-            fallback={
-              <div className="flex h-full items-center justify-center bg-[#0d0f13]">
-                <p className="animate-pulse text-sm text-zinc-400">Turning on the lights…</p>
-              </div>
-            }
-          >
-            <Scene />
-          </Suspense>
-        )}
+        {/* fallback null: overlay LoadingScreen (di App.tsx) yang menutupi
+            layar selama chunk ini diunduh, jadi fallback di sini cuma akan
+            berkedip di belakangnya tanpa pernah terlihat. */}
+        <Suspense fallback={null}>
+          <Scene />
+        </Suspense>
       </div>
 
       {/* Navigasi antar ruangan sekarang lewat waypoint 3D di dalam Canvas
