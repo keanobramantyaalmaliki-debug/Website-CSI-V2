@@ -28,7 +28,6 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 export default function SceneEnvironment() {
   const gl = useThree((s) => s.gl);
   const scene = useThree((s) => s.scene);
-  const invalidate = useThree((s) => s.invalidate);
 
   useLayoutEffect(() => {
     const pmrem = new PMREMGenerator(gl);
@@ -47,7 +46,6 @@ export default function SceneEnvironment() {
         if (m instanceof MeshStandardMaterial) m.needsUpdate = true;
       }
     });
-    invalidate();
 
     return () => {
       scene.environment = null;

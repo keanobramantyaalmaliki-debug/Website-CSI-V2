@@ -27,18 +27,50 @@ const START_POS = VIEWS[START_ROOM].pos.toArray() as [number, number, number];
  *
  * 1. Ia BOHONG soal kapan kantor siap. `useProgress` mencapai 100% saat GLB
  *    selesai diunduh, padahal three masih memblokir main thread ~2,3 detik
- *    untuk mengompilasi 233 shader (terukur, lihat Office.tsx:352-372). Loader
- *    hilang, lalu pengunjung menatap layar beku.
+ *    untuk mengompilasi 233 shader (terukur, lihat Office.tsx). Loader hilang,
+ *    lalu pengunjung menatap layar beku.
  * 2. <Html> hidup DI DALAM Canvas, jadi ia baru bisa tampil setelah konteks
  *    WebGL jadi — mustahil menutupi fase pra-WebGL.
  *
  * Penggantinya overlay DOM di luar Canvas: src/components/loader/LoadingScreen.tsx,
  * yang menunggu sinyal `sceneReady` dari frame nyata pertama.
  */
+
+/**
+ * ⚠️ JANGAN pasang kembali `frameloop="demand"` di Canvas ini tanpa membaca
+ * paragraf berikut sampai habis.
+ *
+ * Pernah ada di sini (commit df27f3d, 29 Jul) dan itu optimasi yang MASUK AKAL:
+ * saat kantor diam, GPU tidak perlu menggambar 60×/detik. `invalidate()` ikut
+ * dipasang di CameraController & SceneEnvironment, yaitu semua pemanggil yang
+ * ada saat itu.
+ *
+ * Yang membuatnya dicabut bukan idenya, melainkan jangkauannya. `demand`
+ * mengubah kontrak SELURUH scene: setiap `useFrame` — yang sekarang maupun yang
+ * ditulis besok — wajib memanggil `invalidate()` atau animasinya diam di layar.
+ * Saat feature/screen-content digabung (96df186) ia membawa tiga useFrame baru
+ * yang tidak tahu kontrak itu ada, karena cabangnya berangkat 7 menit SEBELUM
+ * kontraknya lahir. Git tidak melaporkan konflik — perubahannya di baris yang
+ * berbeda — jadi yang rusak lolos diam-diam:
+ *
+ *   sapuan reveal berhenti di progress 0 → kantor tak pernah tergambar,
+ *   `sweep.dispose()` tak pernah tercapai → 233 material menghitung dither +
+ *   discard selamanya → layar beku DAN berat, tapi navigasi tetap jalan
+ *   (CameraController satu-satunya yang punya invalidate).
+ *
+ * Kalau memang mau on-demand lagi, syaratnya: pasang `invalidate()` di TIAP
+ * tick useFrame di Office.tsx, Waypoints.tsx, dan billiard/BilliardGame.tsx
+ * lebih dulu. Penjaganya sudah ada — `frameloop.invariant.test.ts` akan gagal
+ * dengan menyebut berkas yang belum patuh. Selama sapuan reveal & minigame
+ * billiard masih ada, hemat GPU-nya kecil dan risikonya besar.
+ *
+ * Catatan: dua Canvas kecil di motion/ (DeploymentsField, ManifestoField)
+ * TETAP memakai `demand` dan itu benar — keduanya menggerakkan animasinya
+ * sendiri lewat invalidate() dan tidak berbagi kontrak dengan scene ini.
+ */
 export default function Scene() {
   return (
     <Canvas
-      frameloop="demand"
       camera={{ position: START_POS, fov: 60, near: 0.05, far: 120 }}
       dpr={[1, 1.5]}
       gl={{ antialias: true, powerPreference: "high-performance" }}
