@@ -14,6 +14,16 @@ const BilliardHUD = lazy(() => import("@/components/ui/BilliardHUD"));
  * Comfort/perf: under prefers-reduced-motion we skip the heavy WebGL scene
  * entirely and show a calm static hero. Saves the GPU/bundle cost for users who
  * asked for less motion, and keeps the page smooth on low-end devices.
+ *
+ * ⚠️ SAAT INI TIDAK TERPAKAI. Percabangan `reduced ? <StaticHero/> : <Scene/>`
+ * hilang dari render saat resolusi konflik di PR #4 (73bdca6), jadi <Scene/>
+ * kini selalu di-mount dan komponen ini jadi kode mati. Sengaja TIDAK dihapus:
+ * ini fitur comfort yang disengaja, dan menghapusnya diam-diam sama saja
+ * mengulang cara ia hilang. Keputusan mengembalikan atau membuangnya ada di
+ * pemiliknya.
+ *
+ * Kalau dikembalikan, pemantik `setSceneReady` di bawah WAJIB ikut — tanpa itu
+ * overlay loader menutupi situs selamanya di jalur ini. Lihat INVARIANTS.md §3.
  */
 function StaticHero() {
   return (
@@ -39,6 +49,7 @@ function StaticHero() {
 export default function Hero() {
   const sectionRef = useRef<HTMLElement>(null);
   const setHeroInView = useSceneStore((s) => s.setHeroInView);
+  const setSceneReady = useSceneStore((s) => s.setSceneReady);
   const reduced = useReducedMotion();
 
   useEffect(() => {
@@ -51,6 +62,30 @@ export default function Hero() {
     observer.observe(el);
     return () => observer.disconnect();
   }, [setHeroInView]);
+
+  // ── Jaring pengaman: reduced-motion tetap menyalakan sceneReady ──────────
+  // Saat ini efek ini TIDAK PERNAH menyala, karena <Scene/> selalu di-mount
+  // (percabangan reduced-motion hilang di PR #4 — lihat catatan di StaticHero).
+  // Ia sengaja dipasang lebih dulu, sebagai pengaman untuk saat percabangan itu
+  // dikembalikan.
+  //
+  // Kalau kembali TANPA ini, situsnya tidak bisa dipakai sama sekali di bawah
+  // prefers-reduced-motion, dan gejalanya tidak menunjuk ke sini sedikit pun:
+  // LoadingScreen (overlay putih z-[60]) hanya memulai outro saat `sceneReady`
+  // true, dan satu-satunya yang menyalakannya adalah useFrame di Office.tsx —
+  // yang hidup DI DALAM <Scene/>. Tanpa Scene, sceneReady selamanya false,
+  // jaring pengaman 1500 ms di LoadingScreen bahkan tidak pernah terpasang
+  // karena ia sendiri digerbangi sceneReady, dan layar putih menutupi situs
+  // SELAMANYA.
+  //
+  // Pola yang sama dengan bug frameloop (INVARIANTS.md §1): <StaticHero/> lahir
+  // di cabang comfort-redesign, LoadingScreen di cabang loading-screen, dan
+  // keduanya benar sendiri-sendiri. Rusaknya cuma di persimpangan.
+  // Lihat INVARIANTS.md §3.
+  useEffect(() => {
+    if (!reduced) return;
+    setSceneReady(true);
+  }, [reduced, setSceneReady]);
 
   return (
     <section ref={sectionRef} id="office" className="relative h-dvh w-full">

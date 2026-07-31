@@ -24,8 +24,13 @@ function Landing() {
   return (
     <>
       {/* Di luar <main> dan sebelum Navbar: ia overlay fixed z-[60] yang
-          menutupi SEMUANYA (navbar z-50 termasuk) sampai kantor siap. */}
+          menutupi SEMUANYA (navbar z-50 termasuk) sampai kantor siap.
+          Lihat INVARIANTS.md §2 soal skala z-index. */}
       <LoadingScreen />
+      {/* Ambient depth layer — fixed, non-interactive subtle grid behind everything.
+          Sempat hilang dari App.tsx saat resolusi konflik di PR #4 (73bdca6)
+          padahal `.ambient-grid` masih ada di index.css — dikembalikan di sini. */}
+      <div className="ambient-grid" aria-hidden="true" />
       <Navbar />
       <main className="relative z-10">
         <Hero />

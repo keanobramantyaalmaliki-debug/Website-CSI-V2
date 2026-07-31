@@ -152,7 +152,7 @@ function ease(t: number) {
 }
 
 export default function CameraController() {
-  const { camera, invalidate } = useThree();
+  const { camera } = useThree();
   const setCurrentRoom = useSceneStore((s) => s.setCurrentRoom);
   const registerGoTo   = useSceneStore((s) => s.registerGoTo);
   const registerGoToView = useSceneStore((s) => s.registerGoToView);
@@ -176,8 +176,7 @@ export default function CameraController() {
     camera.position.copy(v.pos);
     lookTarget.current.copy(v.tgt);
     camera.lookAt(v.tgt);
-    invalidate();
-  }, [camera, invalidate]);
+  }, [camera]);
 
   const goTo = useCallback(
     (name: RoomKey) => {
@@ -201,11 +200,10 @@ export default function CameraController() {
       animating.current  = true;
       currentRoomRef.current = name;
       setCurrentRoom(name);
-      invalidate();
 
       history.pushState(null, "", window.location.pathname + hashFor(name));
     },
-    [camera, setCurrentRoom, invalidate],
+    [camera, setCurrentRoom],
   );
 
   // register goTo in store so RoomNav (outside Canvas) can call it
@@ -233,9 +231,8 @@ export default function CameraController() {
       }
       tweenStart.current = performance.now();
       animating.current = true;
-      invalidate();
     },
-    [camera, invalidate],
+    [camera],
   );
 
   useEffect(() => {
@@ -272,7 +269,6 @@ export default function CameraController() {
         camera.position.copy(VIEWS[key].pos);
         lookTarget.current.copy(VIEWS[key].tgt);
         camera.lookAt(VIEWS[key].tgt);
-        invalidate();
       }
     }
 
@@ -286,7 +282,7 @@ export default function CameraController() {
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
-  }, [camera, goTo, setCurrentRoom, invalidate]);
+  }, [camera, goTo, setCurrentRoom]);
 
   useFrame(() => {
     if (!animating.current) return;
@@ -302,7 +298,6 @@ export default function CameraController() {
       setFov(camera, fromFov.current + (toFov.current - fromFov.current) * e);
     }
     if (t >= 1) animating.current = false;
-    else invalidate();
   });
 
   return null;
