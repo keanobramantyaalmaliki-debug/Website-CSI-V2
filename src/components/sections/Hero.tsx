@@ -5,7 +5,6 @@ import { useReducedMotion } from "motion/react";
 import { useSceneStore } from "@/lib/store/sceneStore";
 
 const Scene = lazy(() => import("@/components/canvas/Scene"));
-const RoomNav = lazy(() => import("@/components/ui/RoomNav"));
 const BilliardHUD = lazy(() => import("@/components/ui/BilliardHUD"));
 
 /**
@@ -71,17 +70,14 @@ export default function Hero() {
         )}
       </div>
 
-      {/* 3D tour controls — only when the scene is actually mounted */}
-      {!reduced && (
-        <>
-          <Suspense fallback={null}>
-            <RoomNav />
-          </Suspense>
-          <Suspense fallback={null}>
-            <BilliardHUD />
-          </Suspense>
-        </>
-      )}
+      {/* Navigasi antar ruangan sekarang lewat waypoint 3D di dalam Canvas
+          (Waypoints.tsx), bukan tombol DOM. Lompat cepat tetap tersedia di
+          dropdown "Office" pada Navbar. */}
+
+      {/* Bar tenaga + kontrol minigame billiard (muncul saat meja diklik) */}
+      <Suspense fallback={null}>
+        <BilliardHUD />
+      </Suspense>
 
       {/* "see our work" — scroll ke konten di bawah hero */}
       <a

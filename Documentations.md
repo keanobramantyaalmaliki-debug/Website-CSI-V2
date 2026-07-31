@@ -1,7 +1,7 @@
 # Documentations — Cogniti Office 3D Tour
 
 Dokumentasi progres pembuatan 3D office tour ala [basement.studio](https://basement.studio) untuk **cogniti.id**.
-Terakhir diupdate: **29 Juli 2026**.
+Terakhir diupdate: **30 Juli 2026**.
 
 **Status ringkas:** **5 ruangan sudah ~95% jadi** dan seluruhnya sudah jalan di browser (lihat MVP 1 di bawah):
 - **Lounge/Billiard** (§2) & **Function Room** (eks Smoking, §3) — furniture & dekorasi lengkap
@@ -12,17 +12,28 @@ Terakhir diupdate: **29 Juli 2026**.
 **0 material prosedural** tersisa (semua sudah di-bake ke image texture).
 
 **Per 29 Jul** — kemajuan besar di atas MVP1:
-- **GLB sudah terintegrasi ke Next.js** (§4h) — bukan lagi cuma viewer HTML. Hero fullscreen + navigasi antar-ruangan + hash routing + scrollspy navbar. Blocker path model sudah dibetulkan.
+- **GLB sudah terintegrasi ke web** (§4h) — bukan lagi cuma viewer HTML. Hero fullscreen + navigasi antar-ruangan + hash routing + scrollspy navbar. Blocker path model sudah dibetulkan.
 - **5 karakter sudah TAMPIL & BERANIMASI di web** (§6b) — Leonard (sofa lounge), Person2 & Person3 (mengetik di office), Person4 (meeting room), Person5 (function room). Sudah di-export ke `office.glb` dan `CharacterLights.tsx` sudah diisi.
 - **Minigame billiard dibangun** (§6d) — fisika **cannon-es** (bukan Rapier lagi, lihat §6d) + kamera top-down + bar tenaga. ⏸️ **Ditunda**, belum di-review di browser.
 - **Konten web V1 di-port ke V2** oleh rekan tim (§4i) — 5 section baru + animasi teks pakai `motion`.
 - **Manajer paket disatukan ke `bun`** (§7) — `pnpm-lock.yaml` dihapus, build terverifikasi lolos.
+- **Build pindah Next.js → Vite + React SPA** (§4j) — dikerjakan rekan tim di hari yang sama.
 
-**⬅️ Berikutnya: review billiard di browser** (§6d) — office 3D sudah dianggap selesai; karakter function room yang jadi syarat terakhir sudah masuk.
+**Per 30 Jul** — semuanya di branch `feature/waypoint-nav-lighting`, **belum di-merge ke `main`**:
+- **Navigasi diganti waypoint 3D** (§4k) — `RoomNav.tsx` dihapus; scroll, swipe, dan panah keyboard **dicabut semua**. Berpindah ruangan sekarang hanya lewat bidang waypoint di dalam ruangan + dropdown Navbar.
+- **Lighting scene dirombak** (§4l) — lightmap **DINYALAKAN** (`LIGHTMAP_INTENSITY` 0 → 1), N8AO + contact shadow masuk, bloom turun 1,6 → 0,4, ambient 0,12 → 0,03. Scene tidak lagi "terang rata".
+- **Sapuan "kantor terbentuk"** (§4m) — dither Bayer 4×4 menyeberangi ruangan 2,6 s saat GLB selesai dimuat, tepi silver brand `#d2d3d4`. Terverifikasi 60 FPS di browser.
+- **Titik awal tur pindah ke Lounge** (§4k) — `START_ROOM` di store, satu konstanta untuk kamera + `currentRoom` + hash URL.
+- **Konten layar monitor jalan** (§6c) — Spotify pixel-art 96×54 di `OMon_AOC_2` lewat `emissiveMap`; blocker Blender **dilewati**, bukan dibereskan.
+- **Light cone volumetrik DIHAPUS** (§4l) — sempat dibangun lalu dibuang; dua temuan mahalnya dicatat supaya tidak diulang.
+
+**⬅️ Berikutnya:** (a) **loader saat mengunduh** — masih layar hitam 2,3 s + unduhan 8,09 MB tanpa umpan balik (§4m); (b) **review billiard di browser** (§6d), masih belum pernah dilihat; (c) verifikasi waypoint Lounge & Function dengan resep pengukuran (§4k).
 
 ## 🎉 MVP 1 SELESAI (27 Jul) — **50-60 FPS di browser**
 
-Seluruh scene (5 ruangan) jalan mulus di browser: **`export-test/office-mvp1-baked.glb` 8,0 MB, 401 draw call, 0 lampu realtime** (semua cahaya + bayangan di-bake ke lightmap). Serve `export-test/` → buka `http://localhost:8137`.
+Seluruh scene (5 ruangan) jalan mulus di browser: **8,0 MB, 401 draw call, 0 lampu realtime** (semua cahaya + bayangan di-bake ke lightmap).
+
+> Model yang dipakai sekarang adalah **`public/3d/models/office.glb`** (8,09 MB per 30 Jul, sudah termasuk 5 karakter) di dalam app web — bukan lagi viewer HTML `export-test/`. Jalankan `bun dev` → `http://localhost:3000`. Viewer lama masih dijelaskan di §4e sebagai rujukan kalibrasi.
 
 | Metrik | Awal | Final |
 |---|---|---|
@@ -40,7 +51,7 @@ Tahapan yang menghasilkannya — masing-masing ada sub-bab detailnya:
 
 **Pelajaran utama:** bottleneck-nya **draw call & lampu realtime**, BUKAN poly count. 995k tris tetap 50-60 fps setelah draw call ditekan dan lampu dibake. Urutan diagnosa yang benar ada di §4e.
 
-**Berikutnya:** ~~Karakter PS1 (§6b)~~ ✅ **5 karakter tampil di web 29 Jul** — sekarang: review visual billiard di browser + ukur ulang FPS (§6d, §4h).
+**Berikutnya:** ~~Karakter PS1 (§6b)~~ ✅ **5 karakter tampil di web 29 Jul.** ~~Ukur ulang FPS~~ ✅ **60 FPS terukur 30 Jul** dengan karakter + N8AO + contact shadow + sapuan reveal aktif (§4l, §4m) — tambahan-tambahan itu tidak memakan anggaran performa MVP1. Sisa: review visual billiard di browser (§6d).
 
 **Pekerjaan aktif:** melengkapi & menata furniture/aksesori office. Semua furniture office sudah **dirapikan ke sub-collection** di bawah `Office_Plan`. **Utang teknis import mentah BERES** — `OP_Electronics` diciutkan 1424 → **131 objek** (semua junk `Object_*/Node_*/pCube*/pPlane*/RootNode*` dibuang; part di-rename bersih: `OMagic_KB_/Mouse_`, `OMon_AOC_`). **11 kursi kantor Sketchfab di-rename `OChair_Office_*` & dipindah ke `OP_Seating`.** Furniture office terkini (22 Jul): **pantry cabinet L-shape `OP_Pantry` (56 part: base unit + tower + wall unit + worktop)** di pojok barat laut, **printer `OP_Printer` + shredder `OP_Shredder`** (di pojok, `OP_Electronics`), **wardrobe/kabinet rendah `OP_Ward_*`** (11 part, di `OP_Shelves`), **microwave `OP_Microwave` + bar table `OP_BarTable_*`** (pojok barat daya, di atas pantry base). **Pencahayaan office SUDAH ADA (22 Jul)** — track lighting `OP_TrackL/TrackLV_*` (8 SPOT) + lunch pendant `OP_LunchLight_*` (3 POINT), collection `OP_Lighting`. Collection sudah dirapikan (0 loose). Scene total ~**1391 objek, 254 material**.
 
@@ -607,27 +618,34 @@ Repo mereka open source: [basementstudio/website-2k25](https://github.com/baseme
 
 ---
 
-## 4h. Integrasi ke Next.js ✅ (27–28 Jul)
+## 4h. Integrasi ke web ✅ (27–28 Jul)
 
-GLB kantor sudah tidak lagi cuma jalan di viewer HTML — dia sekarang **hero fullscreen di project Next.js ini**. Struktur halaman: `[3D office tour = hero] → Deployments → Services → Vision → Contact`.
+> Judul bab ini dulu "Integrasi ke Next.js". **Next.js sudah dicabut 29 Jul** — sekarang Vite + React SPA (§4j). Isi bab ini tetap berlaku; yang berubah cuma cara build & memuat komponen.
 
-### Peta file
+GLB kantor sudah tidak lagi cuma jalan di viewer HTML — dia sekarang **hero fullscreen di project web ini**. Struktur halaman: `[3D office tour = hero] → Deployments → Services → Vision → Contact`.
+
+### Peta file (per 30 Jul)
 
 | File | Isi |
 |---|---|
-| `src/components/sections/Hero.tsx` | Section 3D setinggi `h-dvh`. `Scene` di-load `dynamic({ssr:false})`. IntersectionObserver (threshold 0.15) → `heroInView` |
-| `src/components/canvas/Scene.tsx` | `<Canvas>`: ACESFilmic exposure 1.0, `dpr [1,1.5]`, fov 60 / near 0.05 / far 120, background `#0a0a0c`, ambient 0.12, EffectComposer + Bloom |
-| `src/components/canvas/Office.tsx` | Pemuat GLB + 3 fix-up wajib (di bawah) + klik meja billiard + fade lampu |
+| `src/components/sections/Hero.tsx` | Section 3D setinggi `h-dvh`. `Scene` di-load `React.lazy` + `Suspense` (dulu `dynamic({ssr:false})`, §4j). IntersectionObserver (threshold 0.15) → `heroInView` |
+| `src/components/canvas/Scene.tsx` | `<Canvas>`: ACESFilmic exposure 1.0, `dpr [1,1.5]`, fov 60 / near 0.05 / far 120, background `#0a0a0c`, **ambient 0.03**, EffectComposer + **N8AO** + Bloom (§4l) |
+| `src/components/canvas/Office.tsx` | Pemuat GLB + 3 fix-up wajib (di bawah) + klik meja billiard + fade lampu + **penggerak sapuan reveal** (§4m) + **pemasangan konten layar** (§6c) |
 | `src/components/canvas/SceneEnvironment.tsx` | `RoomEnvironment` + PMREM blur 0.04, `environmentIntensity` 0.18 |
-| `src/components/canvas/CameraController.tsx` | Navigasi antar-ruangan (tween, hash routing, wheel/keyboard/touch) + `billiardView()` + `goToView` |
+| `src/components/canvas/CameraController.tsx` | `VIEWS` 5 preset + tween 1400 ms + hash routing + `billiardView()` + `goToView`. **Tanpa handler wheel/keyboard/touch sejak 30 Jul** (§4k) |
 | `src/components/canvas/CharacterLights.tsx` | ✅ **terisi** — key hangat + fill dingin di layer 1, khusus karakter (§6b) |
+| `src/components/canvas/Waypoints.tsx` | 🆕 **Waypoint navigasi 3D** — bidang di ruangan, hover → arsir + bingkai + label (§4k) |
+| `src/components/canvas/ContactShadowsRig.tsx` | 🆕 **Bayangan kontak per ruangan** — "gelap di bawah meja" (§4l) |
+| `src/components/canvas/revealSweep.ts` | 🆕 **Sapuan "kantor terbentuk"** — patch shader dither ke 233 material (§4m) |
+| `src/components/canvas/screens.ts` | 🆕 **Konten layar monitor** — pixel-art via `emissiveMap` (§6c) |
 | `src/components/canvas/billiard/` | Minigame billiard — 6 file (§6d) |
-| `src/components/ui/RoomNav.tsx` | Bar indikator vertikal kanan + hint "Scroll to Explore" |
 | `src/components/ui/BilliardHUD.tsx` | Bar tenaga kiri + tombol reset/exit + gestur bidik (§6d) |
-| `src/lib/store/sceneStore.ts` | Zustand: `currentRoom`, `heroInView`, `activeSection`, `goTo`, `goToView` + state billiard |
+| `src/lib/store/sceneStore.ts` | Zustand: `currentRoom`, `heroInView`, `activeSection`, `goTo`, `goToView` + state billiard + **`START_ROOM`/`hashFor()`** (§4k) |
 | `src/lib/hooks/useScrollSpy.ts` | IntersectionObserver untuk highlight link navbar |
 
-Stack: **Next 16.2 + React 19 + three 0.185 + @react-three/fiber 9 + drei 10 + @react-three/postprocessing 3 + zustand 5 + cannon-es 0.20 + motion 12** (cannon-es untuk billiard §6d; `motion` untuk animasi teks section §4i). **`@react-three/rapier` sudah dicopot** — alasannya di §6d.
+**Dihapus:** `src/components/ui/RoomNav.tsx` (30 Jul, diganti waypoint §4k) · `LightCone.tsx` + `LightCones.tsx` (30 Jul, §4l).
+
+Stack per 30 Jul: **Vite 6 + React 19 + three 0.185 + @react-three/fiber 9 + drei 10 + @react-three/postprocessing 3 + zustand 5 + cannon-es 0.20 + motion 12 + Tailwind 4** (cannon-es untuk billiard §6d; `motion` untuk animasi teks section §4i). **`@react-three/rapier` sudah dicopot** — alasannya di §6d. **`next` juga sudah dicopot** — §4j.
 
 ### 3 fix-up wajib di `Office.tsx`
 
@@ -639,7 +657,9 @@ Ketiganya hasil debugging panjang; kalau meleset, visualnya rusak dengan cara ya
 
 **Angka verifikasi** (log dev `[office]`): `lightmap=40 aoAsliDijaga=22 tanpaUV1=0 emissive=28` — plus `skinned` (jumlah SkinnedMesh karakter) sejak 29 Jul. Kalau menyimpang jauh, fix-up gagal — cek ini dulu sebelum menyalahkan setelan lighting.
 
-### Bloom bukan hiasan
+### Bloom bukan hiasan — ⚠️ angkanya sudah TIDAK 1.6 lagi
+
+> **Per 30 Jul `intensity` = 0.4**, diturunkan bertahap 1,6 → 0,8 → 0,4. Alasan & konteksnya di §4l. Sub-bab ini disimpan sebagai **sejarah kalibrasi**, bukan target — tabel di bawah diambil saat scene belum punya AO maupun bayangan dan lightmap masih mati.
 
 `intensity 1.6`, **bukan 0.4 seperti viewer HTML**. Viewer pakai `UnrealBloomPass`, di sini `BloomEffect` dari postprocessing — algoritmanya beda jadi angkanya tidak setara. Dikalibrasi terhadap screenshot viewer sampai rasio kecerahan 0.98:
 
@@ -647,28 +667,28 @@ Ketiganya hasil debugging panjang; kalau meleset, visualnya rusak dengan cara ya
 |---|---|---|---|---|
 | rasio kecerahan vs viewer | 0.75 | 0.85 | 0.92 | **0.98** |
 
-LED strip lantai & bohlam **mengandalkan bloom untuk terlihat menyala**. Tanpa bloom, kecerahan terukur turun ke 0.53×. `luminanceThreshold 0.95` — kalau diturunkan, lantai & permukaan terang ikut glow seperti lava.
+LED strip lantai & bohlam **mengandalkan bloom untuk terlihat menyala**. Tanpa bloom, kecerahan terukur turun ke 0.53×. `luminanceThreshold 0.95` — kalau diturunkan, lantai & permukaan terang ikut glow seperti lava. (Ambang 0.95 **masih berlaku** per 30 Jul; yang berubah cuma intensity.)
 
-### ⚠️ `LIGHTMAP_INTENSITY = 0` — dan kenapa scene tetap terang
+### ~~⚠️ `LIGHTMAP_INTENSITY = 0`~~ → **sudah 1 sejak 30 Jul**
 
-Nilainya **0**, bukan 1. Ini konsekuensi dari temuan lightmap ter-clip 8-bit (§4g): bake Cycles menghasilkan HDR float (max 189) tapi di-export sebagai WebP 8-bit yang cuma menyimpan 0–1, jadi semua nilai >1 terpotong. Yang tersisa hanya gradasi/AO halus — plus artefak seam UV yang justru terlihat kalau dinyalakan.
+> **Lightmap SUDAH DINYALAKAN** (`LIGHTMAP_INTENSITY = 1`, commit `864322d`). Jangan pakai sub-bab ini sebagai keadaan sekarang — lihat §4l untuk apa yang berubah dan lubang apa yang masih ada.
 
-**Artinya cahaya scene sekarang datang dari bloom + emissive + ambient 0.12 + environment 0.18, bukan dari lightmap.** Scene tetap terlihat bagus, jadi ini bukan blocker — tapi jangan salah paham menganggap lightmap sedang bekerja. Kalau mau lightmap benar-benar jadi sumber cahaya: export sebagai EXR terpisah + custom shader (cara basement.studio), atau normalisasi bake ke 0–1 lalu naikkan `lightMapIntensity` di viewer (mis. bake dibagi 4, intensity 4).
+Catatan historis, kondisi 28–29 Jul: nilainya **0**, konsekuensi dari temuan lightmap ter-clip 8-bit (§4g) — bake Cycles menghasilkan HDR float (max 189) tapi di-export sebagai WebP 8-bit yang cuma menyimpan 0–1, jadi semua nilai >1 terpotong. Yang tersisa hanya gradasi/AO halus. Saat itu cahaya scene datang dari bloom + emissive + ambient 0.12 + environment 0.18, **bukan** dari lightmap — dan itu penyebab keluhan "semuanya terang rata": ambient mengenai semua permukaan sama rata tanpa peduli arah hadap, jadi pojok & plafon ikut terang. Diselesaikan di §4l.
 
 ### Navigasi antar-ruangan (`CameraController.tsx`)
 
 OrbitControls **diganti** dengan navigasi tur: kamera pindah antar 5 titik pandang tetap.
 
-- `VIEWS` = 5 preset (Office, Lounge, Meeting, Function, Pantry). **Pantry `disabled: true`** — dilewati saat scroll & dot-nya abu-abu.
+- `VIEWS` = 5 preset (Office, Lounge, Meeting, Function, Pantry). **Pantry `disabled: true`** — dilewati navigasi dan waypoint ke arahnya tidak dirender (`ACTIVE_KEYS`).
 - Konversi sumbu Blender→three lewat helper `bl(x,y,z) → (x, z, −y)`.
-- Tween **1400 ms cubic in-out**, dengan guard `animating` supaya input beruntun tidak melompati ruangan.
-- Input: **wheel di canvas saja** (`preventDefault`, jadi scroll halaman tidak terganggu), panah keyboard, swipe touch ≥30 px.
-- **Hash routing**: `#lounge`, `#meeting`, dst via `history.pushState` + `popstate`. Office = tanpa hash.
-- `goTo` didaftarkan ke `sceneStore` supaya `RoomNav` & `Navbar` (di luar Canvas) bisa memanggilnya.
+- Tween **1400 ms cubic in-out**, dengan guard `animating` supaya input beruntun tidak melompati ruangan. `up` & FOV ikut di-tween (perlu untuk masuk/keluar pandangan billiard).
+- ~~Input: wheel di canvas, panah keyboard, swipe touch ≥30 px~~ — **SEMUA DIHAPUS 30 Jul.** Lihat §4k: berpindah ruangan hanya lewat waypoint 3D + dropdown Navbar.
+- **Hash routing**: `#lounge`, `#meeting`, dst via `history.pushState` + `popstate`. Ruangan awal (`START_ROOM` = **Lounge** sejak 30 Jul) = tanpa hash, lewat `hashFor()` di store.
+- `goTo` didaftarkan ke `sceneStore` supaya `Waypoints` & `Navbar` (yang satu di dalam Canvas, satu di luar) bisa memanggilnya.
 
 ### UI yang mengikuti scroll
 
-- **`heroInView`** (IntersectionObserver di Hero, threshold 0.15) — begitu 3D keluar viewport, label ruangan di navbar & `RoomNav` di-fade habis. Tanpa ini, dot ruangan mengambang di atas konten teks.
+- **`heroInView`** (IntersectionObserver di Hero, threshold 0.15) — begitu 3D keluar viewport, label ruangan di navbar & waypoint 3D disembunyikan. Tanpa ini, penanda navigasi mengambang di atas konten teks.
 - **Navbar background kondisional**: gradient transparan saat di hero, `bg-black/90` + backdrop-blur + border bawah saat sudah lewat. Memakai `heroInView` yang sudah ada — tidak menambah listener baru.
 - **Scrollspy** (`useScrollSpy`) — `rootMargin −45%/−45%` mempersempit garis deteksi ke pita tipis di tengah layar, jadi section tinggi jadi active tepat saat isinya di tengah, bukan saat tepi atasnya baru menyentuh viewport. Di hero, tidak ada link yang active.
 
@@ -683,23 +703,29 @@ OrbitControls **diganti** dengan navigasi tur: kamera pindah antar 5 titik panda
 
 **Sudah dikembalikan ke `/3d/models/office.glb`** (nilai aslinya di commit `ad31934`; `bc0e86c` yang menggantinya ke path symlink dev-only). File itu ter-track git (9,04 MB saat itu; **8,09 MB sejak export ber-karakter 29 Jul**) dan strukturnya memang benar: 213 mesh, 227 material, 89 image, **0 lampu**, 44 material ber-`occlusionTexture` (39 di antaranya `texCoord=1` = lightmap). Draco + WebP aktif. Komentar peringatan sudah ditulis di atas konstanta itu supaya tidak terulang.
 
-### Yang belum
+### Yang belum (per 30 Jul)
 
+- **Loader saat mengunduh** — `Scene.tsx` sudah punya `<Loader>` dengan `useProgress`, tapi ia baru muncul setelah Suspense aktif. Jendela yang sebenarnya perlu ditutup adalah **unduhan GLB 8,09 MB + stall kompilasi shader 2,3 s** saat layar masih hitam (§4m).
 - Post-processing PS1 (§4b) — `@react-three/postprocessing` sudah terpasang, tinggal tambah pass
-- Interaksi klik pintu — `Bvh firstHitOnly` sudah dipasang di `Office.tsx` untuk mempercepat raycast. Klik **meja billiard** sudah jalan (§6d)
+- Interaksi klik pintu — `Bvh firstHitOnly` sudah dipasang di `Office.tsx` untuk mempercepat raycast. Klik **meja billiard** sudah jalan (§6d); waypoint 3D (§4k) sudah mengambil peran "klik untuk pindah ruangan"
 - ~~Karakter (§6b)~~ ✅ **SELESAI 29 Jul** — 5 karakter tampil & beranimasi, `CharacterLights` terisi
-- Video di layar laptop/iMac (§6c) — masih ada blocker di Blender
-- **Review visual billiard di browser** (§6d) — sekarang jadi pekerjaan berikutnya
+- ~~Gambar di layar monitor (§6c)~~ ✅ **SELESAI 30 Jul** untuk monitor AOC. Layar lain (iMac, MacBook, TV) masih kena blocker Blender.
+- **Review visual billiard di browser** (§6d) — masih belum pernah dilakukan
+- **Verifikasi waypoint Lounge & Function** (§4k) — koordinatnya warisan lama, belum dicek dengan resep pengukuran
 
-### ⚠️ Ukur ulang FPS setelah karakter masuk
+### ⚠️ Ukur ulang FPS setelah karakter masuk — sebagian sudah
 
-Angka 50-60 FPS di MVP1 diukur **sebelum** ada 5 SkinnedMesh + 2 directional light layer-1 + `frustumCulled = false`. Secara teori dampaknya kecil (skinning di GPU, lampu layer dilewati objek statis, §6b), **tapi belum diukur ulang.** Lakukan bersamaan dengan review billiard.
+Angka 50-60 FPS di MVP1 diukur **sebelum** ada 5 SkinnedMesh + 2 directional light layer-1 + `frustumCulled = false`, dan sebelum N8AO + contact shadow masuk.
+
+**Terukur 30 Jul** (§4l, §4m) — dengan karakter + N8AO high+halfRes + contact shadow + sapuan reveal aktif: **60 FPS setelah sapuan selesai, 0 error.** Saat mengukur varian AO, angka mentahnya sampai 119 FPS (`high + halfRes`) vs 66 (`high` tanpa halfRes). Jadi tambahan-tambahan itu **tidak** memakan anggaran performa MVP1.
+
+Yang **masih** belum diukur: FPS saat minigame billiard jalan (fisika cannon-es + 16 bola). Lakukan bersamaan dengan review billiard.
 
 ## 4i. Konten & Animasi Teks ✅ (29 Jul — dikerjakan rekan tim)
 
 Dikerjakan paralel di branch `feature/port-konten-v1` + `feature/text-transitions`, sudah di-merge ke `main`. **Tidak ada satu pun file yang beririsan dengan pekerjaan 3D/billiard** — jadi tidak pernah ada konflik git.
 
-**Struktur halaman final** (`src/app/page.tsx`) — 5 section bertambah jadi 9 di bawah hero:
+**Struktur halaman final** (`src/App.tsx` — dulu `src/app/page.tsx` sebelum migrasi Vite, §4j) — 5 section bertambah jadi 9 di bawah hero:
 
 ```
 Hero (3D) → Manifesto → Deployments → Services → LivingArchitecture
@@ -721,7 +747,260 @@ Hero (3D) → Manifesto → Deployments → Services → LivingArchitecture
 
 ### Percobaan WebGPU + KTX2 — di-revert (27→28 Jul)
 
-Commit `38168ce` sempat mengganti viewer ke `WebGPURenderer` (three r171, fallback WebGL2) + aset KTX2/ETC1S (`office-mvp1-final.glb`, 699 KB VRAM vs 5,59 MB). **Di-revert penuh** di `8a1e0b1` keesokan harinya. Yang bertahan dari eksperimen itu bukan kodenya, tapi **idenya** — navigasi scroll/touch/keyboard + tween 1400 ms + hash routing lahir di sana, lalu ditulis ulang sebagai komponen R3F di `bc0e86c`. Kalau nanti VRAM jadi masalah, KTX2 layak dicoba lagi (di jalur R3F, bukan viewer HTML).
+Commit `38168ce` sempat mengganti viewer ke `WebGPURenderer` (three r171, fallback WebGL2) + aset KTX2/ETC1S (`office-mvp1-final.glb`, 699 KB VRAM vs 5,59 MB). **Di-revert penuh** di `8a1e0b1` keesokan harinya. Yang bertahan dari eksperimen itu bukan kodenya, tapi **idenya** — navigasi scroll/touch/keyboard + tween 1400 ms + hash routing lahir di sana, lalu ditulis ulang sebagai komponen R3F di `bc0e86c`. (Navigasi scroll/touch/keyboard itu sendiri **akhirnya dihapus** 30 Jul — §4k.) Kalau nanti VRAM jadi masalah, KTX2 layak dicoba lagi (di jalur R3F, bukan viewer HTML).
+
+## 4j. Migrasi Next.js → Vite + React SPA ✅ (29 Jul — dikerjakan rekan tim)
+
+Commit `5af294c`/`9264cd6`, branch `chore/migrate-nextjs-to-vite`, backup di `backup/main-before-vite-migration`. **Next.js dicabut seluruhnya.** Project ini SPA client-only — tidak ada satu pun halaman yang butuh SSR, dan hero 3D justru harus `ssr:false`.
+
+| Dari (Next 16.2) | Ke (Vite 6) |
+|---|---|
+| `next dev` / `next build` | `vite --port 3000` / `tsc --noEmit && vite build` |
+| `src/app/page.tsx` + `layout.tsx` | `index.html` + `src/main.tsx` + `src/App.tsx` |
+| `src/app/globals.css` | `src/index.css` |
+| `next/dynamic({ssr:false})` | `React.lazy` + `<Suspense>` |
+| `next/image` | `<img fetchPriority="high">` |
+| `next/font/google` | `@fontsource/geist-sans` + `@fontsource/geist-mono` |
+| `@tailwindcss/postcss` | `@tailwindcss/vite` |
+| `process.env.NODE_ENV` | `import.meta.env.DEV` |
+| alias `@/*` dari `next` | `vite-tsconfig-paths` |
+
+**Yang ikut beres di migrasi ini:** `public/export-test` symlink dihapus dan `public/3d/models/office.glb` di-commit langsung — jadi blocker `MODEL_URL` (§4h) tidak bisa terulang lewat symlink yang tidak ada di git. `.gitignore` diperbarui: `/.next/` → `/dist`, plus `!public/3d/models/office.glb`.
+
+Terverifikasi: build sukses, dev server **276 ms** (dari beberapa detik di Next), app jalan.
+
+> ⚠️ **Dokumentasi lama masih banyak menyebut "Next.js".** Itu sejarah, bukan keadaan sekarang. Yang sudah dikoreksi: §4h, §4i, §7. Kalau ketemu sisa lain, `next` sudah tidak ada di `package.json` — itu sumber kebenarannya.
+
+---
+
+## 4k. Navigasi Waypoint 3D ✅ (29–30 Jul) — scroll/swipe/keyboard DICABUT
+
+Commit `a1a857a`. **`src/components/ui/RoomNav.tsx` dihapus**, `src/components/canvas/Waypoints.tsx` (568 baris) menggantikannya.
+
+### Apa yang berubah, dan kenapa se-radikal itu
+
+Dulu ada **empat** jalan berpindah ruangan: dot RoomNav, scroll wheel, swipe, panah keyboard. Sekarang **dua**: klik bidang waypoint di dalam ruangan, atau dropdown "Office" di Navbar.
+
+- **Scroll & swipe dihapus karena artinya ganda.** Di atas canvas ia memindah ruangan, di luar canvas ia menggulir halaman — dan pengunjung tidak bisa menebak mana yang akan terjadi.
+- **Panah keyboard dihapus meski tidak ambigu**, supaya tidak ada jalur berpindah yang **tidak tergambar di layar**. Satu-satunya cara pindah harus yang kelihatan.
+
+> ⚠️ **Konsekuensi yang wajib diingat kalau menambah ruangan:** tiap ruangan WAJIB punya minimal satu waypoint keluar yang **benar-benar terlihat** dari `VIEWS`-nya. Tidak ada lagi next/prev room sebagai jaring pengaman.
+
+### Kenapa bidang 3D, bukan tombol HTML
+
+Waypoint harus ikut perspektif — mengecil saat jauh, terasa menempel di ruangan. Tombol DOM selalu menempel di layar dan langsung terbaca sebagai antarmuka, bukan bagian dari dunia. Tampilannya: **arsir diagonal shader** (bukan tekstur, supaya tetap tajam berapa pun jarak kamera) + bingkai bracket di 4 sudut + label mono `[Nama Ruangan]`, semua muncul saat hover.
+
+Detail implementasi yang penting:
+- **`depthTest=false` + `renderOrder=10`** — waypoint sengaja digambar di atas segalanya termasuk perabot yang berdiri di depannya. Posisinya tetap benar di ruangan (jadi perspektifnya betul), tapi tidak ikut tertutup.
+- **Hover dianimasikan lewat `ref` + `useFrame`, bukan `useState`.** Nilainya berubah tiap frame; lewat state, tiap frame memicu render ulang React di seluruh subtree.
+- Disembunyikan saat `!heroInView` atau `billiardActive` — kalau tidak, geser-untuk-membidik di billiard bisa mengenai waypoint dan pemain terlempar ke ruangan lain.
+
+### 🔑 Resep mengukur posisi waypoint — JANGAN menebak koordinat
+
+Semua angka di `WAYPOINTS` **diukur**, dan tiap entri mencatat nama objek Blender-nya supaya bisa diukur ulang kalau modelnya berubah. Alurnya lewat Blender MCP:
+
+1. **Ukur objeknya** — `matrix_world @ v.co` untuk bbox tiap objek terkait.
+2. **Bikin kamera tiruan** yang sama persis dengan `VIEWS.<Room>`: `sensor_fit='VERTICAL'`, `sensor_height=24`, `lens = 12/tan(30°)` → FOV 60°. Konversi `bl(x,y,z)` di kode = `blender(x, y, z)` langsung; `three(x,y,z) = blender(x, z, −y)`.
+3. **⚠️ `bpy.context.view_layer.update()` DULU** sebelum baca `matrix_world`. Tanpa itu `world_to_camera_view` mengembalikan hasil ngawur — pernah bikin bisection gagal.
+4. **Cek keterhalangan** dengan `scene.ray_cast` dari kamera ke titik sasaran; jarak hit < jarak sasaran = ada yang menutupi.
+5. **Bikin quad uji + render Workbench** untuk verifikasi mata. Workbench pakai `material.diffuse_color`, BUKAN node BSDF — set `diffuse_color` + `scene.display.shading.color_type='MATERIAL'`, kalau tidak rendernya polos abu-abu.
+6. **Bersihkan** objek/kamera/material bantu setelah selesai.
+
+### Temuan besar: 3 waypoint ternyata MUSTAHIL TERLIHAT sejak ditulis
+
+Ini yang paling mahal didapat dari resep di atas — dan tidak akan pernah ketahuan tanpa mengukur proyeksi kamera. Waypoint yang ditempel di pintu sungguhan bisa jatuh **di belakang kamera**, karena `VIEWS` ruangan itu menghadap ke arah lain:
+
+| Waypoint | Pintunya di | `VIEWS` menghadap | dot vs arah pandang | Penggantinya |
+|---|---|---|---|---|
+| Office→Lounge | +X (kaca `GWL_N1_Glass`) | −X | **−2,65** | **dibaringkan di lantai**, mengikuti petak garis LED |
+| Meeting→Office | timur | barat (ke TV) | **−0,24** | dinding krem timur pilar `OP_Pillar_N2` |
+| Function→Lounge | selatan (`GW_Door`) | utara (ke TV) | **−0,96** | dinding gelap kanan TV, batas ditandai user via annotate |
+
+Ketiganya **mati sejak ditulis**, bukan rusak setelah kamera digeser. Waypoint pengganti diberi `label` eksplisit ("Go back to Lounge") karena nama ruangan saja terbaca seperti tujuan baru, padahal maksudnya jalan pulang.
+
+Pola yang muncul: **waypoint jalan-pulang jarang bisa ditempel di pintunya**, karena `VIEWS` tiap ruangan sengaja menghadap ke daya tarik utamanya (TV, whiteboard), bukan ke jalan masuknya. Tempel di bidang yang memang terlihat, dan buat lebih besar dari bagian yang terlihat supaya tepinya keluar bingkai — kotak yang terpotong di tengah dinding terbaca sebagai cacat.
+
+### Gotcha waypoint
+
+- **Waypoint lantai butuh rotasi beda:** `planeGeometry` lahir menghadap +Z, jadi `floor: true` merebahkannya `[-π/2, 0, rotY]`. Label diangkat pada **+Z lokal** (setelah rebah = lurus ke atas) — rumus yang sama tetap benar untuk waypoint dinding.
+- **React key wajib memuat `floor`:** satu pasang ruangan boleh punya dua waypoint (pintu + lantai); tanpa pembeda itu keduanya berbagi key dan hover-nya menyala bersamaan.
+- **Awas objek di atas dinding:** `AirVent_01..03` (z 2,155..2,505). Bidang setinggi penuh akan menembus kisinya kalau tidak ditaruh di depannya.
+- **Label `pointerEvents: none`** — kalau label ikut menangkap kursor, dia menutupi bidang di bawahnya dan hover berkedip-kedip.
+
+### ⚠️ Function Room berpotensi jalan buntu di HP
+
+Waypoint Function→Lounge terlihat 100% di 21:9, 59% di 16:9, 43% di 16:10, 16% di 4:3, dan **tidak terlihat sama sekali di rasio potret**. Sejak scroll & swipe dihapus, di layar potret pengguna sentuh **tidak punya jalan keluar dari Function Room** selain dropdown Navbar. Kalau mau benar-benar aman di HP, waypoint ini perlu dipindah ke bidang yang terlihat di rasio potret — misalnya dibaringkan di lantai seperti Office→Lounge.
+
+### `START_ROOM` — titik awal tur pindah ke Lounge
+
+`START_ROOM = "Lounge"` di `sceneStore.ts`, dan itu **satu-satunya** tempat titik awal ditentukan. Ia dipakai untuk **tiga** hal yang wajib tetap sepakat:
+
+1. posisi kamera saat mount (`CameraController` + `START_POS` di `Scene.tsx`)
+2. `currentRoom` awal di store
+3. ruangan yang URL-nya **tanpa hash** — lewat `hashFor()`
+
+Nomor 3 yang paling mudah terlewat. Dulu Office yang tanpa hash; memulai di Lounge tapi membiarkan Office tanpa hash berarti **pindah ke Office membuat URL jadi bersih, lalu reload mengembalikan pengunjung ke Lounge** — bukan ke Office yang barusan dibuka.
+
+Sekalian dibetulkan: `START_POS` di `Scene.tsx` dulu tuple hardcode `[-6.0, 1.6, 4.0]` yang bahkan **tidak cocok** dengan `VIEWS.Office` (`[-3.97, 1.13, 2.48]`) — jadi frame pertama selalu dari tempat yang salah sampai `CameraController` men-snap-nya. Sekarang diturunkan dari `VIEWS[START_ROOM].pos`.
+
+---
+
+## 4l. Lighting Dirombak ✅ (30 Jul) — lightmap dinyalakan, AO + bayangan kontak masuk
+
+Commit `864322d`. Keluhan yang memicunya: **"semuanya terang rata"** — dan penyebabnya bukan kurang efek, melainkan `LIGHTMAP_INTENSITY = 0` yang membuat **ambient jadi satu-satunya sumber cahaya**. Ambient mengenai semua permukaan sama rata tanpa peduli arah hadap maupun ada tembok di sebelahnya, jadi pojok ruangan & plafon ikut terang.
+
+| Setelan | Sebelum | Sesudah |
+|---|---|---|
+| `LIGHTMAP_INTENSITY` (`Office.tsx`) | **0** | **1** |
+| `ambientLight` (`Scene.tsx`) | 0.12 | **0.03** |
+| `<Bloom intensity>` | 1.6 | **0.4** |
+| AO | tidak ada | **N8AO** `high` + `halfRes` |
+| Bayangan | tidak ada | **ContactShadows** per ruangan |
+| `M_LEDStrip` emissive | 8 (dari GLB) | **3** (ditimpa) |
+
+Logikanya: bloom 1,6 dulu dipakai untuk **mengangkat kecerahan keseluruhan** — pekerjaan yang sekarang diambil alih lightmap + AO + bayangan. Bloom kembali ke porsinya: memberi pendar pada yang memang menyala.
+
+### N8AO — mengisi lubang terbesar lightmap
+
+Bake lightmap hanya mencakup objek ≥8 m² (§4g) = **39 dari 233 material**. 189 material sisanya tidak punya lightmap sama sekali, jadi pojoknya tidak pernah gelap. AO bekerja **per piksel layar**, jadi kena semua objek tanpa perlu bake — sekaligus menutup tiga cacat yang tidak bisa dibetulkan dari Three.js: plafon Office/Lounge/Function tidak ke-bake, dan 2 lightmap (dinding krem + parket meeting) isinya hitam total.
+
+**⚠️ HARUS SEBELUM `<Bloom>` di `EffectComposer`.** Urutan = urutan eksekusi: AO menggelapkan dulu, bloom baru menyebarkan sisa yang terang. Dibalik, bloom menyebar dari piksel yang belum digelapkan dan pendarnya bocor ke pojok yang seharusnya gelap.
+
+**⚠️ `quality="high"` + `halfRes`, dan keduanya hasil pengukuran — bukan selera.** `quality="low"` adalah penyebab **NOISE BELANG** di dinding & plafon yang sempat dikira berasal dari lightmap (dokumentasi n8ao menyebutnya sendiri: *"Low (Temporally stable, but low-frequency noise)"*). Bukti A/B: mematikan lightmap **tidak** mengubah rasio noise (0,00377 → 0,00393), sedangkan mematikan AO memangkas noise **53%** padahal ruangan jadi lebih terang.
+
+Noise terukur di dinding kiri meeting room + FPS:
+
+| Setelan | Noise | FPS | |
+|---|---|---|---|
+| `low` + halfRes | 0,377 | | noise belang — kondisi awal |
+| **`high` + halfRes** | **0,322** | **119** | ✅ DIPAKAI — paling halus DAN tercepat |
+| `high` tanpa halfRes | 0,621 | 66 | lebih buruk DAN separuh FPS |
+
+> Baris terakhir berlawanan intuisi tapi terukur: **membuang `halfRes` menaikkan noise dua kali lipat.** Di setengah resolusi, upsample sadar kedalaman ikut meratakan bintik antar-piksel — jadi `halfRes` di sini berfungsi sebagai **penghalus**, bukan cuma penghemat ongkos.
+
+### Bayangan kontak — "gelap di bawah meja"
+
+`ContactShadowsRig.tsx`, satu bidang penangkap **per ruangan** (Office, Meeting, Lounge, Function; Pantry tidak ada karena `VIEWS.Pantry` masih `disabled`). Pelengkap AO, bukan tumpang-tindih: AO bekerja di ruang layar (pojok & celah rapat), ini menjatuhkan bayangan **arah** pada lantai dari benda di atasnya.
+
+**Kenapa `ContactShadows` dan bukan lampu + shadow map:** komponen drei ini sama sekali tidak memakai lampu — ia memasang `scene.overrideMaterial = MeshDepthMaterial`, merender dari kamera ortografis yang memandang **lurus ke atas dari lantai**, lalu mem-blur hasilnya. Jadi `gl.shadowMap` tidak perlu dinyalakan — dan **jangan** dinyalakan, karena itu memaksa 291 mesh statis dievaluasi ulang.
+
+Karena kameranya memandang ke atas, benda rendah jadi gelap dan makin tinggi makin pudar sampai terpotong `far`. Persis perilaku occlusion yang dicari. Rumus alpha, dari shader-nya sendiri:
+
+```
+alpha = 1 − (h − y0 − near) / (far − near)      // h = ketinggian dunia occluder
+```
+
+**Ini yang membuat pendekatannya mungkin di GLB yang sudah di-merge:** depth clipping bekerja **per-fragmen**, bukan per-objek. `MG_Office_ODesk_BlackSteel` membentang y 0,01..3,60 — meja dan geometri setinggi plafon di SATU mesh, mustahil dipisah lewat layer atau visibilitas. Tapi `near`/`far` memotongnya dengan benar (diuji: papan meja y 0,70–0,75 tertangkap, slab lantai ter-clip `near`, plafon ter-clip `far`).
+
+**⚠️ 4 jebakan yang semuanya kena di sesi ini:**
+
+1. **`y0` beda-beda per ruangan** karena tinggi lantainya beda: Office 0,00 · Meeting parquet 0,00 · Lounge rug 0,012 · Function rug 0,018. Kalau bayangan hilang di SATU ruangan saja, ini tersangka pertama.
+2. **`blur` dipatok ke resolusi 256** (`uniforms.h.value = blur * 1/256`), jadi nilainya TIDAK sebanding antar resolusi. Mengubah `resolution` **wajib** setel ulang `blur` — jangan dibawa apa adanya.
+3. **Bidang kurang lebar = bayangan terpotong jadi garis.** Versi pertama Meeting dibuat 7,4 × 4,6 (pas occluder + bantalan 0,25 m) dan tepi timurnya memotong occluder → bayangan deretan kursi kanan terpotong di garis vertikal, meninggalkan pita terang bertangga. Sempat dikira z-fighting `near`; ternyata murni bidangnya kurang lebar. Beri bantalan ~0,5 m karena blur menyebarkan bayangan keluar siluetnya.
+4. **`key={currentRoom}` WAJIB.** `frames={4}` berarti bayangan dipanggang sekali lalu berhenti; tanpa remount, pindah ruangan membawa bayangan ruangan **lama**. Dan jangan `frames={1}`: material masih dimutasi setelah mount (`needsUpdate` + PMREM), jadi 1 frame bisa mengunci scene kosong.
+
+### 🐛 Bug paling menyesatkan: bayangan yang MENERANGI lantai
+
+N8AO memindahkan objek yang `transparent && !depthWrite && !userData.treatAsOpaque` ke pass transparansinya sendiri, dan **di pass itu AO tidak diterapkan pada piksel di baliknya**. Bidang penangkap bayangan memenuhi ketiga syarat itu — jadi lantai di bawahnya kehilangan penggelapan AO, dan bayangannya **berbalik menerangi lantai**.
+
+Terukur di piksel yang sama, bawah meja:
+
+| Kondisi | Tanpa bayangan | Dengan bayangan | |
+|---|---|---|---|
+| AO nyala, tanpa flag | 37 | **54** | ❌ salah arah |
+| AO nyala, dengan flag | 37 | **33** | ✅ benar |
+| AO mati | 113 | 103 | ✅ benar |
+
+Baris terakhir yang membuatnya sulit dilacak: **tanpa AO semuanya tampak beres**, jadi gejalanya cuma muncul di kombinasi keduanya.
+
+Solusinya `userData.treatAsOpaque = true` — dan **⚠️ flag HARUS di userData MESH.** Memasangnya lewat prop `userData` pada `<ContactShadows>` menempel ke grup luarnya dan tidak terbaca N8AO (sudah dicoba, angkanya tidak bergerak sama sekali). Karena itu ada `useEffect` yang men-traverse grup dan menandai mesh-nya. **JANGAN pakai `cannotReceiveAO`** — flag itu justru MENAMBAHKAN objek ke pass transparan, memperburuk masalahnya.
+
+### ⚠️ Menaikkan `LIGHTMAP_INTENSITY` lebih dari 1 TIDAK akan menolong
+
+Lightmap lantai office (image 21) di-pack sebagai **ORM**: satu texture dipakai serentak sebagai `occlusionTexture` DAN `metallicRoughnessTexture`. three.js membaca `lightMap` sebagai `.rgb` penuh, jadi menaikkan intensity **membanjiri lantai dengan biru** dari channel metallic (terukur mean RGB 51/36/254). Dua lightmap lain juga mati: `M_SM_Wall_Cream_MeetingWest` hitam pekat, `M_MR_Parquet_MeetingWest` kosong. Itulah kenapa AO + bayangan kontak diperlukan, bukan sekadar menaikkan angka.
+
+### LED strip: `emissiveIntensity` 8 → 3
+
+Satu-satunya material yang emissive-nya **ditimpa** — pengecualian bertarget, bukan pembatalan aturan "jangan clamp emissive" (§4h fix 2, yang dilarang adalah clamp **menyeluruh**). Blender mengekspornya 8 lewat `KHR_materials_emissive_strength`; dengan `toneMapped=false` angka itu melewati ambang bloom 0,95 dengan margin ~8×, jadi pendarnya jauh lebih tebal dari lampu lain. Turunkan angka ini untuk mengurangi bloom garis LED **tanpa** menyentuh `<Bloom intensity>` global. Di bawah ~1,0 strip berhenti berpendar sama sekali.
+
+Cahaya LED yang **jatuh di lantai** sudah di-bake ke lightmap dan tidak ikut berubah — yang berubah cuma pendar strip-nya sendiri.
+
+### ❌ Light cone volumetrik — DIBANGUN lalu DIHAPUS (30 Jul)
+
+`LightCone.tsx` (567 baris) + `LightCones.tsx` (108 baris) dibuat di `864322d` lalu **dihapus di hari yang sama**. Versi terakhir ada di `git stash` ("light cone WIP 30 Jul"). Dua temuan yang mahal didapat, dicatat supaya tidak diulang kalau nanti dicoba lagi:
+
+1. **Kerucut 360° tidak bisa MENJAMIN sinar seimbang kiri-kanan.** Potongan noise yang menghadap kamera ditentukan azimut kamera, jadi tiap view dapat potongan berbeda dan ada yang kebetulan berat sebelah. Mengubah seed/frekuensi/lantai-sinar cuma menggeser peluang, tidak menyelesaikan. Yang menyelesaikan: **setengah cangkang (180°) yang selalu menghadap kamera + `uv.x` dicerminkan** → kiri == kanan secara matematis.
+2. **Radius kerucut tampak = KERUCUT DALAM Blender**, yaitu `spot_size × (1 − spot_blend)`, bukan `spot_size` penuh. Yang penuh itu batas terluar tempat cahaya sudah habis meredup; memakainya memberi bentuk **kipas mekar**, bukan berkas sorot.
+
+---
+
+## 4m. Sapuan "Kantor Terbentuk" ✅ (30 Jul)
+
+`src/components/canvas/revealSweep.ts` + penggerak di `Office.tsx`. Menggantikan pop-in mendadak saat GLB selesai dimuat: sebuah bidang tegak menyeberangi ruangan sepanjang sumbu X — di belakangnya geometri tampil normal, di depannya belum ada apa-apa, dan di garis pertemuannya piksel muncul bertahap lewat pola dither dengan tepi silver brand.
+
+**Terverifikasi di browser: 60 FPS setelah sapuan, 0 error.**
+
+| Parameter | Nilai | Alasan |
+|---|---|---|
+| Arah | **Lounge → Meeting** (x +2,55 → −21,70) | Lounge itu pintu masuknya. Dibalik, kantor terbentuk dari ruangan terdalam yang belum pernah dilihat — terbaca seperti pemindaian denah, bukan seperti memasuki tempat |
+| Durasi | **2,6 s** easeOutCubic | 24,25 m / 2,6 s ≈ 9 m/s. Punya bobot, bukan kilatan. Jangan >3 s: sapuan berjalan sebelum pengunjung bisa berinteraksi |
+| Pita dither (`BAND`) | 3,5 m | ≈14% bentangan — cukup lebar untuk terbaca sebagai gradasi, cukup sempit untuk tetap terbaca sebagai garis bergerak |
+| Pita silver (`EDGE`) | 1,4 m | Lebih sempit dari BAND supaya warnanya jatuh di ujung depan saja |
+| Warna tepi | **`#d2d3d4`** | Silver huruf "cogniti" dari `public/brand/Logo-Final.png` |
+
+**Merah `#ec2028` (segitiga logo) sengaja TIDAK dipakai** untuk efek seluruh ruangan: menyapu seluruh kantor dengan merah terbaca sebagai **peringatan sistem**, bukan brand. Simpan merah untuk aksen kecil yang memang menuntut perhatian.
+
+### Kenapa dither + `discard`, bukan alpha fade seperti referensinya
+
+basement.studio memudarkan alpha (`material.transparent = true`). Itu bekerja untuk **satu** objek; di sini ada **233 material**. Menyalakan `transparent` di semuanya berarti three memindahkan mereka ke pass transparan yang diurutkan per jarak — urutan gambarnya jadi salah di geometri yang saling tembus (kusen di dalam dinding, kaki kursi di dalam karpet), dan `depthWrite` mati sehingga objek di belakang bocor ke depan. Ditambah ongkos sortir 294 primitive tiap frame.
+
+`discard` menghindari semuanya: material tetap **opaque**, depth buffer tetap benar, urutan gambar tidak berubah. Yang hilang cuma kehalusan gradasi — dan justru itu yang ditutup **pola dither Bayer 4×4**: mata membaca kerapatan titik sebagai gradasi, persis seperti halftone koran.
+
+> ⚠️ **JANGAN ganti `discard` jadi alpha tanpa mengukur ulang keempat ruangan.**
+
+### Detail shader yang tidak boleh digeser sembarangan
+
+- **Satu fungsi `patch` yang dipakai bersama semua material.** `Material.customProgramCacheKey()` bawaan three mengembalikan `this.onBeforeCompile.toString()`, jadi selama semua material memakai **referensi fungsi yang sama**, WebGL hanya mengompilasi SATU program tambahan. Objek uniform juga dibagi → menyetel progress = menulis **satu** angka, bukan 233.
+- **Titik sisip VERTEX = `project_vertex`** (`meshphysical.glsl.js:44`). Di titik itu `transformed` sudah melewati morph, skinning, dan displacement — itu yang membuat **5 karakter ber-skin ikut tersapu di posisi pose sebenarnya** alih-alih di bind pose. Menyisip sebelum `skinning_vertex` membuat karakter muncul di tempat yang salah.
+- **Titik sisip FRAGMENT = `dithering_fragment`** (`:221`), chunk **terakhir**, setelah `tonemapping_fragment` (217) dan `colorspace_fragment` (218). Konsekuensinya penting: `gl_FragColor` sudah dalam sRGB akhir, jadi tepi tampil **persis `#d2d3d4`** tanpa diredam ACES. Dipindah ke sebelum tonemapping, silver-nya jadi abu kusam dan harus dikonversi manual.
+- **Pola dither pakai `gl_FragCoord`, bukan UV.** Polanya terkunci ke layar dengan kerapatan tetap 1 titik/piksel, sama rapatnya pada dinding jauh maupun meja di depan hidung. Pola berbasis UV akan melar mengikuti perspektif dan terlihat seperti tekstur kotor.
+- **Matriks Bayer ditulis sebagai rantai `if`, bukan array const** — array indexing dinamis di GLSL ES 1.0 (WebGL1) tidak dijamin didukung, dan project ini belum mengunci WebGL2. Rantai ini dikompilasi jadi lookup konstan, ongkosnya nol.
+- **Deklarasi `uniform`/`varying` wajib ditambahkan sendiri** lewat prefiks string. Mengisi `shader.uniforms` hanya menyediakan **nilai**-nya ke three, tidak membuat variabelnya ada di shader — tanpa itu kompilasi gagal "undeclared identifier".
+- **`dispose()` wajib dipanggil setelah animasi selesai** dan harus mengembalikan `onBeforeCompile` **yang asli**, bukan disetel ke no-op (no-op tetap mengubah cache key dan memaksa kompilasi program ketiga). Tanpa dispose, tiap fragmen di seluruh kantor terus menghitung dither + discard selamanya untuk hasil yang sudah pasti "tampil penuh".
+- **`useLayoutEffect`, bukan `useEffect`** — patch harus terpasang sebelum frame pertama digambar. Dengan `useEffect` ada satu frame di mana kantor tampil penuh sebelum sapuan mengambil alih.
+- Material di-dedup pakai `Set`: 233 material dipakai bersama oleh 294 primitive.
+
+### ⚠️⚠️ STALL 2,3 DETIK — terukur, dan BUKAN dari sapuan
+
+Ini temuan paling penting di sesi ini karena mudah sekali salah menuduh. Antara GLB selesai di-parse dan **frame PERTAMA tergambar** ada jeda besar: three sedang mengompilasi shader untuk 233 material dan mengunggah 91 texture, dan itu memblokir thread utama.
+
+Terukur di mesin ini (30 Jul, dev build):
+
+```
+traverse GLB selesai      → +0,88 s
+frame PERTAMA tergambar   → +3,20 s
+────────────────────────────────────  stall 2,32 s
+```
+
+**A/B dengan patch sapuan dimatikan: 2319 ms tanpa vs 2366 ms dengan** — sapuan menambah ~50 ms, bukan penyebabnya. Stall ini **sudah ada sebelum sapuan dibuat**. Jangan salahkan sapuan kalau loading terasa lama.
+
+**Tapi stall itu MERUSAK animasinya kalau tidak ditangani:** hitungan dimulai di frame 1, frame 2 baru datang 2,4 s kemudian, dan sapuan langsung **meloncat ke 87%** — praktis tak terlihat. Persis gejala yang muncul saat pertama dicoba.
+
+Penanganannya: jam baru mulai setelah ada frame yang jaraknya wajar (`dt < 0,25 s`). Ambang 0,25 s jauh di atas frame normal (0,008–0,033 s) tapi jauh di bawah stall kompilasi — sekaligus menangani hitchan lain dengan sebab sama (pindah tab, GC besar) tanpa kasus khusus.
+
+**Kandidat perbaikan stall:** `KHR_parallel_shader_compile` / `compileAsync`. **Belum dikerjakan.**
+
+### 🚧 Loader saat mengunduh — MASIH TODO
+
+Permintaan awal user, sengaja dipisah dari sapuan. Jendela yang benar untuk itu justru **stall 2,3 s + unduhan GLB 8,09 MB**, saat layar masih hitam dan pengunjung tidak dapat umpan balik apa pun. `<Loader>` yang ada sekarang (`useProgress` di `Scene.tsx`) baru muncul setelah Suspense aktif.
+
+### Verifikasi visual: Playwright 1.61.0
+
+Versi itu yang cocok dengan chromium 1228 yang sudah ter-cache di `~/Library/Caches/ms-playwright`; **versi lain memicu unduhan browser baru**. Flag WebGL yang jalan di headless:
+
+```
+--use-gl=angle --use-angle=metal --enable-unsafe-swiftshader
+```
 
 ---
 
@@ -749,13 +1028,22 @@ Commit `38168ce` sempat mengganti viewer ke `WebGPURenderer` (three r171, fallba
 7f. **Bake lightmap** (§4g) ✅ SELESAI 27 Jul — 39 lampu realtime → **0**
 8. ~~Export GLB seluruh scene~~ ✅ **MVP1 SELESAI 27 Jul — 8,0 MB, 50-60 FPS.** Pecah GLB per ruangan belum perlu
 9. ~~**Karakter PS1** (§6b)~~ ✅ **SELESAI** — 28 Jul 4 karakter di Blender, **29 Jul jadi 5 karakter + di-export + tampil beranimasi di web**. Rencana vertex-color diubah jadi texture 256px `Closest`
-10. **Integrasi ke web** (§4h) — 🚧 sebagian besar SELESAI 27–29 Jul: GLB jadi hero fullscreen, navigasi 5 ruangan (wheel/keyboard/touch + hash routing), navbar dropdown + scrollspy, `heroInView` gating, `MODEL_URL` dibetulkan, **karakter + CharacterLights**. **Sisa:** post-processing PS1, interaksi klik pintu
-11. ~~Minigame billiard~~ ✅ **DIBANGUN 28 Jul, engine diganti cannon-es 29 Jul** (§6d) — fisika terverifikasi lewat simulasi headless. ⏸️ Belum di-review di browser
+10. **Integrasi ke web** (§4h) — 🚧 sebagian besar SELESAI 27–29 Jul: GLB jadi hero fullscreen, navigasi 5 ruangan + hash routing, navbar dropdown + scrollspy, `heroInView` gating, `MODEL_URL` dibetulkan, **karakter + CharacterLights**. **Sisa:** post-processing PS1, loader saat mengunduh
+10b. **Migrasi Next.js → Vite** ✅ **SELESAI 29 Jul** (§4j, rekan tim) — SPA client-only, dev server 276 ms
+11. ~~Minigame billiard~~ ✅ **DIBANGUN 28 Jul, engine diganti cannon-es 29 Jul** (§6d) — fisika terverifikasi lewat simulasi headless. ⏸️ Belum di-review di browser; bug bola di (0,0,0) dibetulkan 30 Jul
 11b. **Konten V1 → V2 + animasi teks** ✅ **SELESAI 29 Jul** (§4i, rekan tim) — 9 section + 4 komponen `motion`
-12. **⬅️ BERIKUTNYA — review billiard di browser** (§6d): posisi stik, apakah bola terlihat resin (bukan besi), framing kamera, timing fade lampu. **Sekalian ukur ulang FPS** setelah 5 karakter masuk (§4h). Setelah itu:
-    - **a. Beresi blocker layar** (§6c) — pisah material MacBook, unwrap ulang UV iMac & SMK_TV
-    - **b. Post-processing PS1** (§4b) — pass terakhir untuk look basement.studio
-    - ~~**c. Sepakati satu lockfile**~~ ✅ **SELESAI 29 Jul — bun** (§7)
+11c. **Navigasi waypoint 3D** ✅ **SELESAI 29–30 Jul** (§4k) — RoomNav + scroll/swipe/keyboard dicabut; 3 waypoint ternyata mustahil terlihat sejak ditulis
+11d. **Lighting dirombak** ✅ **SELESAI 30 Jul** (§4l) — lightmap dinyalakan, N8AO + contact shadow, bloom 1,6→0,4, ambient 0,12→0,03. Light cone dibangun lalu dihapus
+11e. **Sapuan "kantor terbentuk"** ✅ **SELESAI 30 Jul** (§4m) — dither Bayer 2,6 s, 60 FPS terverifikasi
+11f. **Konten layar monitor** ✅ **SELESAI 30 Jul** (§6c) — Spotify pixel-art di monitor AOC
+12. **⬅️ BERIKUTNYA, urut prioritas:**
+    - **a. Loader saat mengunduh** (§4m) — permintaan awal user yang masih terbuka. Layar hitam 2,3 s + unduhan 8,09 MB tanpa umpan balik apa pun
+    - **b. Review billiard di browser** (§6d): posisi stik, apakah bola terlihat resin (bukan besi), framing kamera, timing fade lampu. Sekalian ukur FPS saat fisika jalan
+    - **c. Verifikasi waypoint Lounge & Function** (§4k) dengan resep pengukuran; sekalian putuskan apakah Function→Lounge dipindah ke lantai supaya tidak jalan buntu di HP
+    - **d. Merge `feature/waypoint-nav-lighting` ke `main`** — semua pekerjaan 30 Jul masih di branch
+    - **e. Beresi blocker layar** (§6c) — pisah material MacBook, unwrap ulang UV iMac & SMK_TV
+    - **f. Post-processing PS1** (§4b) — pass terakhir untuk look basement.studio
+    - ~~**Sepakati satu lockfile**~~ ✅ **SELESAI 29 Jul — bun** (§7)
 13. Dekorasi tambahan (tanaman via Sketchfab kalau integrasi di-enable)
 
 ### Polish opsional (tidak mendesak, MVP1 sudah jalan)
@@ -763,6 +1051,8 @@ Commit `38168ce` sempat mengganti viewer ke `WebGPURenderer` (three r171, fallba
 - Rename `AirVent_01..04` → `MR_AirVent_*`
 - 4 spot track light lain yang masih tanpa lensa (kalau ketemu saat review)
 - Post-processing PS1 (§4b) — lapisan opsional di viewer
+- **Perbaiki stall kompilasi shader 2,3 s** (§4m) — kandidat: `KHR_parallel_shader_compile` / `compileAsync`
+- **Bangun ulang light cone volumetrik** (§4l) kalau look-nya masih diinginkan — pakai setengah cangkang 180° + kerucut dalam, jangan ulangi dua kesalahan yang sudah dicatat
 
 ## 6b. Karakter (fase C3) ✅ SELESAI — 5 KARAKTER TAMPIL & BERANIMASI DI WEB (29 Jul)
 
@@ -854,7 +1144,7 @@ Dicoba 28 Jul, gagal, dibatalkan. Model "Low poly ordinary man" (3.296 tris) bag
 
 ~~**NEXT:** export GLB + load ke Next.js, lalu isi `CharacterLights.tsx`~~ ✅ **SELESAI 29 Jul** — lihat sub-bab export & integrasi di atas.
 
-## 6c. Video/Gambar di Layar 🚧 (diputuskan 28 Jul)
+## 6c. Video/Gambar di Layar 🚧 (diputuskan 28 Jul; monitor AOC ✅ jalan 30 Jul)
 
 Pertanyaan berulang: "nambahin video di laptop & iMac itu di mana?" — **Jawaban: di THREE.JS, bukan Blender.** Blender cuma bisa bake tekstur DIAM. Untuk video berputar atau konten yang bisa diganti tanpa export ulang, pakai `THREE.VideoTexture` yang membaca frame dari elemen `<video>` HTML. Gambar statis pakai `TextureLoader` biasa.
 
@@ -872,11 +1162,70 @@ Pertanyaan berulang: "nambahin video di laptop & iMac itu di mana?" — **Jawaba
 
 Catatan: `OMacbook_D*` = **32.751 tris each** × 5 buah — kandidat decimate besar, jauh lebih berat dari karakter.
 
+### ✅ Monitor AOC SUDAH TERISI (30 Jul) — blocker dilewati, bukan dibereskan
+
+`src/components/canvas/screens.ts`. Layar pertama yang benar-benar berisi: **Spotify pixel-art di `OMon_AOC_2`**, `public/screens/spotify-home.png` (96×54, 7 KB). Blocker MacBook/iMac/SMK_TV **tidak disentuh** — monitor AOC memang satu-satunya yang sudah SIAP di tabel di atas, jadi dikerjakan yang bisa dulu.
+
+`SCREENS` sengaja **daftar eksplisit**, bukan "semua yang materialnya `*_Screen`": hanya layar yang benar-benar terlihat dari salah satu `VIEWS` yang perlu diisi, sisanya buang memori texture percuma (dan +1 draw call masing-masing).
+
+**`emissiveMap`, BUKAN `map`.** Material layar di GLB baseColor-nya ~0,01 (hitam) dan ambient scene cuma 0,03 — dipasang sebagai `map` saja, gambarnya praktis tak terlihat. Yang membuatnya "menyala" adalah `emissiveMap`, yang tidak bergantung cahaya sekitar sama sekali. `emissiveIntensity = 1.0`; jangan dinaikkan tanpa melihat hasilnya, karena ambang bloom 0,95 (§4l) berarti di atas itu layar **menyebar pendar** dan terbaca seperti lampu, bukan monitor.
+
+### Pixelasi dilakukan OFFLINE, bukan di shader
+
+Gambarnya memang **disimpan kecil** (96×54) lalu dibesarkan GPU dengan `NearestFilter`. Tidak ada shader, tidak ada canvas 2D per frame, tidak ada quantize UV — GPU sudah melakukan persis itu secara gratis saat mengambil sampel texture yang lebih kecil dari layarnya.
+
+Konsekuensinya: **tingkat pixelasi ditentukan saat membuat aset, bukan di kode.** Untuk mengubahnya, buat ulang PNG-nya:
+
+```bash
+ffmpeg -i sumber.png -vf "crop=W:H:X:Y,scale=96:54:flags=neighbor" keluaran.png
+```
+
+`flags=neighbor` **WAJIB** — tanpa itu ffmpeg memakai bicubic yang merata-ratakan piksel tetangga, hasilnya blur kecil, bukan pixel-art. Crop **sebelum** scale supaya rasionya sudah benar dan gambarnya tidak melar.
+
+### 🔑 Cara memilih resolusi aset untuk layar lain
+
+Yang menentukan **bukan** seberapa enak gambarnya dilihat sendirian, melainkan **seberapa besar layar itu tampil di viewport**. Monitor AOC dari `VIEWS.Office` berjarak 2,49 m dan hanya mengisi ±278 × 181 piksel (1080p, dpr 1,5).
+
+Artinya aset 192 px mendarat di **0,69 teksel per piksel layar** — nyaris 1:1, jadi GPU hampir tidak membesarkan apa pun dan blok pixelnya tidak pernah terbentuk. Itu sebabnya 192 terlihat "kurang pixel" meski di file-nya jelas pixel-art. Dibandingkan pada **ukuran tampil sesungguhnya**:
+
+| Aset | Hasil |
+|---|---|
+| 192 | blok terlalu halus — terbaca sebagai gambar biasa yang agak kasar |
+| **96** | ✅ **DIPAKAI** — blok jelas terbaca, tata letak Spotify masih dikenali |
+| 64 | sudah jadi bidang warna, tidak lagi terbaca sebagai antarmuka |
+
+**Untuk layar lain, ULANGI pengukurannya** — TV meeting yang jauh lebih besar di layar akan butuh angka lebih tinggi untuk kekasaran yang sama. Aturan praktisnya: bidik **±0,3 teksel per piksel tampil**, yaitu lebar-tampil ÷ 3.
+
+### 4 jebakan yang semuanya kena
+
+1. **Material WAJIB di-clone.** Keempat monitor (`OMon_AOC_0..3`) berbagi mesh **dan** material `OMon_Screen` yang sama persis — menempelkan texture langsung membuat **keempatnya** menampilkan gambar yang sama.
+2. **`emissive` harus disetel putih.** `emissiveMap` dikalikan dengan warna `emissive`; dibiarkan hitam (bawaan), hasil perkaliannya nol dan gambarnya **tidak muncul sama sekali** — gejala yang mudah disalahartikan sebagai "texture-nya gagal dimuat".
+3. **`texture.flipY = false` wajib, dan ini gampang terlewat.** glTF menaruh titik asal UV di kiri-atas, WebGL di kiri-bawah. `GLTFLoader` mendamaikannya dengan menyetel `flipY = false` pada setiap texture yang **IA** muat — tapi texture ini dimuat `TextureLoader` lewat `useTexture`, yang bawaannya `flipY = true`. Dibiarkan bawaan, gambarnya **terbalik atas-bawah** (verifikasi dari accessor: pos.y 0,407 → v=0; pos.y 0,108 → v=1).
+4. **`flipX` per-node untuk monitor AOC.** Quad layarnya normal menghadap −Z dengan u=0 di sisi +X, jadi tanpa dibalik gambarnya tampil sebagai **bayangan cermin**. Ini sifat mesh-nya, bukan gambarnya — makanya jadi setelan per-node (`repeat.x = -1` + `offset.x = 1`, bukan menyiapkan dua versi file).
+
+### ⚠️ Urutan dengan sapuan reveal — clone HARUS lebih dulu
+
+`applyScreens()` dipanggil di dalam `useMemo` yang **sama** dengan fix-up material, bukan di `useEffect` terpisah. Alasannya: material hasil clone harus sudah ada saat `prepareRevealSweep()` mengumpulkan material untuk dipatch (§4m). Kalau dipasang belakangan, **layarnya tidak ikut tersapu** dan tampil utuh sejak frame pertama di tengah kantor yang belum terbentuk.
+
+Sekalian: `toneMapped` sengaja **dibiarkan menyala** di sini — beda dari lampu & LED strip yang mematikannya. Lampu memang harus menembus ACES supaya berpendar; layar tidak. Dimatikan, warnanya melompat lebih terang dari seluruh scene dan monitornya terlihat seperti **ditempel**, bukan berada di dalam ruangan yang sama.
+
+### 🔒 Screenshot sumber TIDAK di-commit
+
+Sumbernya tangkapan layar akun Spotify pribadi — nama akun, playlist, riwayat dengar — dan repo ini publik. `.gitignore` memblokir `/Screenshot *.png`; yang di-commit **hanya hasil pixelasinya** di `public/screens/` (96×54, sudah tidak terbaca). Verifikasi log dev: `[office] layar terisi=1/1` — kalau kurang, nama node di `screens.ts` tidak cocok dengan yang ada di GLB, dan layarnya akan **diam hitam tanpa error apa pun**.
+
 ## 6d. Minigame Billiard ✅ DIBANGUN (28 Jul) — ⏸️ ditunda, belum di-review di browser
 
 Sandbox: aim + power + tembak, bola masuk lubang hilang, auto re-rack, tombol reset. **Tanpa skor/giliran/aturan 8-ball.** Fisika **cannon-es 0.20** — dipakai LANGSUNG tanpa wrapper R3F (lihat di bawah kenapa pindah dari Rapier).
 
-**Status:** logika & fisika sudah diverifikasi (simulasi headless + typecheck/lint/build bersih). **Yang belum: penilaian visual** — posisi stik, apakah bola terlihat resin (bukan besi), framing kamera, timing fade lampu. Karakter function room (syarat terakhir office 3D) sudah masuk, jadi **review browser ini sekarang jadi pekerjaan berikutnya**.
+**Status:** logika & fisika sudah diverifikasi (simulasi headless + typecheck/lint/build bersih). **Yang belum: penilaian visual** — posisi stik, apakah bola terlihat resin (bukan besi), framing kamera, timing fade lampu. Karakter function room (syarat terakhir office 3D) sudah masuk, jadi **review browser ini masih jadi pekerjaan yang tertunda** (per 30 Jul belum dilakukan).
+
+### 🐛 Bola & stik tergeletak di (0,0,0) sepanjang tur — dibetulkan 30 Jul
+
+Commit `6ad97b2`. **Loop sinkronisasi mesh berhenti saat minigame tidak aktif**, jadi keenam belas bola tetap berada di titik asal objek — tergeletak di lantai sebelah meja — dan terlihat sebagai benda kecil misterius selama tur, meski minigame belum pernah dibuka.
+
+Dua bagian perbaikannya:
+1. **Rak disusun sekali di awal begitu mesh siap** (`active || meshes.some(Boolean)`), tidak menunggu pemain masuk mode main. Dan `reset()` menyinkronkan mesh ke posisi rak **saat itu juga**, tidak menyerahkannya ke loop yang sedang berhenti.
+2. **Stik & garis bidik disembunyikan** kecuali minigame benar-benar dibuka — `aiming = active && phase === "aiming"`, bukan sekadar `phase === "aiming"`.
 
 ### ⚠️ PINDAH DARI RAPIER KE CANNON-ES (29 Jul) — alasannya rasa main, bukan performa
 
@@ -920,7 +1269,7 @@ Sudut bidik dihitung dari **sudut kursor terhadap bola putih di layar**, bukan g
 
 > ⚠️ **Nilai dibaca lewat ref, BUKAN closure.** Dengan `aimAngle` di dependency array, tiap perubahan sudut membongkar & memasang ulang semua listener — posisi jari sebelumnya ikut hilang, dan stik cuma bergeser sedikit lalu macet.
 
-`cueScreen` diperbarui **hanya saat membidik dan hanya kalau bergeser >1 px**, karena setiap pembaruan memicu render React. `RoomNav` disembunyikan saat main (tombolnya menempati sisi layar yang sama dengan HUD).
+`cueScreen` diperbarui **hanya saat membidik dan hanya kalau bergeser >1 px**, karena setiap pembaruan memicu render React. ~~`RoomNav` disembunyikan saat main~~ — sejak 30 Jul yang disembunyikan adalah **waypoint 3D** (§4k) dan **bayangan kontak** (§4l), lewat `billiardActive` di store. Untuk waypoint alasannya bukan lagi tabrakan tata letak: geser-untuk-membidik bisa mengenai bidang waypoint dan pemain terlempar ke ruangan lain di tengah permainan.
 
 ### Bar tenaga — kurva kuadrat, bukan linear
 
@@ -1017,7 +1366,8 @@ Kode billiard cuma bergantung 3 hal dari `office.glb`: (a) nama node mengandung 
   - Collection `Export_Merged` = hasil merge untuk export (§4f). **Di-exclude saat modeling**, di-include saat export. Objek asli di collection kerja tidak pernah disentuh.
   - Cycles: **GPU Metal** (`prefs.compute_device_type='METAL'` + `cycles.device='GPU'`) — cek tiap sesi, default-nya CPU
 - **Polycam** untuk scanning (GLB)
-- **Next.js + bun** (project web ini) — **GLB sudah terintegrasi (§4h)**. Stack: Next 16.2, React 19, three 0.185, @react-three/fiber 9 + drei 10 + postprocessing 3, zustand 5, Tailwind 4, **cannon-es 0.20** (billiard, §6d), **motion 12** (animasi teks, §4i). Jalankan: `bun dev` → `http://localhost:3000`
+- **Vite + bun** (project web ini) — **GLB sudah terintegrasi (§4h)**. Stack: **Vite 6** (dulu Next 16.2, dimigrasikan 29 Jul — §4j), React 19, three 0.185, @react-three/fiber 9 + drei 10 + postprocessing 3, zustand 5, Tailwind 4, **cannon-es 0.20** (billiard, §6d), **motion 12** (animasi teks, §4i). Jalankan: `bun dev` → `http://localhost:3000`
+- **Playwright 1.61.0** untuk verifikasi visual headless — **versi itu spesifik**, lihat §4m. Flag WebGL: `--use-gl=angle --use-angle=metal --enable-unsafe-swiftshader`
 
 ### 📦 Manajer paket: BUN (diputuskan 29 Jul) — pnpm sudah tidak dipakai
 

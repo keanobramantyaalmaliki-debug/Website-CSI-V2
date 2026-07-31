@@ -3,6 +3,36 @@ import { create } from "zustand";
 export const VIEW_KEYS = ["Office", "Lounge", "Meeting", "Function", "Pantry"] as const;
 export type RoomKey = (typeof VIEW_KEYS)[number];
 
+/**
+ * Ruangan tempat tur DIMULAI — pintu masuk kantor.
+ *
+ * Lounge, bukan Office: itu ruangan pertama yang dilihat orang saat masuk, jadi
+ * memulai di situ mengikuti alur kunjungan sungguhan.
+ *
+ * ⚠️ Ini SATU-SATUNYA tempat titik awal ditentukan, dan ia dipakai untuk TIGA
+ * hal yang WAJIB tetap sepakat:
+ *   1. posisi kamera saat mount (CameraController + START_POS di Scene.tsx)
+ *   2. `currentRoom` awal di store ini
+ *   3. ruangan yang URL-nya TANPA hash (lihat `hashFor` di bawah)
+ *
+ * Nomor 3 yang paling mudah terlewat, dan kalau tidak ikut dipindah hasilnya
+ * bug: dulu Office yang tanpa hash. Memulai di Lounge tapi membiarkan Office
+ * tanpa hash berarti pindah ke Office membuat URL jadi bersih, lalu reload
+ * mengembalikan pengunjung ke Lounge — bukan ke Office yang barusan dibuka.
+ *
+ * Cukup ganti konstanta ini untuk memindahkan titik awal; ketiga hal di atas
+ * ikut sendiri.
+ */
+export const START_ROOM: RoomKey = "Lounge";
+
+/**
+ * Hash URL untuk sebuah ruangan. START_ROOM sengaja tidak berhash supaya URL
+ * halaman depan tetap bersih.
+ */
+export function hashFor(room: RoomKey): string {
+  return room === START_ROOM ? "" : `#${room.toLowerCase()}`;
+}
+
 /** Koordinat dunia three.js. Sengaja tuple, bukan THREE.Vector3, supaya store
  *  ini tetap bebas dari import three (dipakai juga oleh komponen DOM). */
 export type Vec3 = readonly [number, number, number];
@@ -39,9 +69,9 @@ interface SceneStore {
   ) => void;
 
   // ── Minigame billiard ────────────────────────────────────────────────────
-  /** true = pemain sedang di meja. Dipakai CameraController untuk MEMATIKAN
-   *  navigasi wheel/panah/swipe — kalau tidak, geser-untuk-membidik ikut
-   *  berpindah ruangan. */
+  /** true = pemain sedang di meja. Dipakai Waypoints untuk MENYEMBUNYIKAN
+   *  waypoint — kalau tidak, geser-untuk-membidik bisa mengenai waypoint dan
+   *  pemain terlempar ke ruangan lain di tengah permainan. */
   billiardActive: boolean;
   billiardPhase: BilliardPhase;
   enterBilliard: () => void;
@@ -78,7 +108,7 @@ interface SceneStore {
 }
 
 export const useSceneStore = create<SceneStore>((set) => ({
-  currentRoom: "Office",
+  currentRoom: START_ROOM,
   setCurrentRoom: (room) => set({ currentRoom: room }),
   heroInView: true,
   setHeroInView: (inView) => set({ heroInView: inView }),

@@ -19,6 +19,10 @@
 # production
 /build
 
+# next.js
+/.next/
+next-env.d.ts
+
 # misc
 .DS_Store
 *.pem
@@ -66,3 +70,9 @@ matterjs-lab.html
 /src/components/lab/
 /src/lib/lab/
 /src/lib/hooks/useMatterLab.ts
+
+# Screenshot sumber untuk konten layar (src/components/canvas/screens.ts).
+# Isinya tangkapan layar akun pribadi — nama akun, playlist, riwayat dengar —
+# dan repo ini publik. Yang di-commit HANYA hasil pixelasinya di public/screens/
+# (96×54, sudah tidak terbaca). Simpan sumbernya lokal saja.
+/Screenshot *.png

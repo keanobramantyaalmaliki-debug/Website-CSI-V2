@@ -169,8 +169,15 @@ export default function BilliardGame() {
       // Bola yang tadi masuk lubang sudah dikeluarkan dari world — pasang lagi.
       restoreBall(s.world, b);
     });
-    meshes.forEach((m) => {
-      if (m) m.visible = true;
+    meshes.forEach((m, i) => {
+      if (!m) return;
+      m.visible = true;
+      // Sinkronkan mesh ke posisi rak SEKARANG juga, jangan tunggu loop.
+      // Loop sinkronisasi berhenti saat minigame tidak aktif, jadi tanpa ini
+      // bola tetap tergeletak di titik asal (0,0,0) — di lantai sebelah meja
+      // — dan terlihat sebagai benda kecil misterius sepanjang tur.
+      const b = s?.balls[i];
+      if (b) m.position.set(b.position.x, b.position.y, b.position.z);
     });
     setPhase("aiming");
   }, [meshes, setPhase, setPocketed]);
@@ -180,13 +187,18 @@ export default function BilliardGame() {
     return () => registerBilliard(null);
   }, [shoot, reset, registerBilliard]);
 
-  // Susun rak saat pertama kali masuk mode main.
+  // Susun rak saat masuk mode main — DAN sekali di awal begitu mesh siap.
+  //
+  // Yang di awal itu bukan sekadar jaga-jaga: loop sinkronisasi mesh berhenti
+  // saat minigame tidak aktif, jadi tanpa ini keenam belas bola tetap berada
+  // di titik asal objek (0,0,0) — tergeletak di lantai sebelah meja — dan
+  // terlihat sepanjang tur meski minigame belum pernah dibuka.
   useEffect(() => {
-    if (active) reset();
+    if (active || meshes.some(Boolean)) reset();
     // `reset` sengaja tidak jadi dependency: identitasnya berubah tiap kali
     // `meshes` berubah, dan itu akan menata ulang rak di tengah permainan.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active]);
+  }, [active, meshes]);
 
   // Tarikan stik murni turunan dari bar tenaga — dihitung saat render, bukan
   // disimpan sebagai state tersendiri.
@@ -362,7 +374,13 @@ export default function BilliardGame() {
     setPhase("aiming");
   });
 
-  const aiming = phase === "aiming";
+  // Stik & garis bidik hanya muncul saat minigame BENAR-BENAR dibuka.
+  //
+  // `phase` sudah bernilai "aiming" sejak rak ditata di awal, dan grup bidik
+  // baru diposisikan di dalam useFrame yang berhenti saat minigame tidak
+  // aktif — tanpa syarat `active`, stik tergeletak di titik asal (0,0,0) di
+  // lantai sebelah meja sepanjang tur.
+  const aiming = active && phase === "aiming";
 
   return (
     <>
