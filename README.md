@@ -1,31 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Cogniti Office 3D Tour
+
+Website tour kantor 3D interaktif untuk **cogniti.id** — pengunjung menjelajahi kantor Cogniti secara virtual di browser, ala [basement.studio](https://basement.studio).
+
+**[`Documentations.md`](./Documentations.md) adalah dokumentasi utamanya** — pipeline Blender→GLB, kalibrasi lighting, dan puluhan gotcha yang mahal didapat. Baca itu dulu sebelum mengubah apa pun di `src/components/canvas/`.
 
 ## Getting Started
 
-Project ini memakai **bun** (bukan npm/yarn/pnpm). Satu-satunya lockfile yang sah adalah `bun.lock`.
+Project ini memakai **bun** (bukan npm/yarn/pnpm). Satu-satunya lockfile yang sah adalah `bun.lock` — lihat §7 di Documentations.
 
 ```bash
 bun install
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+> ⚠️ `bun` ada di `~/.bun/bin` tapi tidak selalu ada di PATH shell non-interaktif. Kalau ketemu `command not found: bun` di skrip, jalankan `export PATH="$HOME/.bun/bin:$PATH"` dulu.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Perintah | Fungsi |
+|---|---|
+| `bun dev` | Dev server di port 3000 |
+| `bun run build` | `tsc --noEmit` + `vite build` |
+| `bun start` / `bun run preview` | Serve hasil build di port 3000 |
+| `bun run lint` | ESLint |
 
-## Learn More
+## Stack
 
-To learn more about Next.js, take a look at the following resources:
+**Vite 6 + React 19 + TypeScript + Tailwind 4.** Client-only SPA — tidak ada SSR. (Dulu Next.js 16, dimigrasikan 29 Jul 2026; lihat §4j di Documentations.)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3D: **three 0.185** + `@react-three/fiber` 9 + `drei` 10 + `@react-three/postprocessing` 3.
+Lain-lain: `zustand` 5 (state), `cannon-es` 0.20 (minigame billiard), `motion` 12 (animasi teks).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Struktur
 
-## Deploy on Vercel
+```
+src/
+  App.tsx                    struktur halaman: Hero (3D) + 9 section
+  components/
+    canvas/                  semua yang di dalam <Canvas> — lihat §4h
+      Scene.tsx              Canvas + EffectComposer (N8AO → Bloom)
+      Office.tsx             pemuat office.glb + fix-up material wajib
+      CameraController.tsx   VIEWS 5 ruangan + tween + hash routing
+      Waypoints.tsx          navigasi waypoint 3D (§4k)
+      revealSweep.ts         sapuan "kantor terbentuk" (§4m)
+      screens.ts             konten layar monitor (§6c)
+      billiard/              minigame billiard (§6d)
+    sections/                konten halaman
+    motion/                  komponen animasi teks
+  lib/store/sceneStore.ts    zustand: ruangan aktif, START_ROOM, state billiard
+public/3d/models/office.glb  model kantor 8,09 MB — ter-track git, jangan dihapus
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Sebelum menyentuh kode 3D
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Angka-angka di `src/components/canvas/` hampir semuanya **hasil pengukuran**, bukan selera — koordinat kamera dari Blender, ambang bloom, setelan AO, batas bidang bayangan. Komentar di tiap file menjelaskan cara mengukurnya ulang. Kalau ada yang terlihat seperti angka acak, kemungkinan besar itu jawaban dari bug yang sulit dilacak; cek komentarnya sebelum menggantinya.
