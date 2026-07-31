@@ -6,6 +6,7 @@ import { useSceneStore } from "@/lib/store/sceneStore";
 
 const Scene = lazy(() => import("@/components/canvas/Scene"));
 const BilliardHUD = lazy(() => import("@/components/ui/BilliardHUD"));
+const WaypointLabel = lazy(() => import("@/components/ui/WaypointLabel"));
 
 /**
  * HERO — 3D office tour, satu viewport penuh.
@@ -105,6 +106,14 @@ export default function Hero() {
       {/* Bar tenaga + kontrol minigame billiard (muncul saat meja diklik) */}
       <Suspense fallback={null}>
         <BilliardHUD />
+      </Suspense>
+
+      {/* Label waypoint yang mengekor kursor. Di LUAR Canvas karena posisinya
+          ditentukan kursor (screen-space), bukan titik di dunia 3D — lihat
+          ui/WaypointLabel.tsx. Sengaja bersebelahan dengan BilliardHUD: sama-
+          sama overlay z-30, tingkat yang sama di INVARIANTS.md §2. */}
+      <Suspense fallback={null}>
+        <WaypointLabel />
       </Suspense>
 
       {/* "see our work" — scroll ke konten di bawah hero */}
