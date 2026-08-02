@@ -18,6 +18,9 @@ import Office from "@/components/sections/Office";
 import MeetingLead from "@/components/sections/MeetingLead";
 import CaseGrid from "@/components/sections/CaseGrid";
 import CaseStudySpotlight from "@/components/sections/CaseStudySpotlight";
+import PeopleIntro from "@/components/sections/PeopleIntro";
+import PeopleValues from "@/components/sections/PeopleValues";
+import TheCrew from "@/components/sections/TheCrew";
 
 /**
  * Konten yang ditampilkan di bawah hero untuk tiap room.
@@ -61,9 +64,12 @@ export const ROOM_CONTENT: Record<RoomKey, ReactNode> = {
     </>
   ),
   Function: (
-    <p className="px-8 py-24 text-center text-zinc-500">
-      Konten room ini — atur nanti.
-    </p>
+    <>
+      <PeopleIntro />
+      <PeopleValues />
+      <TheCrew />
+      <Contact />
+    </>
   ),
   // Pantry disabled — tidak diberi route, tidak perlu konten.
   Pantry: null,
