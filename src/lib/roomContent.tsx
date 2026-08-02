@@ -15,6 +15,9 @@ import Careers from "@/components/sections/Careers";
 import Vision from "@/components/sections/Vision";
 import Contact from "@/components/sections/Contact";
 import Office from "@/components/sections/Office";
+import MeetingLead from "@/components/sections/MeetingLead";
+import CaseGrid from "@/components/sections/CaseGrid";
+import CaseStudySpotlight from "@/components/sections/CaseStudySpotlight";
 
 /**
  * Konten yang ditampilkan di bawah hero untuk tiap room.
@@ -50,9 +53,12 @@ export const ROOM_CONTENT: Record<RoomKey, ReactNode> = {
   ),
   Office: <Office />,
   Meeting: (
-    <p className="px-8 py-24 text-center text-zinc-500">
-      Konten room ini — atur nanti.
-    </p>
+    <>
+      <MeetingLead />
+      <CaseGrid />
+      <CaseStudySpotlight />
+      <Contact />
+    </>
   ),
   Function: (
     <p className="px-8 py-24 text-center text-zinc-500">
