@@ -67,16 +67,25 @@ export default function Hero() {
     return () => observer.disconnect();
   }, [setHeroInView, reduced]);
 
-  // Canvas recede: opacity 1→0, scale 1→0.96, y drift upward over last 40% of
-  // the scroll track. CSS transforms on the canvas wrapper don't wake R3F's
-  // frameloop="demand" — purely GPU-composited, camera untouched.
+  // Canvas recede: opacity 1→0, scale 1→0.96, y drift upward — must finish
+  // BEFORE the sticky child unpins, not just before the track ends.
+  //
+  // scrollYProgress here spans the full 180dvh track ("start start" → "end
+  // start"), but the sticky canvas (h-dvh inside a 180dvh track) actually
+  // unpins at trackHeight - stickyHeight = 180dvh - 100dvh = 80dvh, i.e.
+  // progress ≈ 0.444 — not at progress 1.0. Fading over [0.6, 1.0] left the
+  // canvas fully opaque for a ~28dvh window after it had already unpinned
+  // and started scrolling with the page, so it visibly reappeared below
+  // HeroHandoff's fixed-height seam (see INVARIANTS.md §2 area, reported as
+  // "kepotong saat discroll"). Fading over [0.28, 0.44] instead completes
+  // the recede just as the element unpins, so nothing scrolls away visibly.
   const { scrollYProgress } = useScroll({
     target: heroTrackRef,
     offset: ["start start", "end start"],
   });
-  const canvasOpacity = useTransform(scrollYProgress, [0.6, 1.0], [1, 0]);
-  const canvasScale   = useTransform(scrollYProgress, [0.6, 1.0], [1, 0.96]);
-  const canvasY       = useTransform(scrollYProgress, [0.6, 1.0], [0, -20]);
+  const canvasOpacity = useTransform(scrollYProgress, [0.28, 0.44], [1, 0]);
+  const canvasScale   = useTransform(scrollYProgress, [0.28, 0.44], [1, 0.96]);
+  const canvasY       = useTransform(scrollYProgress, [0.28, 0.44], [0, -20]);
 
   // Reduced-motion: revert to original h-dvh normal-flow hero, no pin/recede.
   if (reduced) {

@@ -14,12 +14,15 @@ import Industries from "@/components/sections/Industries";
 import Careers from "@/components/sections/Careers";
 import Vision from "@/components/sections/Vision";
 import Contact from "@/components/sections/Contact";
+import Office from "@/components/sections/Office";
 
 /**
  * Konten yang ditampilkan di bawah hero untuk tiap room.
  *
  * Lounge: susunan section saat ini dipertahankan apa adanya.
- * Office / Meeting / Function: placeholder — user yang menentukan section mana
+ * Office: services deep-dive (Office.tsx) — reorganisasi tematik dari 9-item
+ *   accordion Services di Lounge, bukan duplikat.
+ * Meeting / Function: masih placeholder — user yang menentukan section mana
  *   masuk room mana dengan memindah entri di sini.
  *
  * Page structure (decided 2026-07-07, see reference/ROADMAP.md B5; updated
@@ -45,11 +48,7 @@ export const ROOM_CONTENT: Record<RoomKey, ReactNode> = {
       <Contact />
     </>
   ),
-  Office: (
-    <p className="px-8 py-24 text-center text-zinc-500">
-      Konten room ini — atur nanti.
-    </p>
-  ),
+  Office: <Office />,
   Meeting: (
     <p className="px-8 py-24 text-center text-zinc-500">
       Konten room ini — atur nanti.

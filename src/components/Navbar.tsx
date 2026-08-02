@@ -20,6 +20,18 @@ export default function Navbar() {
     setOpen(false);
   }
 
+  // #contact hanya di-render di Lounge (lihat roomContent.tsx). Dari room
+  // lain, getElementById("contact") mengembalikan null dan scrollIntoView
+  // di-swallow optional chaining — tombol diam saja. Navigasi ke "/#contact"
+  // dulu; RoomRouteSync yang menangani scroll setelah Lounge mount.
+  function goToContact() {
+    if (currentRoom !== "Lounge") {
+      navigate("/#contact");
+      return;
+    }
+    document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" });
+  }
+
   return (
     <header className="fixed inset-x-0 top-4 z-50 flex justify-center px-4">
       <nav
@@ -120,7 +132,7 @@ export default function Navbar() {
               <li className="p-2">
                 <button
                   type="button"
-                  onClick={() => { document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" }); setOpen(false); }}
+                  onClick={() => { goToContact(); setOpen(false); }}
                   className="block w-full rounded-full bg-white px-4 py-3 text-center text-sm font-medium text-zinc-900"
                 >
                   Talk to us
