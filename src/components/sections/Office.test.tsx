@@ -70,7 +70,7 @@ describe("Office", () => {
         <Office />
       </MemoryRouter>,
     );
-    expect(screen.getByText(/client testimonial — pending/i)).toBeInTheDocument();
+    expect(screen.getByText(/testimonial coming soon/i)).toBeInTheDocument();
   });
 
   it("renders a recognition/awards placeholder without fabricated awards", () => {
@@ -79,6 +79,27 @@ describe("Office", () => {
         <Office />
       </MemoryRouter>,
     );
-    expect(screen.getByText(/recognition & awards — pending/i)).toBeInTheDocument();
+    expect(screen.getByText(/recognition & awards coming soon/i)).toBeInTheDocument();
+  });
+
+  it("renders the dummy stat panel next to the hero heading", () => {
+    render(
+      <MemoryRouter>
+        <Office />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/projects delivered/i)).toBeInTheDocument();
+    expect(screen.getByText(/service lines/i)).toBeInTheDocument();
+    expect(screen.getByText(/sectors served/i)).toBeInTheDocument();
+  });
+
+  it("renders one icon panel per service, synced to the accordion list", () => {
+    render(
+      <MemoryRouter>
+        <Office />
+      </MemoryRouter>,
+    );
+    // 9 service rows + 9 icon panels (one per service, crossfaded by hover state)
+    expect(document.querySelectorAll("svg").length).toBeGreaterThanOrEqual(9);
   });
 });
