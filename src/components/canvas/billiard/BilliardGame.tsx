@@ -3,7 +3,7 @@
 import { forwardRef, useCallback, useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Vec3 } from "cannon-es";
-import { DirectionalLight, Group, Mesh, Object3D, Vector3 } from "three";
+import { DirectionalLight, Group, Mesh, Vector3 } from "three";
 import { useSceneStore } from "@/lib/store/sceneStore";
 import { useBallMeshes, CUE } from "./Balls";
 import Cue from "./Cue";
@@ -384,7 +384,7 @@ export default function BilliardGame() {
 
   return (
     <>
-      <BilliardLights />
+      <BilliardLights meshes={meshes} />
       {meshes.map((m, i) =>
         m ? <primitive key={i} object={m} /> : null,
       )}
@@ -428,25 +428,35 @@ const AimLine = forwardRef<Mesh>(function AimLine(_, ref) {
  * ulang semua objek itu. `layers.set(1)` membuat lampu ini HANYA menyentuh
  * benda yang ikut mendaftar di lapisan 1, yaitu bola & stik.
  */
-function BilliardLights() {
-  const scene = useThree((s) => s.scene);
+function BilliardLights({ meshes }: { meshes: (Mesh | null)[] }) {
   const lightRef = useRef<DirectionalLight>(null);
 
   useEffect(() => {
     lightRef.current?.layers.set(DYN_LAYER);
   }, []);
 
-  // Daftarkan bola & stik ke lapisan 1. Dijalankan tiap render karena mesh
-  // bola baru bisa muncul setelah GLB selesai dimuat.
-  useFrame(() => {
-    scene.traverse((o: Object3D) => {
-      if (o.userData?.dynLit) return;
-      if (o.name.startsWith("Ball") || o.name.startsWith("Cone")) {
-        o.layers.enable(DYN_LAYER);
-        o.userData.dynLit = true;
-      }
-    });
-  });
+  // Daftarkan bola ke lapisan 1.
+  //
+  // ⚠️ JANGAN kembalikan ini ke `useFrame` + `scene.traverse()` pencari nama
+  // "Ball"/"Cone" (bentuk aslinya sampai 31 Jul). Alasannya bukan selera:
+  //
+  //   1. Ia tidak digerbangi `active`, jadi ia menyapu SELURUH graph 60×/detik
+  //      sepanjang tur, meski minigame tak pernah dibuka. Penjaga
+  //      `userData.dynLit` cuma melewati isi loop — traversalnya tetap penuh.
+  //   2. Sapuan itu sia-sia total: office.glb punya 656 node dan NOL di
+  //      antaranya berawalan "Ball"/"Cone" (diperiksa dari header GLB).
+  //
+  // `meshes` dari useBallMeshes() sudah persis himpunan yang dicari, dan
+  // identitasnya baru berubah saat GLB selesai dimuat — itulah yang dulu
+  // membuat one-shot useEffect terasa tidak cukup. Menjadikannya dependensi
+  // menyelesaikan hal yang sama tanpa ongkos per-frame.
+  //
+  // Stik TIDAK didaftarkan di sini, sama seperti sebelumnya: Cue.tsx membangun
+  // `new Mesh(...)` yang namanya kosong, jadi filter lama pun tak pernah
+  // menjangkaunya. Perilakunya sengaja dipertahankan apa adanya.
+  useEffect(() => {
+    for (const m of meshes) m?.layers.enable(DYN_LAYER);
+  }, [meshes]);
 
   return (
     <directionalLight

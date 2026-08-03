@@ -74,6 +74,16 @@ export default function Manifesto() {
     <section
       id="manifesto"
       ref={sectionRef}
+      /* `bg-background` WAJIB (dari `join`): Manifesto meluncur DI ATAS canvas
+         yang memudar, jadi ia harus buram — tanpa itu kantor 3D terlihat
+         menembus teks.
+
+         `pt-16` (64px, dulu `pt-40` = 160px) juga menopang hal lain: di HP
+         hero cuma setinggi 70dvh (lihat Hero.tsx), dan eyebrow + baris pertama
+         section ini harus MENGINTIP di sisa 30% layar. Padding besar sendirian
+         menghabiskan jatah itu. Ketiganya terikat — Hero 70dvh, `-mt` di
+         HeroHandoff, dan padding ini; mengubah satu tanpa menengok dua lainnya
+         membuat Manifesto tidak mengintip sama sekali. */
       className="relative overflow-hidden bg-background px-6 pb-24 pt-16 sm:px-10 sm:pb-32 sm:pt-20"
     >
       {/* Particle field — absolute behind text */}

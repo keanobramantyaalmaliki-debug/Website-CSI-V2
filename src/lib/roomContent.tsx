@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { isValidElement, type ReactNode } from "react";
 import type { RoomKey } from "@/lib/store/sceneStore";
 
 // ── Section imports ──────────────────────────────────────────────────────────
@@ -69,3 +69,40 @@ export const ROOM_CONTENT: Record<RoomKey, ReactNode> = {
   // Pantry disabled — tidak diberi route, tidak perlu konten.
   Pantry: null,
 };
+
+/**
+ * Ruangan yang punya konten untuk dirender. Pantry dibuang karena `null`.
+ *
+ * Sisa dari pola "mount semua ruangan lalu sembunyikan yang tidak aktif" yang
+ * sudah DICABUT — lihat RoomContent.tsx untuk alasannya. Dipertahankan karena
+ * berguna sendiri: ia menjawab "ruangan mana yang punya konten" tanpa perlu
+ * menebak dari daftar route.
+ */
+export const ROOM_KEYS_WITH_CONTENT = (
+  Object.keys(ROOM_CONTENT) as RoomKey[]
+).filter((k) => ROOM_CONTENT[k] !== null);
+
+/**
+ * Ruangan yang memuat `<Contact />`, jadi `#contact` benar-benar ada di DOM
+ * saat ruangan itu terbuka.
+ *
+ * Dipakai Navbar untuk memutuskan "Talk to us" cukup menggulir di tempat, atau
+ * harus pindah ke Lounge dulu. DITURUNKAN dari ROOM_CONTENT di atas, bukan
+ * ditulis ulang sebagai daftar nama: begitu Office diberi <Contact />,
+ * tombolnya ikut benar sendiri tanpa ada yang perlu ingat menyunting Navbar.
+ *
+ * Cara memeriksanya menelusuri pohon React element — `<Contact />` bisa berdiri
+ * langsung di bawah fragment ruangan (seperti sekarang) maupun terbungkus
+ * elemen lain nanti.
+ */
+function containsContact(node: ReactNode): boolean {
+  if (Array.isArray(node)) return node.some(containsContact);
+  if (!isValidElement(node)) return false;
+  if (node.type === Contact) return true;
+  const children = (node.props as { children?: ReactNode }).children;
+  return children === undefined ? false : containsContact(children);
+}
+
+export function roomHasContact(room: RoomKey): boolean {
+  return containsContact(ROOM_CONTENT[room]);
+}

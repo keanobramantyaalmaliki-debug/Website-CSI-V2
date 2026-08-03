@@ -1,7 +1,7 @@
 # Documentations — Cogniti Office 3D Tour
 
 Dokumentasi progres pembuatan 3D office tour ala [basement.studio](https://basement.studio) untuk **cogniti.id**.
-Terakhir diupdate: **30 Juli 2026**.
+Terakhir diupdate: **3 Agustus 2026**.
 
 **Status ringkas:** **5 ruangan sudah ~95% jadi** dan seluruhnya sudah jalan di browser (lihat MVP 1 di bawah):
 - **Lounge/Billiard** (§2) & **Function Room** (eks Smoking, §3) — furniture & dekorasi lengkap
@@ -19,7 +19,7 @@ Terakhir diupdate: **30 Juli 2026**.
 - **Manajer paket disatukan ke `bun`** (§7) — `pnpm-lock.yaml` dihapus, build terverifikasi lolos.
 - **Build pindah Next.js → Vite + React SPA** (§4j) — dikerjakan rekan tim di hari yang sama.
 
-**Per 30 Jul** — semuanya di branch `feature/waypoint-nav-lighting`, **belum di-merge ke `main`**:
+**Per 30 Jul** — dikerjakan di branch `feature/waypoint-nav-lighting`, kini **sudah di-merge ke `main`** (lewat rangkaian merge 31 Jul):
 - **Navigasi diganti waypoint 3D** (§4k) — `RoomNav.tsx` dihapus; scroll, swipe, dan panah keyboard **dicabut semua**. Berpindah ruangan sekarang hanya lewat bidang waypoint di dalam ruangan + dropdown Navbar.
 - **Lighting scene dirombak** (§4l) — lightmap **DINYALAKAN** (`LIGHTMAP_INTENSITY` 0 → 1), N8AO + contact shadow masuk, bloom turun 1,6 → 0,4, ambient 0,12 → 0,03. Scene tidak lagi "terang rata".
 - **Sapuan "kantor terbentuk"** (§4m) — dither Bayer 4×4 menyeberangi ruangan 2,6 s saat GLB selesai dimuat, tepi silver brand `#d2d3d4`. Terverifikasi 60 FPS di browser.
@@ -27,7 +27,20 @@ Terakhir diupdate: **30 Juli 2026**.
 - **Konten layar monitor jalan** (§6c) — Spotify pixel-art 96×54 di `OMon_AOC_2` lewat `emissiveMap`; blocker Blender **dilewati**, bukan dibereskan.
 - **Light cone volumetrik DIHAPUS** (§4l) — sempat dibangun lalu dibuang; dua temuan mahalnya dicatat supaya tidak diulang.
 
-**⬅️ Berikutnya:** (a) **loader saat mengunduh** — masih layar hitam 2,3 s + unduhan 8,09 MB tanpa umpan balik (§4m); (b) **review billiard di browser** (§6d), masih belum pernah dilihat; (c) verifikasi waypoint Lounge & Function dengan resep pengukuran (§4k).
+**Per 31 Jul** — sudah masuk `main`:
+- **Loading screen isometrik SELESAI** (§4n) — port animasi basement.studio, di-render di **Web Worker** supaya tidak beku saat kompilasi 233 shader (stall 2,3 s). Menjawab TODO "loader saat mengunduh". Koreografi: intro → idle putar-jeda → outro; gerbang `sceneReady` (dari `dt > 0.25` di `Office.tsx`), bukan `useProgress` drei yang bohong.
+- **🐛 Bug merge lintas-wilayah dibetulkan** (§4o) — `frameloop="demand"` (dari `main`) vs tiga `useFrame` baru (dari `feature/screen-content`) **lolos auto-merge tanpa konflik** lalu membekukan seluruh scene: tampilan stuck + berat tapi navigasi tetap jalan. `frameloop="demand"` dicabut. Penjaganya: **`INVARIANTS.md`** + dua test invariant (frameloop & loader gate).
+- **perf(billiard): traverse tiap frame dihentikan** (§6d) — `BilliardLights` menyapu seluruh scene graph 60×/detik sepanjang tur padahal minigame tak dibuka (dan 0 node cocok). Digerbangi `active`.
+- **Label waypoint mengekor kursor** (§4k) — nama ruangan tidak lagi dipaku di tengah bidang, tapi menyusul kursor dengan sedikit tertinggal ("ditarik tali"). Pindah dari `<Html>` drei ke overlay DOM tunggal di luar Canvas (`ui/WaypointLabel.tsx`); gerak kursor lewat ref, bukan state React.
+
+**Per 3 Agu:**
+- **Waypoint Lounge & Function TUNTAS** (§4k) — TODO verifikasi 30 Jul ditutup; semua waypoint sudah terukur & terlihat.
+- **KTX2 dicoba ulang lalu DITOLAK** (§7) — jalan secara teknis (VRAM 240 → 64 MB) tapi kualitas visualnya kalah dari yang asli. Skripnya disimpan sebagai jawaban yang sudah dibayar, bukan pekerjaan tertunda. **Jangan diusulkan lagi tanpa membandingkan mata dulu.**
+- **Perangkat sentuh: scene 3D jadi PEMANDANGAN** (§4p) — waypoint & minigame billiard mati di `(pointer: coarse)`. Penjaganya `INVARIANTS.md` §6 + test invariant ketiga.
+
+- **Hero dipendekkan jadi 70dvh di HP** (§4p) — konten mengintip di bawah canvas ala basement.studio, **dan** framing 3D melebar: `fov` three.js itu vertikal, jadi viewport jangkung menyempitkan pandangan kiri-kanan (iPhone 15: hFOV 29,8° → 41,7°). "see our work" disembunyikan di HP.
+
+**⬅️ Berikutnya:** (a) **merge branch `join`** — Nico membangun room links navbar + routing path (`RoomRouteSync`) yang menjawab blocker §4p, TAPI ia juga merombak `Hero.tsx` jadi *pinned scroll* (`h-[180dvh]` + `sticky h-dvh`) yang **bertabrakan langsung** dengan `h-[70dvh]` di sini — dua jawaban untuk masalah yang sama, harus dipilih salah satu atau digabung; (b) **bug billiard**: bola yang masuk lubang harus dibekukan jadi `fixed` (§6d); (c) review billiard di browser (§6d), masih belum pernah dilihat; (d) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker, baru bisa dibuktikan mata (§4n).
 
 ## 🎉 MVP 1 SELESAI (27 Jul) — **50-60 FPS di browser**
 
@@ -747,7 +760,31 @@ Hero (3D) → Manifesto → Deployments → Services → LivingArchitecture
 
 ### Percobaan WebGPU + KTX2 — di-revert (27→28 Jul)
 
-Commit `38168ce` sempat mengganti viewer ke `WebGPURenderer` (three r171, fallback WebGL2) + aset KTX2/ETC1S (`office-mvp1-final.glb`, 699 KB VRAM vs 5,59 MB). **Di-revert penuh** di `8a1e0b1` keesokan harinya. Yang bertahan dari eksperimen itu bukan kodenya, tapi **idenya** — navigasi scroll/touch/keyboard + tween 1400 ms + hash routing lahir di sana, lalu ditulis ulang sebagai komponen R3F di `bc0e86c`. (Navigasi scroll/touch/keyboard itu sendiri **akhirnya dihapus** 30 Jul — §4k.) Kalau nanti VRAM jadi masalah, KTX2 layak dicoba lagi (di jalur R3F, bukan viewer HTML).
+Commit `38168ce` sempat mengganti viewer ke `WebGPURenderer` (three r171, fallback WebGL2) + aset KTX2/ETC1S (`office-mvp1-final.glb`, 699 KB VRAM vs 5,59 MB). **Di-revert penuh** di `8a1e0b1` keesokan harinya. Yang bertahan dari eksperimen itu bukan kodenya, tapi **idenya** — navigasi scroll/touch/keyboard + tween 1400 ms + hash routing lahir di sana, lalu ditulis ulang sebagai komponen R3F di `bc0e86c`. (Navigasi scroll/touch/keyboard itu sendiri **akhirnya dihapus** 30 Jul — §4k.)
+
+### KTX2 dicoba ulang di jalur R3F — DITOLAK (3 Agu)
+
+Percobaan kedua, kali ini murni KTX2 tanpa WebGPU, dengan uji berdampingan `?ktx2=1`. **Ditolak Keano: yang asli terlihat lebih bagus.** Artefak percobaannya dihapus; yang disimpan cuma `scripts/ktx2-convert.sh`.
+
+Yang terukur — semuanya jalan, jadi ini **bukan** penolakan karena gagal teknis:
+
+| | office.glb | office-ktx2.glb |
+|---|---|---|
+| VRAM | 240 MB | **64 MB** (−73%) |
+| disk | 8,1 MB | 17,8 MB (**2,2× lebih besar**) |
+| node/mesh/material | 656/240/233 | identik |
+| lightmap | 39 | 39 |
+| selisih piksel vs asli | — | rata-rata 0,49/255; 0,11% piksel beda >24 |
+
+Pelajaran yang berlaku di luar KTX2:
+
+- **Ukuran disk NAIK, bukan turun.** WebP+Draco sudah sangat efisien untuk transfer; KTX2 menukar itu demi format yang GPU baca langsung. Yang dibeli VRAM & waktu upload, yang dibayar bandwidth — arah yang berlawanan dari dugaan awal.
+- **Lightmap WAJIB UASTC.** Dengan ETC1S ia turun ke 0,98 bit/piksel dan gradasi cahaya halus adalah titik terlemah kompresi blok (gejalanya banding). Memaksa UASTC (`-tu normal,attrib`) menaikkan VRAM 49 → 64 MB dan menyumbang ~3,6 MB ke ukuran file. Ini penyebab utama file jadi besar.
+- **gltfpack menghapus nama mesh** (240/240 jadi kosong) meski `-kn` dipakai — `-kn` menjaga nama **node**, bukan mesh. Nama node & material selamat, jadi `M_LEDStrip` dan klik `PoolTable` tetap jalan. Tapi kode yang mencari nama *mesh* akan gagal senyap.
+- **`TEXCOORD_1` turun 80 → 40 primitif** dan itu **aman**: ke-40 yang dibuang tidak dipakai material lightmap mana pun (diverifikasi satu per satu). gltfpack membuang UV mati. Sempat terlihat seperti bug fatal — pengecekan yang benar bukan "berapa yang hilang" tapi "apakah yang hilang itu dipakai".
+- **Angka 240 MB itu nyata** dan terhitung dari header GLB: 62,9 MP × 4 byte. Bukan estimasi kasar.
+
+Kalau suatu saat VRAM benar-benar jadi penghalang (mis. target perangkat mobile), resepnya sudah ada di `scripts/ktx2-convert.sh` — 4 langkah, karena gltfpack tidak bisa membaca Draco maupun WebP. Tapi jangan mengulang percobaan ini cuma karena "240 MB terdengar besar": sudah dicoba, hasilnya kalah di mata.
 
 ## 4j. Migrasi Next.js → Vite + React SPA ✅ (29 Jul — dikerjakan rekan tim)
 
@@ -794,6 +831,13 @@ Detail implementasi yang penting:
 - **`depthTest=false` + `renderOrder=10`** — waypoint sengaja digambar di atas segalanya termasuk perabot yang berdiri di depannya. Posisinya tetap benar di ruangan (jadi perspektifnya betul), tapi tidak ikut tertutup.
 - **Hover dianimasikan lewat `ref` + `useFrame`, bukan `useState`.** Nilainya berubah tiap frame; lewat state, tiap frame memicu render ulang React di seluruh subtree.
 - Disembunyikan saat `!heroInView` atau `billiardActive` — kalau tidak, geser-untuk-membidik di billiard bisa mengenai waypoint dan pemain terlempar ke ruangan lain.
+
+### Label mengekor kursor (31 Jul, commit `c4fe546`)
+
+Nama ruangan tidak lagi dipaku di tengah bidang waypoint, melainkan muncul di samping kursor dan **menyusulnya dengan sedikit tertinggal** — seperti ditarik tali, bukan dipaku.
+
+- **Pindah dari `<Html>` drei ke overlay DOM tunggal di luar Canvas** (`src/components/ui/WaypointLabel.tsx`). Alasannya: label ini elemen screen-space, posisinya ditentukan **kursor**, bukan titik di dunia 3D — sedangkan `<Html>` justru memproyeksikan titik dunia ke layar tiap frame. Bonus: tiap `<Html>` memanggil `ReactDOM.createRoot()` sendiri, jadi satu overlay tunggal meniadakan satu root React **per** waypoint.
+- **Gerak kursor sengaja TIDAK lewat state React** — posisinya di `ref` dan diinterpolasi tiap frame, supaya tidak memicu render ulang saat mouse bergerak.
 
 ### 🔑 Resep mengukur posisi waypoint — JANGAN menebak koordinat
 
@@ -990,9 +1034,9 @@ Penanganannya: jam baru mulai setelah ada frame yang jaraknya wajar (`dt < 0,25 
 
 **Kandidat perbaikan stall:** `KHR_parallel_shader_compile` / `compileAsync`. **Belum dikerjakan.**
 
-### 🚧 Loader saat mengunduh — MASIH TODO
+### ✅ Loader saat mengunduh — SELESAI (31 Jul, lihat §4n)
 
-Permintaan awal user, sengaja dipisah dari sapuan. Jendela yang benar untuk itu justru **stall 2,3 s + unduhan GLB 8,09 MB**, saat layar masih hitam dan pengunjung tidak dapat umpan balik apa pun. `<Loader>` yang ada sekarang (`useProgress` di `Scene.tsx`) baru muncul setelah Suspense aktif.
+Permintaan awal user, sengaja dipisah dari sapuan. Jendela yang benar untuk itu justru **stall 2,3 s + unduhan GLB 8,09 MB**, saat layar masih hitam dan pengunjung tidak dapat umpan balik apa pun. Dijawab 31 Jul dengan **loading screen isometrik yang dirender di Web Worker** — detail di §4n.
 
 ### Verifikasi visual: Playwright 1.61.0
 
@@ -1001,6 +1045,76 @@ Versi itu yang cocok dengan chromium 1228 yang sudah ter-cache di `~/Library/Cac
 ```
 --use-gl=angle --use-angle=metal --enable-unsafe-swiftshader
 ```
+
+---
+
+## 4n. Loading Screen Isometrik ✅ (31 Jul) — dirender di Web Worker
+
+Port animasi loader basement.studio (sumber `~/Downloads/CSI.tsx`). File di `src/components/loader/`: `introAnimation.ts` (logika murni), `intro.worker.ts`, `introMessages.ts`, `LoadingScreen.tsx`.
+
+**Koreografi (SENGAJA beda dari referensi):** intro sekali → idle putar-jeda berulang → outro. Referensi membuang batangnya keluar layar tiap siklus; untuk loader berdurasi tak tentu itu bikin gelisah, jadi batang ditahan di tempat.
+
+### ⚠️ Empat hal mahal yang tidak terlihat dari kode
+
+1. **Worker itu SYARAT, bukan kemewahan.** Kompilasi 233 shader memblokir main thread 2,3 s (§4m). Kanvas 2D menggambar di thread yang sama → animasi main-thread **MEMBEKU** persis di detik terakhir sebelum kantor muncul. Yang kena stall itu fase IDLE-nya; outro aman karena sinyalnya datang dari `useFrame` yang baru jalan setelah stall usai.
+2. **JANGAN impor `three` di modul animasi.** Worker = chunk terpisah; `three` membuatnya ratusan kB dan loader harus menunggu unduhan sebelum bisa muncul — kebalikan dari tugasnya. Matematika 4×4 ditulis tangan (~40 baris), rumus rotasi disalin dari `Matrix4.makeRotationFromEuler` cabang XYZ (cocok sampai galat 1,7e-15). Hasil: chunk worker **3,74 kB**.
+3. **StrictMode + `transferControlToOffscreen()` = bug fatal di dev.** Fungsi itu cuma boleh dipanggil SEKALI seumur hidup elemen kanvas. Alur dev: mount → transfer → cleanup → mount lagi; di putaran kedua jalur worker DAN jalur cadangan sama-sama buntu → layar putih kosong. Solusi: worker **tidak** dimatikan di cleanup (ref bertahan melewati remount), dimatikan di `finish()` saja.
+4. **`useProgress` drei BOHONG** — melapor 100% saat unduhan selesai, 2,3 s sebelum ada yang terlihat. Diganti `sceneReady`, disetel dari gerbang `dt > 0.25` di `Office.tsx` (§4m).
+
+### Detail yang tidak boleh digeser
+
+- Batang digambar `destination-out` (**melubangi** lingkaran), bukan putih seperti referensi. Wajib: saat outro latar putihnya memudar, batang putih akan tertinggal melayang di atas kantor 3D.
+- Latar putih = `<div>` DOM + `transition-opacity`, bukan `fillRect`. Repo ini belum punya `AnimatePresence` di mana pun — jangan perkenalkan untuk fade sesederhana ini.
+- `index.html` punya `<div>` putih statis di dalam `#root` — mencegah kedipan hitam sebelum React mount (body `#000`, loader putih).
+- Tuas kalau idle terasa lama: `IDLE_PAUSE_MS` di `introAnimation.ts` (2000 → 1200).
+- **BELUM DIUJI:** anti-beku di browser sungguhan (DevTools Performance saat kompilasi shader) — itu inti keputusan Worker, dan cuma bisa dibuktikan mata.
+
+---
+
+## 4o. 🐛 Bug Merge Lintas-Wilayah + INVARIANTS.md ✅ (31 Jul)
+
+Repo ini dikerjakan berdua: **Keano** pegang `src/components/canvas/**` + `lib/store` (aset & scene 3D), **Nico** pegang `src/components/sections/**`, `motion/**`, Navbar (konten web). Batasnya bersih — tumpang tindih nyaris nol dalam 80 commit.
+
+**Kelas bug yang berulang: dua cabang yang masing-masing benar, rusak hanya saat bertemu — dan git TIDAK melaporkan konflik** karena perubahannya jatuh di baris berbeda. Sudah terjadi dua kali:
+
+1. **`frameloop="demand"` vs tiga `useFrame` baru.** `frameloop="demand"` (`df27f3d`, hanya di `main`) vs `useFrame` di Office/Waypoints/BilliardGame (dari `feature/screen-content`, bercabang 7 menit sebelum kontrak demand lahir). Auto-merge sukses secara tekstual (baris 41 vs 67 di `Scene.tsx`). Akibat: hanya `CameraController` yang punya `invalidate()` → cuma dia yang minta frame. **Gejala khas: tampilan stuck total + berat, TAPI navigasi tetap responsif.** Sapuan reveal berhenti di progress 0, `sweep.dispose()` tak pernah tercapai, 233 material menghitung dither + `discard` selamanya, dan `discard` mematikan early-Z → berat, terutama di GPU integrated. **Fix:** `frameloop="demand"` dicabut (`7e3723a`).
+2. **`StaticHero` (reduced-motion) vs `LoadingScreen`.** `<Scene/>` tak di-mount → `sceneReady` selamanya false → overlay putih menutupi situs selamanya.
+
+Keduanya **lolos** `tsc --noEmit`, `eslint`, dan `bun run build`. Yang menangkap cuma: membuka halamannya, atau test yang membaca sumber.
+
+**Penjaganya sekarang ada** (`INVARIANTS.md` di root):
+- `INVARIANTS.md` — 6 invariant lintas-wilayah + kebiasaan merge
+- `src/components/canvas/frameloop.invariant.test.ts`
+- `src/components/loader/loaderGate.invariant.test.tsx`
+- `src/lib/hooks/coarsePointer.invariant.test.ts` (3 Agu, §4p)
+
+Norma penulisan penjaga di repo ini: **buktikan test-nya MERAH di kondisi rusak dulu** sebelum dipakai memverifikasi perbaikan. Test yang tak pernah terlihat gagal tidak bisa dipercaya. Catatan: jsdom tidak punya `canvas.getContext('2d')`, jadi `LoadingScreen` selalu jatuh ke `finish()` seketika di test — jangan tulis test "overlay bertahan", itu memaksa orang melemahkan kode produksi.
+
+---
+
+## 4p. Perangkat sentuh: scene 3D jadi pemandangan ✅ (3 Agu)
+
+Di `(pointer: coarse)`, kantor 3D **tidak menerima interaksi apa pun**: waypoint tidak di-render, meja billiard tidak bisa dibuka. Navigasi ruangan di HP diserahkan sepenuhnya ke navbar.
+
+**Pemicunya** waypoint `Function→Lounge`: di rasio potret ia jatuh **di luar bingkai** sepenuhnya (terlihat 100% di 21:9, 59% di 16:9, 0% di 1:1 ke bawah), jadi Function Room menjadi jalan buntu di HP sejak scroll & swipe dicabut 30 Jul. Tapi setelah ditelusuri, masalahnya lebih luas dari satu waypoint.
+
+**Akar masalahnya bukan layar sempit, melainkan tidak ada hover.** Waypoint adalah bidang **tak terlihat** sampai kursor menyentuhnya — arsir, bingkai, dan label itulah satu-satunya penanda bahwa ia bisa diklik. Jari tidak punya keadaan hover: sentuhan pertama langsung memindahkan ruangan, jadi yang dialami pengunjung HP adalah kamera melompat tanpa sebab yang terlihat. Karena itu patokannya `pointer: coarse`, **bukan `max-width`** — patokan lebar layar meloloskan tablet landscape yang masalahnya sama persis.
+
+**Blocker yang ditemukan saat mengerjakan ini — dan sudah terjawab.** `Navbar.tsx` ternyata **belum punya pemilih ruangan sama sekali**: `RoomNav` dihapus di `a1a857a`, dan komentar di `Hero.tsx` + `CameraController.tsx` yang menyebut "dropdown ruangan di Navbar" merujuk ke UI yang tidak ada lagi (komentarnya sudah dibetulkan). Grep `goTo` di seluruh `src/` cuma menemukan `Waypoints.tsx`. Konsekuensinya pengunjung HP terkunci di Lounge — diterima sadar sambil menunggu koordinasi dengan Nico, karena navbar wilayahnya.
+
+Ternyata Nico mengerjakannya paralel di branch `join`: room links di `Navbar.tsx` (`ACTIVE_KEYS.map` → `goRoom`) + **routing berbasis path** (`/lounge`, `/meeting`, …) lewat `routes/RoomRouteSync.tsx` yang menyinkronkan URL ↔ `currentRoom` dua arah. Begitu `join` di-merge, kuncinya terbuka. ⚠️ Keduanya kini **terikat**: kalau room links dihapus, §6 berubah jadi jalan buntu di HP, dan tidak ada test yang bisa melihat ikatan itu.
+
+**Tiga berkas menjalankan satu keputusan ini**, dan urutannya tidak boleh dibalik:
+
+| berkas | perannya | kalau lepas |
+|---|---|---|
+| `canvas/Waypoints.tsx` | berhenti me-render waypoint | sentuhan memindah ruangan tanpa penjelasan |
+| `canvas/Office.tsx` | `onClick` meja tidak membuka minigame | **pemain terkunci** di pandangan atas meja — tombol keluar hidup di HUD yang tidak di-mount |
+| `sections/Hero.tsx` | HUD & label tidak di-mount | chunk terunduh percuma di seluler (kosmetik + hemat bundle) |
+
+Gerbang di `Hero.tsx` cuma kosmetik; yang benar-benar mematikan interaksi adalah dua yang pertama. **Menyembunyikan HUD tanpa mematikan pintu masuknya menghasilkan jalan buntu**, bukan tampilan yang kurang rapi.
+
+Hook-nya `src/lib/hooks/useCoarsePointer.ts` — `useSyncExternalStore` di atas `matchMedia`, jadi ia ikut berubah kalau perangkat berganti mode. Penjaganya `coarsePointer.invariant.test.ts`, dan **sudah dibuktikan merah** dengan melepas gerbang di `Office.tsx` + mengganti query ke `max-width` sebelum dipakai. ⚠️ Seluruh aturan ini **tidak terlihat sama sekali di desktop** — buka device toolbar setelah menyentuh apa pun di `canvas/`.
 
 ---
 
@@ -1036,13 +1150,14 @@ Versi itu yang cocok dengan chromium 1228 yang sudah ter-cache di `~/Library/Cac
 11d. **Lighting dirombak** ✅ **SELESAI 30 Jul** (§4l) — lightmap dinyalakan, N8AO + contact shadow, bloom 1,6→0,4, ambient 0,12→0,03. Light cone dibangun lalu dihapus
 11e. **Sapuan "kantor terbentuk"** ✅ **SELESAI 30 Jul** (§4m) — dither Bayer 2,6 s, 60 FPS terverifikasi
 11f. **Konten layar monitor** ✅ **SELESAI 30 Jul** (§6c) — Spotify pixel-art di monitor AOC
+11g. **Loading screen isometrik (loader saat mengunduh)** ✅ **SELESAI 31 Jul** (§4n) — di-render di Web Worker, menjawab permintaan awal user
+11h. **Semua pekerjaan 30 Jul di-merge ke `main`** ✅ **SELESAI 31 Jul** (§4o) — sekaligus perbaikan bug merge `frameloop="demand"` + `INVARIANTS.md`
 12. **⬅️ BERIKUTNYA, urut prioritas:**
-    - **a. Loader saat mengunduh** (§4m) — permintaan awal user yang masih terbuka. Layar hitam 2,3 s + unduhan 8,09 MB tanpa umpan balik apa pun
-    - **b. Review billiard di browser** (§6d): posisi stik, apakah bola terlihat resin (bukan besi), framing kamera, timing fade lampu. Sekalian ukur FPS saat fisika jalan
-    - **c. Verifikasi waypoint Lounge & Function** (§4k) dengan resep pengukuran; sekalian putuskan apakah Function→Lounge dipindah ke lantai supaya tidak jalan buntu di HP
-    - **d. Merge `feature/waypoint-nav-lighting` ke `main`** — semua pekerjaan 30 Jul masih di branch
-    - **e. Beresi blocker layar** (§6c) — pisah material MacBook, unwrap ulang UV iMac & SMK_TV
-    - **f. Post-processing PS1** (§4b) — pass terakhir untuk look basement.studio
+    - **a. Review billiard di browser** (§6d): posisi stik, apakah bola terlihat resin (bukan besi), framing kamera, timing fade lampu. Sekalian ukur FPS saat fisika jalan
+    - **b. Verifikasi waypoint Lounge & Function** (§4k) dengan resep pengukuran; sekalian putuskan apakah Function→Lounge dipindah ke lantai supaya tidak jalan buntu di HP
+    - **c. Uji anti-beku loader di browser sungguhan** (§4n) — DevTools Performance saat kompilasi 233 shader; inti keputusan Web Worker, baru bisa dibuktikan mata
+    - **d. Beresi blocker layar** (§6c) — pisah material MacBook, unwrap ulang UV iMac & SMK_TV
+    - **e. Post-processing PS1** (§4b) — pass terakhir untuk look basement.studio
     - ~~**Sepakati satu lockfile**~~ ✅ **SELESAI 29 Jul — bun** (§7)
 13. Dekorasi tambahan (tanaman via Sketchfab kalau integrasi di-enable)
 
@@ -1226,6 +1341,12 @@ Commit `6ad97b2`. **Loop sinkronisasi mesh berhenti saat minigame tidak aktif**,
 Dua bagian perbaikannya:
 1. **Rak disusun sekali di awal begitu mesh siap** (`active || meshes.some(Boolean)`), tidak menunggu pemain masuk mode main. Dan `reset()` menyinkronkan mesh ke posisi rak **saat itu juga**, tidak menyerahkannya ke loop yang sedang berhenti.
 2. **Stik & garis bidik disembunyikan** kecuali minigame benar-benar dibuka — `aiming = active && phase === "aiming"`, bukan sekadar `phase === "aiming"`.
+
+### 🐛 Traverse seluruh scene tiap frame — dibetulkan 31 Jul
+
+Commit `f94ee51`. `BilliardLights` mendaftarkan bola ke layer 1 lewat `useFrame` + `scene.traverse()` **tanpa gerbang `active`** — artinya seluruh scene graph disapu **60×/detik sepanjang tur**, meski minigame biliar tak pernah dibuka. Penjaga `userData.dynLit` cuma melewati isi loop; traversalnya sendiri tetap berjalan penuh.
+
+Sapuan itu juga sia-sia total: diperiksa dari header GLB, `office.glb` punya **656 node dan NOL** yang berawalan `Ball`/`Cone`. Jadi kunjungan node terbanyaknya murni ongkos tanpa hasil. **Fix:** traversal digerbangi `active`.
 
 ### ⚠️ PINDAH DARI RAPIER KE CANNON-ES (29 Jul) — alasannya rasa main, bukan performa
 
