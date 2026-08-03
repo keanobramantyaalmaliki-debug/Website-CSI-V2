@@ -1,6 +1,7 @@
 "use client";
 
 import LineMask from "@/components/motion/LineMask";
+import MagneticButton from "@/components/motion/MagneticButton";
 import { motion } from "motion/react";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -48,12 +49,14 @@ export default function Contact() {
         viewport={{ once: true }}
         transition={{ duration: 0.5, ease: EASE, delay: 0.25 }}
       >
-        <a
-          href="mailto:hello@cogniti.id"
-          className="group relative rounded-full bg-white px-6 py-3 text-sm font-medium text-black transition-colors hover:bg-zinc-200"
-        >
-          hello@cogniti.id
-        </a>
+        <MagneticButton>
+          <a
+            href="mailto:hello@cogniti.id"
+            className="group relative rounded-full bg-white px-6 py-3 text-sm font-medium text-black transition-colors hover:bg-zinc-200"
+          >
+            hello@cogniti.id
+          </a>
+        </MagneticButton>
         <a
           href="#office"
           className="relative rounded-full border border-white/15 px-6 py-3 text-sm text-zinc-200 transition-colors hover:border-white/30 after:absolute after:bottom-3 after:left-6 after:h-px after:w-0 after:bg-zinc-200 after:transition-[width] after:duration-300 after:content-[''] hover:after:w-[calc(100%-3rem)]"

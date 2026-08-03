@@ -6,6 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useSceneStore, pathFor, type RoomKey } from "@/lib/store/sceneStore";
 import { roomHasContact } from "@/lib/roomContent";
 import { ACTIVE_KEYS } from "@/components/canvas/CameraController";
+import MagneticButton from "@/components/motion/MagneticButton";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
