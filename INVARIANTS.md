@@ -162,8 +162,8 @@ atau tidaknya hover, bukan sempitnya layar. `max-width` akan meloloskan tablet
 landscape yang masalahnya sama persis.
 
 **Kenapa lintas-wilayah.** Ini seam paling tajam sekarang, dan bentuknya beda
-dari §1–§5 — ia tidak menunggu merge untuk rusak, ia **sudah** bergantung pada
-pekerjaan yang belum ada:
+dari §1–§5 — saat ditulis ia tidak menunggu merge untuk rusak, ia **sudah**
+bergantung pada pekerjaan yang belum ada:
 
 > Saat gerbang ini ditulis (3 Agu), `Navbar.tsx` **belum punya** pemilih
 > ruangan sama sekali — grep `goTo` di seluruh `src/` dan satu-satunya
@@ -172,14 +172,20 @@ pekerjaan yang belum ada:
 > ada lagi (komentarnya sudah dibetulkan). Artinya untuk sementara pengunjung
 > HP **terkunci di Lounge** — diterima sadar sambil menunggu koordinasi.
 
-**Sudah terjawab di branch `join`:** Nico membangun room links di `Navbar.tsx`
-(`ACTIVE_KEYS.map` → `goRoom`) plus routing berbasis path lewat
-`routes/RoomRouteSync.tsx`. Begitu `join` masuk, kunci itu terbuka.
+**✅ TERJAWAB — `join` sudah di-merge (3 Agu, `455eae7`).** Nico membangun room
+links di `Navbar.tsx` (`ACTIVE_KEYS.map` → `goRoom`) plus routing berbasis path
+lewat `routes/RoomRouteSync.tsx`. Kuncinya terbuka; pengunjung HP bisa berpindah
+ruangan lewat navbar.
 
-Yang tetap berlaku: **jangan "memperbaiki" §6 dengan menghidupkan lagi waypoint
-di perangkat sentuh.** Jalan keluarnya adalah navbar, dan sekarang navbar itu
-ada. Kalau suatu saat room links-nya dihapus/diubah, §6 ikut jadi jalan buntu —
-keduanya terikat, dan tidak ada test yang bisa melihat ikatan itu.
+⚠️ **Yang berlaku sekarang adalah ikatannya.** Room links di `Navbar.tsx`
+bukan sekadar kenyamanan — ia **satu-satunya** jalan pindah ruangan di
+perangkat sentuh. Kalau suatu saat dihapus atau diubah jadi butuh hover, §6
+langsung berubah jadi jalan buntu di HP, dan **tidak ada test yang bisa melihat
+ikatan itu**: `coarsePointer.invariant.test.ts` menjaga gerbangnya mati, bukan
+menjaga adanya jalan keluar.
+
+Dan tetap: **jangan "memperbaiki" §6 dengan menghidupkan lagi waypoint di
+perangkat sentuh.** Jalan keluarnya adalah navbar, dan sekarang navbar itu ada.
 
 **Urutan gerbang yang tidak boleh dibalik.** Tiga berkas menjalankan satu
 keputusan ini, dan dua di antaranya punya kegagalan lebih buruk dari sekadar
