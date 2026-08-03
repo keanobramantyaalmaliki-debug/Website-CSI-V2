@@ -4,6 +4,7 @@ import { lazy, Suspense, useEffect, useRef } from "react";
 import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { useSceneStore } from "@/lib/store/sceneStore";
 import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
+import ChunkBoundary from "@/components/ChunkBoundary";
 
 const Scene = lazy(() => import("@/components/canvas/Scene"));
 const BilliardHUD = lazy(() => import("@/components/ui/BilliardHUD"));
@@ -36,6 +37,28 @@ function StaticHero() {
       />
     </div>
   );
+}
+
+/**
+ * Ditampilkan kalau chunk `Scene` GAGAL diunduh (bukan gagal render).
+ *
+ * Dua tugas, dan yang kedua lebih penting dari yang terlihat:
+ *
+ *   1. Menampilkan hero statis, supaya hero tidak jadi kotak hitam kosong.
+ *      Dipakai ulang dari jalur reduced-motion — keadaannya memang sama:
+ *      "tidak ada WebGL, tunjukkan sesuatu yang tenang".
+ *   2. **Melepas LoadingScreen.** `sceneReady` biasanya dipancarkan useFrame di
+ *      Office.tsx; kalau chunk-nya tidak pernah ada, sinyal itu tidak akan
+ *      pernah datang dan loader menutupi layar SELAMANYA. Jaring pengaman
+ *      1500 ms di LoadingScreen tidak menolong — ia baru dipasang setelah
+ *      `sceneReady` true.
+ */
+function SceneFailed() {
+  const setSceneReady = useSceneStore((s) => s.setSceneReady);
+  useEffect(() => {
+    setSceneReady(true);
+  }, [setSceneReady]);
+  return <StaticHero />;
 }
 
 export default function Hero() {
@@ -196,10 +219,21 @@ export default function Hero() {
         >
           {/* fallback null: overlay LoadingScreen (di SiteLayout) yang menutupi
               layar selama chunk ini diunduh, jadi fallback di sini cuma akan
-              berkedip di belakangnya tanpa pernah terlihat. */}
-          <Suspense fallback={null}>
-            <Scene />
-          </Suspense>
+              berkedip di belakangnya tanpa pernah terlihat.
+
+              ⚠️ ChunkBoundary di sini PUNYA fallback, beda dari yang lain —
+              dan ini kegagalan paling buruk dari semua lazy() di repo.
+              `sceneReady` dipancarkan useFrame di Office.tsx, yang tidak akan
+              pernah jalan kalau chunk-nya gagal dimuat. LoadingScreen menunggu
+              sinyal itu untuk memulai outro-nya, jadi tanpa penangkap ini
+              pengunjung menatap layar loader SELAMANYA — jaring pengaman
+              1500 ms di sana pun tidak menolong, karena ia baru dipasang
+              SETELAH sceneReady true. */}
+          <ChunkBoundary name="Scene" fallback={<SceneFailed />}>
+            <Suspense fallback={null}>
+              <Scene />
+            </Suspense>
+          </ChunkBoundary>
         </motion.div>
 
         {/* Dua overlay di bawah ini melayani interaksi yang TIDAK ADA di
@@ -214,18 +248,22 @@ export default function Hero() {
         {!coarse && (
           <>
             {/* Bar tenaga + kontrol minigame billiard (muncul saat meja diklik) */}
-            <Suspense fallback={null}>
-              <BilliardHUD />
-            </Suspense>
+            <ChunkBoundary name="BilliardHUD">
+              <Suspense fallback={null}>
+                <BilliardHUD />
+              </Suspense>
+            </ChunkBoundary>
 
             {/* Label waypoint yang mengekor kursor. Di LUAR Canvas karena
                 posisinya ditentukan kursor (screen-space), bukan titik di dunia
                 3D — lihat ui/WaypointLabel.tsx. Sengaja bersebelahan dengan
                 BilliardHUD: sama-sama overlay z-30, tingkat yang sama di
                 INVARIANTS.md §2. */}
-            <Suspense fallback={null}>
-              <WaypointLabel />
-            </Suspense>
+            <ChunkBoundary name="WaypointLabel">
+              <Suspense fallback={null}>
+                <WaypointLabel />
+              </Suspense>
+            </ChunkBoundary>
           </>
         )}
 
