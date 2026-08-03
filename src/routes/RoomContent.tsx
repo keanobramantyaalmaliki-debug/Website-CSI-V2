@@ -24,12 +24,20 @@ import { ROOM_CONTENT, ROOM_KEYS_WITH_CONTENT } from "@/lib/roomContent";
  * pemicunya digerbangi `useInView`/scroll yang mati saat `display: none`).
  * Ongkos diamnya mendekati nol; yang dihemat adalah ongkos MEMBANGUN ULANG.
  *
- * ⚠️ Konsekuensi kalau nanti menambah ruangan berkonten: semua konten ikut
- * dipasang di muat pertama, bukan saat ruangannya dibuka. Selama cuma Lounge
- * yang berisi (sisanya placeholder satu paragraf), ini praktis gratis. Kalau
- * tiap ruangan nanti punya konten penuh, timbang ulang — mungkin `lazy()` per
- * ruangan. Tapi JANGAN kembali ke bongkar-pasang: yang mahal adalah remount
- * WebGL-nya, bukan ukuran bundle-nya.
+ * ⚠️ Konsekuensinya: SEMUA konten ikut dipasang di muat pertama, bukan saat
+ * ruangannya dibuka. Per 3 Agu keempat ruangan sudah berisi penuh (Office
+ * accordion, Meeting case grid, Function people) — bukan lagi placeholder satu
+ * paragraf seperti saat pola ini dipasang.
+ *
+ * Itu tetap dipertahankan karena yang mahal BUKAN jumlah node DOM-nya,
+ * melainkan konteks WebGL — dan ketiganya masih hanya ada di Lounge. Section
+ * baru di ruangan lain murni DOM + motion, yang murah untuk di-mount dan
+ * praktis nol saat `display: none`.
+ *
+ * Kalau nanti ruangan lain ikut membawa Canvas sendiri, timbang ulang: mungkin
+ * `lazy()` + `Suspense` per ruangan supaya ongkos muat pertama tidak menumpuk.
+ * Tapi JANGAN kembali ke bongkar-pasang — yang mahal remount WebGL-nya, dan
+ * itu tidak berubah seberapa pun kontennya bertambah.
  */
 export default function RoomContent({ room }: { room: RoomKey }) {
   return (

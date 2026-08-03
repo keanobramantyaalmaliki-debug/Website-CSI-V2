@@ -22,7 +22,7 @@ import { useSceneStore, pathFor, roomFromPath } from "@/lib/store/sceneStore";
  */
 export default function RoomRouteSync() {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, hash } = useLocation();
   const goTo       = useSceneStore((s) => s.goTo);
   const currentRoom = useSceneStore((s) => s.currentRoom);
 
@@ -53,8 +53,11 @@ export default function RoomRouteSync() {
     if (!key || !goTo) return;
     if (key === currentRoom) return;
     goTo(key);
-    window.scrollTo(0, 0);
-  }, [pathname, goTo, currentRoom]);
+    // `!hash` — kalau URL-nya membawa anchor (mis. "/#contact"), Arah 3 di
+    // bawah yang mengurus scroll-nya. Melompat ke atas dulu di sini membuat
+    // pengunjung melihat halaman tersentak sebelum meluncur ke tujuannya.
+    if (!hash) window.scrollTo(0, 0);
+  }, [pathname, goTo, currentRoom, hash]);
 
   // Arah 2: currentRoom → pathname (klik waypoint dalam Canvas)
   useEffect(() => {
@@ -63,6 +66,21 @@ export default function RoomRouteSync() {
       navigate(target, { replace: false });
     }
   }, [currentRoom, navigate, pathname]);
+
+  // Arah 3: hash → scroll. Dipisah dari efek pathname supaya klik "Talk to us"
+  // dari room lain (navigate ke "/#contact") ikut ter-scroll setelah konten
+  // Lounge mount — dan supaya klik ulang saat sudah di Lounge (hash berubah,
+  // pathname tidak) tetap memicu scroll.
+  useEffect(() => {
+    if (!hash) return;
+    const id = hash.slice(1);
+    // rAF: beri satu frame untuk konten room yang baru saja mount (misal
+    // pindah dari Office ke Lounge) selesai dirender sebelum discroll.
+    const raf = requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [pathname, hash]);
 
   return null;
 }

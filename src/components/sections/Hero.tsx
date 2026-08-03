@@ -92,16 +92,38 @@ export default function Hero() {
     setSceneReady(true);
   }, [reduced, setSceneReady]);
 
-  // Canvas surut: opacity 1→0, scale 1→0.96, dan sedikit naik sepanjang 40%
-  // terakhir track. Murni transform CSS di pembungkusnya — kamera tidak
-  // disentuh, dan transform tidak membangunkan frameloop R3F.
+  // Canvas surut: opacity 1→0, scale 1→0.96, sedikit naik. Murni transform CSS
+  // di pembungkusnya — kamera tidak disentuh, dan transform tidak membangunkan
+  // frameloop R3F.
+  //
+  // ⚠️ Rentangnya HARUS selesai sebelum anak sticky-nya lepas dari pin, bukan
+  // sebelum track-nya habis. `scrollYProgress` membentang sepanjang seluruh
+  // track ("start start" → "end start"), tapi canvas sticky lepas pin di
+  // trackHeight − stickyHeight — bukan di progress 1,0. Memudarkan di
+  // [0.6, 1.0] membuat canvas masih pekat selama ±28dvh SETELAH ia lepas pin
+  // dan ikut menggulir bersama halaman, jadi ia terlihat muncul lagi di bawah
+  // seam HeroHandoff (dilaporkan sebagai "kepotong saat discroll").
+  //
+  // ⚠️ Titik lepas pin = (track − sticky) / track, dan angka itu HARUS SAMA di
+  // desktop maupun HP — kalau tidak, satu rentang [0.28, 0.44] tidak mungkin
+  // benar untuk keduanya. Itulah sebab tinggi track mobile 126dvh, bukan
+  // angka bulat:
+  //
+  //   desktop  (180dvh track, 100dvh sticky) → (180−100)/180 = 0,444
+  //   mobile   (126dvh track,  70dvh sticky) → (126− 70)/126 = 0,444  ✓ sama
+  //
+  // Dengan 150dvh (percobaan pertama) rasionya jadi 0,533, sehingga canvas di
+  // HP habis memudar ~13dvh SEBELUM lepas pin — pengunjung melihat area kosong
+  // yang masih terpaku di layar. Kalau salah satu tinggi diubah, hitung ulang
+  // pasangannya: track = sticky / (1 − 0,444).
+
   const { scrollYProgress } = useScroll({
     target: heroTrackRef,
     offset: ["start start", "end start"],
   });
-  const canvasOpacity = useTransform(scrollYProgress, [0.6, 1.0], [1, 0]);
-  const canvasScale   = useTransform(scrollYProgress, [0.6, 1.0], [1, 0.96]);
-  const canvasY       = useTransform(scrollYProgress, [0.6, 1.0], [0, -20]);
+  const canvasOpacity = useTransform(scrollYProgress, [0.28, 0.44], [1, 0]);
+  const canvasScale   = useTransform(scrollYProgress, [0.28, 0.44], [1, 0.96]);
+  const canvasY       = useTransform(scrollYProgress, [0.28, 0.44], [0, -20]);
 
   // Reduced-motion: hero normal-flow setinggi layar, tanpa pin/surut.
   if (reduced) {
@@ -160,7 +182,7 @@ export default function Hero() {
     <section
       ref={heroTrackRef}
       id="office"
-      className="relative h-[150dvh] w-full md:h-[180dvh]"
+      className="relative h-[126dvh] w-full md:h-[180dvh]"
     >
       {/* Viewport sticky — diam di atas selagi track melintas */}
       <div
