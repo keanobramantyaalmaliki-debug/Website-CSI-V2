@@ -39,8 +39,12 @@ Terakhir diupdate: **3 Agustus 2026**.
 - **Perangkat sentuh: scene 3D jadi PEMANDANGAN** (§4p) — waypoint & minigame billiard mati di `(pointer: coarse)`. Penjaganya `INVARIANTS.md` §6 + test invariant ketiga.
 
 - **Hero dipendekkan jadi 70dvh di HP** (§4p) — konten mengintip di bawah canvas ala basement.studio, **dan** framing 3D melebar: `fov` three.js itu vertikal, jadi viewport jangkung menyempitkan pandangan kiri-kanan (iPhone 15: hFOV 29,8° → 41,7°). "see our work" disembunyikan di HP.
+- **Branch `join` di-merge, blocker §6 TERBUKA** (§4q) — room links navbar + routing berbasis path (`/lounge`, `/office`, …) dari Nico masuk; pengunjung HP tidak lagi terkunci di Lounge. Konflik `Hero.tsx` (pinned scroll vs 70dvh) **digabung, bukan dipilih salah satu**: track mobile disetel 126dvh supaya rasio lepas pin 0,444 sama persis dengan desktop. Satu bug layar-putih reduced-motion ikut ketangkap saat merge.
+- **🔥 Empat perbaikan performa & navigasi** (§4r) — semuanya berangkat dari keluhan nyata, bukan tebakan: MSAA dimatikan (**30 → 60 FPS** di kerapatan Retina), engine matter-js yang berdetak selamanya dihentikan (biang "laptop panas"), pola mount-semua-ruangan dicabut, chunk billiard ditunda + di-prefetch. Alat ukurnya ikut disimpan (`scripts/measure-frames.mjs` + `shoot.mjs`).
+- **Aliasing itu PILIHAN ESTETIK** (§4r) — setelah melihat perbandingan berdampingan, Keano **lebih suka** tepi yang sedikit bergigi; sejalan dengan arah PS1/basement.studio. Jangan tawarkan SMAA/FXAA/MSAA sebagai "perbaikan".
+- **Konten per-ruangan lengkap** (§4q) — tiap ruangan punya narasinya sendiri: Lounge (perusahaan), Office (layanan), Meeting (studi kasus), Function (orang & karir). `Services.tsx` dihapus, diserap jadi accordion 9-item di Office.
 
-**⬅️ Berikutnya:** (a) **merge branch `join`** — Nico membangun room links navbar + routing path (`RoomRouteSync`) yang menjawab blocker §4p, TAPI ia juga merombak `Hero.tsx` jadi *pinned scroll* (`h-[180dvh]` + `sticky h-dvh`) yang **bertabrakan langsung** dengan `h-[70dvh]` di sini — dua jawaban untuk masalah yang sama, harus dipilih salah satu atau digabung; (b) **bug billiard**: bola yang masuk lubang harus dibekukan jadi `fixed` (§6d); (c) review billiard di browser (§6d), masih belum pernah dilihat; (d) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker, baru bisa dibuktikan mata (§4n).
+**⬅️ Berikutnya:** (a) **bug billiard**: bola yang masuk lubang harus dibekukan jadi `fixed` (§6d); (b) review billiard di browser (§6d), masih belum pernah dilihat mata — sekarang lebih mudah karena chunk-nya sudah dipisah; (c) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker, baru bisa dibuktikan mata (§4n); (d) beresi blocker layar (§6c) — pisah material MacBook, unwrap ulang UV iMac; (e) post-processing PS1 (§4b), pass terakhir untuk look basement.studio.
 
 ## 🎉 MVP 1 SELESAI (27 Jul) — **50-60 FPS di browser**
 
@@ -695,8 +699,8 @@ OrbitControls **diganti** dengan navigasi tur: kamera pindah antar 5 titik panda
 - `VIEWS` = 5 preset (Office, Lounge, Meeting, Function, Pantry). **Pantry `disabled: true`** — dilewati navigasi dan waypoint ke arahnya tidak dirender (`ACTIVE_KEYS`).
 - Konversi sumbu Blender→three lewat helper `bl(x,y,z) → (x, z, −y)`.
 - Tween **1400 ms cubic in-out**, dengan guard `animating` supaya input beruntun tidak melompati ruangan. `up` & FOV ikut di-tween (perlu untuk masuk/keluar pandangan billiard).
-- ~~Input: wheel di canvas, panah keyboard, swipe touch ≥30 px~~ — **SEMUA DIHAPUS 30 Jul.** Lihat §4k: berpindah ruangan hanya lewat waypoint 3D + dropdown Navbar.
-- **Hash routing**: `#lounge`, `#meeting`, dst via `history.pushState` + `popstate`. Ruangan awal (`START_ROOM` = **Lounge** sejak 30 Jul) = tanpa hash, lewat `hashFor()` di store.
+- ~~Input: wheel di canvas, panah keyboard, swipe touch ≥30 px~~ — **SEMUA DIHAPUS 30 Jul.** Lihat §4k: berpindah ruangan hanya lewat waypoint 3D + room links Navbar.
+- ~~**Hash routing**: `#lounge`, `#meeting`, dst via `history.pushState` + `popstate`~~ — **DIGANTI routing berbasis PATH 3 Agu** (`/`, `/office`, `/meeting`, `/function`) lewat React Router + `routes/RoomRouteSync.tsx`; lihat §4q. `hash` sekarang khusus untuk scroll ke section (`#contact`), bukan penanda ruangan. Ruangan awal tetap `START_ROOM` = **Lounge**, kini lewat `pathFor()`/`roomFromPath()` di store.
 - `goTo` didaftarkan ke `sceneStore` supaya `Waypoints` & `Navbar` (yang satu di dalam Canvas, satu di luar) bisa memanggilnya.
 
 ### UI yang mengikuti scroll
@@ -738,12 +742,14 @@ Yang **masih** belum diukur: FPS saat minigame billiard jalan (fisika cannon-es 
 
 Dikerjakan paralel di branch `feature/port-konten-v1` + `feature/text-transitions`, sudah di-merge ke `main`. **Tidak ada satu pun file yang beririsan dengan pekerjaan 3D/billiard** — jadi tidak pernah ada konflik git.
 
-**Struktur halaman final** (`src/App.tsx` — dulu `src/app/page.tsx` sebelum migrasi Vite, §4j) — 5 section bertambah jadi 9 di bawah hero:
+**Struktur halaman saat itu** (`src/App.tsx` — dulu `src/app/page.tsx` sebelum migrasi Vite, §4j) — 5 section bertambah jadi 9 di bawah hero:
 
 ```
 Hero (3D) → Manifesto → Deployments → Services → LivingArchitecture
           → Process → Industries → Careers → Vision → Contact
 ```
+
+> ⚠️ **Struktur satu-halaman-panjang ini sudah TIDAK berlaku sejak 3 Agu.** Situsnya kini empat halaman per-ruangan (§4q): `App.tsx` tinggal tabel route, dan daftar section pindah ke `src/lib/roomContent.tsx`. `Services.tsx` **dihapus** (diserap ke `Office.tsx`), `Careers` pindah ke Function. Yang di bawah ini tetap berlaku — komponen `motion`-nya masih dipakai semua.
 
 **4 komponen animasi** (`src/components/motion/`), semuanya pakai library `motion` v12 (`motion/react`):
 
@@ -816,7 +822,9 @@ Commit `a1a857a`. **`src/components/ui/RoomNav.tsx` dihapus**, `src/components/c
 
 ### Apa yang berubah, dan kenapa se-radikal itu
 
-Dulu ada **empat** jalan berpindah ruangan: dot RoomNav, scroll wheel, swipe, panah keyboard. Sekarang **dua**: klik bidang waypoint di dalam ruangan, atau dropdown "Office" di Navbar.
+Dulu ada **empat** jalan berpindah ruangan: dot RoomNav, scroll wheel, swipe, panah keyboard. Sekarang **dua**: klik bidang waypoint di dalam ruangan, atau pemilih ruangan di Navbar.
+
+> ⚠️ **Koreksi 3 Agu:** bagian ini (dan §4h) sempat menyebut "dropdown Navbar" — UI itu **tidak ada** saat §4k ditulis; `RoomNav` sudah dihapus di commit yang sama. Baru ada lagi 3 Agu dalam bentuk **room links** (bukan dropdown) dari merge `join`, §4q. Sejak itu ia juga bukan sekadar alternatif: di perangkat sentuh ia **satu-satunya** jalan pindah ruangan (§4p, INVARIANTS §6).
 
 - **Scroll & swipe dihapus karena artinya ganda.** Di atas canvas ia memindah ruangan, di luar canvas ia menggulir halaman — dan pengunjung tidak bisa menebak mana yang akan terjadi.
 - **Panah keyboard dihapus meski tidak ambigu**, supaya tidak ada jalur berpindah yang **tidak tergambar di layar**. Satu-satunya cara pindah harus yang kelihatan.
@@ -871,9 +879,11 @@ Pola yang muncul: **waypoint jalan-pulang jarang bisa ditempel di pintunya**, ka
 - **Awas objek di atas dinding:** `AirVent_01..03` (z 2,155..2,505). Bidang setinggi penuh akan menembus kisinya kalau tidak ditaruh di depannya.
 - **Label `pointerEvents: none`** — kalau label ikut menangkap kursor, dia menutupi bidang di bawahnya dan hover berkedip-kedip.
 
-### ⚠️ Function Room berpotensi jalan buntu di HP
+### ⚠️ Function Room berpotensi jalan buntu di HP → **terjawab lain jalan**
 
-Waypoint Function→Lounge terlihat 100% di 21:9, 59% di 16:9, 43% di 16:10, 16% di 4:3, dan **tidak terlihat sama sekali di rasio potret**. Sejak scroll & swipe dihapus, di layar potret pengguna sentuh **tidak punya jalan keluar dari Function Room** selain dropdown Navbar. Kalau mau benar-benar aman di HP, waypoint ini perlu dipindah ke bidang yang terlihat di rasio potret — misalnya dibaringkan di lantai seperti Office→Lounge.
+Waypoint Function→Lounge terlihat 100% di 21:9, 59% di 16:9, 43% di 16:10, 16% di 4:3, dan **tidak terlihat sama sekali di rasio potret**. Sejak scroll & swipe dihapus, di layar potret pengguna sentuh **tidak punya jalan keluar dari Function Room**.
+
+**Temuan ini yang memicu §4p** — tapi jawabannya bukan memindahkan waypoint-nya ke lantai seperti yang direncanakan di sini. Setelah ditelusuri, masalahnya lebih luas dari satu waypoint: **waypoint dibangun di atas hover, dan jari tidak punya hover**. Jadi di perangkat sentuh waypoint dimatikan **seluruhnya** dan navigasi diserahkan ke navbar (§4p, §4q, INVARIANTS §6). Waypoint ini sendiri dibiarkan apa adanya — di desktop ia baik-baik saja.
 
 ### `START_ROOM` — titik awal tur pindah ke Lounge
 
@@ -1118,6 +1128,212 @@ Hook-nya `src/lib/hooks/useCoarsePointer.ts` — `useSyncExternalStore` di atas 
 
 ---
 
+## 4q. Routing Per-Ruangan & Konten Per-Ruangan ✅ (3 Agu — merge `join`)
+
+Situs berubah dari **satu halaman panjang** jadi **empat halaman**, satu per ruangan. Hero 3D tetap sama di semuanya; yang berganti cuma konten di bawahnya.
+
+### Bentuk barunya
+
+```
+App.tsx  →  <SiteLayout>            ← persisten, TIDAK ikut berganti
+              LoadingScreen
+              Navbar
+              Hero  (menampung <Canvas>)
+              HeroHandoff
+              <main><Outlet/></main> ← HANYA ini yang di-swap
+              RoomRouteSync
+            </SiteLayout>
+
+  /          → RoomContent room="Lounge"
+  /office    → RoomContent room="Office"
+  /meeting   → RoomContent room="Meeting"
+  /function  → RoomContent room="Function"
+  *          → redirect ke /
+```
+
+**Kenapa Hero ada di layout, bukan di tiap route:** `<Canvas>` hidup di dalam `Hero.tsx`. Kalau ia ikut berganti tiap pindah ruangan, konteks WebGL kantor 3D dibongkar-pasang setiap kali — kompilasi ulang 233 shader di tengah tween kamera 1400 ms. Dengan Hero di `SiteLayout`, ia tidak pernah unmount.
+
+**Konten tiap ruangan** (`src/lib/roomContent.tsx`) — tiap ruangan punya narasinya sendiri, bukan potongan acak dari halaman lama:
+
+| ruangan | isi | perannya |
+|---|---|---|
+| **Lounge** `/` | CsiHero → Manifesto → TrustedBy → Deployments → LivingArchitecture → Process → Industries → Vision → Contact | perusahaannya |
+| **Office** `/office` | Office (accordion 9 layanan) | apa yang dikerjakan |
+| **Meeting** `/meeting` | MeetingLead → CaseGrid → CaseStudySpotlight → Contact | studi kasus |
+| **Function** `/function` | PeopleIntro → PeopleValues → TheCrew → Careers → Contact | orang & karir |
+
+`Services.tsx` **dihapus** — isinya diserap jadi accordion 9-item di `Office.tsx`, supaya tidak ada dua sumber layanan yang tumpang tindih. `FeaturedProjects` juga dibuang karena menduplikasi `CaseGrid` di Meeting.
+
+### `RoomRouteSync` — tiga arah, bukan satu
+
+Berkas ini menyinkronkan URL ↔ `currentRoom`, dan ketiga arahnya menjawab hal berbeda. Ia duduk di DOM (bukan di dalam `<Canvas>`) karena butuh konteks React Router yang tidak tersedia di sana.
+
+| arah | pemicu | kerjanya |
+|---|---|---|
+| 1 | `pathname` berubah | Back/forward & deep-link → `goTo(room)` |
+| 2 | `currentRoom` berubah | Klik waypoint 3D → `navigate()` supaya address bar menyusul |
+| 3 | `hash` berubah | `#contact` → `scrollIntoView` setelah satu `rAF` |
+
+**Dua guard di Arah 1 yang keduanya wajib** — ini hasil resolusi konflik yang digabung, bukan dipilih salah satu:
+
+- `!hash` (dari Nico) — jangan lompat ke atas kalau URL membawa anchor; Arah 3 yang mengurus scroll-nya. Tanpa ini pengunjung melihat halaman tersentak ke atas sebelum meluncur ke tujuan.
+- `key === currentRoom` (dari branch ini) — jangan jalankan efek samping saat URL cuma **menyusul** kamera yang sudah bergerak.
+
+Guard kedua itu bukan optimasi. Klik waypoint memicu rantai: `goTo()` → Arah 2 `navigate()` → `pathname` berubah → Arah 1 menyala lagi — semuanya **selagi tween kamera 1400 ms berjalan**. Panggilan `goTo()`-nya sendiri tertahan `if (animating.current) return` di `CameraController`, tapi `window.scrollTo` di sebelahnya **tidak ikut tertahan**: ia memaksa layout + repaint sementara `useFrame` menggerakkan kamera 60×/detik. Gejalanya perpindahan ruangan terasa **tersendat**, dan penyebabnya tidak menunjuk ke sini sama sekali (`060cf5f`).
+
+> ⚠️ Jangan "menyederhanakan" dengan memindahkan `scrollTo` ke dalam guard `animating` di `CameraController` — guard itu juga tidak bisa membedakan "URL menyusul kamera" dari "pengguna menekan Back", dan ini urusan DOM yang memang wilayahnya di `RoomRouteSync`.
+
+### 🐛 Query string terbuang saat pindah ruangan (`9384d69`)
+
+Arah 2 dulu menavigasi ke `pathFor(currentRoom)` **telanjang**. `pathFor()` cuma tahu soal ruangan, jadi menavigasi ke hasilnya apa adanya **menulis ulang seluruh URL** — dan `location.search` terbuang pada perpindahan ruangan pertama.
+
+Ketahuan lewat overlay dev ber-query yang menyala di Lounge lalu lenyap tepat saat ganti ruangan. Gejalanya menyesatkan: tampak seperti overlay-nya yang rusak. Dampak sebenarnya jauh lebih luas dari alat dev — **`?utm_source=` dari tautan kampanye ikut hilang diam-diam**, jadi kunjungan yang berpindah ruangan kehilangan atribusinya.
+
+Perbaikannya `navigate(target + search + hash)`. Tapi perbandingannya **tetap `target !== pathname`** — murni path, tanpa search. Kalau search ikut dibandingkan, efeknya menyala tiap query berubah lalu menavigasi ke URL yang isinya persis sama: riwayat browser terisi entri kembar, dan Arah 1 ikut menyala di tengah tween kamera.
+
+Penjaganya `roomRouteSearch.test.tsx`, dibuktikan **merah** dulu (dapat `/meeting`, search & hash dua-duanya hilang). Pakai render sungguhan + `MemoryRouter`, beda dari `RoomRouteSync.test.tsx` yang membaca teks sumber: yang dijaga di sini murni urusan routing, tidak butuh WebGL.
+
+### "Talk to us" tidak lagi melempar ke Lounge (`7c8408f`)
+
+Perilaku lama: dari ruangan mana pun selain Lounge, tombolnya `navigate("/#contact")`. Alasannya sempat benar — "`#contact` cuma ada di Lounge" — lalu jadi basi begitu Meeting & Function ikut memuat `<Contact />`, **tanpa ada yang berubah di Navbar**.
+
+Sekarang ia menggulir **di tempat** kalau ruangannya punya Contact. Hanya dari Office — satu-satunya yang memang tidak punya — ia pindah ke Lounge. Memindahkan pengunjung hanya karena ia menekan tombol kontak itu mengagetkan; ia kehilangan tempatnya tanpa meminta.
+
+Keputusannya diturunkan dari `ROOM_CONTENT` lewat `roomHasContact()`, **bukan daftar nama ruangan yang ditulis ulang di Navbar**: begitu Office diberi `<Contact />`, tombolnya ikut benar sendiri tanpa ada yang perlu ingat menyunting Navbar. Penelusurannya menyusuri pohon React element, jadi `<Contact />` boleh terbungkus elemen lain nanti.
+
+> Norma test yang dipakai di sini: penelusuran pohonnya **ditulis ulang secara independen di test**, bukan mengimpor helper yang sama — mengimpornya cuma membuktikan fungsi itu setuju dengan dirinya sendiri.
+
+### 🐛 Layar putih permanen di reduced-motion (tertangkap saat merge `455eae7`)
+
+`Hero.tsx` di `join` mengembalikan cabang `if (reduced) return <StaticHero/>` — fitur comfort yang hilang di PR #4, dan itu bagus. Tapi pemantik `setSceneReady` ditaruh **sesudah** early return itu, jadi di jalur reduced ia tidak pernah dieksekusi.
+
+Akibatnya persis yang `INVARIANTS.md` §3 dokumentasikan: `<Scene/>` tidak di-mount → `sceneReady` selamanya false → `LoadingScreen` menutupi situs **selamanya** bagi siapa pun yang menyalakan "Reduce motion" di OS-nya. Jaring pengaman 1500 ms tidak menolong; ia sendiri digerbangi `sceneReady`.
+
+Seluruh **62 test di `join` HIJAU**. Yang menangkap cuma eslint, dengan pesan yang tidak menyebut loader sama sekali: *"React Hook called conditionally"*.
+
+### Rasio lepas pin harus SAMA di semua ukuran
+
+Konflik terbesar merge ini: Nico merombak `Hero.tsx` jadi *pinned scroll* (`h-[180dvh]` + `sticky h-dvh`), sementara branch ini memendekkan hero jadi `h-[70dvh]` di HP (§4p). Dua jawaban untuk masalah yang sama. **Digabung.**
+
+Nico menemukan canvas *recede* harus selesai saat sticky **lepas pin**, bukan saat track habis — yaitu di `(track − sticky) / track`, bukan progress 1,0 — lalu menyetel rentangnya ke `[0.28, 0.44]`: 180/100 → 0,444.
+
+Tapi tinggi sticky mobile berbeda (70dvh), dan dengan track 150dvh rasionya jadi 0,533. **Satu rentang tidak bisa benar untuk dua rasio** — di HP canvas habis memudar ~13dvh *sebelum* lepas pin, menyisakan area kosong yang masih terpaku di layar.
+
+Track mobile diubah **150 → 126dvh**:
+
+```
+desktop  (180dvh track, 100dvh sticky) → (180−100)/180 = 0,444
+mobile   (126dvh track,  70dvh sticky) → (126− 70)/126 = 0,444  ✓ sama
+```
+
+Rumus pasangannya dicatat di komentar `Hero.tsx`: **`track = sticky / (1 − 0,444)`**. Kalau tinggi sticky diubah lagi, tracknya wajib ikut — bukan disetel dengan mata.
+
+---
+
+## 4r. Empat Perbaikan Performa ✅ (3 Agu)
+
+Semuanya berangkat dari **keluhan nyata** ("berat", "laptop panas"), bukan tebakan — dan tiga dari empat menemukan penyebab yang berbeda dari dugaan awal.
+
+Empat perbaikannya: **4r-1** (MSAA), **4r-3** (matter-js), **4r-4** (mount semua ruangan), **4r-5** (chunk billiard). **4r-2** disisipkan di antaranya karena ia bukan perbaikan melainkan *keputusan* — dan justru keputusan itu yang paling mudah dibatalkan orang berikutnya tanpa sadar.
+
+### 4r-1. 🔥 MSAA dimatikan — 30 → 60 FPS (`b55a0ab`)
+
+`<EffectComposer>` ditulis **tanpa props**, jadi kena default library `multisampling: 8` (diverifikasi di `node_modules`). Setelan termahal di seluruh berkas itu, dan sebelumnya tidak disebut di komentar mana pun.
+
+Terukur di M2, **dpr 2** (2,63 Mpx, mendekati layar Retina):
+
+| multisampling | p50 | FPS |
+|---|---|---|
+| 8 (default library) | 33,3 ms | 30 |
+| 4 | 33,3 ms | 30 ← **tidak menolong sama sekali** |
+| **0** (dipakai sekarang) | **16,7 ms** | **60** ✅ |
+
+**Bahwa 4 sama mahalnya dengan 8 berarti pilihannya BINER.** Jangan pernah "kompromi" ke 4: bayar penuh, tidak dapat apa-apa.
+
+> ⚠️ **Di dpr 1 ketiganya sama-sama 16,7 ms** karena mentok vsync. Mengukur di jendela kecil akan menyimpulkan "tidak ada bedanya" — **salah total**. Ongkos N8AO + Bloom + MSAA itu **per piksel**; piksel naik 2,25× → frame time naik tepat 2×.
+
+Ini juga yang menjelaskan keluhan **"berat di desktop, lancar di HP"** yang selama ini terdengar terbalik: HP merender jauh lebih sedikit piksel **dan** melewatkan waypoint + billiard (§6).
+
+**`antialias: true` di `gl` ikut dimatikan**, dan ini terukur terpisah: mengubahnya `true → false` **tidak mengubah frame time sama sekali**. Flag itu berlaku pada *default framebuffer*, sedangkan `EffectComposer` merender ke buffer offscreen sendiri dan melewatinya — MSAA dialokasikan 2×, satu menganggur. Konsekuensinya: **menyalakannya lagi TIDAK akan mengembalikan tepi yang mulus.**
+
+### 4r-2. Aliasing itu pilihan estetik, bukan utang teknis (`c292bef`)
+
+Ongkos tampilannya **terlihat** dan diterima sadar setelah Keano melihat perbandingan berdampingan: **18,84% piksel berubah**, tepi plafon diagonal & pilar jadi bertangga, cincin lampu gantung pecah jadi putus-putus.
+
+Komentar awalnya menyisakan SMAA sebagai "jalan kalau mau tepi mulus lagi" — seolah ini kompromi yang ditelan demi FPS dan menunggu diperbaiki. **Keano menyatakan sebaliknya: ia LEBIH SUKA tepi yang sedikit bergigi.** Sejalan juga dengan arah look PS1/basement.studio yang justru bersandar pada `NearestFilter` + piksel tegas — anti-aliasing yang terlalu halus melawan arah itu.
+
+> 🚫 **Jangan menawarkan SMAA/FXAA/MSAA sebagai "perbaikan".** Laporan "tepinya kasar" nanti = konsekuensi yang sudah ditimbang, bukan bug. Dibiarkan seperti semula, orang berikutnya akan membaca komentar itu sebagai undangan membetulkan sesuatu yang memang disengaja.
+
+### 4r-3. 🔥 Engine matter-js berdetak selamanya — biang "laptop panas" (`6912e8b`)
+
+`Runner.run()` dipanggil langsung saat mount dan **tidak pernah berhenti** sampai unmount.
+
+Yang membuatnya lolos dari mata: ada flag `physicsActive`, tapi ia cuma menggerbangi **penulisan transform** di `afterUpdate`. Simulasinya sendiri tetap mengintegrasikan posisi 3 dinding + N badan kata ~60×/detik walau kursor tak pernah menyentuh judulnya. Dan `<PhysicsHeading>` dipakai **2×** di `Deployments.tsx`, jadi **dua engine** berjalan bersamaan sepanjang Lounge terbuka.
+
+Ini beban **CPU, bukan GPU** — itulah kenapa gejalanya kipas menyala & laptop panas, bukan sekadar FPS turun, dan kenapa di HP tidak terasa.
+
+Sekarang engine baru berjalan saat hover dan berhenti lagi saat kursor pergi. Perjalanan pulangnya murni CSS transition (badan sudah diteleport ke rumah, `physicsActive` sudah false), jadi engine boleh berhenti **sekarang** tanpa menunggu transisi 0,6 s selesai.
+
+> 💡 **Pelajaran yang bisa dipakai lagi:** flag yang menggerbangi **efek** animasi belum tentu menggerbangi **mesin**-nya. Pertanyaannya *"apa yang menghentikannya?"*, bukan *"apa yang menyembunyikannya?"*.
+
+Sudah disisir juga dan hasilnya bersih: `CsiParticleField` digerbangi `active` (`useInView`), `NetworkField` punya `IntersectionObserver` sendiri, `WaypointLabel` rAF-nya wajar. `PhysicsHeading` satu-satunya yang bocor.
+
+### 4r-4. Pola "mount semua ruangan" dicabut (`7c8408f`)
+
+Dipasang di `ff4a488` untuk menghindari remount konteks WebGL tiap ganti ruangan. Alasannya **sah saat itu**: keempat ruangan masih placeholder satu paragraf, jadi menahan semuanya di DOM praktis gratis. Beberapa jam kemudian Office/Meeting/Function diisi konten penuh, dan asumsinya runtuh.
+
+1. **Berat sepanjang waktu.** `display: none` menghentikan render & layout, tapi **TIDAK menghentikan hook**. `useScroll` tetap terpasang di window dan `useInView` tetap punya `IntersectionObserver` hidup. Dengan empat ruangan berisi, observer & listener scroll berlipat — semuanya ikut dievaluasi tiap frame scroll, termasuk milik ruangan yang tak terlihat.
+2. **`id` GANDA.** `<Contact />` kini ada di Lounge, Meeting, **dan** Function, jadi `id="contact"` muncul 3× sekaligus. `getElementById` mengembalikan yang **pertama** — bisa milik ruangan tersembunyi, dan scroll ke elemen `display: none` tidak ke mana-mana. HTML memang melarang id ganda; pola itu melanggarnya **secara struktural**, bukan karena kelalaian.
+
+**Ongkos remount WebGL dibayar SEKALI per perpindahan; ongkos observer berlipat dibayar SETIAP frame scroll, selamanya.** Yang kedua jauh lebih mahal.
+
+> ⚠️ Kalau remount WebGL terasa mengganggu lagi, jalan keluarnya **bukan** mengembalikan pola ini — melainkan memindahkan Canvas-nya ke tempat yang tidak ikut berganti (seperti `SiteLayout`, yang sudah dilakukan untuk Hero), atau membuatnya menahan konteks GL antar-mount.
+
+Koreksi angka yang ikut dibetulkan: komentar lama menyebut **tiga** konteks WebGL di-remount tiap ganti ruangan (`CsiParticleField`, `ManifestoField`, `DeploymentsField`). Diperiksa ulang — `DeploymentsField` **sudah tidak diimpor siapa pun**, dan dua sisanya cuma ada di section Lounge. Angka "tiga" itu ikut membesarkan ongkos yang dikira ada di sana.
+
+### 4r-5. Chunk billiard ditunda + prefetch (`1d85a39`)
+
+`<BilliardGame>` di-mount **tanpa syarat**, jadi setiap pengunjung membayar ~1 MB GLB (`billiard_balls` 887 KB + `cue` 94 KB) plus 16 mesh bola yang dirender tiap frame, tergeletak di lantai sebelah meja sepanjang tur. Di perangkat sentuh minigame **mati total** (§6), jadi di sana 1 MB itu murni sia-sia.
+
+**Dua anggapan lama yang ternyata salah, dan keduanya ditulis di kode supaya tidak "dioptimalkan" orang berikutnya:**
+- "World fisika hidup selama tur" — **salah**, `s.step()` sudah digerbangi `active` sejak awal.
+- "`directionalLight` yang selalu ter-mount itu mahal" — **salah**, ia `layers.set(1)` sementara kamera tetap layer 0, dan three mengumpulkan lampu lewat `object.layers.test(camera.layers)`. Ia tak pernah masuk render state.
+
+**Prefetch, bukan lazy polos.** Lazy polos memindahkan ongkos 1 MB ke detik paling buruk — tepat saat meja diklik, berbarengan tween kamera 1400 ms. Sekarang chunk-nya diunduh diam-diam saat pengunjung sampai di **Lounge** (tempat mejanya), dan baru di-mount saat `billiardActive`. Prefetch digerbangi `coarse` juga — penghematan terbesar dari seluruh perubahan ini.
+
+Aturannya dipisah ke `prefetchRule.ts` sebagai **fungsi murni** `(ruangan, jenis pointer) → boolean` — sekalian membereskan `react-refresh/only-export-components`.
+
+| | sebelum | sesudah |
+|---|---|---|
+| `Scene` chunk | 445,13 kB (gzip 166,44) | **352,32 kB** (gzip 138,50) |
+| `BilliardGame` | — (ikut Scene) | chunk sendiri **93,34 kB** (gzip 28,22) |
+
+### `ChunkBoundary` — repo punya 4 `lazy()` dan NOL error boundary
+
+Ikut dibangun di commit yang sama, karena menunda pemuatan **menaikkan** risikonya.
+
+`<Suspense>` menangani **sedang memuat**, bukan **gagal**. Import yang ditolak membuat `lazy()` melempar saat render, dan error render yang tak tertangkap meng-unmount **seluruh pohon** — halaman blank. Skenario nyatanya bukan jaringan putus, tapi **deploy saat ada tab terbuka**.
+
+Dua aturan yang ditulis di kodenya:
+
+- **Di dalam `<Canvas>` JANGAN beri fallback DOM.** R3F merekonsiliasi ke objek three; `<div>` di sana melempar error **baru** dari dalam penangkap error.
+- **`Scene` WAJIB punya fallback yang memanggil `setSceneReady(true)`.** Sinyal itu datang dari `useFrame` di `Office.tsx` yang tak pernah jalan kalau chunk gagal, dan `LoadingScreen` menunggunya untuk memulai outro → **loader menggantung selamanya**. Jaring pengaman 1500 ms tidak menolong; ia baru dipasang setelah `sceneReady` true.
+
+### 🔧 Alat ukur: `scripts/measure-frames.mjs` + `shoot.mjs`
+
+Nol dependency, pakai Chrome yang sudah ada lewat **CDP**. Ini menjawab gagalnya `r3f-perf` — tidak perlu ada yang menyalin bacaan dari HUD.
+
+```bash
+node scripts/measure-frames.mjs http://localhost:3000/ 8 2   # url, detik, dpr
+node scripts/shoot.mjs http://localhost:3000/ shot.png 2     # url, keluaran, dpr
+```
+
+Keduanya berpasangan: yang pertama mengukur **ongkos**, yang kedua merekam **hasilnya**. Keputusan yang menyentuh tampilan butuh dua-duanya — angka saja membuat orang menukar sesuatu yang tidak seharusnya ditukar (persis yang hampir terjadi di 4r-2).
+
+> ⚠️ **WAJIB ukur di dpr 2.** Default `dpr 1` sudah mentok vsync, jadi semua setelan terlihat sama — kesimpulannya salah. Skripnya juga **mencetak renderer yang dipakai**: kalau tertulis SwiftShader/llvmpipe, itu rasterisasi CPU dan angkanya tidak mewakili laptop siapa pun.
+
+---
+
 ## 5. Foto Referensi
 
 | Folder | Isi |
@@ -1152,12 +1368,16 @@ Hook-nya `src/lib/hooks/useCoarsePointer.ts` — `useSyncExternalStore` di atas 
 11f. **Konten layar monitor** ✅ **SELESAI 30 Jul** (§6c) — Spotify pixel-art di monitor AOC
 11g. **Loading screen isometrik (loader saat mengunduh)** ✅ **SELESAI 31 Jul** (§4n) — di-render di Web Worker, menjawab permintaan awal user
 11h. **Semua pekerjaan 30 Jul di-merge ke `main`** ✅ **SELESAI 31 Jul** (§4o) — sekaligus perbaikan bug merge `frameloop="demand"` + `INVARIANTS.md`
+11i. **Perangkat sentuh: scene jadi pemandangan** ✅ **SELESAI 3 Agu** (§4p) — waypoint & billiard mati di `pointer: coarse`, hero 70dvh di HP
+11j. **Routing & konten per-ruangan** ✅ **SELESAI 3 Agu** (§4q, merge `join`) — 4 halaman (`/`, `/office`, `/meeting`, `/function`), Hero pindah ke `SiteLayout` supaya Canvas tidak remount, `Services` diserap ke Office. Blocker §6 (HP terkunci di Lounge) **terbuka** lewat room links navbar
+11k. **Empat perbaikan performa** ✅ **SELESAI 3 Agu** (§4r) — MSAA dimatikan (**30 → 60 FPS**), engine matter-js dihentikan, mount-semua-ruangan dicabut, chunk billiard ditunda. Alat ukur CDP ikut disimpan
 12. **⬅️ BERIKUTNYA, urut prioritas:**
-    - **a. Review billiard di browser** (§6d): posisi stik, apakah bola terlihat resin (bukan besi), framing kamera, timing fade lampu. Sekalian ukur FPS saat fisika jalan
-    - **b. Verifikasi waypoint Lounge & Function** (§4k) dengan resep pengukuran; sekalian putuskan apakah Function→Lounge dipindah ke lantai supaya tidak jalan buntu di HP
+    - **a. Bug billiard** (§6d): bola yang masuk lubang harus dibekukan jadi `fixed`
+    - **b. Review billiard di browser** (§6d): posisi stik, apakah bola terlihat resin (bukan besi), framing kamera, timing fade lampu. Sekalian ukur FPS saat fisika jalan — sekarang lebih mudah karena chunk-nya sudah terpisah (§4r-5)
     - **c. Uji anti-beku loader di browser sungguhan** (§4n) — DevTools Performance saat kompilasi 233 shader; inti keputusan Web Worker, baru bisa dibuktikan mata
     - **d. Beresi blocker layar** (§6c) — pisah material MacBook, unwrap ulang UV iMac & SMK_TV
     - **e. Post-processing PS1** (§4b) — pass terakhir untuk look basement.studio
+    - ~~**Verifikasi waypoint Lounge & Function**~~ ✅ **SELESAI 3 Agu** (§4k) — semua waypoint terukur & terlihat
     - ~~**Sepakati satu lockfile**~~ ✅ **SELESAI 29 Jul — bun** (§7)
 13. Dekorasi tambahan (tanaman via Sketchfab kalau integrasi di-enable)
 
@@ -1487,8 +1707,10 @@ Kode billiard cuma bergantung 3 hal dari `office.glb`: (a) nama node mengandung 
   - Collection `Export_Merged` = hasil merge untuk export (§4f). **Di-exclude saat modeling**, di-include saat export. Objek asli di collection kerja tidak pernah disentuh.
   - Cycles: **GPU Metal** (`prefs.compute_device_type='METAL'` + `cycles.device='GPU'`) — cek tiap sesi, default-nya CPU
 - **Polycam** untuk scanning (GLB)
-- **Vite + bun** (project web ini) — **GLB sudah terintegrasi (§4h)**. Stack: **Vite 6** (dulu Next 16.2, dimigrasikan 29 Jul — §4j), React 19, three 0.185, @react-three/fiber 9 + drei 10 + postprocessing 3, zustand 5, Tailwind 4, **cannon-es 0.20** (billiard, §6d), **motion 12** (animasi teks, §4i). Jalankan: `bun dev` → `http://localhost:3000`
-- **Playwright 1.61.0** untuk verifikasi visual headless — **versi itu spesifik**, lihat §4m. Flag WebGL: `--use-gl=angle --use-angle=metal --enable-unsafe-swiftshader`
+- **Vite + bun** (project web ini) — **GLB sudah terintegrasi (§4h)**. Stack: **Vite 6** (dulu Next 16.2, dimigrasikan 29 Jul — §4j), React 19, three 0.185, @react-three/fiber 9 + drei 10 + postprocessing 3, zustand 5, Tailwind 4, **react-router-dom 7** (routing per-ruangan, §4q), **cannon-es 0.20** (billiard, §6d), **motion 12** (animasi teks, §4i), **matter-js 0.20** (`PhysicsHeading`, §4r-3). Jalankan: `bun dev` → `http://localhost:3000`
+- **Vitest 4** — `bun run test`. **101 test di 19 berkas**, semuanya hijau per 3 Agu. Tiga di antaranya invariant lintas-wilayah (`INVARIANTS.md` §1, §3, §6). Norma repo: **buktikan test-nya MERAH di kondisi rusak dulu** sebelum dipakai memverifikasi perbaikan
+- **Pengukuran performa: CDP langsung, tanpa dependency** (§4r) — `scripts/measure-frames.mjs` (frame time) + `scripts/shoot.mjs` (screenshot). Pakai Chrome yang sudah terpasang. ⚠️ **Wajib jalankan di dpr 2**; dpr 1 mentok vsync dan semua setelan terlihat sama
+- **Playwright 1.61.0** untuk verifikasi visual headless — **versi itu spesifik**, lihat §4m. Flag WebGL: `--use-gl=angle --use-angle=metal --enable-unsafe-swiftshader`. (Tidak ada di `package.json`; dipasang terpisah saat dibutuhkan. Untuk mengukur **frame time** pakai skrip CDP di atas, bukan ini.)
 
 ### 📦 Manajer paket: BUN (diputuskan 29 Jul) — pnpm sudah tidak dipakai
 
