@@ -20,13 +20,13 @@ const PROJECTS: Project[] = [
     title: "Citizen Service Portal",
     desc: "Unified digital front door for public services, cutting request turnaround from days to hours through automated routing and status tracking.",
     tags: ["Public Sector", "Web Platform"],
-    image: "https://picsum.photos/seed/csi-project-citizen-portal/1200/800",
+    image: "https://images.unsplash.com/photo-1542744173-05336fcc7ad4?w=1200&q=80&auto=format&fit=crop",
   },
   {
     title: "Field Operations Suite",
     desc: "Real-time monitoring and dispatch for distributed field teams, linking asset data, crew location, and incident response in one workspace.",
     tags: ["Infrastructure", "Mobile + Web"],
-    image: "https://picsum.photos/seed/csi-project-field-ops/1200/800",
+    image: "https://images.unsplash.com/photo-1580795479225-c50ab8c3348d?w=1200&q=80&auto=format&fit=crop",
   },
 ];
 
