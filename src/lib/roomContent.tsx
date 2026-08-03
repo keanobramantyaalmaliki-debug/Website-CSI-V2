@@ -6,8 +6,6 @@ import CsiHero from "@/components/sections/CsiHero";
 import Manifesto from "@/components/sections/Manifesto";
 import TrustedBy from "@/components/sections/TrustedBy";
 import Deployments from "@/components/sections/Deployments";
-import FeaturedProjects from "@/components/sections/FeaturedProjects";
-import Services from "@/components/sections/Services";
 import LivingArchitecture from "@/components/sections/LivingArchitecture";
 import Process from "@/components/sections/Process";
 import Industries from "@/components/sections/Industries";
@@ -25,17 +23,16 @@ import TheCrew from "@/components/sections/TheCrew";
 /**
  * Konten yang ditampilkan di bawah hero untuk tiap room.
  *
- * Lounge: susunan section saat ini dipertahankan apa adanya.
- * Office: services deep-dive (Office.tsx) — reorganisasi tematik dari 9-item
- *   accordion Services di Lounge, bukan duplikat.
- * Meeting / Function: masih placeholder — user yang menentukan section mana
- *   masuk room mana dengan memindah entri di sini.
+ * Office: satu-satunya tempat detail layanan (9-item accordion, pindahan
+ *   dari Services.tsx yang dulu ada di Lounge — dihapus supaya tidak ada
+ *   dua sumber layanan yang tumpang tindih).
  *
  * Page structure (decided 2026-07-07, see reference/ROADMAP.md B5; updated
- * 2026-08-01 to add TrustedBy + FeaturedProjects, see diskusi/section-1):
- * Hero → CsiHero → Manifesto → TrustedBy → Deployments → FeaturedProjects
- *      → Services → LivingArchitecture → Process → Industries → Careers
- *      → Vision → Contact
+ * 2026-08-03: Careers → Function, FeaturedProjects dropped (duplicated
+ * CaseGrid in Meeting), Services dropped from Lounge and merged into
+ * Office as the single services deep-dive, see diskusi/bedah-content-lounge):
+ * Hero → CsiHero → Manifesto → TrustedBy → Deployments
+ *      → LivingArchitecture → Process → Industries → Vision → Contact
  */
 export const ROOM_CONTENT: Record<RoomKey, ReactNode> = {
   Lounge: (
@@ -44,12 +41,9 @@ export const ROOM_CONTENT: Record<RoomKey, ReactNode> = {
       <Manifesto />
       <TrustedBy />
       <Deployments />
-      <FeaturedProjects />
-      <Services />
       <LivingArchitecture />
       <Process />
       <Industries />
-      <Careers />
       <Vision />
       <Contact />
     </>
@@ -68,6 +62,7 @@ export const ROOM_CONTENT: Record<RoomKey, ReactNode> = {
       <PeopleIntro />
       <PeopleValues />
       <TheCrew />
+      <Careers />
       <Contact />
     </>
   ),

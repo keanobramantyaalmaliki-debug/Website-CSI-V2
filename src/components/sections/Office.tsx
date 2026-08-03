@@ -3,40 +3,61 @@
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
+import Disclosure from "@/components/motion/Disclosure";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 /**
- * Office deep-dive pillars — reorganized from the 9-item SERVICES list in
- * Services.tsx (Lounge accordion) into 5 thematic pillars, each rewritten
- * with fresh copy so the two pages don't read as duplicates.
+ * Office deep-dive services — moved from Services.tsx (former Lounge
+ * accordion) since Office is the single place service detail now lives.
  */
-const PILLARS: { num: string; title: string; desc: string }[] = [
+const SERVICES: { num: string; title: string; desc: string; subs?: string[] }[] = [
   {
     num: "01",
-    title: "Custom Software & Platforms",
-    desc: "From first workflow diagram to production rollout, we build software platforms that carry your operations — not just your requirements list.",
+    title: "Custom Software Development",
+    desc: "Tailor-made software designed around your unique business processes, helping you improve productivity, streamline operations, and support long-term growth.",
   },
   {
     num: "02",
-    title: "Web & Mobile Experiences",
-    desc: "From first tap to daily habit, we craft web and mobile experiences that keep people coming back, on whatever device they reach for.",
+    title: "Web Application Development",
+    desc: "Modern, responsive, and secure web applications built with performance, scalability, and user experience in mind.",
   },
   {
     num: "03",
-    title: "Artificial Intelligence Solutions",
-    desc: "From raw data to daily decisions, we embed AI that turns information into action — knowledge assistants, process automation, and analytics built around how your team already works.",
+    title: "Mobile App Development",
+    desc: "Native and cross-platform mobile applications for Android and iOS that deliver seamless user experiences.",
   },
   {
     num: "04",
-    title: "Systems & Cloud Infrastructure",
-    desc: "From siloed tools to a single source of truth, we connect systems and cloud infrastructure so your organization runs as one, not as a dozen disconnected parts.",
+    title: "Artificial Intelligence Solutions",
+    desc: "Leverage AI to automate workflows, enhance customer engagement, analyze data, and unlock new business opportunities through intelligent digital solutions.",
+    subs: ["Jenna.ai", "Knowledge Assistants", "Process Automation", "AI-Powered Analytics", "Custom AI Integration"],
   },
   {
     num: "05",
-    title: "Ongoing Partnership",
-    desc: "From launch day onward, we stay close — maintaining, monitoring, and evolving what we build so it keeps working as your organization grows.",
+    title: "Enterprise Solutions",
+    desc: "Develop enterprise-grade platforms that integrate departments, automate operations, and improve decision-making across your organization.",
+  },
+  {
+    num: "06",
+    title: "System Integration",
+    desc: "Connect existing applications, third-party services, and business systems through secure and reliable API integrations.",
+  },
+  {
+    num: "07",
+    title: "UI/UX Design",
+    desc: "Create intuitive and engaging digital experiences through user-centered interface and experience design.",
+  },
+  {
+    num: "08",
+    title: "Cloud & DevOps",
+    desc: "Deploy, monitor, and optimize applications with modern cloud infrastructure and DevOps best practices for maximum reliability and scalability.",
+  },
+  {
+    num: "09",
+    title: "Maintenance & Technical Support",
+    desc: "Ensure your applications remain secure, updated, and optimized with continuous support and proactive maintenance.",
   },
 ];
 
@@ -75,26 +96,55 @@ export default function Office() {
         depends on.
       </motion.p>
 
-      {/* Pillar grid — large cards with breathing room, distinct from the
-          Lounge accordion's dense single-column list. */}
-      <FadeUpList
-        tag="ul"
-        className="mt-16 grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.08] sm:grid-cols-2 lg:grid-cols-3"
-      >
-        {PILLARS.map((p) => (
-          <FadeUpItem
-            key={p.num}
-            tag="li"
-            className="flex flex-col gap-4 bg-background p-8"
-          >
-            <span
-              className="text-4xl font-bold tabular-nums leading-none text-zinc-600 sm:text-5xl"
-              aria-hidden="true"
+      {/*
+        Editorial index: large number as typographic anchor.
+        Grid: [number-col | title | toggle] — number is visually dominant,
+        desc revealed behind Disclosure. Subs pills preserved on expand.
+      */}
+      <FadeUpList tag="ul" className="mt-16 border-t border-white/[0.08]">
+        {SERVICES.map((s) => (
+          <FadeUpItem key={s.num} tag="li">
+            <Disclosure
+              className="border-b border-white/[0.08]"
+              triggerClassName="group w-full text-left"
+              contentClassName="pb-6 pl-16 sm:pl-32"
+              trigger={(open) => (
+                <div className="grid w-full grid-cols-[4rem_1fr_1.5rem] items-center gap-4 py-5 sm:grid-cols-[7rem_1fr_1.5rem]">
+                  {/* Large number — typographic anchor */}
+                  <span
+                    className="text-4xl font-bold tabular-nums leading-none text-zinc-600 transition-colors duration-200 group-hover:text-accent sm:text-5xl"
+                    aria-hidden="true"
+                  >
+                    {s.num}
+                  </span>
+                  {/* Title */}
+                  <span className="font-medium text-zinc-300 transition-colors duration-200 group-hover:text-zinc-100">
+                    {s.title}
+                  </span>
+                  {/* Toggle indicator */}
+                  <span
+                    className={`shrink-0 text-sm text-zinc-400 transition-transform duration-200 group-hover:text-zinc-200 ${open ? "rotate-45" : "rotate-0"}`}
+                    aria-hidden="true"
+                  >
+                    +
+                  </span>
+                </div>
+              )}
             >
-              {p.num}
-            </span>
-            <h3 className="text-lg font-medium text-zinc-100">{p.title}</h3>
-            <p className="text-sm leading-relaxed text-zinc-400">{p.desc}</p>
+              <p className="text-sm leading-relaxed text-zinc-300">{s.desc}</p>
+              {s.subs && (
+                <ul className="mt-4 flex flex-wrap gap-2">
+                  {s.subs.map((sub) => (
+                    <li
+                      key={sub}
+                      className="rounded-full border border-zinc-800 px-3 py-1 text-xs text-zinc-400"
+                    >
+                      {sub}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Disclosure>
           </FadeUpItem>
         ))}
       </FadeUpList>
