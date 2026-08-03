@@ -100,16 +100,18 @@ export default function Navbar() {
               sehingga tombol desktop & mobile berperilaku berbeda: yang mobile
               tahu harus pindah dulu kalau ruangannya tak punya Contact, yang
               ini tidak — dari Office ia diam saja tanpa umpan balik. */}
-          <button
-            type="button"
-            onClick={goToContact}
-            className="group hidden shrink-0 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-200 md:flex"
-          >
-            Talk to us
-            <span className="grid h-5 w-5 place-items-center rounded-full bg-zinc-900/10 text-zinc-900 transition-transform duration-200 group-hover:translate-x-0.5">
-              →
-            </span>
-          </button>
+          <MagneticButton>
+            <button
+              type="button"
+              onClick={goToContact}
+              className="group hidden shrink-0 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-200 md:flex"
+            >
+              Talk to us
+              <span className="grid h-5 w-5 place-items-center rounded-full bg-zinc-900/10 text-zinc-900 transition-transform duration-200 group-hover:translate-x-0.5">
+                →
+              </span>
+            </button>
+          </MagneticButton>
 
           {/* Mobile hamburger */}
           <button
