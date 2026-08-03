@@ -87,6 +87,19 @@ export default function Hero() {
   const canvasScale   = useTransform(scrollYProgress, [0.28, 0.44], [1, 0.96]);
   const canvasY       = useTransform(scrollYProgress, [0.28, 0.44], [0, -20]);
 
+  // ── Jaring pengaman: reduced-motion tetap menyalakan sceneReady ──────────
+  // Harus di atas early return `if (reduced)` di bawah — hooks tidak boleh
+  // dipanggil kondisional. LoadingScreen (overlay putih z-[60]) hanya memulai
+  // outro saat `sceneReady` true, dan satu-satunya yang menyalakannya lewat
+  // jalur normal adalah useFrame di Office.tsx — yang hidup DI DALAM <Scene/>.
+  // Saat reduced-motion, <StaticHero/> dirender sebagai ganti <Scene/>, jadi
+  // tanpa pengaman ini sceneReady selamanya false dan layar putih menutupi
+  // situs SELAMANYA di bawah prefers-reduced-motion. Lihat INVARIANTS.md §3.
+  useEffect(() => {
+    if (!reduced) return;
+    setSceneReady(true);
+  }, [reduced, setSceneReady]);
+
   // Reduced-motion: revert to original h-dvh normal-flow hero, no pin/recede.
   if (reduced) {
     return (
@@ -107,30 +120,6 @@ export default function Hero() {
       </section>
     );
   }
-
-  // ── Jaring pengaman: reduced-motion tetap menyalakan sceneReady ──────────
-  // Saat ini efek ini TIDAK PERNAH menyala, karena <Scene/> selalu di-mount
-  // (percabangan reduced-motion hilang di PR #4 — lihat catatan di StaticHero).
-  // Ia sengaja dipasang lebih dulu, sebagai pengaman untuk saat percabangan itu
-  // dikembalikan.
-  //
-  // Kalau kembali TANPA ini, situsnya tidak bisa dipakai sama sekali di bawah
-  // prefers-reduced-motion, dan gejalanya tidak menunjuk ke sini sedikit pun:
-  // LoadingScreen (overlay putih z-[60]) hanya memulai outro saat `sceneReady`
-  // true, dan satu-satunya yang menyalakannya adalah useFrame di Office.tsx —
-  // yang hidup DI DALAM <Scene/>. Tanpa Scene, sceneReady selamanya false,
-  // jaring pengaman 1500 ms di LoadingScreen bahkan tidak pernah terpasang
-  // karena ia sendiri digerbangi sceneReady, dan layar putih menutupi situs
-  // SELAMANYA.
-  //
-  // Pola yang sama dengan bug frameloop (INVARIANTS.md §1): <StaticHero/> lahir
-  // di cabang comfort-redesign, LoadingScreen di cabang loading-screen, dan
-  // keduanya benar sendiri-sendiri. Rusaknya cuma di persimpangan.
-  // Lihat INVARIANTS.md §3.
-  useEffect(() => {
-    if (!reduced) return;
-    setSceneReady(true);
-  }, [reduced, setSceneReady]);
 
   return (
     // 180dvh scroll track — the extra ~80dvh is the "pin runway" where 3D
