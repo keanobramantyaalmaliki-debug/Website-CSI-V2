@@ -167,16 +167,18 @@ export default function Scene() {
           Bahwa 4 sama mahalnya dengan 8 berarti pilihannya BINER: ada MSAA atau
           tidak. Tidak ada jalan tengah yang bisa ditawar.
 
-          ⚠️ ONGKOSNYA TERLIHAT, dan itu DITERIMA SADAR — bukan terlewat:
-          18,84% piksel berubah; tepi plafon diagonal & pilar jadi bertangga,
-          dan cincin lampu gantung pecah jadi putus-putus alih-alih lingkaran
-          mulus. Jadi kalau nanti ada yang melaporkan "tepinya kasar", itu
-          konsekuensi yang sudah ditimbang, BUKAN bug yang perlu dikejar.
+          Tampilannya memang berubah — 18,84% piksel, tepi plafon diagonal &
+          pilar jadi bertangga, cincin lampu gantung pecah jadi putus-putus.
+          Tapi itu BUKAN sekadar kompromi yang ditelan demi FPS: Keano melihat
+          hasilnya lalu menyatakan ia LEBIH SUKA tepi yang sedikit bergigi.
+          Sejalan juga dengan arah look PS1/basement.studio yang bersandar pada
+          NearestFilter + piksel tegas.
 
-          Kalau suatu saat mau tepi mulus lagi tanpa membayar MSAA, jalannya
-          SMAA (antialias berbasis post-processing, satu pass di composer ini) —
-          belum diukur. JANGAN kembali ke `multisampling={4}`: terukur sama
-          mahalnya dengan 8, membayar penuh tanpa dapat apa-apa. */}
+          ⚠️ Jadi aliasing di sini adalah PILIHAN ESTETIK, bukan utang teknis.
+          Laporan "tepinya kasar" = keputusan yang sudah ditimbang, bukan bug.
+          JANGAN menambahkan SMAA/FXAA untuk "memperbaikinya", dan JANGAN
+          kembali ke `multisampling={4}` — terukur sama mahalnya dengan 8,
+          membayar penuh tanpa dapat apa-apa. */}
       <EffectComposer multisampling={0}>
         {/* ── AO runtime: pojok & celah jadi gelap ────────────────────────────
             Ini yang mengisi lubang terbesar lightmap. Bake cuma mencakup
