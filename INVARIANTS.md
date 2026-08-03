@@ -204,6 +204,49 @@ yang kurang rapi.
 
 ---
 
+## §7 🔒 Render loop mati saat hero di-scroll lewat
+
+**Aturan.** `useGatedFrameloop()` (di `canvas/FrameloopGate.tsx`) mengembalikan
+`"never"` saat `!heroInView && sceneReady`, dan `canvas/Scene.tsx` memasangnya
+sebagai **prop** `frameloop` di `<Canvas>`. Wajib prop, bukan `setFrameloop()`
+imperatif — bentuk imperatif sudah dicoba dan terukur gagal: tiap re-render
+`<Canvas>` (dipicu `react-use-measure` saat fade scroll men-scale pembungkus
+hero) menyinkronkan ulang prop `frameloop` yang tidak diset = `"always"`,
+menimpa panggilan imperatif persis di momen ia dibutuhkan.
+
+Dua konsekuensi, satu ke tiap arah:
+
+1. **Untuk siapa pun yang menulis kode di `canvas/`:** `useFrame` TIDAK
+   berdetak saat pengunjung berada di konten bawah halaman. Komponen baru tidak
+   boleh mengandalkan tick untuk pekerjaan yang harus jalan saat hero
+   off-screen (polling, sinkronisasi state, timer). Pakai efek/DOM biasa untuk
+   itu. Animasi visual justru aman — toh canvasnya tak terlihat.
+2. **Untuk siapa pun yang menyentuh gate-nya:** kondisi jalan wajib menyertakan
+   `|| !sceneReady`. `sceneReady` dipancarkan `useFrame` di `Office.tsx` — kalau
+   loop dipause sebelum frame pertama, sinyal tak pernah datang dan overlay
+   loader menutupi situs **selamanya** (kegagalan yang sama dengan §3).
+   `heroInView` default `true` tidak cukup: reload di posisi scroll tengah
+   halaman membuat observer menyetelnya `false` sebelum GLB selesai dimuat.
+
+**Penjaga.** `src/components/canvas/frameloopGate.invariant.test.ts`
+
+**Kenapa BUKAN `frameloop="demand"` (§1).** `"never"` beda kelas: ia
+menghentikan SEMUA `useFrame` serempak — mixer karakter, sweep, tween — tidak
+ada file yang bisa "lupa invalidate" sebagian. Kontrak demand↔invalidate yang
+rapuh itu tetap tidak dihidupkan lagi.
+
+**Kenapa lintas-wilayah.** Gejala aslinya (3 Agu) ada di wilayah Nico — "laptop
+panas saat baca konten" — tapi sebabnya di wilayah Keano: canvas tetap merender
+60 fps di balik pembungkus `opacity: 0` milik `sections/Hero.tsx`. Dan sinyal
+gerbangnya (`heroInView`) diproduksi `Hero.tsx` (Nico) lalu dikonsumsi
+`canvas/` (Keano) — persis jenis ikatan yang putus diam-diam saat salah satu
+pihak mengubah observernya.
+
+Ikatan turunannya: `BilliardHUD` keluar otomatis saat `!heroInView` — HUD-nya
+`position: fixed`, tanpa itu bar tenaga melayang di atas konten halaman.
+
+---
+
 ## Kebiasaan yang menangkap sisanya
 
 Tiga hal ini menangkap lebih banyak daripada tooling mana pun di atas, karena

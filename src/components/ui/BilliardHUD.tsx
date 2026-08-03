@@ -169,6 +169,19 @@ export default function BilliardHUD() {
     return () => window.removeEventListener("keydown", onKey);
   }, [active, exit]);
 
+  // Scroll meninggalkan hero saat masih di meja → keluar otomatis.
+  //
+  // Dua alasan, dua-duanya baru muncul sejak FrameloopGate ada:
+  //   1. HUD ini `position: fixed` dan TIDAK digerbang heroInView — tanpa ini
+  //      bar tenaga & tombol tetap melayang di atas konten halaman.
+  //   2. Gate mematikan render loop saat hero lewat, jadi permainan toh beku;
+  //      keluar rapi (kamera dikembalikan ke Lounge lewat `exit`) lebih jujur
+  //      daripada membiarkan pemain kembali ke meja yang membeku diam-diam.
+  const heroInView = useSceneStore((s) => s.heroInView);
+  useEffect(() => {
+    if (active && !heroInView) exit();
+  }, [active, heroInView, exit]);
+
   if (!active) return null;
 
   const pct = Math.round(shotPower * 100);

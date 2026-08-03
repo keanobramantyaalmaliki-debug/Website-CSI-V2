@@ -350,11 +350,23 @@ export default function Office() {
   /** Sudah mengabari store bahwa frame nyata pertama tergambar? */
   const readySent = useRef(false);
 
-  useFrame((_, dt) => {
+  /** performance.now() tick sebelumnya — untuk mengukur jeda antar-frame. */
+  const lastTickRef = useRef<number | null>(null);
+
+  useFrame(() => {
     const sweep = sweepRef.current;
     if (!sweep || revealDone.current) return;
 
     const now = performance.now();
+
+    // Jeda sejak tick terakhir diukur dengan jam dinding SENDIRI, bukan `dt`
+    // dari R3F. `dt` bersumber dari clock internal R3F, dan clock itu DI-RESET
+    // oleh setFrameloop() — yang kini dipanggil FrameloopGate tiap kali hero
+    // keluar/masuk viewport. Setelah reset, `dt` frame pertama bisa ~0 padahal
+    // loop baru saja diam berdetik-detik; gerbang di bawah lolos dan sapuan
+    // meloncat sebesar durasi pause. Jam dinding tidak bisa dibohongi reset.
+    const gap = lastTickRef.current === null ? Infinity : now - lastTickRef.current;
+    lastTickRef.current = now;
 
     // ── Jangan mulai menghitung sebelum frame mengalir wajar ────────────────
     // Frame PERTAMA setelah GLB siap selalu diikuti tersendat besar: three baru
@@ -375,8 +387,10 @@ export default function Office() {
     // Karena itu jamnya baru dimulai setelah ada frame yang jaraknya wajar.
     // Ambang 0,25 s: jauh di atas frame normal (0,008–0,033 s) tapi jauh di
     // bawah tersendat kompilasi. Ini sekaligus menangani hitchan lain dengan
-    // sebab sama — pindah tab, GC besar — tanpa perlu kasus khusus.
-    if (startRef.current === null || dt > 0.25) {
+    // sebab sama — pindah tab, GC besar, DAN pause FrameloopGate (loop diam
+    // berdetik-detik → gap besar → jam mulai ulang saat kembali) — tanpa
+    // perlu kasus khusus.
+    if (startRef.current === null || gap > 250) {
       startRef.current = now;
       return;
     }

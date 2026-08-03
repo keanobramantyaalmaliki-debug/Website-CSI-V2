@@ -12,6 +12,7 @@ import { START_ROOM } from "@/lib/store/sceneStore";
 import BilliardLazy from "./billiard/BilliardLazy";
 import Waypoints from "./Waypoints";
 import ContactShadowsRig from "./ContactShadowsRig";
+import { useGatedFrameloop } from "./FrameloopGate";
 
 // Posisi awal kamera. DIAMBIL dari VIEWS[START_ROOM], bukan angka yang ditulis
 // ulang: sebelumnya di sini ada tuple hardcode [-6.0, 1.6, 4.0] yang bahkan
@@ -71,8 +72,16 @@ const START_POS = VIEWS[START_ROOM].pos.toArray() as [number, number, number];
  * siapa pun — jangan cari jejaknya di halaman.)
  */
 export default function Scene() {
+  // "always" saat hero terlihat ATAU scene belum siap; "never" selebihnya.
+  // HARUS lewat prop (bukan setFrameloop imperatif): tiap re-render Canvas —
+  // termasuk yang dipicu react-use-measure saat fade scroll men-scale
+  // pembungkusnya — menyinkronkan ulang prop ini, jadi panggilan imperatif
+  // akan ditimpa balik ke default "always". Rincian + syarat sceneReady di
+  // FrameloopGate.tsx; penjaganya frameloopGate.invariant.test.ts.
+  const frameloop = useGatedFrameloop();
   return (
     <Canvas
+      frameloop={frameloop}
       camera={{ position: START_POS, fov: 60, near: 0.05, far: 120 }}
       dpr={[1, 1.5]}
       // antialias: false — dan ini BUKAN bagian dari uji MSAA di bawah.
