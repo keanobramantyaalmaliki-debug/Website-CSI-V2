@@ -7,7 +7,7 @@ import {
   useSceneStore,
   VIEW_KEYS,
   START_ROOM,
-  hashFor,
+  roomFromPath,
   type RoomKey,
   type Vec3,
 } from "@/lib/store/sceneStore";
@@ -200,8 +200,7 @@ export default function CameraController() {
       animating.current  = true;
       currentRoomRef.current = name;
       setCurrentRoom(name);
-
-      history.pushState(null, "", window.location.pathname + hashFor(name));
+      // URL diperbarui oleh RoomRouteSync di DOM (punya router context).
     },
     [camera, setCurrentRoom],
   );
@@ -258,31 +257,18 @@ export default function CameraController() {
    * VIEWS-nya. Tidak ada lagi next/prev room sebagai jaring pengaman.
    */
 
-  // hash routing on load
+  // Snap kamera ke room yang diminta pathname saat pertama mount (deep-link).
+  // Back/forward browser ditangani React Router → RoomRouteSync memanggil goTo.
   useEffect(() => {
-    const hash = window.location.hash.replace("#", "");
-    if (hash) {
-      const key = VIEW_KEYS.find((k) => k.toLowerCase() === hash);
-      if (key && !VIEWS[key].disabled) {
-        currentRoomRef.current = key;
-        setCurrentRoom(key);
-        camera.position.copy(VIEWS[key].pos);
-        lookTarget.current.copy(VIEWS[key].tgt);
-        camera.lookAt(VIEWS[key].tgt);
-      }
+    const key = roomFromPath(window.location.pathname);
+    if (key && !VIEWS[key].disabled && key !== START_ROOM) {
+      currentRoomRef.current = key;
+      setCurrentRoom(key);
+      camera.position.copy(VIEWS[key].pos);
+      lookTarget.current.copy(VIEWS[key].tgt);
+      camera.lookAt(VIEWS[key].tgt);
     }
-
-    const onPop = () => {
-      const h   = window.location.hash.replace("#", "");
-      // Tanpa hash = kembali ke titik awal tur, lihat hashFor() di store.
-      const key = (h
-        ? VIEW_KEYS.find((k) => k.toLowerCase() === h)
-        : START_ROOM) as RoomKey | undefined;
-      if (key && !VIEWS[key]?.disabled) goTo(key);
-    };
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, [camera, goTo, setCurrentRoom]);
+  }, [camera, setCurrentRoom]);
 
   useFrame(() => {
     if (!animating.current) return;

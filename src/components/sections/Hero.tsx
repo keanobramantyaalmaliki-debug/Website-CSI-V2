@@ -1,7 +1,7 @@
 "use client";
 
 import { lazy, Suspense, useEffect, useRef } from "react";
-import { useReducedMotion } from "motion/react";
+import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { useSceneStore } from "@/lib/store/sceneStore";
 
 const Scene = lazy(() => import("@/components/canvas/Scene"));
@@ -47,13 +47,17 @@ function StaticHero() {
 }
 
 export default function Hero() {
-  const sectionRef = useRef<HTMLElement>(null);
+  const heroTrackRef = useRef<HTMLElement>(null);
+  const stickyRef = useRef<HTMLDivElement>(null);
   const setHeroInView = useSceneStore((s) => s.setHeroInView);
   const setSceneReady = useSceneStore((s) => s.setSceneReady);
   const reduced = useReducedMotion();
 
+  // Anchor heroInView to the sticky viewport (h-dvh inner div), not the
+  // 180dvh track, so Navbar transparency and Waypoints unmount keep their
+  // current timing — they depend on when the 3D is actually visible on screen.
   useEffect(() => {
-    const el = sectionRef.current;
+    const el = reduced ? heroTrackRef.current : stickyRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
       ([entry]) => setHeroInView(entry.isIntersecting),
@@ -61,60 +65,95 @@ export default function Hero() {
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [setHeroInView]);
+  }, [setHeroInView, reduced]);
+
+  // Canvas recede: opacity 1→0, scale 1→0.96, y drift upward — must finish
+  // BEFORE the sticky child unpins, not just before the track ends.
+  //
+  // scrollYProgress here spans the full 180dvh track ("start start" → "end
+  // start"), but the sticky canvas (h-dvh inside a 180dvh track) actually
+  // unpins at trackHeight - stickyHeight = 180dvh - 100dvh = 80dvh, i.e.
+  // progress ≈ 0.444 — not at progress 1.0. Fading over [0.6, 1.0] left the
+  // canvas fully opaque for a ~28dvh window after it had already unpinned
+  // and started scrolling with the page, so it visibly reappeared below
+  // HeroHandoff's fixed-height seam (see INVARIANTS.md §2 area, reported as
+  // "kepotong saat discroll"). Fading over [0.28, 0.44] instead completes
+  // the recede just as the element unpins, so nothing scrolls away visibly.
+  const { scrollYProgress } = useScroll({
+    target: heroTrackRef,
+    offset: ["start start", "end start"],
+  });
+  const canvasOpacity = useTransform(scrollYProgress, [0.28, 0.44], [1, 0]);
+  const canvasScale   = useTransform(scrollYProgress, [0.28, 0.44], [1, 0.96]);
+  const canvasY       = useTransform(scrollYProgress, [0.28, 0.44], [0, -20]);
 
   // ── Jaring pengaman: reduced-motion tetap menyalakan sceneReady ──────────
-  // Saat ini efek ini TIDAK PERNAH menyala, karena <Scene/> selalu di-mount
-  // (percabangan reduced-motion hilang di PR #4 — lihat catatan di StaticHero).
-  // Ia sengaja dipasang lebih dulu, sebagai pengaman untuk saat percabangan itu
-  // dikembalikan.
-  //
-  // Kalau kembali TANPA ini, situsnya tidak bisa dipakai sama sekali di bawah
-  // prefers-reduced-motion, dan gejalanya tidak menunjuk ke sini sedikit pun:
-  // LoadingScreen (overlay putih z-[60]) hanya memulai outro saat `sceneReady`
-  // true, dan satu-satunya yang menyalakannya adalah useFrame di Office.tsx —
-  // yang hidup DI DALAM <Scene/>. Tanpa Scene, sceneReady selamanya false,
-  // jaring pengaman 1500 ms di LoadingScreen bahkan tidak pernah terpasang
-  // karena ia sendiri digerbangi sceneReady, dan layar putih menutupi situs
-  // SELAMANYA.
-  //
-  // Pola yang sama dengan bug frameloop (INVARIANTS.md §1): <StaticHero/> lahir
-  // di cabang comfort-redesign, LoadingScreen di cabang loading-screen, dan
-  // keduanya benar sendiri-sendiri. Rusaknya cuma di persimpangan.
-  // Lihat INVARIANTS.md §3.
+  // Harus di atas early return `if (reduced)` di bawah — hooks tidak boleh
+  // dipanggil kondisional. LoadingScreen (overlay putih z-[60]) hanya memulai
+  // outro saat `sceneReady` true, dan satu-satunya yang menyalakannya lewat
+  // jalur normal adalah useFrame di Office.tsx — yang hidup DI DALAM <Scene/>.
+  // Saat reduced-motion, <StaticHero/> dirender sebagai ganti <Scene/>, jadi
+  // tanpa pengaman ini sceneReady selamanya false dan layar putih menutupi
+  // situs SELAMANYA di bawah prefers-reduced-motion. Lihat INVARIANTS.md §3.
   useEffect(() => {
     if (!reduced) return;
     setSceneReady(true);
   }, [reduced, setSceneReady]);
 
-  return (
-    <section ref={sectionRef} id="office" className="relative h-dvh w-full">
-      <div className="absolute inset-0">
-        {/* fallback null: overlay LoadingScreen (di App.tsx) yang menutupi
-            layar selama chunk ini diunduh, jadi fallback di sini cuma akan
-            berkedip di belakangnya tanpa pernah terlihat. */}
+  // Reduced-motion: revert to original h-dvh normal-flow hero, no pin/recede.
+  if (reduced) {
+    return (
+      <section ref={heroTrackRef} id="office" className="relative h-dvh w-full">
+        <div className="absolute inset-0">
+          <StaticHero />
+        </div>
         <Suspense fallback={null}>
-          <Scene />
+          <BilliardHUD />
         </Suspense>
+        <a
+          href="#manifesto"
+          className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2 text-zinc-400 transition-colors hover:text-zinc-200"
+        >
+          <span className="text-xs tracking-widest uppercase">see our work</span>
+          <span className="text-zinc-300">↓</span>
+        </a>
+      </section>
+    );
+  }
+
+  return (
+    // 180dvh scroll track — the extra ~80dvh is the "pin runway" where 3D
+    // stays on screen and content slides up over it.
+    <section ref={heroTrackRef} id="office" className="relative h-[180dvh] w-full">
+      {/* Sticky viewport — stays fixed at top while track scrolls past */}
+      <div ref={stickyRef} className="sticky top-0 h-dvh w-full">
+        {/* Canvas wrapper — CSS transforms only, camera is never touched */}
+        <motion.div
+          className="absolute inset-0"
+          style={{ opacity: canvasOpacity, scale: canvasScale, y: canvasY }}
+        >
+          {/* fallback null: overlay LoadingScreen (di SiteLayout) yang menutupi
+              layar selama chunk ini diunduh, jadi fallback di sini cuma akan
+              berkedip di belakangnya tanpa pernah terlihat. */}
+          <Suspense fallback={null}>
+            <Scene />
+          </Suspense>
+        </motion.div>
+
+        {/* Bar tenaga + kontrol minigame billiard (muncul saat meja diklik) */}
+        <Suspense fallback={null}>
+          <BilliardHUD />
+        </Suspense>
+
+        {/* "see our work" — scroll ke konten di bawah hero */}
+        <a
+          href="#manifesto"
+          className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2 text-zinc-400 transition-colors hover:text-zinc-200"
+        >
+          <span className="text-xs tracking-widest uppercase">see our work</span>
+          <span className="animate-bounce text-zinc-300">↓</span>
+        </a>
       </div>
-
-      {/* Navigasi antar ruangan sekarang lewat waypoint 3D di dalam Canvas
-          (Waypoints.tsx), bukan tombol DOM. Lompat cepat tetap tersedia di
-          dropdown "Office" pada Navbar. */}
-
-      {/* Bar tenaga + kontrol minigame billiard (muncul saat meja diklik) */}
-      <Suspense fallback={null}>
-        <BilliardHUD />
-      </Suspense>
-
-      {/* "see our work" — scroll ke konten di bawah hero */}
-      <a
-        href="#manifesto"
-        className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2 text-zinc-400 transition-colors hover:text-zinc-200"
-      >
-        <span className="text-xs tracking-widest uppercase">see our work</span>
-        <span className={reduced ? "text-zinc-300" : "animate-bounce text-zinc-300"}>↓</span>
-      </a>
     </section>
   );
 }
