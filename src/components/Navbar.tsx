@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useSceneStore, pathFor, type RoomKey } from "@/lib/store/sceneStore";
+import { roomHasContact } from "@/lib/roomContent";
 import { ACTIVE_KEYS } from "@/components/canvas/CameraController";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -20,16 +21,34 @@ export default function Navbar() {
     setOpen(false);
   }
 
-  // #contact hanya di-render di Lounge (lihat roomContent.tsx). Dari room
-  // lain, getElementById("contact") mengembalikan null dan scrollIntoView
-  // di-swallow optional chaining — tombol diam saja. Navigasi ke "/#contact"
-  // dulu; RoomRouteSync yang menangani scroll setelah Lounge mount.
+  /**
+   * "Talk to us" — SCROLL DI TEMPAT, jangan memindahkan ruangan.
+   *
+   * `<Contact />` sekarang ada di Lounge, Meeting, DAN Function (lihat
+   * roomContent.tsx), jadi dari ketiganya tombol ini cukup menggulir ke bawah.
+   * Memindahkan pengunjung ke ruangan lain hanya karena ia menekan tombol
+   * kontak itu mengagetkan — ia kehilangan tempatnya tanpa meminta.
+   *
+   * Versi sebelumnya SELALU melempar ke Lounge dari ruangan mana pun, dengan
+   * alasan yang sempat benar: "#contact cuma ada di Lounge". Alasan itu gugur
+   * begitu Meeting & Function ikut memuat Contact — perilakunya jadi basi
+   * tanpa ada yang berubah di berkas ini.
+   *
+   * Office satu-satunya yang memang tidak punya Contact, dan hanya di situ
+   * berpindah ke Lounge itu benar — tidak ada tujuan lain untuk dituju.
+   * `RoomRouteSync` (Arah 3) yang menggulirkannya setelah Lounge ter-mount.
+   *
+   * ⚠️ Diturunkan dari ROOM_CONTENT, bukan daftar nama ruangan yang ditulis
+   * ulang di sini: begitu Office diberi <Contact />, tombolnya ikut benar
+   * dengan sendirinya tanpa ada yang perlu ingat memperbarui tempat ini.
+   */
   function goToContact() {
-    if (currentRoom !== "Lounge") {
-      navigate("/#contact");
+    setOpen(false);
+    if (roomHasContact(currentRoom)) {
+      document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" });
       return;
     }
-    document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" });
+    navigate("/#contact");
   }
 
   return (
@@ -75,10 +94,14 @@ export default function Navbar() {
         </ul>
 
         <div className="flex items-center gap-2">
-          {/* CTA */}
+          {/* CTA — pakai goToContact(), BUKAN scrollIntoView langsung.
+              Versi sebelumnya memanggil scrollIntoView apa adanya di sini,
+              sehingga tombol desktop & mobile berperilaku berbeda: yang mobile
+              tahu harus pindah dulu kalau ruangannya tak punya Contact, yang
+              ini tidak — dari Office ia diam saja tanpa umpan balik. */}
           <button
             type="button"
-            onClick={() => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })}
+            onClick={goToContact}
             className="group hidden shrink-0 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-200 md:flex"
           >
             Talk to us
@@ -132,7 +155,7 @@ export default function Navbar() {
               <li className="p-2">
                 <button
                   type="button"
-                  onClick={() => { goToContact(); setOpen(false); }}
+                  onClick={goToContact}
                   className="block w-full rounded-full bg-white px-4 py-3 text-center text-sm font-medium text-zinc-900"
                 >
                   Talk to us
