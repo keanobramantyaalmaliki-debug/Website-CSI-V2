@@ -191,6 +191,15 @@ export default function Office() {
                   </div>
                 )}
               >
+                {/* Mobile/tablet only — desktop shows the same photo in the
+                    sticky panel on the right, synced via hover instead of
+                    tap, so it isn't repeated here at lg+. */}
+                <img
+                  src={s.image}
+                  alt=""
+                  loading="lazy"
+                  className="mb-4 aspect-video w-full rounded-lg object-cover lg:hidden"
+                />
                 <p className="text-sm leading-relaxed text-zinc-300">{s.desc}</p>
                 {s.subs && (
                   <ul className="mt-4 flex flex-wrap gap-2">

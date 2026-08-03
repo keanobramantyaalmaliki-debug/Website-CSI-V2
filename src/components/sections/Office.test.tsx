@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import Office from "./Office";
 
@@ -104,5 +105,19 @@ describe("Office", () => {
       img.src.includes("images.unsplash.com"),
     );
     expect(panelImages).toHaveLength(9);
+  });
+
+  it("reveals the service photo inline when a row is expanded (mobile has no hover)", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <Office />
+      </MemoryRouter>,
+    );
+    // Desktop panel already renders all 9 photos; expanding a row adds one
+    // more (the inline mobile copy) on top of that baseline.
+    const before = document.querySelectorAll("img").length;
+    await user.click(screen.getByRole("button", { name: /custom software development/i }));
+    expect(document.querySelectorAll("img").length).toBe(before + 1);
   });
 });
