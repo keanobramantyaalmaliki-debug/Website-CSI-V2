@@ -45,11 +45,22 @@ src/
       revealSweep.ts         sapuan "kantor terbentuk" (§4m)
       screens.ts             konten layar monitor (§6c)
       billiard/              minigame billiard (§6d)
+    loader/                  loading screen isometrik, di-render di Web Worker (§4n)
     sections/                konten halaman
     motion/                  komponen animasi teks
+    ui/WaypointLabel.tsx     label ruangan yang mengekor kursor (§4k)
   lib/store/sceneStore.ts    zustand: ruangan aktif, START_ROOM, state billiard
+  lib/hooks/useCoarsePointer.ts  perangkat sentuh → scene 3D jadi pemandangan (§6)
 public/3d/models/office.glb  model kantor 8,09 MB — ter-track git, jangan dihapus
+INVARIANTS.md                6 invariant lintas-wilayah + kebiasaan merge (§4o)
+scripts/ktx2-convert.sh      konversi KTX2 — JALAN tapi hasilnya ditolak, lihat headernya
 ```
+
+> **Di perangkat sentuh, kantor 3D tidak interaktif** — waypoint & minigame
+> billiard mati, jadi navigasi ruangan bergantung penuh pada **room links di
+> navbar**. Keduanya terikat: kalau room links dihapus, HP jadi jalan buntu.
+> Jangan "memperbaiki"-nya dengan menghidupkan waypoint lagi di sentuh —
+> jalan keluarnya adalah navbar. Duduk perkaranya di INVARIANTS.md §6.
 
 ## Sebelum menyentuh kode 3D
 

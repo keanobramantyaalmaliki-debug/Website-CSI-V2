@@ -141,6 +141,63 @@ gejalanya muncul sebagai "efek X tiba-tiba hilang" berbulan-bulan kemudian.
 
 ---
 
+## §6 🔒 Di perangkat sentuh, kantor 3D adalah pemandangan
+
+**Aturan.** Saat `(pointer: coarse)`, scene 3D tidak menerima interaksi apa pun:
+waypoint tidak di-render, meja billiard tidak bisa dibuka. Perpindahan ruangan
+di perangkat sentuh **sepenuhnya bergantung pada navbar**.
+
+**Penjaga.** `src/lib/hooks/coarsePointer.invariant.test.ts`
+
+**Kenapa.** Waypoint dibangun di atas *hover*: arsir, bingkai, dan label baru
+muncul saat kursor menyentuhnya — dan itulah satu-satunya penanda bahwa bidang
+tak terlihat itu bisa diklik. Jari tidak punya keadaan hover, jadi sentuhan
+pertama langsung memindahkan ruangan tanpa pengunjung sempat tahu apa yang ia
+sentuh. Pemicunya adalah waypoint `Function→Lounge` yang di rasio potret jatuh
+**di luar bingkai** sepenuhnya, tapi masalahnya ternyata lebih luas dari satu
+waypoint.
+
+Patokannya `pointer: coarse`, **bukan lebar layar**: yang menentukan adalah ada
+atau tidaknya hover, bukan sempitnya layar. `max-width` akan meloloskan tablet
+landscape yang masalahnya sama persis.
+
+**Kenapa lintas-wilayah.** Ini seam paling tajam sekarang, dan bentuknya beda
+dari §1–§5 — ia tidak menunggu merge untuk rusak, ia **sudah** bergantung pada
+pekerjaan yang belum ada:
+
+> Saat gerbang ini ditulis (3 Agu), `Navbar.tsx` **belum punya** pemilih
+> ruangan sama sekali — grep `goTo` di seluruh `src/` dan satu-satunya
+> pemanggil adalah `Waypoints.tsx`. `RoomNav` dihapus di `a1a857a`, dan
+> komentar yang menyebut "dropdown ruangan di Navbar" merujuk ke UI yang tidak
+> ada lagi (komentarnya sudah dibetulkan). Artinya untuk sementara pengunjung
+> HP **terkunci di Lounge** — diterima sadar sambil menunggu koordinasi.
+
+**Sudah terjawab di branch `join`:** Nico membangun room links di `Navbar.tsx`
+(`ACTIVE_KEYS.map` → `goRoom`) plus routing berbasis path lewat
+`routes/RoomRouteSync.tsx`. Begitu `join` masuk, kunci itu terbuka.
+
+Yang tetap berlaku: **jangan "memperbaiki" §6 dengan menghidupkan lagi waypoint
+di perangkat sentuh.** Jalan keluarnya adalah navbar, dan sekarang navbar itu
+ada. Kalau suatu saat room links-nya dihapus/diubah, §6 ikut jadi jalan buntu —
+keduanya terikat, dan tidak ada test yang bisa melihat ikatan itu.
+
+**Urutan gerbang yang tidak boleh dibalik.** Tiga berkas menjalankan satu
+keputusan ini, dan dua di antaranya punya kegagalan lebih buruk dari sekadar
+"fitur bocor":
+
+| berkas | perannya | kalau lepas |
+|---|---|---|
+| `canvas/Waypoints.tsx` | berhenti me-render waypoint | sentuhan memindah ruangan tanpa penjelasan |
+| `canvas/Office.tsx` | `onClick` meja tidak membuka minigame | **pemain terkunci** di pandangan atas meja — tombol keluar hidup di HUD yang tidak di-mount |
+| `sections/Hero.tsx` | HUD & label tidak di-mount | chunk terunduh percuma di seluler (kosmetik) |
+
+Gerbang di `Hero.tsx` bersifat kosmetik + hemat bundle; yang benar-benar
+mematikan interaksi adalah dua yang pertama. **Menyembunyikan HUD tanpa
+mematikan pintu masuknya menghasilkan jalan buntu**, bukan sekadar tampilan
+yang kurang rapi.
+
+---
+
 ## Kebiasaan yang menangkap sisanya
 
 Tiga hal ini menangkap lebih banyak daripada tooling mana pun di atas, karena
@@ -159,6 +216,11 @@ kegagalan seperti §1 dan §3 **lolos dari typecheck, lint, dan build**:
 3. **Cabang pendek.** Makin lama sebuah cabang hidup, makin besar peluang ada
    invariant yang berubah di belakangnya tanpa ia tahu.
 
-`bun run test` menjalankan §1 dan §3. Keduanya sudah dibuktikan **merah** di
-kondisi rusak sebelum dipakai — test yang tak pernah terlihat gagal tidak bisa
-dipercaya.
+`bun run test` menjalankan §1, §3, dan §6. Ketiganya sudah dibuktikan **merah**
+di kondisi rusak sebelum dipakai — test yang tak pernah terlihat gagal tidak
+bisa dipercaya.
+
+§6 punya satu kebiasaan tambahan yang tidak dijawab tooling: **buka halamannya
+di device toolbar browser** (atau HP betulan) setelah menyentuh apa pun di
+`canvas/`. Seluruh aturan §6 tidak terlihat sama sekali di desktop — di sanalah
+letak bahayanya.
