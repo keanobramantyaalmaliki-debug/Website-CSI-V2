@@ -22,7 +22,7 @@ import { useSceneStore, pathFor, roomFromPath } from "@/lib/store/sceneStore";
  */
 export default function RoomRouteSync() {
   const navigate = useNavigate();
-  const { pathname, hash } = useLocation();
+  const { pathname, hash, search } = useLocation();
   const goTo       = useSceneStore((s) => s.goTo);
   const currentRoom = useSceneStore((s) => s.currentRoom);
 
@@ -60,12 +60,30 @@ export default function RoomRouteSync() {
   }, [pathname, goTo, currentRoom, hash]);
 
   // Arah 2: currentRoom → pathname (klik waypoint dalam Canvas)
+  //
+  // ⚠️ `search` & `hash` DIBAWA SERTA, jangan kembali ke `pathFor()` telanjang.
+  // pathFor() cuma tahu soal ruangan, jadi menavigasi ke hasilnya apa adanya
+  // MENULIS ULANG seluruh URL — dan membuang query string pengunjung pada
+  // perpindahan ruangan pertama.
+  //
+  // Ketahuan lewat overlay dev ber-query (`?perf=1`) yang menyala di Lounge
+  // lalu lenyap tepat saat ganti ruangan. Gejalanya menyesatkan — tampak
+  // seperti overlay-nya yang rusak, padahal URL-nya yang ditulis ulang di sini.
+  //
+  // Dampaknya jauh lebih luas dari alat dev: `?utm_source=` dari tautan
+  // kampanye ikut hilang diam-diam, jadi kunjungan yang berpindah ruangan
+  // kehilangan atribusinya.
+  //
+  // Perbandingannya tetap `target !== pathname` — MURNI path, tanpa search.
+  // Kalau search ikut dibandingkan, efek ini menyala lagi tiap query berubah
+  // dan menavigasi ke URL yang isinya persis sama (riwayat browser terisi
+  // entri kembar, dan Arah 1 ikut menyala di tengah tween kamera).
   useEffect(() => {
     const target = pathFor(currentRoom);
     if (target !== pathname) {
-      navigate(target, { replace: false });
+      navigate(target + search + hash, { replace: false });
     }
-  }, [currentRoom, navigate, pathname]);
+  }, [currentRoom, navigate, pathname, search, hash]);
 
   // Arah 3: hash → scroll. Dipisah dari efek pathname supaya klik "Talk to us"
   // dari room lain (navigate ke "/#contact") ikut ter-scroll setelah konten
