@@ -106,6 +106,18 @@ interface SceneStore {
   goTo: ((room: RoomKey) => void) | null;
   registerGoTo: (fn: (room: RoomKey) => void) => void;
 
+  /**
+   * Teks label waypoint yang sedang di-hover, atau null kalau tidak ada.
+   *
+   * Jembatan dari dalam Canvas (Waypoints) ke overlay DOM di luar Canvas
+   * (ui/WaypointLabel) — pola yang sama dengan `cueScreen`, tapi TANPA ongkos
+   * per-frame: nilainya cuma berubah saat kursor masuk/keluar waypoint, bukan
+   * tiap frame. Posisi kursornya sendiri TIDAK lewat sini; overlay melacaknya
+   * sendiri lewat ref supaya tidak ada render React per gerakan mouse.
+   */
+  hoveredWaypoint: string | null;
+  setHoveredWaypoint: (label: string | null) => void;
+
   /** Tween kamera ke posisi bebas (bukan preset ruangan) — dipakai minigame
    *  billiard supaya bisa ikut memakai mesin tween 1400ms yang sudah ada.
    *  `up` wajib untuk pandangan tegak lurus ke bawah. */
@@ -168,6 +180,9 @@ export const useSceneStore = create<SceneStore>((set) => ({
   setActiveSection: (id) => set({ activeSection: id }),
   goTo: null,
   registerGoTo: (fn) => set({ goTo: fn }),
+
+  hoveredWaypoint: null,
+  setHoveredWaypoint: (hoveredWaypoint) => set({ hoveredWaypoint }),
 
   goToView: null,
   registerGoToView: (fn) => set({ goToView: fn }),

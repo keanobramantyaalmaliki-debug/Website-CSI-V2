@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Html, shaderMaterial } from "@react-three/drei";
+import { useEffect, useRef, useState } from "react";
+import { shaderMaterial } from "@react-three/drei";
 import { extend, useFrame, type ThreeEvent } from "@react-three/fiber";
 import {
   DoubleSide,
@@ -11,6 +11,7 @@ import {
   type ShaderMaterial,
 } from "three";
 import { useSceneStore, type RoomKey } from "@/lib/store/sceneStore";
+import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import { ACTIVE_KEYS } from "./CameraController";
 
 /**
@@ -303,10 +304,18 @@ export default function Waypoints() {
   const goTo = useSceneStore((s) => s.goTo);
   const heroInView = useSceneStore((s) => s.heroInView);
   const billiardActive = useSceneStore((s) => s.billiardActive);
+  const coarse = useCoarsePointer();
 
   // Disembunyikan saat main billiard atau saat hero sudah tergulir keluar —
   // sama seperti perilaku RoomNav sebelumnya.
-  if (!heroInView || billiardActive) return null;
+  //
+  // Di perangkat SENTUH waypoint dimatikan seluruhnya (3 Agu) — lihat
+  // INVARIANTS.md §6. Waypoint dibangun di atas hover: arsir, bingkai, dan
+  // label baru muncul saat kursor menyentuhnya, dan itulah satu-satunya
+  // penanda bahwa bidang tak terlihat ini bisa diklik. Jari tidak punya
+  // keadaan hover — sentuhan pertama LANGSUNG memindahkan ruangan, jadi yang
+  // dialami pengunjung HP adalah kamera melompat tanpa sebab yang terlihat.
+  if (!heroInView || billiardActive || coarse) return null;
 
   return (
     <>
@@ -338,6 +347,10 @@ function Waypoint({
 }) {
   const [hovered, setHovered] = useState(false);
   const mesh = useRef<Mesh>(null);
+  const setHoveredWaypoint = useSceneStore((s) => s.setHoveredWaypoint);
+
+  /** Teks label waypoint ini — dipakai sebagai identitasnya di store. */
+  const text = def.label ?? LABELS[def.to];
 
   /**
    * Kekuatan hover 0..1 yang dianimasikan sendiri, BUKAN state React.
@@ -376,10 +389,18 @@ function Waypoint({
   const enter = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     setHovered(true);
+    setHoveredWaypoint(text);
     document.body.style.cursor = "pointer";
   };
   const leave = () => {
     setHovered(false);
+    // ⚠️ Kosongkan HANYA kalau label yang tampil memang milik waypoint ini.
+    // Saat kursor berpindah langsung dari waypoint A ke B yang bersinggungan,
+    // R3F mengirim enter(B) SEBELUM leave(A); tanpa penjaga ini leave(A) akan
+    // menghapus label B yang baru saja menyala dan labelnya berkedip hilang.
+    if (useSceneStore.getState().hoveredWaypoint === text) {
+      setHoveredWaypoint(null);
+    }
     document.body.style.cursor = "";
   };
   const click = (e: ThreeEvent<MouseEvent>) => {
@@ -387,6 +408,19 @@ function Waypoint({
     leave();
     onSelect();
   };
+
+  // Jaring pengaman saat unmount: waypoint dilepas begitu ruangan berganti
+  // (daftar di-filter oleh `currentRoom`) atau saat minigame billiard dibuka.
+  // Kalau itu terjadi selagi kursor masih di atasnya, `leave` TIDAK PERNAH
+  // dipanggil — labelnya akan menggantung di layar selamanya.
+  useEffect(() => {
+    return () => {
+      if (useSceneStore.getState().hoveredWaypoint === text) {
+        useSceneStore.getState().setHoveredWaypoint(null);
+      }
+      document.body.style.cursor = "";
+    };
+  }, [text]);
 
   // Bidang lantai perlu direbahkan −90° pada sumbu X: planeGeometry lahir
   // tegak menghadap +Z, sedangkan penanda lantai harus menghadap ke atas.
@@ -433,39 +467,12 @@ function Waypoint({
           Yang meredupkannya adalah `k` di useFrame. */}
       <Frame w={def.size[0]} h={def.size[1]} k={k} />
 
-      {/* Label diangkat pada sumbu +Z LOKAL, yang setelah bidangnya
-          direbahkan menunjuk LURUS KE ATAS — jadi teksnya melayang sedikit
-          di atas lantai, bukan tenggelam di dalamnya. Untuk waypoint
-          dinding, +Z lokal memang keluar dari dinding, jadi rumus yang
-          sama tetap benar. Naik 0,35 m di lantai supaya tidak tertimpa
-          pantulan garis LED tepat di bawahnya.
-
-          Html tetap dipasang; yang dianimasikan CSS-nya. Transisi ditangani
-          CSS transition, bukan useFrame: elemen DOM tidak perlu ikut ritme
-          render Three.js, dan transisi CSS lebih murah. */}
-      <Html center distanceFactor={6} position={[0, 0, def.floor ? 0.35 : 0.02]}>
-        <div
-          style={{
-            // pointerEvents none: kalau label ikut menangkap kursor, dia
-            // menutupi bidang di bawahnya dan hover berkedip-kedip.
-            pointerEvents: "none",
-            whiteSpace: "nowrap",
-            fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-            fontSize: 14,
-            letterSpacing: "0.06em",
-            color: "#ffffff",
-            textShadow: "0 1px 3px rgba(0,0,0,0.9)",
-            userSelect: "none",
-            opacity: hovered ? 0.85 : 0,
-            // Naik tipis saat muncul — gerakan kecil yang membuatnya terbaca
-            // sebagai "menyala", bukan sekadar berganti nilai opacity.
-            transform: `translateY(${hovered ? 0 : 4}px)`,
-            transition: "opacity 180ms ease-out, transform 180ms ease-out",
-          }}
-        >
-          [{def.label ?? LABELS[def.to]}]
-        </div>
-      </Html>
+      {/* Labelnya TIDAK di sini lagi.
+          Dulu di titik ini ada <Html> drei yang menempelkan nama ruangan di
+          tengah bidang. Sejak 31 Jul label mengekor kursor, jadi ia elemen
+          screen-space dan pindah ke overlay DOM di luar Canvas:
+          src/components/ui/WaypointLabel.tsx. Yang tersisa di sini hanya
+          pelaporan hover ke store lewat `enter`/`leave` di atas. */}
     </group>
   );
 }
