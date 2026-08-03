@@ -8,10 +8,15 @@ import { ROOM_CONTENT } from "@/lib/roomContent";
  * ruangan di-mount lalu yang tidak aktif disembunyikan `hidden` — dan itu
  * DICABUT (3 Agu). Sejarahnya penting supaya tidak diulang:
  *
- * Pola "mount semua" dipasang untuk menghindari remount TIGA konteks WebGL
- * (CsiParticleField, ManifestoField, DeploymentsField) tiap ganti ruangan.
- * Alasannya sah saat itu: keempat ruangan masih placeholder satu paragraf,
- * jadi menahan semuanya praktis gratis.
+ * Pola "mount semua" dipasang untuk menghindari remount konteks WebGL tiap
+ * ganti ruangan. Alasannya sah saat itu: keempat ruangan masih placeholder
+ * satu paragraf, jadi menahan semuanya praktis gratis.
+ *
+ * ⚠️ Komentar ini dulu menyebut TIGA konteks (CsiParticleField, ManifestoField,
+ * DeploymentsField). Diperiksa ulang 3 Agu 2026: `DeploymentsField` sudah tidak
+ * diimpor siapa pun, dan dua sisanya cuma ada di section LOUNGE — jadi
+ * remount-nya terjadi saat masuk/keluar Lounge, bukan di setiap perpindahan.
+ * Angka "tiga" itu ikut membesarkan ongkos yang dikira ada di sini.
  *
  * Asumsi itu gugur beberapa jam kemudian, ketika Office/Meeting/Function diisi
  * konten penuh. Dua akibatnya nyata dan keduanya terlaporkan:
