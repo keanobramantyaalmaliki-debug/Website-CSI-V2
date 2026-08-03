@@ -9,7 +9,7 @@ import SceneEnvironment from "./SceneEnvironment";
 import CharacterLights from "./CharacterLights";
 import CameraController, { VIEWS } from "./CameraController";
 import { START_ROOM } from "@/lib/store/sceneStore";
-import BilliardGame from "./billiard/BilliardGame";
+import BilliardLazy from "./billiard/BilliardLazy";
 import Waypoints from "./Waypoints";
 import ContactShadowsRig from "./ContactShadowsRig";
 
@@ -64,16 +64,28 @@ const START_POS = VIEWS[START_ROOM].pos.toArray() as [number, number, number];
  * dengan menyebut berkas yang belum patuh. Selama sapuan reveal & minigame
  * billiard masih ada, hemat GPU-nya kecil dan risikonya besar.
  *
- * Catatan: dua Canvas kecil di motion/ (DeploymentsField, ManifestoField)
- * TETAP memakai `demand` dan itu benar — keduanya menggerakkan animasinya
- * sendiri lewat invalidate() dan tidak berbagi kontrak dengan scene ini.
+ * Catatan: Canvas kecil di motion/ (CsiParticleField, ManifestoField) TETAP
+ * memakai `demand` dan itu benar — keduanya menggerakkan animasinya sendiri
+ * lewat invalidate() dan tidak berbagi kontrak dengan scene ini.
+ * (DeploymentsField juga begitu, tapi per 3 Agu 2026 ia sudah tidak diimpor
+ * siapa pun — jangan cari jejaknya di halaman.)
  */
 export default function Scene() {
   return (
     <Canvas
       camera={{ position: START_POS, fov: 60, near: 0.05, far: 120 }}
       dpr={[1, 1.5]}
-      gl={{ antialias: true, powerPreference: "high-performance" }}
+      // antialias: false — dan ini BUKAN bagian dari uji MSAA di bawah.
+      // Terukur terpisah: dengan multisampling 8 tetap menyala, mengubah flag
+      // ini true→false TIDAK mengubah frame time sama sekali (33,3 ms
+      // dua-duanya). Sebabnya ia memang tak pernah terpakai: flag ini berlaku
+      // pada default framebuffer, sedangkan EffectComposer merender ke buffer
+      // offscreen-nya sendiri dan melewati framebuffer itu. Jadi MSAA
+      // dialokasikan dua kali, satu menganggur.
+      //
+      // Konsekuensinya: menyalakan kembali flag ini tidak akan mengembalikan
+      // tepi yang mulus — yang menentukan hanya `multisampling` di bawah.
+      gl={{ antialias: false, powerPreference: "high-performance" }}
       onCreated={({ gl }) => {
         gl.toneMapping = ACESFilmicToneMapping;
         gl.toneMappingExposure = 1.0;
@@ -123,13 +135,49 @@ export default function Scene() {
             layar (pojok & celah rapat), sedangkan ini menjatuhkan bayangan
             ARAH pada lantai dari benda di atasnya — kolong meja, bawah kursi. */}
         <ContactShadowsRig />
-        <BilliardGame />
+        {/* Minigame billiard — kodenya + ~1 MB GLB baru diunduh saat pengunjung
+            sampai di Lounge (tempat mejanya), dan baru di-mount saat mejanya
+            benar-benar diklik. Di perangkat sentuh keduanya tidak pernah
+            terjadi. Lihat BilliardLazy.tsx. */}
+        <BilliardLazy />
         {/* Waypoint harus di dalam Suspense: posisinya mengacu ke ruangan yang
             baru ada setelah GLB dimuat. */}
         <Waypoints />
       </Suspense>
 
-      <EffectComposer>
+      {/* ── multisampling: 0 — DIPUTUSKAN, MSAA dimatikan (3 Agu 2026) ───────
+          Keano melihat sendiri hasilnya berdampingan dan menerima tepi yang
+          lebih bergerigi sebagai harga yang pantas untuk 2× frame rate.
+          Bukan asumsi "60 FPS pasti lebih baik" — penilaian tampilan yang
+          diambil setelah melihat.
+
+          Ditulis EKSPLISIT, bukan dibiarkan kosong. Tanpa props, library
+          memakai default `multisampling: 8` (diverifikasi di node_modules:
+          `multisampling:_=8`) — setelan termahal di berkas ini, dan dulu tidak
+          disebut sama sekali di komentar mana pun.
+
+          Terukur di M2, dpr 2 (2,63 Mpx — mendekati layar Retina):
+            multisampling 8 → p50 33,3 ms · 30 FPS
+            multisampling 4 → p50 33,3 ms · 30 FPS   ← TIDAK menolong sama sekali
+            multisampling 0 → p50 16,7 ms · 60 FPS   ← DIPAKAI SEKARANG
+          Di dpr 1 ketiganya sama-sama 16,7 ms (mentok vsync), jadi mengukur di
+          jendela kecil akan menyimpulkan "tidak ada bedanya" — SALAH. Ongkos
+          MSAA itu per piksel; ia baru terlihat di kerapatan piksel Retina.
+
+          Bahwa 4 sama mahalnya dengan 8 berarti pilihannya BINER: ada MSAA atau
+          tidak. Tidak ada jalan tengah yang bisa ditawar.
+
+          ⚠️ ONGKOSNYA TERLIHAT, dan itu DITERIMA SADAR — bukan terlewat:
+          18,84% piksel berubah; tepi plafon diagonal & pilar jadi bertangga,
+          dan cincin lampu gantung pecah jadi putus-putus alih-alih lingkaran
+          mulus. Jadi kalau nanti ada yang melaporkan "tepinya kasar", itu
+          konsekuensi yang sudah ditimbang, BUKAN bug yang perlu dikejar.
+
+          Kalau suatu saat mau tepi mulus lagi tanpa membayar MSAA, jalannya
+          SMAA (antialias berbasis post-processing, satu pass di composer ini) —
+          belum diukur. JANGAN kembali ke `multisampling={4}`: terukur sama
+          mahalnya dengan 8, membayar penuh tanpa dapat apa-apa. */}
+      <EffectComposer multisampling={0}>
         {/* ── AO runtime: pojok & celah jadi gelap ────────────────────────────
             Ini yang mengisi lubang terbesar lightmap. Bake cuma mencakup
             objek ≥8 m² (Documentations.md §4g) = 39 dari 233 material; 189
