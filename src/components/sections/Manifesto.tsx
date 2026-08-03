@@ -74,7 +74,14 @@ export default function Manifesto() {
     <section
       id="manifesto"
       ref={sectionRef}
-      className="relative overflow-hidden px-6 pb-24 pt-40 sm:px-10 sm:pb-32 sm:pt-35"
+      /* pt-10 di HP (dulu pt-40 = 160px di semua ukuran).
+         Manifesto adalah section pertama setelah hero, dan sejak hero
+         dipendekkan jadi 70dvh ia yang mengisi 30% sisanya — eyebrow + baris
+         pertamanya harus MENGINTIP di bawah canvas, itu seluruh maksud
+         perubahan ini (pola basement.studio). Dengan pt-40 padding kosongnya
+         sendirian menghabiskan jatah itu dan tak ada yang terlihat.
+         Desktop tidak berubah: `sm:pt-35` tetap. */
+      className="relative overflow-hidden px-6 pb-24 pt-10 sm:px-10 sm:pb-32 sm:pt-35"
     >
       {/* Particle field — absolute behind text */}
       <ManifestoField progress={scrollYProgress} />

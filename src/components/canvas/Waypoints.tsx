@@ -11,6 +11,7 @@ import {
   type ShaderMaterial,
 } from "three";
 import { useSceneStore, type RoomKey } from "@/lib/store/sceneStore";
+import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import { ACTIVE_KEYS } from "./CameraController";
 
 /**
@@ -303,10 +304,18 @@ export default function Waypoints() {
   const goTo = useSceneStore((s) => s.goTo);
   const heroInView = useSceneStore((s) => s.heroInView);
   const billiardActive = useSceneStore((s) => s.billiardActive);
+  const coarse = useCoarsePointer();
 
   // Disembunyikan saat main billiard atau saat hero sudah tergulir keluar —
   // sama seperti perilaku RoomNav sebelumnya.
-  if (!heroInView || billiardActive) return null;
+  //
+  // Di perangkat SENTUH waypoint dimatikan seluruhnya (3 Agu) — lihat
+  // INVARIANTS.md §6. Waypoint dibangun di atas hover: arsir, bingkai, dan
+  // label baru muncul saat kursor menyentuhnya, dan itulah satu-satunya
+  // penanda bahwa bidang tak terlihat ini bisa diklik. Jari tidak punya
+  // keadaan hover — sentuhan pertama LANGSUNG memindahkan ruangan, jadi yang
+  // dialami pengunjung HP adalah kamera melompat tanpa sebab yang terlihat.
+  if (!heroInView || billiardActive || coarse) return null;
 
   return (
     <>

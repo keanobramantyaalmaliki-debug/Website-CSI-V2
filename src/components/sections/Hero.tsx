@@ -3,6 +3,7 @@
 import { lazy, Suspense, useEffect, useRef } from "react";
 import { useReducedMotion } from "motion/react";
 import { useSceneStore } from "@/lib/store/sceneStore";
+import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 
 const Scene = lazy(() => import("@/components/canvas/Scene"));
 const BilliardHUD = lazy(() => import("@/components/ui/BilliardHUD"));
@@ -52,6 +53,7 @@ export default function Hero() {
   const setHeroInView = useSceneStore((s) => s.setHeroInView);
   const setSceneReady = useSceneStore((s) => s.setSceneReady);
   const reduced = useReducedMotion();
+  const coarse = useCoarsePointer();
 
   useEffect(() => {
     const el = sectionRef.current;
@@ -89,7 +91,46 @@ export default function Hero() {
   }, [reduced, setSceneReady]);
 
   return (
-    <section ref={sectionRef} id="office" className="relative h-dvh w-full">
+    /**
+     * Tinggi hero: 70% layar di HP, penuh mulai `md`.
+     *
+     * Dua masalah diselesaikan sekaligus oleh angka yang sama.
+     *
+     * 1. KONTEN TERLIHAT. Mengikuti basement.studio: canvas mereka ±71,5% dari
+     *    tinggi layar di potret, sisanya headline. Hero setinggi layar penuh
+     *    tidak memberi petunjuk bahwa ada halaman di bawahnya.
+     *
+     * 2. FRAMING 3D MELEBAR — ini yang tidak kelihatan sebagai soal layout.
+     *    `fov: 60` di Scene.tsx itu fov VERTIKAL; yang terlihat kiri-kanan
+     *    diturunkan dari aspect. Makin jangkung viewport-nya, makin sempit
+     *    pandangannya. Terukur di iPhone 15 (393×852):
+     *
+     *      100dvh → hFOV 29,8°   ← sebelumnya; sepertiga desktop, terasa tele
+     *       70dvh → hFOV 41,7°   ← +40% lebih lebar
+     *      (desktop 16:9 → 91,5° sebagai pembanding)
+     *
+     *    Itulah kenapa kantor terasa "kepotong kanan-kirinya" di HP. Menurunkan
+     *    tinggi hero MELEBARKAN framing-nya, bukan mengecilkan pemandangan.
+     *
+     * ⚠️ Patokannya breakpoint LEBAR (`md:`), sengaja BEDA dari gerbang
+     * interaksi di INVARIANTS.md §6 yang memakai `pointer: coarse`. Bukan
+     * kelalaian: yang ini soal BENTUK VIEWPORT (aspect rasio jangkung), yang
+     * itu soal ADA-TIDAKNYA HOVER. Dua pertanyaan berbeda, dua patokan berbeda.
+     * Bonusnya, layout tetap benar sebelum JS jalan — tidak ada lompatan tinggi
+     * saat hidrasi.
+     *
+     * ⚠️ Angka 70 ini BERPASANGAN dengan jarak di HeroHandoff & Manifesto.
+     * Sisa 30% (256px di iPhone 15) harus cukup untuk eyebrow + baris pertama
+     * Manifesto. Dulu `HeroHandoff h-40` + `Manifesto pt-40` = 320px sendirian
+     * sudah melebihi jatah itu, jadi keduanya ikut dirapatkan di mobile.
+     * Menaikkan salah satunya tanpa menengok yang lain = Manifesto tidak
+     * mengintip sama sekali dan seluruh perubahan ini sia-sia.
+     */
+    <section
+      ref={sectionRef}
+      id="office"
+      className="relative h-[70dvh] w-full md:h-dvh"
+    >
       <div className="absolute inset-0">
         {/* fallback null: overlay LoadingScreen (di App.tsx) yang menutupi
             layar selama chunk ini diunduh, jadi fallback di sini cuma akan
@@ -99,27 +140,51 @@ export default function Hero() {
         </Suspense>
       </div>
 
-      {/* Navigasi antar ruangan sekarang lewat waypoint 3D di dalam Canvas
-          (Waypoints.tsx), bukan tombol DOM. Lompat cepat tetap tersedia di
-          dropdown "Office" pada Navbar. */}
+      {/* Navigasi antar ruangan lewat waypoint 3D di dalam Canvas
+          (Waypoints.tsx), bukan tombol DOM — dan waypoint itu MATI di
+          perangkat sentuh (INVARIANTS.md §6), tempat navbar seharusnya
+          mengambil alih. Baris ini dulu menyebut dropdown "Office" di Navbar
+          sebagai lompat cepat; dropdown itu tidak ada lagi sejak a1a857a. */}
 
-      {/* Bar tenaga + kontrol minigame billiard (muncul saat meja diklik) */}
-      <Suspense fallback={null}>
-        <BilliardHUD />
-      </Suspense>
+      {/* Dua overlay di bawah ini melayani interaksi yang TIDAK ADA di
+          perangkat sentuh (INVARIANTS.md §6), jadi chunk-nya pun tak perlu
+          diunduh di sana: keduanya lazy, dan `coarse` mencegah import-nya
+          berjalan sama sekali. Ini bonus nyata di jaringan seluler.
 
-      {/* Label waypoint yang mengekor kursor. Di LUAR Canvas karena posisinya
-          ditentukan kursor (screen-space), bukan titik di dunia 3D — lihat
-          ui/WaypointLabel.tsx. Sengaja bersebelahan dengan BilliardHUD: sama-
-          sama overlay z-30, tingkat yang sama di INVARIANTS.md §2. */}
-      <Suspense fallback={null}>
-        <WaypointLabel />
-      </Suspense>
+          Gerbangnya di sini bersifat KOSMETIK — yang benar-benar mematikan
+          interaksinya ada di Waypoints.tsx & Office.tsx (onClick meja). Urutan
+          itu disengaja: HUD yang disembunyikan tanpa mematikan pintu masuknya
+          akan mengunci pemain di pandangan atas meja tanpa tombol keluar. */}
+      {!coarse && (
+        <>
+          {/* Bar tenaga + kontrol minigame billiard (muncul saat meja diklik) */}
+          <Suspense fallback={null}>
+            <BilliardHUD />
+          </Suspense>
 
-      {/* "see our work" — scroll ke konten di bawah hero */}
+          {/* Label waypoint yang mengekor kursor. Di LUAR Canvas karena
+              posisinya ditentukan kursor (screen-space), bukan titik di dunia
+              3D — lihat ui/WaypointLabel.tsx. Sengaja bersebelahan dengan
+              BilliardHUD: sama-sama overlay z-30, tingkat yang sama di
+              INVARIANTS.md §2. */}
+          <Suspense fallback={null}>
+            <WaypointLabel />
+          </Suspense>
+        </>
+      )}
+
+      {/* "see our work" — petunjuk scroll, HANYA di layar lebar.
+          Di HP hero cuma 70dvh sehingga Manifesto sudah mengintip sendiri di
+          bawah canvas; petunjuk "ada halaman di bawah" jadi mubazir, dan ia
+          memakan ruang yang justru dibutuhkan konten. Di desktop hero tetap
+          setinggi layar penuh, jadi di sana petunjuk ini masih bekerja.
+
+          `hidden md:flex`, mengikuti breakpoint yang sama dengan tinggi hero di
+          atas — keduanya menjawab pertanyaan yang sama (viewport ini jangkung
+          atau tidak), jadi keduanya harus ikut patokan yang sama. */}
       <a
         href="#manifesto"
-        className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2 text-zinc-400 transition-colors hover:text-zinc-200"
+        className="absolute bottom-6 left-1/2 z-10 hidden -translate-x-1/2 flex-col items-center gap-2 text-zinc-400 transition-colors hover:text-zinc-200 md:flex"
       >
         <span className="text-xs tracking-widest uppercase">see our work</span>
         <span className={reduced ? "text-zinc-300" : "animate-bounce text-zinc-300"}>↓</span>

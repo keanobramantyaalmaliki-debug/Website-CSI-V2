@@ -6,6 +6,7 @@ import { useThree, useFrame, type ThreeEvent } from "@react-three/fiber";
 import type * as THREE from "three";
 import { Mesh, SkinnedMesh, MeshStandardMaterial, Light, LoopRepeat } from "three";
 import { useSceneStore } from "@/lib/store/sceneStore";
+import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import { billiardView } from "./CameraController";
 import { prepareLampFade } from "./billiard/lamps";
 import { prepareRevealSweep } from "./revealSweep";
@@ -465,8 +466,14 @@ export default function Office() {
 
   const size = useThree((s) => s.size);
   const setTableRotated = useSceneStore((s) => s.setTableRotated);
+  const coarse = useCoarsePointer();
 
   const onClick = (e: ThreeEvent<MouseEvent>) => {
+    // Di perangkat sentuh minigame dimatikan bersama waypoint (INVARIANTS.md
+    // §6): kantor tampil sebagai pemandangan saja. Dijaga DI SINI, bukan cuma
+    // dengan menyembunyikan HUD — HUD yang hilang tanpa gerbang ini akan
+    // menyisakan pemain terkunci di pandangan atas meja tanpa tombol keluar.
+    if (coarse) return;
     if (billiardActive) return;
     let o: THREE.Object3D | null = e.object;
     while (o) {

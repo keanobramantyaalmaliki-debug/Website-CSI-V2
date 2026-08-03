@@ -243,9 +243,15 @@ export default function CameraController() {
   /**
    * TIDAK ADA navigasi berbasis gerakan atau tombol di sini — dengan sengaja.
    *
-   * Perpindahan ruangan hanya lewat DUA jalur: klik waypoint 3D
-   * (Waypoints.tsx) dan dropdown ruangan di Navbar. Scroll wheel, swipe layar,
-   * dan panah keyboard semuanya dihapus 30 Jul.
+   * Perpindahan ruangan hanya lewat klik waypoint 3D (Waypoints.tsx). Scroll
+   * wheel, swipe layar, dan panah keyboard semuanya dihapus 30 Jul.
+   *
+   * ⚠️ Baris ini dulu menyebut "dan dropdown ruangan di Navbar" sebagai jalur
+   * kedua. Itu TIDAK BENAR sejak `a1a857a` menghapus RoomNav: grep `goTo` di
+   * seluruh src/ dan satu-satunya pemanggil adalah Waypoints.tsx. Jalur kedua
+   * itu perlu DIBANGUN, dan §6 INVARIANTS.md sekarang bergantung padanya —
+   * sejak waypoint dimatikan di perangkat sentuh (3 Agu), navbar adalah
+   * satu-satunya jalan berpindah ruangan di HP.
    *
    * Alasannya: scroll & swipe punya arti ganda — di atas canvas ia memindah
    * ruangan, di luar canvas ia menggulir halaman, dan pemain tidak bisa

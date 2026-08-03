@@ -32,7 +32,14 @@ export default function HeroHandoff() {
     <div
       ref={ref}
       aria-hidden="true"
-      className="relative h-40 w-full overflow-hidden sm:h-52"
+      /* h-16 di HP (dulu h-40 di semua ukuran).
+         Sejak hero dipendekkan jadi 70dvh (lihat Hero.tsx), sisa layar cuma
+         ±256px di iPhone 15 — dan seam ini sendirian memakan 160px, menyisakan
+         terlalu sedikit untuk baris pertama Manifesto muncul. Karena ia murni
+         dekoratif (`aria-hidden`, cuma gradien), ia yang mengalah.
+         Desktop tidak berubah: `sm:h-52` tetap, dan di sana hero masih setinggi
+         layar penuh sehingga seam ini punya ruangnya sendiri. */
+      className="relative h-16 w-full overflow-hidden sm:h-52"
       style={{
         background:
           "linear-gradient(to bottom, #0a0a0c 0%, #0f1116 45%, #14161b 100%)",
