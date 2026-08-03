@@ -27,12 +27,34 @@ export default function RoomRouteSync() {
   const currentRoom = useSceneStore((s) => s.currentRoom);
 
   // Arah 1: pathname → room (back/forward, deep-link React Router)
+  //
+  // ⚠️ `key === currentRoom` WAJIB dijaga di sini, dan bukan cuma optimasi.
+  //
+  // Klik waypoint memicu URUTAN BERANTAI: goTo() menyetel currentRoom → Arah 2
+  // memanggil navigate() → pathname berubah → efek INI menyala kembali, semua
+  // itu terjadi SELAGI tween kamera 1400 ms masih berjalan.
+  //
+  // Panggilan goTo()-nya sendiri memang tertahan (`if (animating.current)
+  // return` di CameraController), tapi `window.scrollTo` di bawah TIDAK ikut
+  // tertahan — ia dulu tetap dieksekusi di tengah animasi, memaksa layout +
+  // repaint sementara useFrame menggerakkan kamera 60×/detik. Gejalanya:
+  // perpindahan ruangan terasa TERSENDAT, dan penyebabnya tidak menunjuk ke
+  // sini sama sekali.
+  //
+  // Menjaga di `currentRoom` memisahkan dua hal yang tampak sama dari pathname
+  // saja: "URL menyusul kamera yang sudah bergerak" (lewati — tak ada yang
+  // perlu dikerjakan) vs "pengguna menekan Back / membuka tautan" (jalankan).
+  //
+  // JANGAN menggantinya dengan menaruh scrollTo di dalam guard `animating` di
+  // CameraController: guard itu tidak bisa membedakan keduanya juga, dan ini
+  // urusan DOM yang memang wilayahnya di sini.
   useEffect(() => {
     const key = roomFromPath(pathname);
     if (!key || !goTo) return;
+    if (key === currentRoom) return;
     goTo(key);
     window.scrollTo(0, 0);
-  }, [pathname, goTo]);
+  }, [pathname, goTo, currentRoom]);
 
   // Arah 2: currentRoom → pathname (klik waypoint dalam Canvas)
   useEffect(() => {
