@@ -74,14 +74,17 @@ export default function Manifesto() {
     <section
       id="manifesto"
       ref={sectionRef}
-      /* pt-10 di HP (dulu pt-40 = 160px di semua ukuran).
-         Manifesto adalah section pertama setelah hero, dan sejak hero
-         dipendekkan jadi 70dvh ia yang mengisi 30% sisanya — eyebrow + baris
-         pertamanya harus MENGINTIP di bawah canvas, itu seluruh maksud
-         perubahan ini (pola basement.studio). Dengan pt-40 padding kosongnya
-         sendirian menghabiskan jatah itu dan tak ada yang terlihat.
-         Desktop tidak berubah: `sm:pt-35` tetap. */
-      className="relative overflow-hidden px-6 pb-24 pt-10 sm:px-10 sm:pb-32 sm:pt-35"
+      /* `bg-background` WAJIB (dari `join`): Manifesto meluncur DI ATAS canvas
+         yang memudar, jadi ia harus buram — tanpa itu kantor 3D terlihat
+         menembus teks.
+
+         `pt-16` (64px, dulu `pt-40` = 160px) juga menopang hal lain: di HP
+         hero cuma setinggi 70dvh (lihat Hero.tsx), dan eyebrow + baris pertama
+         section ini harus MENGINTIP di sisa 30% layar. Padding besar sendirian
+         menghabiskan jatah itu. Ketiganya terikat — Hero 70dvh, `-mt` di
+         HeroHandoff, dan padding ini; mengubah satu tanpa menengok dua lainnya
+         membuat Manifesto tidak mengintip sama sekali. */
+      className="relative overflow-hidden bg-background px-6 pb-24 pt-16 sm:px-10 sm:pb-32 sm:pt-20"
     >
       {/* Particle field — absolute behind text */}
       <ManifestoField progress={scrollYProgress} />

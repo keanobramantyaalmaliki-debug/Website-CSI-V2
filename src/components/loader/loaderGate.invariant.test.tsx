@@ -152,4 +152,53 @@ describe("jalur reduced-motion tetap menyalakan sceneReady", () => {
         "menutupi situs SELAMANYA di jalur itu. Lihat INVARIANTS.md §3.",
     ).toBe(true);
   });
+
+  /**
+   * Pemantiknya harus TERJANGKAU dari cabang reduced, bukan sekadar ADA.
+   *
+   * Test di atas cuma bertanya "kata `setSceneReady` muncul di berkas?" — dan
+   * batas itu tertembus sungguhan (3 Agu, branch `join`): pemantiknya ditulis
+   * dengan benar tapi ditaruh SESUDAH `if (reduced) return`, sehingga di jalur
+   * reduced ia tidak pernah dieksekusi. Hurufnya terpenuhi, maksudnya tidak.
+   * Seluruh 62 test hijau; yang menangkap cuma `eslint`, dengan pesan yang
+   * tidak menyebut loader sama sekali:
+   *
+   *   error  React Hook "useEffect" is called conditionally.
+   *          Did you accidentally call a React Hook after an early return?
+   *
+   * Aturan React sudah melarang hook setelah early return, jadi pemantik yang
+   * benar SELALU berada di atasnya. Itu yang diperiksa di sini: posisi, bukan
+   * keberadaan. Sekaligus jadi alasan mengapa `bun run lint` bukan pilihan
+   * bagi berkas ini.
+   */
+  it("pemantik sceneReady berada SEBELUM early return reduced-motion", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { dirname, join } = await import("node:path");
+    const { fileURLToPath } = await import("node:url");
+
+    const hero = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "../sections/Hero.tsx"),
+      "utf8",
+    );
+    const code = hero.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+
+    const trigger = code.indexOf("setSceneReady(true)");
+    // `if (reduced) return` — spasi bebas, dan boleh diikuti apa pun.
+    const earlyReturn = code.search(/if\s*\(\s*reduced\s*\)\s*\{?\s*return/);
+
+    // Tak ada cabang early-return reduced → tidak ada yang perlu dijaga.
+    if (earlyReturn === -1 || trigger === -1) return;
+
+    expect(
+      trigger < earlyReturn,
+      "Pemantik `setSceneReady(true)` di Hero.tsx berada SESUDAH " +
+        "`if (reduced) return`, jadi ia TIDAK PERNAH JALAN di jalur " +
+        "reduced-motion — justru satu-satunya jalur yang membutuhkannya.\n\n" +
+        "Akibatnya overlay loader menutupi situs SELAMANYA bagi siapa pun yang " +
+        "menyalakan \"Reduce motion\" di OS-nya. Hook setelah early return juga " +
+        "melanggar aturan React (`react-hooks/rules-of-hooks`).\n\n" +
+        "Pindahkan useEffect pemantiknya ke ATAS early return, bersama hook " +
+        "lainnya. Lihat INVARIANTS.md §3.\n",
+    ).toBe(true);
+  });
 });

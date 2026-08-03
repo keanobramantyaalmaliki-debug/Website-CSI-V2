@@ -1,7 +1,7 @@
 "use client";
 
 import { lazy, Suspense, useEffect, useRef } from "react";
-import { useReducedMotion } from "motion/react";
+import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { useSceneStore } from "@/lib/store/sceneStore";
 import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 
@@ -10,22 +10,12 @@ const BilliardHUD = lazy(() => import("@/components/ui/BilliardHUD"));
 const WaypointLabel = lazy(() => import("@/components/ui/WaypointLabel"));
 
 /**
- * HERO — 3D office tour, satu viewport penuh.
- * 3D "selesai" di sini: scroll ke bawah = keluar dari 3D masuk konten web normal.
+ * HERO — tur kantor 3D.
  *
- * Comfort/perf: under prefers-reduced-motion we skip the heavy WebGL scene
- * entirely and show a calm static hero. Saves the GPU/bundle cost for users who
- * asked for less motion, and keeps the page smooth on low-end devices.
- *
- * ⚠️ SAAT INI TIDAK TERPAKAI. Percabangan `reduced ? <StaticHero/> : <Scene/>`
- * hilang dari render saat resolusi konflik di PR #4 (73bdca6), jadi <Scene/>
- * kini selalu di-mount dan komponen ini jadi kode mati. Sengaja TIDAK dihapus:
- * ini fitur comfort yang disengaja, dan menghapusnya diam-diam sama saja
- * mengulang cara ia hilang. Keputusan mengembalikan atau membuangnya ada di
- * pemiliknya.
- *
- * Kalau dikembalikan, pemantik `setSceneReady` di bawah WAJIB ikut — tanpa itu
- * overlay loader menutupi situs selamanya di jalur ini. Lihat INVARIANTS.md §3.
+ * Comfort/perf: di bawah `prefers-reduced-motion` seluruh scene WebGL
+ * dilewati dan diganti hero statis yang tenang. Menghemat ongkos GPU/bundle
+ * bagi yang memang meminta lebih sedikit gerak, sekaligus menjaga halaman
+ * tetap mulus di perangkat lemah.
  */
 function StaticHero() {
   return (
@@ -49,14 +39,32 @@ function StaticHero() {
 }
 
 export default function Hero() {
-  const sectionRef = useRef<HTMLElement>(null);
+  const heroTrackRef = useRef<HTMLElement>(null);
+  const stickyRef = useRef<HTMLDivElement>(null);
   const setHeroInView = useSceneStore((s) => s.setHeroInView);
   const setSceneReady = useSceneStore((s) => s.setSceneReady);
   const reduced = useReducedMotion();
   const coarse = useCoarsePointer();
 
+  /**
+   * ⚠️ SEMUA HOOK WAJIB DI ATAS `if (reduced) return` DI BAWAH.
+   *
+   * Ini bukan gaya penulisan, melainkan aturan React: hook harus dipanggil
+   * dalam urutan yang sama di setiap render. Hook yang berada SETELAH early
+   * return tidak akan pernah jalan di cabang itu — dan justru cabang itulah
+   * yang paling butuh salah satunya (lihat pemantik `sceneReady` di bawah).
+   *
+   * Pernah kejadian sungguhan: pemantik `setSceneReady` sempat berada di bawah
+   * early return, sehingga jalur reduced-motion tidak pernah menyalakannya dan
+   * overlay loader menutupi situs SELAMANYA. `eslint react-hooks/rules-of-hooks`
+   * menangkapnya; `bun run test` tidak. Jalankan lint sebelum commit.
+   */
+
+  // heroInView diikat ke viewport sticky (div h-dvh di dalam), BUKAN ke track
+  // 180dvh-nya. Transparansi Navbar & unmount Waypoints bergantung pada kapan
+  // 3D benar-benar terlihat di layar, bukan kapan track-nya tersentuh.
   useEffect(() => {
-    const el = sectionRef.current;
+    const el = reduced ? heroTrackRef.current : stickyRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
       ([entry]) => setHeroInView(entry.isIntersecting),
@@ -64,131 +72,158 @@ export default function Hero() {
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [setHeroInView]);
+  }, [setHeroInView, reduced]);
 
-  // ── Jaring pengaman: reduced-motion tetap menyalakan sceneReady ──────────
-  // Saat ini efek ini TIDAK PERNAH menyala, karena <Scene/> selalu di-mount
-  // (percabangan reduced-motion hilang di PR #4 — lihat catatan di StaticHero).
-  // Ia sengaja dipasang lebih dulu, sebagai pengaman untuk saat percabangan itu
-  // dikembalikan.
-  //
-  // Kalau kembali TANPA ini, situsnya tidak bisa dipakai sama sekali di bawah
-  // prefers-reduced-motion, dan gejalanya tidak menunjuk ke sini sedikit pun:
-  // LoadingScreen (overlay putih z-[60]) hanya memulai outro saat `sceneReady`
-  // true, dan satu-satunya yang menyalakannya adalah useFrame di Office.tsx —
-  // yang hidup DI DALAM <Scene/>. Tanpa Scene, sceneReady selamanya false,
-  // jaring pengaman 1500 ms di LoadingScreen bahkan tidak pernah terpasang
-  // karena ia sendiri digerbangi sceneReady, dan layar putih menutupi situs
-  // SELAMANYA.
-  //
-  // Pola yang sama dengan bug frameloop (INVARIANTS.md §1): <StaticHero/> lahir
-  // di cabang comfort-redesign, LoadingScreen di cabang loading-screen, dan
-  // keduanya benar sendiri-sendiri. Rusaknya cuma di persimpangan.
-  // Lihat INVARIANTS.md §3.
+  /**
+   * Jaring pengaman: jalur reduced-motion menyalakan `sceneReady` sendiri.
+   *
+   * Tanpa ini situsnya TIDAK BISA DIPAKAI SAMA SEKALI di bawah
+   * prefers-reduced-motion, dan gejalanya tidak menunjuk ke sini sedikit pun:
+   * LoadingScreen (overlay z-[60]) baru memulai outro saat `sceneReady` true,
+   * dan satu-satunya yang menyalakannya adalah useFrame di Office.tsx — yang
+   * hidup DI DALAM <Scene/>. Tanpa Scene, `sceneReady` selamanya false, jaring
+   * pengaman 1500 ms di LoadingScreen bahkan tidak pernah terpasang karena ia
+   * sendiri digerbangi `sceneReady`, dan layar menutupi situs SELAMANYA.
+   *
+   * Lihat INVARIANTS.md §3.
+   */
   useEffect(() => {
     if (!reduced) return;
     setSceneReady(true);
   }, [reduced, setSceneReady]);
 
+  // Canvas surut: opacity 1→0, scale 1→0.96, dan sedikit naik sepanjang 40%
+  // terakhir track. Murni transform CSS di pembungkusnya — kamera tidak
+  // disentuh, dan transform tidak membangunkan frameloop R3F.
+  const { scrollYProgress } = useScroll({
+    target: heroTrackRef,
+    offset: ["start start", "end start"],
+  });
+  const canvasOpacity = useTransform(scrollYProgress, [0.6, 1.0], [1, 0]);
+  const canvasScale   = useTransform(scrollYProgress, [0.6, 1.0], [1, 0.96]);
+  const canvasY       = useTransform(scrollYProgress, [0.6, 1.0], [0, -20]);
+
+  // Reduced-motion: hero normal-flow setinggi layar, tanpa pin/surut.
+  if (reduced) {
+    return (
+      <section ref={heroTrackRef} id="office" className="relative h-dvh w-full">
+        <div className="absolute inset-0">
+          <StaticHero />
+        </div>
+        <a
+          href="#manifesto"
+          className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2 text-zinc-400 transition-colors hover:text-zinc-200"
+        >
+          <span className="text-xs tracking-widest uppercase">see our work</span>
+          <span className="text-zinc-300">↓</span>
+        </a>
+      </section>
+    );
+  }
+
   return (
     /**
-     * Tinggi hero: 70% layar di HP, penuh mulai `md`.
+     * Track scroll: 180dvh di desktop, 150dvh di HP. Kelebihan di atas 100dvh
+     * adalah "landasan pin" — bagian tempat 3D tetap di layar sementara konten
+     * meluncur menutupinya.
      *
-     * Dua masalah diselesaikan sekaligus oleh angka yang sama.
+     * ⚠️ Tinggi VIEWPORT sticky-nya berbeda per perangkat: `h-[70dvh]` di HP,
+     * `h-dvh` mulai `md`. Dua alasan yang kebetulan dijawab angka yang sama:
      *
      * 1. KONTEN TERLIHAT. Mengikuti basement.studio: canvas mereka ±71,5% dari
-     *    tinggi layar di potret, sisanya headline. Hero setinggi layar penuh
+     *    tinggi layar di potret, sisanya konten. Hero setinggi layar penuh
      *    tidak memberi petunjuk bahwa ada halaman di bawahnya.
      *
-     * 2. FRAMING 3D MELEBAR — ini yang tidak kelihatan sebagai soal layout.
-     *    `fov: 60` di Scene.tsx itu fov VERTIKAL; yang terlihat kiri-kanan
+     * 2. FRAMING 3D MELEBAR — ini yang tidak terlihat sebagai soal layout.
+     *    `fov: 60` di Scene.tsx itu fov VERTIKAL; yang tampak kiri-kanan
      *    diturunkan dari aspect. Makin jangkung viewport-nya, makin sempit
      *    pandangannya. Terukur di iPhone 15 (393×852):
      *
-     *      100dvh → hFOV 29,8°   ← sebelumnya; sepertiga desktop, terasa tele
+     *      100dvh → hFOV 29,8°   ← sepertiga desktop, terasa seperti lensa tele
      *       70dvh → hFOV 41,7°   ← +40% lebih lebar
      *      (desktop 16:9 → 91,5° sebagai pembanding)
      *
-     *    Itulah kenapa kantor terasa "kepotong kanan-kirinya" di HP. Menurunkan
-     *    tinggi hero MELEBARKAN framing-nya, bukan mengecilkan pemandangan.
+     *    Itulah sebab kantor terasa "kepotong kanan-kirinya" di HP. Memendekkan
+     *    hero MELEBARKAN framing-nya, bukan mengecilkan pemandangan.
      *
      * ⚠️ Patokannya breakpoint LEBAR (`md:`), sengaja BEDA dari gerbang
      * interaksi di INVARIANTS.md §6 yang memakai `pointer: coarse`. Bukan
-     * kelalaian: yang ini soal BENTUK VIEWPORT (aspect rasio jangkung), yang
-     * itu soal ADA-TIDAKNYA HOVER. Dua pertanyaan berbeda, dua patokan berbeda.
-     * Bonusnya, layout tetap benar sebelum JS jalan — tidak ada lompatan tinggi
-     * saat hidrasi.
+     * kelalaian: yang ini soal BENTUK VIEWPORT, yang itu soal ADA-TIDAKNYA
+     * HOVER. Dua pertanyaan berbeda, dua patokan berbeda. Bonusnya, layout
+     * tetap benar sebelum JS jalan — tidak ada lompatan tinggi saat hidrasi.
      *
-     * ⚠️ Angka 70 ini BERPASANGAN dengan jarak di HeroHandoff & Manifesto.
-     * Sisa 30% (256px di iPhone 15) harus cukup untuk eyebrow + baris pertama
-     * Manifesto. Dulu `HeroHandoff h-40` + `Manifesto pt-40` = 320px sendirian
-     * sudah melebihi jatah itu, jadi keduanya ikut dirapatkan di mobile.
-     * Menaikkan salah satunya tanpa menengok yang lain = Manifesto tidak
-     * mengintip sama sekali dan seluruh perubahan ini sia-sia.
+     * ⚠️ Angka ini BERPASANGAN dengan `-mt-32` di HeroHandoff dan `pt-16` di
+     * Manifesto. Sisa layar di HP harus cukup untuk eyebrow + baris pertama
+     * Manifesto; mengubah satu tanpa menengok dua lainnya membuat konten tidak
+     * mengintip sama sekali dan seluruh susunan ini kehilangan maksudnya.
      */
     <section
-      ref={sectionRef}
+      ref={heroTrackRef}
       id="office"
-      className="relative h-[70dvh] w-full md:h-dvh"
+      className="relative h-[150dvh] w-full md:h-[180dvh]"
     >
-      <div className="absolute inset-0">
-        {/* fallback null: overlay LoadingScreen (di App.tsx) yang menutupi
-            layar selama chunk ini diunduh, jadi fallback di sini cuma akan
-            berkedip di belakangnya tanpa pernah terlihat. */}
-        <Suspense fallback={null}>
-          <Scene />
-        </Suspense>
-      </div>
-
-      {/* Navigasi antar ruangan lewat waypoint 3D di dalam Canvas
-          (Waypoints.tsx), bukan tombol DOM — dan waypoint itu MATI di
-          perangkat sentuh (INVARIANTS.md §6), tempat navbar seharusnya
-          mengambil alih. Baris ini dulu menyebut dropdown "Office" di Navbar
-          sebagai lompat cepat; dropdown itu tidak ada lagi sejak a1a857a. */}
-
-      {/* Dua overlay di bawah ini melayani interaksi yang TIDAK ADA di
-          perangkat sentuh (INVARIANTS.md §6), jadi chunk-nya pun tak perlu
-          diunduh di sana: keduanya lazy, dan `coarse` mencegah import-nya
-          berjalan sama sekali. Ini bonus nyata di jaringan seluler.
-
-          Gerbangnya di sini bersifat KOSMETIK — yang benar-benar mematikan
-          interaksinya ada di Waypoints.tsx & Office.tsx (onClick meja). Urutan
-          itu disengaja: HUD yang disembunyikan tanpa mematikan pintu masuknya
-          akan mengunci pemain di pandangan atas meja tanpa tombol keluar. */}
-      {!coarse && (
-        <>
-          {/* Bar tenaga + kontrol minigame billiard (muncul saat meja diklik) */}
-          <Suspense fallback={null}>
-            <BilliardHUD />
-          </Suspense>
-
-          {/* Label waypoint yang mengekor kursor. Di LUAR Canvas karena
-              posisinya ditentukan kursor (screen-space), bukan titik di dunia
-              3D — lihat ui/WaypointLabel.tsx. Sengaja bersebelahan dengan
-              BilliardHUD: sama-sama overlay z-30, tingkat yang sama di
-              INVARIANTS.md §2. */}
-          <Suspense fallback={null}>
-            <WaypointLabel />
-          </Suspense>
-        </>
-      )}
-
-      {/* "see our work" — petunjuk scroll, HANYA di layar lebar.
-          Di HP hero cuma 70dvh sehingga Manifesto sudah mengintip sendiri di
-          bawah canvas; petunjuk "ada halaman di bawah" jadi mubazir, dan ia
-          memakan ruang yang justru dibutuhkan konten. Di desktop hero tetap
-          setinggi layar penuh, jadi di sana petunjuk ini masih bekerja.
-
-          `hidden md:flex`, mengikuti breakpoint yang sama dengan tinggi hero di
-          atas — keduanya menjawab pertanyaan yang sama (viewport ini jangkung
-          atau tidak), jadi keduanya harus ikut patokan yang sama. */}
-      <a
-        href="#manifesto"
-        className="absolute bottom-6 left-1/2 z-10 hidden -translate-x-1/2 flex-col items-center gap-2 text-zinc-400 transition-colors hover:text-zinc-200 md:flex"
+      {/* Viewport sticky — diam di atas selagi track melintas */}
+      <div
+        ref={stickyRef}
+        className="sticky top-0 h-[70dvh] w-full md:h-dvh"
       >
-        <span className="text-xs tracking-widest uppercase">see our work</span>
-        <span className={reduced ? "text-zinc-300" : "animate-bounce text-zinc-300"}>↓</span>
-      </a>
+        {/* Pembungkus canvas — hanya transform CSS, kamera tak pernah disentuh */}
+        <motion.div
+          className="absolute inset-0"
+          style={{ opacity: canvasOpacity, scale: canvasScale, y: canvasY }}
+        >
+          {/* fallback null: overlay LoadingScreen (di SiteLayout) yang menutupi
+              layar selama chunk ini diunduh, jadi fallback di sini cuma akan
+              berkedip di belakangnya tanpa pernah terlihat. */}
+          <Suspense fallback={null}>
+            <Scene />
+          </Suspense>
+        </motion.div>
+
+        {/* Dua overlay di bawah ini melayani interaksi yang TIDAK ADA di
+            perangkat sentuh (INVARIANTS.md §6), jadi chunk-nya pun tak perlu
+            diunduh di sana: keduanya lazy, dan `coarse` mencegah import-nya
+            berjalan sama sekali. Bonus nyata di jaringan seluler.
+
+            Gerbang di sini KOSMETIK — yang benar-benar mematikan interaksinya
+            ada di Waypoints.tsx & Office.tsx (onClick meja). Urutan itu
+            disengaja: HUD yang disembunyikan tanpa mematikan pintu masuknya
+            akan mengunci pemain di pandangan atas meja tanpa tombol keluar. */}
+        {!coarse && (
+          <>
+            {/* Bar tenaga + kontrol minigame billiard (muncul saat meja diklik) */}
+            <Suspense fallback={null}>
+              <BilliardHUD />
+            </Suspense>
+
+            {/* Label waypoint yang mengekor kursor. Di LUAR Canvas karena
+                posisinya ditentukan kursor (screen-space), bukan titik di dunia
+                3D — lihat ui/WaypointLabel.tsx. Sengaja bersebelahan dengan
+                BilliardHUD: sama-sama overlay z-30, tingkat yang sama di
+                INVARIANTS.md §2. */}
+            <Suspense fallback={null}>
+              <WaypointLabel />
+            </Suspense>
+          </>
+        )}
+
+        {/* "see our work" — petunjuk scroll, HANYA di layar lebar.
+            Di HP hero cuma 70dvh sehingga konten sudah mengintip sendiri di
+            bawah canvas; petunjuk "ada halaman di bawah" jadi mubazir, dan ia
+            memakan ruang yang justru dibutuhkan konten itu. Di desktop hero
+            setinggi layar penuh, jadi di sana petunjuk ini masih bekerja.
+
+            `hidden md:flex` mengikuti breakpoint yang sama dengan tinggi hero
+            di atas — keduanya menjawab pertanyaan yang sama (viewport ini
+            jangkung atau tidak), jadi keduanya harus ikut patokan yang sama. */}
+        <a
+          href="#manifesto"
+          className="absolute bottom-6 left-1/2 z-10 hidden -translate-x-1/2 flex-col items-center gap-2 text-zinc-400 transition-colors hover:text-zinc-200 md:flex"
+        >
+          <span className="text-xs tracking-widest uppercase">see our work</span>
+          <span className="animate-bounce text-zinc-300">↓</span>
+        </a>
+      </div>
     </section>
   );
 }
