@@ -63,3 +63,15 @@ export const ROOM_CONTENT: Record<RoomKey, ReactNode> = {
   // Pantry disabled — tidak diberi route, tidak perlu konten.
   Pantry: null,
 };
+
+/**
+ * Ruangan yang punya konten untuk dirender. Pantry dibuang karena `null`.
+ *
+ * Dipakai RoomContent untuk me-mount SEMUA ruangan sekaligus lalu
+ * menyembunyikan yang tidak aktif — lihat alasannya di sana (ringkasnya:
+ * bongkar-pasang subtree ini menghancurkan 3 konteks WebGL tiap ganti ruangan,
+ * tepat saat kamera sedang tween).
+ */
+export const ROOM_KEYS_WITH_CONTENT = (
+  Object.keys(ROOM_CONTENT) as RoomKey[]
+).filter((k) => ROOM_CONTENT[k] !== null);
