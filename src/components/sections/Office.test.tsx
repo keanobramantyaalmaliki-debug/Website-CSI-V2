@@ -93,13 +93,16 @@ describe("Office", () => {
     expect(screen.getByText(/sectors served/i)).toBeInTheDocument();
   });
 
-  it("renders one icon panel per service, synced to the accordion list", () => {
+  it("renders one image panel per service, synced to the accordion list", () => {
     render(
       <MemoryRouter>
         <Office />
       </MemoryRouter>,
     );
-    // 9 service rows + 9 icon panels (one per service, crossfaded by hover state)
-    expect(document.querySelectorAll("svg").length).toBeGreaterThanOrEqual(9);
+    // 9 services = 9 crossfaded photo panels (one visible at a time via hover state)
+    const panelImages = [...document.querySelectorAll("img")].filter((img) =>
+      img.src.includes("images.unsplash.com"),
+    );
+    expect(panelImages).toHaveLength(9);
   });
 });

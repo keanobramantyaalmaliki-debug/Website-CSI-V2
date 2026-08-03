@@ -3,19 +3,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
-import {
-  Code2,
-  Globe,
-  Smartphone,
-  Brain,
-  Building2,
-  Network,
-  Palette,
-  Cloud,
-  LifeBuoy,
-  Award,
-  type LucideIcon,
-} from "lucide-react";
+import { Award } from "lucide-react";
 import LineMask from "@/components/motion/LineMask";
 import Disclosure from "@/components/motion/Disclosure";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
@@ -27,62 +15,67 @@ const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 /**
  * Office deep-dive services — moved from Services.tsx (former Lounge
  * accordion) since Office is the single place service detail now lives.
+ *
+ * `image` — stock photo from Unsplash keyed to each service's meaning (code
+ * for custom software, a server room for system integration, etc). Same
+ * hotlink pattern as DeploymentRow/CaseStudySpotlight (picsum.photos there,
+ * Unsplash here) — no local asset to manage, sized via URL query params.
  */
-const SERVICES: { num: string; title: string; desc: string; icon: LucideIcon; subs?: string[] }[] = [
+const SERVICES: { num: string; title: string; desc: string; image: string; subs?: string[] }[] = [
   {
     num: "01",
     title: "Custom Software Development",
     desc: "Tailor-made software designed around your unique business processes, helping you improve productivity, streamline operations, and support long-term growth.",
-    icon: Code2,
+    image: "https://images.unsplash.com/photo-1607799279861-4dd421887fb3?w=640&q=80&auto=format&fit=crop",
   },
   {
     num: "02",
     title: "Web Application Development",
     desc: "Modern, responsive, and secure web applications built with performance, scalability, and user experience in mind.",
-    icon: Globe,
+    image: "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=640&q=80&auto=format&fit=crop",
   },
   {
     num: "03",
     title: "Mobile App Development",
     desc: "Native and cross-platform mobile applications for Android and iOS that deliver seamless user experiences.",
-    icon: Smartphone,
+    image: "https://images.unsplash.com/photo-1480694313141-fce5e697ee25?w=640&q=80&auto=format&fit=crop",
   },
   {
     num: "04",
     title: "Artificial Intelligence Solutions",
     desc: "Leverage AI to automate workflows, enhance customer engagement, analyze data, and unlock new business opportunities through intelligent digital solutions.",
-    icon: Brain,
+    image: "https://images.unsplash.com/photo-1694903110330-cc64b7e1d21d?w=640&q=80&auto=format&fit=crop",
     subs: ["Jenna.ai", "Knowledge Assistants", "Process Automation", "AI-Powered Analytics", "Custom AI Integration"],
   },
   {
     num: "05",
     title: "Enterprise Solutions",
     desc: "Develop enterprise-grade platforms that integrate departments, automate operations, and improve decision-making across your organization.",
-    icon: Building2,
+    image: "https://images.unsplash.com/photo-1758518729685-f88df7890776?w=640&q=80&auto=format&fit=crop",
   },
   {
     num: "06",
     title: "System Integration",
     desc: "Connect existing applications, third-party services, and business systems through secure and reliable API integrations.",
-    icon: Network,
+    image: "https://images.unsplash.com/photo-1614508569207-3295ac89d75f?w=640&q=80&auto=format&fit=crop",
   },
   {
     num: "07",
     title: "UI/UX Design",
     desc: "Create intuitive and engaging digital experiences through user-centered interface and experience design.",
-    icon: Palette,
+    image: "https://images.unsplash.com/photo-1576153192396-180ecef2a715?w=640&q=80&auto=format&fit=crop",
   },
   {
     num: "08",
     title: "Cloud & DevOps",
     desc: "Deploy, monitor, and optimize applications with modern cloud infrastructure and DevOps best practices for maximum reliability and scalability.",
-    icon: Cloud,
+    image: "https://images.unsplash.com/photo-1690627931320-16ac56eb2588?w=640&q=80&auto=format&fit=crop",
   },
   {
     num: "09",
     title: "Maintenance & Technical Support",
     desc: "Ensure your applications remain secure, updated, and optimized with continuous support and proactive maintenance.",
-    icon: LifeBuoy,
+    image: "https://images.unsplash.com/photo-1553775282-20af80779df7?w=640&q=80&auto=format&fit=crop",
   },
 ];
 
@@ -219,7 +212,14 @@ export default function Office() {
         <StickyScroll
           activeIndex={activeService}
           panels={SERVICES.map((s) => ({
-            icon: <s.icon className="size-10 text-accent" strokeWidth={1.5} />,
+            content: (
+              <img
+                src={s.image}
+                alt=""
+                loading="lazy"
+                className="h-full w-full object-cover"
+              />
+            ),
           }))}
         />
       </div>

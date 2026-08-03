@@ -8,11 +8,11 @@ const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
  * Adapted from Aceternity UI's StickyScroll — the original tracks an
  * internal scroll container and swaps a gradient background. This version
  * is controlled from the outside (activeIndex prop) so it can sync with an
- * accordion's hover/open state instead of its own scroll, and swaps an icon
- * instead of a gradient panel.
+ * accordion's hover/open state instead of its own scroll, and crossfades
+ * arbitrary content (e.g. a photo) instead of a gradient panel.
  *
- * Purely decorative (aria-hidden): the service title this icon represents is
- * already announced by its row in the accordion list, so no label is
+ * Purely decorative (aria-hidden): the service title each panel represents
+ * is already announced by its row in the accordion list, so no label is
  * rendered here — avoids a duplicate, screen-reader-redundant echo.
  */
 export function StickyScroll({
@@ -21,13 +21,13 @@ export function StickyScroll({
   className,
 }: {
   activeIndex: number;
-  panels: { icon: React.ReactNode }[];
+  panels: { content: React.ReactNode }[];
   className?: string;
 }) {
   return (
     <div
       className={cn(
-        "sticky top-32 hidden h-72 items-center justify-center overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] lg:flex",
+        "sticky top-32 hidden h-72 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] lg:block",
         className,
       )}
       aria-hidden="true"
@@ -35,15 +35,15 @@ export function StickyScroll({
       {panels.map((panel, index) => (
         <motion.div
           key={index}
-          className="absolute flex items-center justify-center"
+          className="absolute inset-0"
           initial={false}
           animate={{
             opacity: activeIndex === index ? 1 : 0,
-            scale: activeIndex === index ? 1 : 0.94,
+            scale: activeIndex === index ? 1 : 1.03,
           }}
           transition={{ duration: 0.35, ease: EASE }}
         >
-          {panel.icon}
+          {panel.content}
         </motion.div>
       ))}
     </div>
