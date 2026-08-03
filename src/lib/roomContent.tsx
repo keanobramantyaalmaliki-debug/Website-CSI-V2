@@ -6,7 +6,6 @@ import CsiHero from "@/components/sections/CsiHero";
 import Manifesto from "@/components/sections/Manifesto";
 import TrustedBy from "@/components/sections/TrustedBy";
 import Deployments from "@/components/sections/Deployments";
-import Services from "@/components/sections/Services";
 import LivingArchitecture from "@/components/sections/LivingArchitecture";
 import Process from "@/components/sections/Process";
 import Industries from "@/components/sections/Industries";
@@ -24,14 +23,15 @@ import TheCrew from "@/components/sections/TheCrew";
 /**
  * Konten yang ditampilkan di bawah hero untuk tiap room.
  *
- * Office: services deep-dive (Office.tsx) — reorganisasi tematik dari 9-item
- *   accordion Services di Lounge, bukan duplikat.
+ * Office: satu-satunya tempat detail layanan (9-item accordion, pindahan
+ *   dari Services.tsx yang dulu ada di Lounge — dihapus supaya tidak ada
+ *   dua sumber layanan yang tumpang tindih).
  *
  * Page structure (decided 2026-07-07, see reference/ROADMAP.md B5; updated
- * 2026-08-03 to move Careers → Function and drop FeaturedProjects, see
- * diskusi/bedah-content-lounge — FeaturedProjects duplicated CaseGrid's
- * Citizen Service Portal / Field Operations Suite entries in Meeting):
- * Hero → CsiHero → Manifesto → TrustedBy → Deployments → Services
+ * 2026-08-03: Careers → Function, FeaturedProjects dropped (duplicated
+ * CaseGrid in Meeting), Services dropped from Lounge and merged into
+ * Office as the single services deep-dive, see diskusi/bedah-content-lounge):
+ * Hero → CsiHero → Manifesto → TrustedBy → Deployments
  *      → LivingArchitecture → Process → Industries → Vision → Contact
  */
 export const ROOM_CONTENT: Record<RoomKey, ReactNode> = {
@@ -41,7 +41,6 @@ export const ROOM_CONTENT: Record<RoomKey, ReactNode> = {
       <Manifesto />
       <TrustedBy />
       <Deployments />
-      <Services />
       <LivingArchitecture />
       <Process />
       <Industries />

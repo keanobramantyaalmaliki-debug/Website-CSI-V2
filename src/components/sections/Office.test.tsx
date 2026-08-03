@@ -32,28 +32,26 @@ describe("Office", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders exactly 5 pillar cards", () => {
+  it("renders exactly 9 service accordion items", () => {
     render(
       <MemoryRouter>
         <Office />
       </MemoryRouter>,
     );
     const list = screen.getByRole("list");
-    expect(list.children).toHaveLength(5);
+    expect(list.children).toHaveLength(9);
   });
 
-  it("renders pillar titles distinct from the Lounge accordion's raw item titles", () => {
+  it("renders the service titles moved from the former Lounge accordion", () => {
     render(
       <MemoryRouter>
         <Office />
       </MemoryRouter>,
     );
-    // Pillar titles are thematic groupings, not the original 9 SERVICES titles.
-    expect(screen.getByText("Custom Software & Platforms")).toBeInTheDocument();
-    expect(screen.getByText("Web & Mobile Experiences")).toBeInTheDocument();
-    expect(screen.getByText("Systems & Cloud Infrastructure")).toBeInTheDocument();
-    expect(screen.getByText("Ongoing Partnership")).toBeInTheDocument();
-    expect(screen.queryByText("Custom Software Development")).not.toBeInTheDocument();
+    expect(screen.getByText("Custom Software Development")).toBeInTheDocument();
+    expect(screen.getByText("Artificial Intelligence Solutions")).toBeInTheDocument();
+    expect(screen.getByText("Cloud & DevOps")).toBeInTheDocument();
+    expect(screen.getByText("Maintenance & Technical Support")).toBeInTheDocument();
   });
 
   it("links the CTA back to Contact in the Lounge", () => {
