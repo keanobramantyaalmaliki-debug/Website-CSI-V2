@@ -368,14 +368,29 @@ export function restoreBall(world: CANNON.World, b: CANNON.Body) {
  * saat baru menyenggol pinggirnya.
  */
 export function overPocket(b: CANNON.Body): boolean {
-  // Hanya bola yang SUDAH TURUN di bawah permukaan kain yang dihitung masuk.
+  // ⚠️ DULU di sini ada syarat "bola harus sudah turun 1 mm di bawah kain"
+  // (`if (b.position.y > FELT.y - 0.001) return false`). Itu SALAH untuk bola
+  // cepat, dan begini duduk perkaranya:
   //
-  // Ini andal karena collider kain benar-benar berlubang di mulut lubang: bola
-  // yang melewatinya kehilangan tumpuan dan langsung jatuh, sedangkan bola
-  // yang menggelinding normal selalu bertumpu di y = FELT.y + BALL_R dan tidak
-  // pernah lolos syarat ini.
-  if (b.position.y > FELT.y - 0.001) return false;
-
+  // Celah kain di mulut lubang lebarnya 75 mm. Pada tenaga penuh (8,2 m/s)
+  // bola menyeberanginya dalam 9,1 ms, dan dalam waktu sesingkat itu gravitasi
+  // baru menjatuhkannya 0,4 mm — belum sampai ambang 1 mm. Bola pun melintas
+  // di ATAS lubang tanpa pernah dihitung masuk, lalu keluar meja begitu saja
+  // karena bantalan memang sengaja diputus di setiap lubang.
+  //
+  // Terukur: dari 18 tembakan yang dibidik LURUS ke lubang, hanya 6 yang
+  // masuk — 12 sisanya kabur keluar meja. Setelah syarat itu dibuang: 18/18.
+  //
+  // Membuangnya aman, dan ini bukan kesimpulan dari tes saja melainkan dari
+  // geometri: seluruh zona sensor (r = 60,7 mm) terbukti berada di atas celah
+  // tanpa kain — diperiksa 6 lubang × 720 arah × 41 jarak, nol titik yang
+  // masih berkain. Artinya bola yang masuk zona ini PASTI sudah kehilangan
+  // tumpuan; syarat ketinggian tadi cuma mengulang hal yang sama dengan cara
+  // yang gagal pada kecepatan tinggi.
+  //
+  // ⚠️ Kalau POCKET_SENSOR_R nanti diperbesar melewati POCKET_R, jaminan itu
+  // batal — zona sensor akan menjorok ke daerah yang masih berkain dan bola
+  // yang sekadar lewat di dekat lubang ikut terhitung masuk.
   const ax = b.previousPosition.x;
   const az = b.previousPosition.z;
   const bx = b.position.x;

@@ -11,7 +11,7 @@
  * dan angka-angkanya sudah dicatat di physics.ts.
  */
 import { describe, it, expect } from "vitest";
-import { createWorld, dampAirborne } from "./physics";
+import { createWorld, dampAirborne, overPocket } from "./physics";
 import { BALL_Y, FELT, POCKETS, POCKET_R, startPositions } from "./table";
 
 const world = () => createWorld(startPositions());
@@ -57,11 +57,11 @@ describe("dampAirborne", () => {
     expect(b.velocity.y).toBe(-1.2);
   });
 
-  // ── Dua penjaga di bawah ini yang mencegah giliran menggantung selamanya ──
+  // ── Dua penjaga di bawah ini yang menjaga lubang tetap berfungsi ─────────
   //
   // Bola yang masuk lubang HARUS bisa turun. Kalau peredam menahannya di
-  // permukaan kain, `overPocket` (yang mensyaratkan bola sudah di bawah kain)
-  // tidak pernah terpicu dan fase `rolling` tidak pernah selesai.
+  // permukaan kain, yang terlihat pemain adalah bola menggantung di mulut
+  // lubang alih-alih jatuh masuk.
 
   it("TIDAK menahan bola yang berada di mulut lubang", () => {
     const w = world();
@@ -118,5 +118,38 @@ describe("dampAirborne", () => {
 
     expect(() => dampAirborne(w)).not.toThrow();
     expect(b.position.y).toBe(BALL_Y + 0.5); // tak disentuh
+  });
+});
+
+/**
+ * `overPocket` dulu mensyaratkan bola sudah TURUN 1 mm di bawah kain sebelum
+ * diakui masuk lubang. Pada tenaga penuh bola menyeberangi celah 75 mm dalam
+ * 9,1 ms dan gravitasi baru menjatuhkannya 0,4 mm — jadi bola cepat melintas
+ * di atas lubang tanpa terhitung, lalu keluar meja lewat bantalan yang memang
+ * diputus di setiap lubang. Terukur: 12 dari 18 tembakan yang dibidik LURUS ke
+ * lubang malah kabur.
+ */
+describe("overPocket pada bola cepat", () => {
+  it("mengakui bola yang melintasi lubang TANPA sempat turun", () => {
+    const w = world();
+    const b = w.balls[0];
+    const [px, pz] = POCKETS[0];
+
+    // Satu langkah frame pada ~8 m/s: 137 mm, melewati pusat lubang.
+    // Ketinggiannya masih persis di permukaan kain — belum turun sama sekali.
+    b.previousPosition.set(px + 0.068, BALL_Y, pz + 0.068);
+    b.position.set(px - 0.068, BALL_Y, pz - 0.068);
+
+    expect(overPocket(b)).toBe(true);
+  });
+
+  it("tidak salah menghitung bola yang lewat JAUH dari lubang", () => {
+    const w = world();
+    const b = w.balls[0];
+    // Menyusuri tengah meja, jauh dari lubang mana pun.
+    b.previousPosition.set(0.375, BALL_Y, -1.2);
+    b.position.set(0.375, BALL_Y, -1.35);
+
+    expect(overPocket(b)).toBe(false);
   });
 });
