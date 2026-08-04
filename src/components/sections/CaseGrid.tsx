@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
@@ -10,8 +10,11 @@ const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 const AUTO_ADVANCE_MS = 5000;
 
 // Fan interpolation range — offset 0 (front) to offset (total - 1) (furthest back).
-const BIGGEST_WIDTH = 726;
-const SMALLEST_WIDTH = 280;
+// These are the *design-reference* sizes (tuned at a ~1062px-wide container);
+// the slider scales them to the measured container width at render time so
+// the fan fills the section instead of leaving empty space on wide screens.
+const BASE_BIGGEST_WIDTH = 726;
+const BASE_SMALLEST_WIDTH = 280;
 const MAX_OPACITY = 1;
 const MIN_OPACITY = 0.35;
 const MAX_BRIGHTNESS = 1;
@@ -21,7 +24,24 @@ const MIN_BRIGHTNESS = 0.5;
 // move them, so position is derived from the target right edge (see below)
 // rather than a naive `offset * step`, or the fan collapses invisibly under
 // the front card.
-const REVEAL_STEP = 48;
+const BASE_REVEAL_STEP = 48;
+const BASE_HEIGHT = 420;
+
+// Bounds on how far the fan is allowed to scale from its reference size —
+// keeps cards legible on narrow lg screens and prevents them from becoming
+// absurdly large on ultra-wide monitors.
+const MIN_SCALE = 0.85;
+const MAX_SCALE = 1.8;
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+
+type FanScale = {
+  biggestWidth: number;
+  smallestWidth: number;
+  revealStep: number;
+  height: number;
+};
 
 type CaseProject = {
   title: string;
@@ -107,6 +127,7 @@ function FanCard({
   isActive,
   onSelect,
   reduced,
+  scale,
 }: {
   project: CaseProject;
   offset: number;
@@ -114,14 +135,16 @@ function FanCard({
   isActive: boolean;
   onSelect: () => void;
   reduced: boolean;
+  scale: FanScale;
 }) {
+  const { biggestWidth, smallestWidth, revealStep } = scale;
   const t = offset / (total - 1);
-  const width = BIGGEST_WIDTH - t * (BIGGEST_WIDTH - SMALLEST_WIDTH);
+  const width = biggestWidth - t * (biggestWidth - smallestWidth);
   const opacity = MAX_OPACITY - t * (MAX_OPACITY - MIN_OPACITY);
   const brightness = MAX_BRIGHTNESS - t * (MAX_BRIGHTNESS - MIN_BRIGHTNESS);
   // Right edge grows with offset so each card behind the front one peeks out
   // past it; x is derived from that target edge, not a flat per-step value.
-  const x = offset === 0 ? 0 : BIGGEST_WIDTH - width + offset * REVEAL_STEP;
+  const x = offset === 0 ? 0 : biggestWidth - width + offset * revealStep;
 
   return (
     <motion.button
@@ -164,10 +187,41 @@ function FanSlider({
   const total = projects.length;
   const activeProject = projects[active];
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observe = () => setContainerWidth(el.getBoundingClientRect().width);
+    observe();
+    const ro = new ResizeObserver(observe);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Reference fan footprint = biggest card + how far the back card's reveal
+  // pushes past it. Unmeasured (containerWidth 0, e.g. first paint or no
+  // ResizeObserver support) falls back to scale 1 — the original fixed size.
+  const baseFootprint = BASE_BIGGEST_WIDTH + (total - 1) * BASE_REVEAL_STEP;
+  const scaleFactor =
+    containerWidth > 0
+      ? clamp(containerWidth / baseFootprint, MIN_SCALE, MAX_SCALE)
+      : 1;
+
+  const scale: FanScale = {
+    biggestWidth: BASE_BIGGEST_WIDTH * scaleFactor,
+    smallestWidth: BASE_SMALLEST_WIDTH * scaleFactor,
+    revealStep: BASE_REVEAL_STEP * scaleFactor,
+    height: BASE_HEIGHT * scaleFactor,
+  };
+
   return (
     <div
+      ref={containerRef}
       data-testid="fan-slider"
-      className="relative h-[420px] w-full overflow-hidden"
+      className="relative w-full overflow-hidden"
+      style={{ height: scale.height }}
     >
       {projects.map((project, index) => (
         <FanCard
@@ -178,13 +232,14 @@ function FanSlider({
           isActive={index === active}
           onSelect={() => onSelect(index)}
           reduced={reduced}
+          scale={scale}
         />
       ))}
 
       {/* Active-card detail overlay — the only piece that truly mounts/unmounts. */}
       <div
         className="pointer-events-none absolute left-0 top-0 h-full"
-        style={{ width: BIGGEST_WIDTH, zIndex: total + 1 }}
+        style={{ width: scale.biggestWidth, zIndex: total + 1 }}
       >
         <AnimatePresence mode="wait">
           <motion.div
