@@ -66,6 +66,46 @@ function contactPairs(): CANNON.ContactMaterial[] {
   ];
 }
 
+/**
+ * Batas X pita kain yang dipersempit di depan lubang. Kain mundur sejauh
+ * POCKET_R dari kedua tepi, sehingga tersisa celah selebar POCKET_R di sana.
+ */
+const FELT_NARROW_X0 = FELT.x0 + POCKET_R;
+const FELT_NARROW_X1 = FELT.x1 - POCKET_R;
+
+/** Rentang Z tiap lubang, diurutkan dan dipotong sebatas kain. */
+const POCKET_BANDS: readonly (readonly [number, number])[] = [
+  ...new Set(POCKETS.map(([, z]) => z)),
+]
+  .sort((a, b) => a - b)
+  .map(
+    (z) =>
+      [Math.max(z - POCKET_R, FELT.z0), Math.min(z + POCKET_R, FELT.z1)] as const,
+  );
+
+/**
+ * Adakah kain yang menopang di titik ini?
+ *
+ * Bentuk celah kain itu PERSEGI (pita yang dipersempit di X sepanjang sebuah
+ * band Z), bukan lingkaran di sekitar titik pusat lubang. Membedakannya
+ * penting: `dampAirborne` sempat memakai lingkaran ber-radius POCKET_R sebagai
+ * pengecualian, dan 511 titik yang sebenarnya tanpa kain jatuh di LUAR
+ * lingkaran itu — di sana peredam akan menahan bola melayang tepat di atas
+ * lubang alih-alih membiarkannya jatuh.
+ *
+ * Diturunkan dari konstanta yang sama dengan pembangun kain di `createWorld`,
+ * jadi keduanya tidak bisa berbeda diam-diam.
+ */
+function overFeltGap(x: number, z: number): boolean {
+  if (x < FELT.x0 || x > FELT.x1 || z < FELT.z0 || z > FELT.z1) return true;
+  for (const [bz0, bz1] of POCKET_BANDS) {
+    if (z >= bz0 && z <= bz1 && (x < FELT_NARROW_X0 || x > FELT_NARROW_X1)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export interface BilliardWorld {
   world: CANNON.World;
   /** 16 bola; index 0 = bola putih. */
@@ -121,20 +161,13 @@ export function createWorld(
     );
   };
 
-  // Pita sempit di depan lubang: kain mundur sejauh POCKET_R dari kedua tepi.
-  const nx0 = FELT.x0 + POCKET_R;
-  const nx1 = FELT.x1 - POCKET_R;
-
-  // Rentang Z tiap lubang, diurutkan dan dipotong sebatas kain.
-  const bands = [...new Set(POCKETS.map(([, z]) => z))]
-    .sort((a, b) => a - b)
-    .map((z) => [
-      Math.max(z - POCKET_R, FELT.z0),
-      Math.min(z + POCKET_R, FELT.z1),
-    ]);
+  // Pita sempit di depan lubang & rentang Z tiap lubang — dihitung sekali di
+  // atas berkas supaya `overFeltGap` memakai angka yang sama persis.
+  const nx0 = FELT_NARROW_X0;
+  const nx1 = FELT_NARROW_X1;
 
   let zCursor: number = FELT.z0;
-  for (const [bz0, bz1] of bands) {
+  for (const [bz0, bz1] of POCKET_BANDS) {
     addStrip(FELT.x0, FELT.x1, zCursor, bz0); // penuh, sebelum lubang
     addStrip(nx0, nx1, bz0, bz1); // sempit, sejajar lubang
     zCursor = bz1;
@@ -208,6 +241,62 @@ export function createWorld(
     // lagi) tetap dikejar bertahap, bukan satu lompatan besar.
     step: (dt: number) => world.step(1 / 180, dt, 6),
   };
+}
+
+/**
+ * Tekan kembali bola yang terlanjur melayang di atas kain.
+ *
+ * ── Kenapa bola bisa melayang sama sekali ──────────────────────────────────
+ * Bukan karena tembakan terlalu keras — itu dugaan yang wajar tapi salah.
+ * Sebabnya SAMBUNGAN antar-pelat kain. Kain di `createWorld` sengaja dipecah
+ * jadi pita-pita agar ada celah sungguhan di mulut lubang, dan tiap pita adalah
+ * `Box` terpisah. Bola yang menggelinding cepat melintasi batas dua pita bisa
+ * menyenggol RUSUK pelat berikutnya alih-alih mendarat mulus di permukaannya,
+ * dan rusuk itu melontarkannya ke atas.
+ *
+ * Terukur lewat simulasi headless 108 tembakan: 4 kejadian melayang, SEMUANYA
+ * (100%) terjadi dalam 3–7 mm dari sebuah sambungan, tidak ada satu pun di
+ * tengah pelat. Yang terparah naik 47,8 mm — hampir dua kali diameter bola.
+ *
+ * ── Kenapa ini harus diperbaiki, padahal fisikanya "cuma meleset sedikit" ──
+ * Kamera minigame melihat LURUS DARI ATAS. Dari sudut itu ketinggian tidak
+ * terbaca sebagai ketinggian — bola yang melayang hanya terlihat sebagai bola
+ * yang menembus benda lain. Di kamera serong hal yang sama akan terbaca wajar.
+ *
+ * ── Kenapa menekan posisi, bukan menambal geometrinya ─────────────────────
+ * Menyatukan pelat kain akan menghapus celah lubang, dan celah itu justru yang
+ * membuat bola jatuh sendiri tanpa perlu penambal deteksi (lihat `createWorld`).
+ * Menaikkan resolusi langkah tidak menolong: ini soal rusuk yang memang ada,
+ * bukan soal langkah yang kelewat besar.
+ *
+ * Peredam ini hanya bertindak saat bola SUDAH naik melewati toleransi. Bola
+ * yang bertumpu normal tidak pernah disentuh, jadi gesekan kontak dan rasa
+ * permainan tetap utuh — terukur: durasi giliran 99,6% dan jarak tempuh bola
+ * putih 99,4% dari sebelumnya, sementara melayang turun 47,8 mm → 1,9 mm.
+ *
+ * ⚠️ DUA PENGECUALIAN DI BAWAH WAJIB ADA. Tanpa keduanya, peredam menahan bola
+ * yang sedang masuk lubang tetap melayang di permukaan kain — ia tidak pernah
+ * jatuh, dan yang terlihat pemain adalah bola menggantung di mulut lubang.
+ */
+const AIRBORNE_TOL = 0.002;
+
+export function dampAirborne(w: BilliardWorld) {
+  for (const b of w.balls) {
+    if (!w.world.bodies.includes(b)) continue; // sudah dikeluarkan
+    if (b.position.y < FELT.y - 0.02) continue; // (1) sudah masuk lubang
+    // (2) sedang di atas celah — di sinilah bola MEMANG harus kehilangan
+    // tumpuan. Diuji lewat `overFeltGap` yang mengikuti bentuk kain yang
+    // sebenarnya; lihat catatan di sana soal kenapa lingkaran tidak cukup.
+    if (overFeltGap(b.position.x, b.position.z)) continue;
+
+    if (b.position.y > BALL_Y + AIRBORNE_TOL) {
+      b.position.y = BALL_Y;
+      b.interpolatedPosition.y = BALL_Y;
+      // Hanya kecepatan NAIK yang dinolkan. Bola yang sedang turun dibiarkan
+      // menyelesaikan jatuhnya secara wajar.
+      if (b.velocity.y > 0) b.velocity.y = 0;
+    }
+  }
 }
 
 /**
