@@ -12,6 +12,7 @@ import {
   BALL_MASS,
   aimDistance,
   createWorld,
+  dampAirborne,
   overPocket,
   placeBall,
   removeBall,
@@ -213,6 +214,12 @@ export default function BilliardGame() {
     // Dijeda saat meja tidak dipakai — tanpa ini 16 body tetap disimulasikan
     // sepanjang kunjungan dan memakan CPU/baterai percuma.
     s.step(Math.min(dt, 0.1));
+
+    // Rusuk sambungan antar-pelat kain sesekali melontarkan bola ke atas, dan
+    // dari kamera tegak lurus itu terbaca sebagai bola menembus benda lain.
+    // Harus SETELAH step dan SEBELUM salin ke mesh, kalau tidak frame ini
+    // sempat menggambar posisi yang melayang. Duduk perkaranya di physics.ts.
+    dampAirborne(s);
 
     // Salin posisi fisika → mesh. Inilah harga memakai cannon-es langsung:
     // tidak ada wrapper R3F yang melakukannya otomatis.
