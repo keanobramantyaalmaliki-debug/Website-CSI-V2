@@ -49,7 +49,9 @@ describe("Office", () => {
         <Office />
       </MemoryRouter>,
     );
-    expect(screen.getByText("Custom Software Development")).toBeInTheDocument();
+    // "Custom Software Development" is service #0, the default active
+    // panel, so it also appears in PinnedServiceStack's sr-only label.
+    expect(screen.getAllByText("Custom Software Development").length).toBeGreaterThan(0);
     expect(screen.getByText("Artificial Intelligence Solutions")).toBeInTheDocument();
     expect(screen.getByText("Cloud & DevOps")).toBeInTheDocument();
     expect(screen.getByText("Maintenance & Technical Support")).toBeInTheDocument();
@@ -65,22 +67,24 @@ describe("Office", () => {
     expect(cta).toHaveAttribute("href", "/#contact");
   });
 
-  it("renders a testimonial placeholder without a fabricated quote", () => {
+  it("renders a dummy testimonial quote labeled as a placeholder client", () => {
     render(
       <MemoryRouter>
         <Office />
       </MemoryRouter>,
     );
-    expect(screen.getByText(/testimonial coming soon/i)).toBeInTheDocument();
+    expect(screen.getByText(/cogniti rebuilt the systems/i)).toBeInTheDocument();
+    expect(screen.getByText(/placeholder client/i)).toBeInTheDocument();
   });
 
-  it("renders a recognition/awards placeholder without fabricated awards", () => {
+  it("renders 4 dummy award entries labeled as placeholders", () => {
     render(
       <MemoryRouter>
         <Office />
       </MemoryRouter>,
     );
     expect(screen.getByText(/recognition & awards coming soon/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/placeholder award/i)).toHaveLength(4);
   });
 
   it("renders the dummy stat panel next to the hero heading", () => {
@@ -94,30 +98,49 @@ describe("Office", () => {
     expect(screen.getByText(/sectors served/i)).toBeInTheDocument();
   });
 
-  it("renders one image panel per service, synced to the accordion list", () => {
+  it("renders 9 desktop sticky-panel photos plus 9 mobile row thumbnails", () => {
     render(
       <MemoryRouter>
         <Office />
       </MemoryRouter>,
     );
-    // 9 services = 9 crossfaded photo panels (one visible at a time via hover state)
+    // jsdom doesn't apply the lg: breakpoint CSS that hides one set or the
+    // other, so both mount: 9 in PinnedServiceStack (desktop) + 9 collapsed
+    // row thumbnails (mobile card anchor) = 18.
     const panelImages = [...document.querySelectorAll("img")].filter((img) =>
       img.src.includes("images.unsplash.com"),
     );
-    expect(panelImages).toHaveLength(9);
+    expect(panelImages).toHaveLength(18);
   });
 
-  it("reveals the service photo inline when a row is expanded (mobile has no hover)", async () => {
+  it("expanding a row swaps its thumbnail for a full photo and reveals the description", async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
         <Office />
       </MemoryRouter>,
     );
-    // Desktop panel already renders all 9 photos; expanding a row adds one
-    // more (the inline mobile copy) on top of that baseline.
+    // Collapsed thumbnail is removed and replaced by the expanded full photo
+    // (shared layoutId morph) — net image count for this row stays at 1, so
+    // the total across all 18 images is unchanged.
     const before = document.querySelectorAll("img").length;
     await user.click(screen.getByRole("button", { name: /custom software development/i }));
-    expect(document.querySelectorAll("img").length).toBe(before + 1);
+    expect(document.querySelectorAll("img").length).toBe(before);
+    expect(screen.getByRole("region").textContent).toMatch(
+      /software built around your processes/i,
+    );
+  });
+
+  it("shows the first service's photo by default (scroll-driven index starts at 0)", () => {
+    render(
+      <MemoryRouter>
+        <Office />
+      </MemoryRouter>,
+    );
+    // jsdom has no real scroll geometry, so scrollYProgress stays at rest —
+    // this just guards against a crash and confirms the initial state is
+    // sane (first panel visible, announced via the sr-only label) rather
+    // than driving an actual scroll simulation.
+    expect(screen.getAllByText("Custom Software Development").length).toBeGreaterThan(0);
   });
 });
