@@ -1,29 +1,36 @@
 "use client";
 
-import { useState } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
+import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
+const AUTO_ADVANCE_MS = 5000;
+
+// Fan interpolation range — offset 0 (front) to offset (total - 1) (furthest back).
+const BIGGEST_WIDTH = 726;
+const SMALLEST_WIDTH = 280;
+const MAX_OPACITY = 1;
+const MIN_OPACITY = 0.35;
+const MAX_BRIGHTNESS = 1;
+const MIN_BRIGHTNESS = 0.5;
+// Per-offset-step growth of the right edge — how much of each card behind
+// the front one peeks out. Cards shrink faster than a flat x-offset would
+// move them, so position is derived from the target right edge (see below)
+// rather than a naive `offset * step`, or the fan collapses invisibly under
+// the front card.
+const REVEAL_STEP = 48;
 
 type CaseProject = {
   title: string;
   client: string;
   year: string;
-  category: string;
   tags: string[];
   image: string;
   outcome?: string;
 };
-
-const CATEGORIES = [
-  "All",
-  "Public Sector",
-  "Infrastructure",
-  "AI & Data",
-  "Enterprise",
-  "Integration",
-] as const;
 
 // PLACEHOLDER — replace with actual CSI project screenshots when available.
 const PROJECTS: CaseProject[] = [
@@ -31,7 +38,6 @@ const PROJECTS: CaseProject[] = [
     title: "Citizen Service Portal",
     client: "Regional Government",
     year: "2024",
-    category: "Public Sector",
     tags: ["Web Platform", "Next.js", "PostgreSQL"],
     image: "https://picsum.photos/seed/csi-citizen-portal/1200/675",
     outcome: "67% faster turnaround",
@@ -40,7 +46,6 @@ const PROJECTS: CaseProject[] = [
     title: "SIPD Implementation",
     client: "District Government",
     year: "2023",
-    category: "Public Sector",
     tags: ["Gov Platform", "Training"],
     image: "https://picsum.photos/seed/csi-sipd/1200/675",
     outcome: "200+ staff trained",
@@ -49,7 +54,6 @@ const PROJECTS: CaseProject[] = [
     title: "Field Operations Suite",
     client: "State-Owned Infrastructure Co.",
     year: "2023",
-    category: "Infrastructure",
     tags: ["Real-time", "Mobile + Web"],
     image: "https://picsum.photos/seed/csi-field-ops/1200/675",
     outcome: "30% cost reduction",
@@ -58,7 +62,6 @@ const PROJECTS: CaseProject[] = [
     title: "Cloud Infrastructure Migration",
     client: "Manufacturing Group",
     year: "2024",
-    category: "Infrastructure",
     tags: ["Cloud", "DevOps", "Docker"],
     image: "https://picsum.photos/seed/csi-cloud/1200/675",
     outcome: "99.9% uptime achieved",
@@ -67,7 +70,6 @@ const PROJECTS: CaseProject[] = [
     title: "Knowledge Assistant",
     client: "Financial Services Firm",
     year: "2024",
-    category: "AI & Data",
     tags: ["LLM", "RAG", "React"],
     image: "https://picsum.photos/seed/csi-knowledge-ai/1200/675",
     outcome: "5,000+ queries/month",
@@ -76,7 +78,6 @@ const PROJECTS: CaseProject[] = [
     title: "Analytics Dashboard",
     client: "Government Agency",
     year: "2024",
-    category: "AI & Data",
     tags: ["Data Viz", "Python"],
     image: "https://picsum.photos/seed/csi-analytics/1200/675",
     outcome: "50+ data sources unified",
@@ -85,7 +86,6 @@ const PROJECTS: CaseProject[] = [
     title: "Procurement Portal",
     client: "Enterprise Corporation",
     year: "2023",
-    category: "Enterprise",
     tags: ["ERP Integration", "TypeScript"],
     image: "https://picsum.photos/seed/csi-procurement/1200/675",
     outcome: "100% paperless",
@@ -94,95 +94,192 @@ const PROJECTS: CaseProject[] = [
     title: "API Gateway & Middleware",
     client: "Telecommunications",
     year: "2024",
-    category: "Integration",
     tags: ["API", "Node.js", "Legacy Bridge"],
     image: "https://picsum.photos/seed/csi-api-gateway/1200/675",
     outcome: "Zero-downtime migration",
   },
 ];
 
-const CAT_STYLE: Record<string, string> = {
-  "Public Sector":  "text-amber-400 border-amber-400/25 bg-amber-400/[0.06]",
-  "Infrastructure": "text-blue-400 border-blue-400/25 bg-blue-400/[0.06]",
-  "AI & Data":      "text-emerald-400 border-emerald-400/25 bg-emerald-400/[0.06]",
-  "Enterprise":     "text-purple-400 border-purple-400/25 bg-purple-400/[0.06]",
-  "Integration":    "text-orange-400 border-orange-400/25 bg-orange-400/[0.06]",
-};
-
-function CaseCard({
+function FanCard({
   project,
-  index,
+  offset,
+  total,
+  isActive,
+  onSelect,
+  reduced,
 }: {
   project: CaseProject;
-  index: number;
+  offset: number;
+  total: number;
+  isActive: boolean;
+  onSelect: () => void;
+  reduced: boolean;
 }) {
-  const reduced = useReducedMotion();
+  const t = offset / (total - 1);
+  const width = BIGGEST_WIDTH - t * (BIGGEST_WIDTH - SMALLEST_WIDTH);
+  const opacity = MAX_OPACITY - t * (MAX_OPACITY - MIN_OPACITY);
+  const brightness = MAX_BRIGHTNESS - t * (MAX_BRIGHTNESS - MIN_BRIGHTNESS);
+  // Right edge grows with offset so each card behind the front one peeks out
+  // past it; x is derived from that target edge, not a flat per-step value.
+  const x = offset === 0 ? 0 : BIGGEST_WIDTH - width + offset * REVEAL_STEP;
 
   return (
-    <motion.article
-      className="group flex flex-col overflow-hidden border-b border-r border-white/[0.06] bg-white/[0.01]"
-      initial={{ opacity: reduced ? 1 : 0, y: reduced ? 0 : 12 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "0px 0px -40px 0px" }}
-      transition={{ duration: 0.45, ease: EASE, delay: (index % 3) * 0.06 }}
+    <motion.button
+      type="button"
+      onClick={onSelect}
+      aria-label={project.title}
+      aria-pressed={isActive}
+      className="absolute left-0 top-0 h-full overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]"
+      style={{ zIndex: total - offset }}
+      animate={{
+        width,
+        x,
+        opacity,
+        filter: `brightness(${brightness})`,
+      }}
+      transition={reduced ? { duration: 0 } : { duration: 0.6, ease: EASE }}
+      whileHover={!isActive && !reduced ? { scale: 1.02 } : undefined}
     >
-      {/* Thumbnail */}
-      <div className="relative overflow-hidden">
-        <motion.img
-          src={project.image}
-          alt=""
-          loading="lazy"
-          className="aspect-[16/9] w-full object-cover"
-          whileHover={reduced ? undefined : { scale: 1.04 }}
-          transition={{ duration: 0.5, ease: EASE }}
+      <img
+        src={project.image}
+        alt=""
+        loading="lazy"
+        className="h-full w-full object-cover"
+      />
+    </motion.button>
+  );
+}
+
+function FanSlider({
+  projects,
+  active,
+  onSelect,
+  reduced,
+}: {
+  projects: CaseProject[];
+  active: number;
+  onSelect: (index: number) => void;
+  reduced: boolean;
+}) {
+  const total = projects.length;
+  const activeProject = projects[active];
+
+  return (
+    <div
+      data-testid="fan-slider"
+      className="relative h-[420px] w-full overflow-hidden"
+    >
+      {projects.map((project, index) => (
+        <FanCard
+          key={project.title}
+          project={project}
+          offset={(index - active + total) % total}
+          total={total}
+          isActive={index === active}
+          onSelect={() => onSelect(index)}
+          reduced={reduced}
         />
-      </div>
+      ))}
 
-      {/* Meta */}
-      <div className="flex flex-1 flex-col gap-2.5 p-4">
-        <div className="flex items-center justify-between gap-2">
-          <span
-            className={`inline-block rounded-sm border px-1.5 py-0.5 font-mono text-[9px] tracking-widest uppercase ${CAT_STYLE[project.category] ?? "text-zinc-400 border-white/10"}`}
+      {/* Active-card detail overlay — the only piece that truly mounts/unmounts. */}
+      <div
+        className="pointer-events-none absolute left-0 top-0 h-full"
+        style={{ width: BIGGEST_WIDTH, zIndex: total + 1 }}
+      >
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeProject.title}
+            initial={{ opacity: reduced ? 1 : 0, y: reduced ? 0 : 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: reduced ? 1 : 0, y: reduced ? 0 : -12 }}
+            transition={{ duration: reduced ? 0 : 0.4, ease: EASE }}
+            className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/85 via-black/25 to-transparent p-6 sm:p-8"
           >
-            {project.category}
-          </span>
-          <span className="font-mono text-[10px] tracking-widest text-zinc-500">
-            {project.year}
-          </span>
-        </div>
-
-        <h3 className="text-sm font-semibold leading-snug text-zinc-100">
-          {project.title}
-        </h3>
-
-        <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
-          {project.tags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded-sm border border-white/[0.08] px-1.5 py-0.5 text-[10px] text-zinc-500"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-
-        {project.outcome && (
-          <p className="border-t border-white/[0.06] pt-2 font-mono text-[10px] tracking-wider text-zinc-500">
-            {project.outcome}
-          </p>
-        )}
+            <p className="font-mono text-xs tracking-widest text-zinc-400">
+              {activeProject.client} · {activeProject.year}
+            </p>
+            <h3 className="mt-2 text-2xl font-semibold text-zinc-50">
+              {activeProject.title}
+            </h3>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {activeProject.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-sm border border-white/[0.15] bg-white/[0.06] px-1.5 py-0.5 text-[10px] text-zinc-300"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+            {activeProject.outcome && (
+              <p className="mt-3 border-t border-white/[0.15] pt-2 font-mono text-[10px] tracking-wider text-zinc-400">
+                {activeProject.outcome}
+              </p>
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
-    </motion.article>
+    </div>
+  );
+}
+
+function MobileStack({ projects }: { projects: CaseProject[] }) {
+  return (
+    <FadeUpList className="flex flex-col gap-4" tag="div">
+      {projects.map((project) => (
+        <FadeUpItem
+          key={project.title}
+          tag="article"
+          className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]"
+        >
+          <img
+            src={project.image}
+            alt=""
+            loading="lazy"
+            className="aspect-[16/9] w-full object-cover"
+          />
+          <div className="flex flex-col gap-2 p-5">
+            <p className="font-mono text-xs tracking-widest text-zinc-500">
+              {project.client} · {project.year}
+            </p>
+            <h3 className="text-lg font-semibold text-zinc-100">
+              {project.title}
+            </h3>
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {project.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-sm border border-white/[0.08] px-1.5 py-0.5 text-[10px] text-zinc-500"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+            {project.outcome && (
+              <p className="border-t border-white/[0.06] pt-2 font-mono text-[10px] tracking-wider text-zinc-500">
+                {project.outcome}
+              </p>
+            )}
+          </div>
+        </FadeUpItem>
+      ))}
+    </FadeUpList>
   );
 }
 
 export default function CaseGrid() {
-  const [active, setActive] = useState<string>("All");
+  const [active, setActive] = useState(0);
+  const reduced = !!useReducedMotion();
+  const total = PROJECTS.length;
 
-  const filtered =
-    active === "All"
-      ? PROJECTS
-      : PROJECTS.filter((p) => p.category === active);
+  // Re-arms on every `active` change (timer tick or click) — avoids stale closures.
+  useEffect(() => {
+    if (reduced) return;
+    const id = setInterval(() => {
+      setActive((prev) => (prev + 1) % total);
+    }, AUTO_ADVANCE_MS);
+    return () => clearInterval(id);
+  }, [active, reduced, total]);
 
   return (
     <section
@@ -202,7 +299,7 @@ export default function CaseGrid() {
             Portfolio
           </motion.p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-100 sm:text-3xl">
-            <LineMask>All Projects</LineMask>
+            <LineMask>Selected Work</LineMask>
           </h2>
         </div>
         <motion.span
@@ -212,38 +309,36 @@ export default function CaseGrid() {
           viewport={{ once: true }}
           transition={{ duration: 0.5, ease: EASE, delay: 0.1 }}
         >
-          {filtered.length} of {PROJECTS.length} projects
+          {total} Projects
         </motion.span>
       </div>
 
-      {/* Filter tabs — horizontal scroll on mobile keeps single line, no wrapping */}
-      <div className="mb-6 -mx-6 sm:mx-0">
-        <div className="flex gap-2 overflow-x-auto px-6 pb-1 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
-          {CATEGORIES.map((cat) => (
+      {/* Desktop — staggered fan slider */}
+      <div className="hidden lg:block">
+        <FanSlider
+          projects={PROJECTS}
+          active={active}
+          onSelect={setActive}
+          reduced={reduced}
+        />
+        <div className="mt-4 flex gap-1.5">
+          {PROJECTS.map((project, index) => (
             <button
-              key={cat}
-              onClick={() => setActive(cat)}
-              className={[
-                "flex-none rounded-sm border px-3 py-2 font-mono text-[10px] tracking-widest uppercase transition-colors duration-150",
-                active === cat
-                  ? "border-orange-500/40 bg-orange-500/10 text-orange-400"
-                  : "border-white/[0.08] text-zinc-500 hover:border-white/20 hover:text-zinc-300",
-              ].join(" ")}
-            >
-              {cat}
-            </button>
+              key={project.title}
+              type="button"
+              aria-label={`Show ${project.title}`}
+              onClick={() => setActive(index)}
+              className={`h-1 w-6 rounded-full transition-colors duration-300 ${
+                index === active ? "bg-accent" : "bg-white/20"
+              }`}
+            />
           ))}
         </div>
       </div>
 
-      {/* Grid — border-top + border-left as outer frame */}
-      <div className="border-l border-t border-white/[0.06]">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((p, i) => (
-            // key includes active so cards remount (and re-animate) on filter change
-            <CaseCard key={`${active}-${p.title}`} project={p} index={i} />
-          ))}
-        </div>
+      {/* Mobile — static vertical stack, no auto-rotate */}
+      <div className="lg:hidden" data-testid="mobile-stack">
+        <MobileStack projects={PROJECTS} />
       </div>
     </section>
   );
