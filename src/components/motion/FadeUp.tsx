@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import { type ReactNode } from "react";
+import { forwardRef, type ReactNode, type UIEventHandler } from "react";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -16,28 +16,31 @@ const makeItemVariants = (reduced: boolean) => ({
 });
 
 /** T2 — stagger fade-up list container. Pair with FadeUpItem. */
-export function FadeUpList({
-  children,
-  className,
-  tag = "div",
-}: {
-  children: ReactNode;
-  className?: string;
-  tag?: "div" | "ul" | "ol";
-}) {
+export const FadeUpList = forwardRef<
+  HTMLDivElement,
+  {
+    children: ReactNode;
+    className?: string;
+    tag?: "div" | "ul" | "ol";
+    onScroll?: UIEventHandler<HTMLDivElement>;
+  }
+>(function FadeUpList({ children, className, tag = "div", onScroll }, ref) {
   const Tag = tag === "ul" ? motion.ul : tag === "ol" ? motion.ol : motion.div;
+  const ElementTag = Tag as typeof motion.div;
   return (
-    <Tag
+    <ElementTag
+      ref={ref}
       className={className}
+      onScroll={onScroll}
       initial="hidden"
       whileInView="show"
       viewport={{ once: true, margin: "0px 0px -60px 0px" }}
       variants={containerVariants}
     >
       {children}
-    </Tag>
+    </ElementTag>
   );
-}
+});
 
 /** T2 — single item within a FadeUpList. */
 export function FadeUpItem({

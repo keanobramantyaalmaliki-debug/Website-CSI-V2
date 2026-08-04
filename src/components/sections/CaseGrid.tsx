@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
-import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
+import CaseGridMobileStack, {
+  type CaseProject,
+} from "@/components/sections/CaseGridMobileStack";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -43,23 +45,16 @@ type FanScale = {
   height: number;
 };
 
-type CaseProject = {
-  title: string;
-  client: string;
-  year: string;
-  tags: string[];
-  image: string;
-  outcome?: string;
-};
-
-// PLACEHOLDER — replace with actual CSI project screenshots when available.
+// PLACEHOLDER — copy/outcomes are illustrative; images are curated Unsplash
+// stock (same hotlink pattern as Office.tsx) keyed to each project's subject.
+// Replace with actual CSI project screenshots when available.
 const PROJECTS: CaseProject[] = [
   {
     title: "Citizen Service Portal",
     client: "Regional Government",
     year: "2024",
     tags: ["Web Platform", "Next.js", "PostgreSQL"],
-    image: "https://picsum.photos/seed/csi-citizen-portal/1200/675",
+    image: "https://images.unsplash.com/photo-1611639906810-4a29ece1b847?w=1200&q=80&auto=format&fit=crop",
     outcome: "67% faster turnaround",
   },
   {
@@ -67,7 +62,7 @@ const PROJECTS: CaseProject[] = [
     client: "District Government",
     year: "2023",
     tags: ["Gov Platform", "Training"],
-    image: "https://picsum.photos/seed/csi-sipd/1200/675",
+    image: "https://images.unsplash.com/photo-1758270704925-fa59d93119c1?w=1200&q=80&auto=format&fit=crop",
     outcome: "200+ staff trained",
   },
   {
@@ -75,7 +70,7 @@ const PROJECTS: CaseProject[] = [
     client: "State-Owned Infrastructure Co.",
     year: "2023",
     tags: ["Real-time", "Mobile + Web"],
-    image: "https://picsum.photos/seed/csi-field-ops/1200/675",
+    image: "https://images.unsplash.com/photo-1646082276009-bb35409086ed?w=1200&q=80&auto=format&fit=crop",
     outcome: "30% cost reduction",
   },
   {
@@ -83,7 +78,7 @@ const PROJECTS: CaseProject[] = [
     client: "Manufacturing Group",
     year: "2024",
     tags: ["Cloud", "DevOps", "Docker"],
-    image: "https://picsum.photos/seed/csi-cloud/1200/675",
+    image: "https://images.unsplash.com/photo-1784652852605-6945598f2af3?w=1200&q=80&auto=format&fit=crop",
     outcome: "99.9% uptime achieved",
   },
   {
@@ -91,7 +86,7 @@ const PROJECTS: CaseProject[] = [
     client: "Financial Services Firm",
     year: "2024",
     tags: ["LLM", "RAG", "React"],
-    image: "https://picsum.photos/seed/csi-knowledge-ai/1200/675",
+    image: "https://images.unsplash.com/photo-1739036868260-c26b292cd85d?w=1200&q=80&auto=format&fit=crop",
     outcome: "5,000+ queries/month",
   },
   {
@@ -99,7 +94,7 @@ const PROJECTS: CaseProject[] = [
     client: "Government Agency",
     year: "2024",
     tags: ["Data Viz", "Python"],
-    image: "https://picsum.photos/seed/csi-analytics/1200/675",
+    image: "https://images.unsplash.com/photo-1516383274235-5f42d6c6426d?w=1200&q=80&auto=format&fit=crop",
     outcome: "50+ data sources unified",
   },
   {
@@ -107,7 +102,7 @@ const PROJECTS: CaseProject[] = [
     client: "Enterprise Corporation",
     year: "2023",
     tags: ["ERP Integration", "TypeScript"],
-    image: "https://picsum.photos/seed/csi-procurement/1200/675",
+    image: "https://images.unsplash.com/photo-1716363340859-e2a0ab1396a5?w=1200&q=80&auto=format&fit=crop",
     outcome: "100% paperless",
   },
   {
@@ -115,7 +110,7 @@ const PROJECTS: CaseProject[] = [
     client: "Telecommunications",
     year: "2024",
     tags: ["API", "Node.js", "Legacy Bridge"],
-    image: "https://picsum.photos/seed/csi-api-gateway/1200/675",
+    image: "https://images.unsplash.com/photo-1698668975271-2ba9a323be6b?w=1200&q=80&auto=format&fit=crop",
     outcome: "Zero-downtime migration",
   },
 ];
@@ -278,50 +273,6 @@ function FanSlider({
   );
 }
 
-function MobileStack({ projects }: { projects: CaseProject[] }) {
-  return (
-    <FadeUpList className="flex flex-col gap-4" tag="div">
-      {projects.map((project) => (
-        <FadeUpItem
-          key={project.title}
-          tag="article"
-          className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]"
-        >
-          <img
-            src={project.image}
-            alt=""
-            loading="lazy"
-            className="aspect-[16/9] w-full object-cover"
-          />
-          <div className="flex flex-col gap-2 p-5">
-            <p className="font-mono text-xs tracking-widest text-zinc-500">
-              {project.client} · {project.year}
-            </p>
-            <h3 className="text-lg font-semibold text-zinc-100">
-              {project.title}
-            </h3>
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {project.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-sm border border-white/[0.08] px-1.5 py-0.5 text-[10px] text-zinc-500"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-            {project.outcome && (
-              <p className="border-t border-white/[0.06] pt-2 font-mono text-[10px] tracking-wider text-zinc-500">
-                {project.outcome}
-              </p>
-            )}
-          </div>
-        </FadeUpItem>
-      ))}
-    </FadeUpList>
-  );
-}
-
 export default function CaseGrid() {
   const [active, setActive] = useState(0);
   const reduced = !!useReducedMotion();
@@ -391,9 +342,9 @@ export default function CaseGrid() {
         </div>
       </div>
 
-      {/* Mobile — static vertical stack, no auto-rotate */}
+      {/* Mobile — swipeable scroll-snap stack, no auto-rotate */}
       <div className="lg:hidden" data-testid="mobile-stack">
-        <MobileStack projects={PROJECTS} />
+        <CaseGridMobileStack projects={PROJECTS} />
       </div>
     </section>
   );

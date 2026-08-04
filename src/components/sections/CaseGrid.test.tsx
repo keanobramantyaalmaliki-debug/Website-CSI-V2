@@ -103,4 +103,37 @@ describe("CaseGrid", () => {
 
     expect(within(fanSlider).getByText("67% faster turnaround")).toBeInTheDocument();
   });
+
+  it("mobile stack container uses scroll-snap for swipeable cards", () => {
+    render(<CaseGrid />);
+    const mobileStack = screen.getByTestId("mobile-stack");
+    const scrollContainer = mobileStack.querySelector(".snap-x");
+    expect(scrollContainer).toBeInTheDocument();
+    expect(scrollContainer).toHaveClass("snap-mandatory");
+  });
+
+  it("hides tags and outcome in the mobile stack by default, behind a Details disclosure", () => {
+    render(<CaseGrid />);
+    const mobileStack = screen.getByTestId("mobile-stack");
+
+    expect(within(mobileStack).queryByText("Web Platform")).not.toBeInTheDocument();
+    expect(
+      within(mobileStack).queryByText("67% faster turnaround"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(mobileStack).getAllByRole("button", { name: /details/i }).length,
+    ).toBe(8);
+  });
+
+  it("reveals tags and outcome in the mobile stack after clicking Details", async () => {
+    const user = userEvent.setup();
+    render(<CaseGrid />);
+    const mobileStack = screen.getByTestId("mobile-stack");
+
+    const triggers = within(mobileStack).getAllByRole("button", { name: /details/i });
+    await user.click(triggers[0]);
+
+    expect(within(mobileStack).getByText("Web Platform")).toBeInTheDocument();
+    expect(within(mobileStack).getByText("67% faster turnaround")).toBeInTheDocument();
+  });
 });
