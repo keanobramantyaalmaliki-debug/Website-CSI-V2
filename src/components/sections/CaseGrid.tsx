@@ -1,7 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { useRef, useState } from "react";
+import {
+  motion,
+  useMotionTemplate,
+  useMotionValue,
+  useReducedMotion,
+} from "motion/react";
 import LineMask from "@/components/motion/LineMask";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -117,12 +122,28 @@ function CaseCard({
   index: number;
 }) {
   const reduced = useReducedMotion();
+  const cardRef = useRef<HTMLElement>(null);
+
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const spotlight = useMotionTemplate`radial-gradient(280px circle at ${mouseX}px ${mouseY}px, rgba(255,255,255,0.06) 0%, transparent 80%)`;
+
+  function onMouseMove(e: React.MouseEvent<HTMLElement>) {
+    if (reduced || !cardRef.current) return;
+    const r = cardRef.current.getBoundingClientRect();
+    mouseX.set(e.clientX - r.left);
+    mouseY.set(e.clientY - r.top);
+  }
 
   return (
     <motion.article
-      className="group flex flex-col overflow-hidden border-b border-r border-white/[0.06] bg-white/[0.01]"
+      ref={cardRef}
+      onMouseMove={onMouseMove}
+      className="group relative z-0 flex flex-col overflow-hidden border-b border-r border-white/[0.06] bg-surface-1 shadow-[var(--elevation-1)] transition-[background-color,box-shadow] duration-[var(--dur-base)] ease-[var(--ease-out)] hover:z-10 hover:bg-surface-2 hover:shadow-[var(--elevation-2)]"
+      style={reduced ? undefined : { backgroundImage: spotlight }}
       initial={{ opacity: reduced ? 1 : 0, y: reduced ? 0 : 12 }}
       whileInView={{ opacity: 1, y: 0 }}
+      whileHover={reduced ? undefined : { y: -4, transition: { duration: 0.25, ease: EASE } }}
       viewport={{ once: true, margin: "0px 0px -40px 0px" }}
       transition={{ duration: 0.45, ease: EASE, delay: (index % 3) * 0.06 }}
     >

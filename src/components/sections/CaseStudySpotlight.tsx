@@ -145,7 +145,7 @@ export default function CaseStudySpotlight() {
         >
           Featured
         </motion.p>
-        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
+        <h2 className="mt-3 text-[clamp(1.875rem,4.5vw,2.25rem)] font-semibold tracking-tight text-zinc-100 leading-[1.05]">
           <LineMask>Case Studies</LineMask>
         </h2>
       </div>
