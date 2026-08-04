@@ -1,7 +1,9 @@
 "use client";
 
-import { motion } from "motion/react";
+import { useRef } from "react";
+import { motion, useScroll, useTransform, useReducedMotion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
+import Disclosure from "@/components/motion/Disclosure";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -13,6 +15,7 @@ type Spotlight = {
   scope: string[];
   outcome: string;
   title: string;
+  quote: string;
   desc: string;
   image: string;
 };
@@ -26,6 +29,8 @@ const SPOTLIGHTS: Spotlight[] = [
     scope: ["Web Platform", "SIPD Integration", "Staff Training"],
     outcome: "67% faster turnaround",
     title: "Citizen Service Portal",
+    quote:
+      "Thousands of requests a month — permits, letters, complaints — all still processed by hand at a counter.",
     desc: "This regional government handles thousands of service requests every month — permits, official letters, complaints — all processed manually through physical counters. The process was slow, opaque, and required in-person attendance.\n\nCogniti designed a unified portal connecting every department under one interface. Citizens submit requests online, the system routes them to the right office, and status can be tracked in real time. Average processing time dropped from 5 days to under 2 days.",
     image: "https://picsum.photos/seed/csi-spotlight-citizen/1400/788",
   },
@@ -36,6 +41,8 @@ const SPOTLIGHTS: Spotlight[] = [
     scope: ["Mobile App", "Real-time Monitoring", "API Integration"],
     outcome: "30% cost reduction",
     title: "Field Operations Suite",
+    quote:
+      "Field teams across hundreds of sites, coordinating by phone — information arriving too late to matter.",
     desc: "Field teams spread across hundreds of sites — with no centralized visibility, coordination relied on phone calls and messaging apps. Incidents were frequently delayed because information never reached the right people in time.\n\nCogniti built a real-time monitoring and dispatch platform linking crew locations, asset data, and incident logs in a single workspace. Supervisors can see the full operation from one screen and dispatch teams within minutes.",
     image: "https://picsum.photos/seed/csi-spotlight-field/1400/788",
   },
@@ -73,6 +80,16 @@ function SpotlightItem({
   spotlight: Spotlight;
   flip?: boolean;
 }) {
+  const imageRef = useRef<HTMLDivElement>(null);
+  const reduced = useReducedMotion();
+
+  const { scrollYProgress } = useScroll({
+    target: imageRef,
+    offset: ["start end", "end start"],
+  });
+  const y = useTransform(scrollYProgress, [0, 0.5, 1], reduced ? [0, 0, 0] : [-16, 0, 16]);
+  const scale = useTransform(scrollYProgress, [0, 0.5, 1], reduced ? [1, 1, 1] : [1.04, 1, 1.04]);
+
   return (
     <FadeUpItem
       tag="article"
@@ -81,7 +98,7 @@ function SpotlightItem({
       <div
         className={`grid border border-white/[0.06] lg:grid-cols-[220px_1fr] ${flip ? "lg:grid-cols-[1fr_220px]" : ""}`}
       >
-        {/* Sidebar — metadata only; desc hidden on mobile (shown in main below) */}
+        {/* Sidebar — metadata only */}
         <aside
           className={`flex flex-col gap-4 border-b border-white/[0.06] bg-white/[0.02] p-6 lg:border-b-0 lg:border-r ${flip ? "lg:order-2 lg:border-l lg:border-r-0" : ""}`}
         >
@@ -90,23 +107,17 @@ function SpotlightItem({
           <MetaRow label="Industry" value={spotlight.industry} />
           <MetaRow label="Scope" tags={spotlight.scope} />
           <MetaRow label="Outcome" value={spotlight.outcome} />
-
-          {/* Only show teaser desc on desktop where sidebar sits beside content */}
-          <div className="mt-auto hidden lg:block">
-            <p className="text-xs leading-relaxed text-zinc-500">
-              {spotlight.desc.split("\n\n")[0]}
-            </p>
-          </div>
         </aside>
 
-        {/* Main — image + body */}
+        {/* Main — image + pull-quote */}
         <div className={`flex flex-col bg-white/[0.01] ${flip ? "lg:order-1" : ""}`}>
-          <div className="overflow-hidden">
+          <div ref={imageRef} className="overflow-hidden">
             <motion.img
               src={spotlight.image}
               alt=""
               loading="lazy"
               className="aspect-[16/9] w-full object-cover"
+              style={{ y, scale }}
               whileHover={{ scale: 1.02 }}
               transition={{ duration: 0.6, ease: EASE }}
             />
@@ -116,11 +127,24 @@ function SpotlightItem({
             <h3 className="text-xl font-semibold tracking-tight text-zinc-100 sm:text-2xl">
               {spotlight.title}
             </h3>
-            {spotlight.desc.split("\n\n").map((para, i) => (
-              <p key={i} className="text-sm leading-relaxed text-zinc-400">
-                {para}
-              </p>
-            ))}
+            <p className="text-lg leading-snug font-medium text-zinc-200 sm:text-xl">
+              &ldquo;{spotlight.quote}&rdquo;
+            </p>
+            <p className="font-mono text-2xl font-bold text-zinc-100">{spotlight.outcome}</p>
+            <Disclosure
+              trigger={(open) => (
+                <span className="text-xs uppercase tracking-widest text-zinc-400">
+                  {open ? "Show less" : "Read the full story"} {open ? "−" : "+"}
+                </span>
+              )}
+              contentClassName="flex flex-col gap-4 pt-4"
+            >
+              {spotlight.desc.split("\n\n").map((para, i) => (
+                <p key={i} className="text-sm leading-relaxed text-zinc-400">
+                  {para}
+                </p>
+              ))}
+            </Disclosure>
           </div>
         </div>
       </div>
