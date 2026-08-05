@@ -1,16 +1,22 @@
 "use client";
 
 import { useMemo, useLayoutEffect, useEffect, useRef } from "react";
+import { useReducedMotion } from "motion/react";
 import { useGLTF, useAnimations, useTexture, Bvh } from "@react-three/drei";
 import { useThree, useFrame, type ThreeEvent } from "@react-three/fiber";
 import type * as THREE from "three";
-import { Mesh, SkinnedMesh, MeshStandardMaterial, Light, LoopRepeat } from "three";
+import { Mesh, SkinnedMesh, MeshStandardMaterial, Light, LoopRepeat, SRGBColorSpace } from "three";
 import { useSceneStore } from "@/lib/store/sceneStore";
 import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import { billiardView } from "./CameraController";
 import { prepareLampFade } from "./billiard/lamps";
 import { prepareRevealSweep } from "./revealSweep";
 import { applyScreens, SCREENS } from "./screens";
+import {
+  getScreenVideo,
+  pauseScreenVideos,
+  playScreenVideos,
+} from "./screenVideo";
 import { CHAR_LAYER } from "./CharacterLights";
 
 // GLB baked ada di public/ dan ter-track git (9 MB). Jangan kembalikan ke
@@ -19,14 +25,21 @@ import { CHAR_LAYER } from "./CharacterLights";
 const MODEL_URL = "/3d/models/office.glb";
 
 /**
- * Kuat pencahayaan baked. 1 = sesuai hasil bake di Blender.
+ * Kuat pencahayaan baked. 4 = sesuai hasil bake di Blender.
+ *
+ * KENAPA 4, BUKAN 1: EXR bake menyimpan cahaya HDR (hotspot lampu sampai ~36).
+ * PNG/WebP 8-bit memenggal semua nilai >1.0 — itu yang bikin scene gelap pada
+ * export 5 Agu pertama. Solusinya nilai lightmap DIBAGI 4 di Blender sebelum
+ * export (skrip in-memory, EXR asli tidak disentuh) lalu DIKALIKAN 4 lagi di
+ * sini. Hotspot 1.0–4.0 selamat; di atas 4.0 (13 dari 144 image) tetap
+ * terpotong — kompromi yang diterima. Kalau angka ini diubah, ubah juga
+ * pembaginya di skrip export; keduanya HARUS sama.
  *
  * ⚠️ Ini SATU-SATUNYA sumber cahaya scene — GLB tidak punya lampu realtime
  * sama sekali. Set 0 = ruangan gelap total, hanya menyisakan ambient 0.12 +
- * environment 0.18 dari Scene.tsx. Berguna untuk membuktikan lightmap bekerja;
- * kembalikan ke 1 untuk tampilan normal.
+ * environment 0.18 dari Scene.tsx. Berguna untuk membuktikan lightmap bekerja.
  */
-const LIGHTMAP_INTENSITY = 1;
+const LIGHTMAP_INTENSITY = 5;
 
 /**
  * Emissive strength LED strip lantai (`M_LEDStrip`), menimpa nilai dari GLB.
@@ -66,6 +79,64 @@ const REVEAL_MS = 2600;
 const REVEAL_DELAY_MS = 150;
 
 /**
+ * Gerbang pemutaran video layar. Tidak merender apa pun.
+ *
+ * ── Kenapa useEffect, BUKAN useFrame ────────────────────────────────────────
+ * Ini titik paling mudah salah di seluruh fitur ini. `useFrame` BERHENTI TOTAL
+ * saat FrameloopGate menyetel frameloop "never" — yaitu persis keadaan yang
+ * ingin kita tanggapi (pengunjung scroll melewati hero). Menaruh gerbangnya di
+ * useFrame berarti perintah pause-nya tidak pernah sampai, dan videonya
+ * men-dekode selamanya di balik halaman yang sudah lama ditinggalkan.
+ *
+ * Ini kelas bug yang SUDAH pernah menggigit repo ini: engine matter-js di
+ * PhysicsHeading tetap berdetak 60 fps walau efeknya sudah mati (3 Agu, "laptop
+ * panas"). Pelajarannya: menggerbangi EFEK tidak sama dengan menggerbangi
+ * MESIN. Elemen `<video>` adalah mesin — ia punya thread dekode sendiri dan
+ * sama sekali tidak peduli pada frameloop.
+ *
+ * Penjaganya: screenVideo.invariant.test.ts.
+ *
+ * ── Kenapa komponen terpisah ────────────────────────────────────────────────
+ * Supaya `Office` tidak perlu berlangganan `currentRoom`. Kalau dilanggan di
+ * sana, tiap perpindahan ruangan me-render ulang komponen yang memegang scene
+ * 660-node — sia-sia, karena tak satu pun output-nya berubah.
+ */
+function ScreenVideoGate() {
+  const heroInView = useSceneStore((s) => s.heroInView);
+  const currentRoom = useSceneStore((s) => s.currentRoom);
+  const billiardActive = useSceneStore((s) => s.billiardActive);
+  const reduced = useReducedMotion();
+
+  // Layar hanya benar-benar terlihat dari view Office. Di ruangan lain ia di
+  // luar frustum atau sejauh beberapa piksel — men-dekode 12 fps untuk itu
+  // murni pemborosan.
+  const wanted = heroInView && currentRoom === "Office" && !billiardActive && !reduced;
+
+  useEffect(() => {
+    if (!wanted) {
+      pauseScreenVideos();
+      return;
+    }
+    playScreenVideos();
+
+    // Pindah tab: browser MEMANG menurunkan prioritas timer, tapi tidak
+    // menghentikan dekode video. Dipause eksplisit — dan dinyalakan lagi saat
+    // kembali, karena efek ini tidak dijalankan ulang oleh perpindahan tab.
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") playScreenVideos();
+      else pauseScreenVideos();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      pauseScreenVideos();
+    };
+  }, [wanted]);
+
+  return null;
+}
+
+/**
  * Kantor Cogniti — hasil bake lightmap (lihat Documentations.md §4g).
  *
  * GLB ini punya NOL lampu realtime: semua cahaya + bayangan sudah dipanggang
@@ -83,15 +154,30 @@ export default function Office() {
   // Gambar untuk layar monitor/laptop — lihat screens.ts. useTexture ikut
   // Suspense yang sama dengan GLB, jadi teksturnya dijamin sudah ada sebelum
   // frame pertama; tidak ada kedipan layar hitam lalu berisi.
-  const screenUrls = useMemo(() => SCREENS.map((s) => s.url), []);
-  const screenTexList = useTexture(screenUrls);
+  //
+  // Layar VIDEO dipisah dan TIDAK boleh lewat sini: useTexture memakai
+  // TextureLoader, yang memuat url lewat <img> — diberi .mp4 ia gagal dan
+  // seluruh Suspense boundary tergantung selamanya (loader tidak pernah
+  // hilang). Sumbernya datang dari screenVideo.ts.
+  const imageUrls = useMemo(
+    () => SCREENS.filter((s) => !s.video).map((s) => s.url),
+    [],
+  );
+  const imageTexList = useTexture(imageUrls);
   const screenTextures = useMemo(() => {
     const map: Record<string, THREE.Texture> = {};
-    screenUrls.forEach((url, i) => {
-      map[url] = screenTexList[i];
+    imageUrls.forEach((url, i) => {
+      map[url] = imageTexList[i];
     });
+    // Video tidak ikut Suspense — elemennya baru mulai mengunduh sekarang, dan
+    // menunggunya berarti menahan SELURUH kantor demi satu layar 31 KB. Yang
+    // membuat layarnya tidak tampil hitam sementara itu adalah priming frame
+    // pertama di screenVideo.ts, bukan penantian di sini.
+    for (const s of SCREENS) {
+      if (s.video) map[s.url] = getScreenVideo(s.url, s.flipX);
+    }
     return map;
-  }, [screenUrls, screenTexList]);
+  }, [imageUrls, imageTexList]);
 
   // Mixer dipasang di root GLB, bukan per-karakter: kelima klip menarget node
   // rig-nya masing-masing (sudah dicek tidak ada bone yang dipakai dua klip),
@@ -159,6 +245,11 @@ export default function Office() {
         if (ao && ao.channel === 1 && !mat.lightMap) {
           mat.lightMap = ao;
           mat.lightMap.channel = 1;
+          // Lightmap disimpan sRGB-encoded (presisi gradasi gelap di 8-bit),
+          // tapi GLTFLoader menandai occlusionTexture sebagai linear. Tanpa
+          // koreksi ini midtone-nya terangkat gamma — pucat keabu-abuan.
+          mat.lightMap.colorSpace = SRGBColorSpace;
+          mat.lightMap.needsUpdate = true;
           mat.aoMap = null;
 
           // lightMap butuh atribut 'uv1'. Kalau GLB menaruhnya di channel lain,
@@ -505,9 +596,12 @@ export default function Office() {
 
   // Bvh mempercepat raycast di 291 objek — dipakai nanti untuk klik pintu (B2).
   return (
-    <Bvh firstHitOnly>
-      <primitive object={prepared} onClick={onClick} />
-    </Bvh>
+    <>
+      <Bvh firstHitOnly>
+        <primitive object={prepared} onClick={onClick} />
+      </Bvh>
+      <ScreenVideoGate />
+    </>
   );
 }
 
