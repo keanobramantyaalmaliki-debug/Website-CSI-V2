@@ -4,8 +4,10 @@ import { useRef, useMemo, useEffect } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { useReducedMotion } from "motion/react";
 import * as THREE from "three";
+import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 
-const PARTICLE_COUNT = 1000;
+const PARTICLE_COUNT_FINE = 1000;
+const PARTICLE_COUNT_COARSE = 500;
 const LETTERS = ["C", "S", "I"] as const;
 
 // Autoplay timeline: converge onto a letter, hold, disperse back to scatter, next letter.
@@ -157,15 +159,15 @@ export function sampleTimeline(
   return { from: last.from, to: last.to, eased: 1 };
 }
 
-function Particles({ active }: { active: boolean }) {
+function Particles({ active, particleCount }: { active: boolean; particleCount: number }) {
   const { invalidate } = useThree();
   const pointsRef = useRef<THREE.Points>(null);
 
   const { scatter, opacities, timeline } = useMemo(() => {
-    const scatter = new Float32Array(PARTICLE_COUNT * 3);
-    const opacities = new Float32Array(PARTICLE_COUNT);
+    const scatter = new Float32Array(particleCount * 3);
+    const opacities = new Float32Array(particleCount);
 
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
+    for (let i = 0; i < particleCount; i++) {
       const [sx, sy, sz] = scatterPosition();
       scatter[i * 3] = sx;
       scatter[i * 3 + 1] = sy;
@@ -173,9 +175,9 @@ function Particles({ active }: { active: boolean }) {
       opacities[i] = 0.25 + Math.random() * 0.25;
     }
 
-    const letterTargets = LETTERS.map((letter) => sampleTextPoints(letter, PARTICLE_COUNT));
+    const letterTargets = LETTERS.map((letter) => sampleTextPoints(letter, particleCount));
     return { scatter, opacities, timeline: buildTimeline(scatter, letterTargets) };
-  }, []);
+  }, [particleCount]);
 
   const positions = useMemo(() => new Float32Array(scatter), [scatter]);
 
@@ -198,7 +200,7 @@ function Particles({ active }: { active: boolean }) {
       const pos = pointsRef.current?.geometry.attributes.position as THREE.BufferAttribute | undefined;
       if (pos) {
         const { from, to, eased } = sampleTimeline(timeline, elapsedRef.current);
-        for (let i = 0; i < PARTICLE_COUNT * 3; i++) {
+        for (let i = 0; i < particleCount * 3; i++) {
           pos.array[i] = lerp(from[i], to[i], eased);
         }
         pos.needsUpdate = true;
@@ -212,7 +214,7 @@ function Particles({ active }: { active: boolean }) {
       cancelAnimationFrame(rafId);
       lastTsRef.current = null;
     };
-  }, [active, timeline, invalidate]);
+  }, [active, timeline, invalidate, particleCount]);
 
   return (
     <points ref={pointsRef}>
@@ -220,13 +222,13 @@ function Particles({ active }: { active: boolean }) {
         <bufferAttribute
           attach="attributes-position"
           args={[positions, 3]}
-          count={PARTICLE_COUNT}
+          count={particleCount}
           itemSize={3}
         />
         <bufferAttribute
           attach="attributes-opacity"
           args={[opacities, 1]}
-          count={PARTICLE_COUNT}
+          count={particleCount}
           itemSize={1}
         />
       </bufferGeometry>
@@ -244,6 +246,8 @@ function Particles({ active }: { active: boolean }) {
 
 export default function CsiParticleField({ active }: { active: boolean }) {
   const reduced = useReducedMotion();
+  const coarse = useCoarsePointer();
+  const particleCount = coarse ? PARTICLE_COUNT_COARSE : PARTICLE_COUNT_FINE;
 
   // No-WebGL / reduced-motion: render subtle gradient instead
   if (reduced) {
@@ -271,7 +275,7 @@ export default function CsiParticleField({ active }: { active: boolean }) {
         }}
         style={{ width: "100%", height: "100%" }}
       >
-        <Particles active={active} />
+        <Particles active={active} particleCount={particleCount} />
       </Canvas>
     </div>
   );

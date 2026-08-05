@@ -38,7 +38,6 @@ export default function CsiHero() {
             </h2>
           </FadeUpList>
 
-          {/* Body copy is a placeholder — replace with final copy from user (TODO(csi-hero): pending final copy). */}
           <motion.p
             className="mt-4 max-w-xl text-lg leading-relaxed text-zinc-400 sm:text-xl"
             initial={{ opacity: 0, y: 8 }}
@@ -46,14 +45,13 @@ export default function CsiHero() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
           >
-            We design systems that think alongside the people who run them —
-            turning raw software into intelligence that anticipates, adapts,
-            and acts.
+            We turn scattered systems into intelligence your organization can
+            act on — every day, every decision.
           </motion.p>
         </div>
 
-        <aside className="relative hidden lg:block">
-          <div className="h-[20rem]">
+        <aside className="relative mt-8 lg:mt-0">
+          <div className="h-40 lg:h-[20rem]">
             <CsiParticleField active={inView} />
           </div>
         </aside>
