@@ -1334,6 +1334,72 @@ Keduanya berpasangan: yang pertama mengukur **ongkos**, yang kedua merekam **has
 
 ---
 
+## 4s. Bake Ulang Lighting 🚧 (4–5 Agu) — mood baru + emission layar; lounge & office SELESAI, tone di-tuning & GLB dipangkas (5 Agu siang)
+
+Keano ingin look referensi Cycles yang gelap-kontras (kolam cahaya hangat, LED strip menyala, ambient gelap) tanpa lampu realtime. Keputusan desain yang DIKUNCI:
+
+- **Refleksi lantai glossy DICORET** — no SSR, no env probe. Kilau lantai = jatah envmap viewer yang sudah ada. Separuh "wah" referensi memang dari refleksi, tapi ongkosnya tidak sepadan.
+- **Emission 5 material layar dinyalakan** supaya spill-nya terpanggang: `iMac_Screen`/`OMon_Screen`/`MR_TVScreen` strength 3, `M_MacBook_Screen` 2.5, `M_SM_TV_Screen` 4 ("sedikit memancar" — function room tetap terang). Warna netral kebiruan (0.75, 0.82, 1.0) karena layar nanti diisi VideoTexture (§6c) — glow baked harus cocok dengan footage apapun. Glow-nya statis (tidak ikut kedip video) — trade-off standar, basement.studio juga begitu.
+- **Mood per ruangan:** office & meeting & pantry TIDAK diubah; function `FR_CeilLight` 150→**100W**; lounge dapat **`LNG_FillCard`** — AREA 4×3 m, 120W, warna hangat (1.0, 0.88, 0.72) di (-0.3, 4.6, 3.25). Lampu siluman = trik film: practical yang terlihat + fill tak terlihat; gratis karena cuma hidup saat bake. ⚠️ AREA tidak di-support glTF — tidak masalah, `export_lights=False`.
+- **CharacterLights akan dirombak** (SETELAH semua bake): 2 directional global → **1 point light per karakter, motivated** (P2/P3 monitor kebiruan, Leonard pendant hangat, P4 TV/ceiling netral, P5 TV function — "nonton TV di ruang gelap" tapi versi halus karena ruangannya tetap terang) + fill global redup dipertahankan. Ide "1 layar saja per orang" dari Keano — satu key dominan, bukan tiga lampu saling melawan.
+
+### Status bake (5 Agu): 107 lightmap
+| Batch | Objek | Hasil |
+|---|---|---|
+| Lounge (`MG_Lounge_*`) | 34 | ✅ 96 samples |
+| Arsitektur ter-lihat dari lounge (lantai/tembok/plafon lintas ruangan) | 24 | ✅ (1 skip → dibetulkan) |
+| Office (`MG_Office_*`) | 49 | ✅ 10 menit, 0 error |
+| Function/smoking, meeting, pantry/westroom | — | ⏳ BELUM |
+
+EXR float tersimpan ganda: `/tmp/lmt_{lounge,office}/` + **`bake-output/{lounge,office}/` di repo** (58+49 file). `.blend` sudah di-save dengan LMT8 packed.
+
+### Beda resep vs bake lama (§4g) — dan kenapa
+- **Semua objek dibake** (kecil pun), bukan hanya ≥8 m² — mood gelap butuh benda kecil ikut gelap; objek yang cuma dapat ambient akan mengambang terang.
+- **166 mesh era baru belum punya UV2** → `smart_project` per mesh (66°, margin 0.02) ke layer `Lightmap`. ⚠️ `Export_Merged` di-EXCLUDE dari view layer — `lc.exclude=False` dulu, kembalikan setelahnya, atau semua ops gagal "not in ViewLayer".
+- **Pass DIFFUSE direct+indirect TANPA color** (murni cahaya) — sama seperti lama.
+- **Material lintas objek diduplikat DI DEPAN** (`mn__objname`), bukan setelah ketahuan saling timpa (kasus bohlam billiard & M_GlassFrame; 9+3 material).
+- **Karakter (5 rig) dibiarkan visible saat bake** = pelempar bayangan, bukan penerima (SkinnedMesh tidak dibake). Bola billiard tidak ada di .blend (aset Three.js terpisah) — isu bayangan hantu gugur.
+- **Progress ditulis ke `/tmp/bake_progress.json` per objek** + EXR di-save per objek. Bake >2 menit MEMUTUS socket MCP ("No data received") padahal Blender jalan terus — pantau lewat file progress / `ps aux` (CPU tinggi = masih bake), JANGAN kirim perintah bertubi (cuma antre). Selesai → reconnect N-panel.
+
+### Preview "lihat hasil bake" (tanpa export)
+Override per material: `UVMap(Lightmap) → LM_BakeTarget → Mix MULTIPLY dengan Base Color → Emission`, strength 1, semua lampu `hide_render`, world 0. ⚠️ Blender 5: socket `ShaderNodeMix` RGBA dicari via `identifier` (`A_Color`/`B_Color`/`Result_Color`) — `inputs['A']` mengembalikan socket Float yang SALAH sambung. ⚠️ Material emissive asli (bohlam/layar) harus dikembalikan emission-nya di mode preview, kalau tidak bohlam tampak mati. ⚠️ WAJIB restore penuh sebelum bake batch berikutnya — bake dalam mode preview = cahaya dobel.
+
+**Membaca preview:** render diffuse-only SELALU tampak lebih gelap dari hasil web — tidak ada specular (lantai hitam mengkilap = hampir nol diffuse), ambient, envmap, bloom, exposure. Verifikasi dengan render `view_settings.exposure=+1.5`: kalau informasi cahayanya ada (sofa kebaca, mozaik hidup), bake SEHAT — kalibrasi terang final di viewer (slider exposure / lightMapIntensity), BUKAN re-bake. Keano sempat menilai "masih gelap" dari render tanpa exposure — versi +1.5 stop menjawabnya.
+
+### Tes di web (5 Agu, malam)
+Wiring export: `UV Lightmap → LM_BakeTarget → glTF Material Output.Occlusion` → `occlusionTexture texCoord=1` (kontrak §4g/§4l tak berubah — `Office.tsx` deteksi `ao.channel===1` tetap jalan, **kode web NOL perubahan**). Verifikasi GLB: 140 material texCoord=1, 96 AO asli utuh.
+- LMT float 32-bit bikin GLB **138 MB** → konversi **LMT8** (8-bit, clamp 0-1, downscale 2048→1024, `Non-Color`) → **104 MB**. Masih 12× versi lama (8.5 MB) — **SENGAJA belum dioptimasi**; percuma mengecilkan file kalau lighting masih bisa berubah. Optimasi final nanti: atlas per ruangan + Draco + WebP (§4g).
+- ⚠️ Clamp 0-1 di LMT8 memotong nilai >1 (bohlam 51.8) — di permukaan penerima efeknya kecil (mayoritas <1), tapi kalau highlight baked terasa tumpul, ini tersangkanya.
+- `office.glb` produksi di-backup: `public/3d/models/office.glb.bak-prebake`. **Belum di-commit** — masih fase tes.
+- **Hasil di web BELUM di-review Keano** (pulang duluan) — item pertama besok.
+
+### Tuning tone di viewer ✅ (5 Agu) — resep "dibagi 4, dikali 4"
+Export pertama 5 Agu gelap: EXR menyimpan cahaya HDR (hotspot lampu ~36) tapi PNG/WebP 8-bit memenggal semua nilai >1.0. Solusinya nilai lightmap **dibagi 4 di skrip export Blender** (in-memory, EXR asli tak disentuh) lalu **dikalikan 4 lagi di viewer** — hotspot 1.0–4.0 selamat; >4.0 (13 dari 144 image) tetap terpotong, kompromi diterima. ⚠️ Pembagi di skrip export dan pengali di `Office.tsx` **HARUS sama** — ubah satu, ubah dua-duanya.
+- `Office.tsx`: `LIGHTMAP_INTENSITY = 5`; lightmap di-set `SRGBColorSpace` (GLTFLoader menandai occlusionTexture linear → midtone terangkat gamma, pucat keabu-abuan)
+- `Scene.tsx`: exposure 1.0→**1.6**; ambient 0.03→**0.18 warm `#ffbd75`**; +`HueSaturation saturation 0.3` + `BrightnessContrast 0.03/0.08` setelah Bloom — ACES pada exposure tinggi menekan saturasi, dinding cream jadi pucat kelabu; dua pass murah ini mengembalikannya di level frame tanpa melawan lightmap
+
+### 🐛 "Web jadi berat setelah bake ulang" — DIAGNOSA + FIX ✅ (5 Agu siang)
+Gejala Keano: FPS drop saat jalan-jalan, laptop panas, tab lain lemot. **Bukan tone tuning-nya** (post-processing digabung satu pass) — biang: bake ulang meledakkan tekstur **91 → 179** (lightmap 36 → **124** terpisah; Office sendiri 54), memori GPU **336 → 508 MB**. Cocok dengan gejala = memory pressure di unified memory M2. Ukuran headless dpr 2: `/office` p95 33 ms + worst 350 ms (thrash bind tekstur), lounge/function mulus.
+
+**Fix: `scripts/shrink-lightmaps.mjs`** — ciutkan 123 lightmap ke 256px (lossless WebP) **di level byte kontainer GLB**. Hasil: GPU **508 → 315 MB** (LM 236 → ~33 MB), file 6.4 → 6.9 MB, worst frame `/office` 350 → 83 ms. Lightmap aman di 256px karena low-frequency. Direview visual Keano ✅.
+
+Tiga jebakan yang dilalui (mahal, jangan diulang):
+1. **`gltf-transform resize` CLI melewati tekstur WebP DIAM-DIAM** (hanya dukung PNG/JPEG) — run "sukses" dengan nol perubahan.
+2. **Encode ulang Draco = lossy walau setelan maksimal.** Pipeline gltf-transform API (NodeIO) men-decode Draco dan wajib encode ulang saat menulis; grid kuantisasi baru ≠ milik exporter → UV bergeser menyeberang padding island lightmap → **segitiga terang di panel rak cubby** MESKI lightmap rak itu tak diciutkan. `quantizeTexcoord: 14` tidak menolong. Solusi final: operasi di level kontainer GLB (JSON + BIN chunk), hanya byte image ditukar, bufferView Draco tersalin **byte-identik** (diverifikasi SHA-256).
+3. **Nama LM hidup di `images`, bukan `textures`** — GLB ini pakai `EXT_texture_webp` dan tekstur-teksturnya anonim; filter by `texture.name` dapat nol.
+
+Sisa yang sengaja belum: dedup 29 image kembar (hemat kecil setelah LM mengecil; butuh utak-atik referensi JSON), atlas per ruangan (fix sejati thrash bind — kerjaan Blender, bareng bake 3 ruangan sisa). **p95 33 ms di `/office` & `/meeting` MASIH ADA setelah shrink** — bukan dari tekstur; kesamaan dua ruangan itu karakter beranimasi (skinning) → isu terpisah, belum diselidiki.
+
+### NEXT (urutan)
+1. ~~Review web bareng Keano~~ ✅ 5 Agu — tone di-tuning (lihat atas), GLB shrink direview OK
+2. Bake 3 ruangan sisa dengan pipeline yang sama (function/meeting/pantry masih lightmap lama)
+3. ~~Kalibrasi exposure/lightMapIntensity/bloom di viewer~~ ✅ 5 Agu
+4. Rombak `CharacterLights.tsx` per tabel motivated di atas
+5. Optimasi ukuran GLB (atlas per ruangan + dedup) + audit pre-export (§4d) + commit
+6. Selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter)
+
+---
+
 ## 5. Foto Referensi
 
 | Folder | Isi |

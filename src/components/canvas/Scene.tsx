@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { EffectComposer, Bloom, N8AO } from "@react-three/postprocessing";
+import { EffectComposer, Bloom, N8AO, HueSaturation, BrightnessContrast } from "@react-three/postprocessing";
 import { ACESFilmicToneMapping } from "three";
 import { Suspense } from "react";
 import Office from "./Office";
@@ -97,7 +97,7 @@ export default function Scene() {
       gl={{ antialias: false, powerPreference: "high-performance" }}
       onCreated={({ gl }) => {
         gl.toneMapping = ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.0;
+        gl.toneMappingExposure = 1.6;
       }}
     >
       <color attach="background" args={["#0a0a0c"]} />
@@ -112,7 +112,7 @@ export default function Scene() {
           Naikkan hanya kalau ada yang gelap total sampai tidak terbaca, dan
           naikkan sedikit-sedikit; 0.10 saja sudah cukup untuk mengembalikan
           tampilan flat itu. */}
-      <ambientLight intensity={0.03} />
+      <ambientLight intensity={0.18} color="#ffbd75" />
       <SceneEnvironment />
       <CharacterLights />
       <CameraController />
@@ -260,6 +260,13 @@ export default function Scene() {
             threshold 0.95 = hanya emissive yang berpendar. JANGAN diturunkan:
             lantai & permukaan terang ikut glow seperti lava. */}
         <Bloom intensity={0.4} luminanceThreshold={0.95} mipmapBlur />
+        {/* Color grade hangat — mengejar tone render Cycles (5 Agu).
+            ACES pada exposure tinggi menekan saturasi, jadi dinding cream
+            tampak pucat kelabu meski sudah terang. Dua pass murah ini
+            mengembalikannya DI LEVEL FRAME, setelah bloom, tanpa melawan
+            lightmap (beda dengan menaikkan ambient yang meratakan pojok). */}
+        <HueSaturation saturation={0.3} />
+        <BrightnessContrast brightness={0.03} contrast={0.08} />
       </EffectComposer>
     </Canvas>
   );

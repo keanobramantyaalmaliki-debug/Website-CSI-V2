@@ -76,3 +76,12 @@ matterjs-lab.html
 # dan repo ini publik. Yang di-commit HANYA hasil pixelasinya di public/screens/
 # (96×54, sudah tidak terbaca). Simpan sumbernya lokal saja.
 /Screenshot *.png
+
+# Artefak pipeline bake (5 Agu) — sumber EXR & render antara, ratusan MB.
+# Yang di-commit hanya hasil akhirnya: public/3d/models/office.glb.
+/bake-output/
+*.glb.bak-*
+*.test-shrink.glb
+
+# Keluaran default scripts/shoot.mjs.
+/shot.png
