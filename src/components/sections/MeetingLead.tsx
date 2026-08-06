@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import LineMask from "@/components/motion/LineMask";
+import LineMask, { LINE_STAGGER } from "@/components/motion/LineMask";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -31,8 +31,11 @@ export default function MeetingLead() {
           </motion.p>
 
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-100 sm:text-5xl">
+            {/* Patahannya dirancang, bukan hasil pembungkusan — makanya dua
+                LineMask. Jaraknya memakai irama yang sama dengan heading yang
+                patah sendiri. */}
             <LineMask>From Public Sector</LineMask>
-            <LineMask delay={0.06}>to Enterprise.</LineMask>
+            <LineMask delay={LINE_STAGGER}>to Enterprise.</LineMask>
           </h2>
 
           <motion.p

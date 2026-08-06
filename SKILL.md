@@ -74,7 +74,8 @@ export default function SomeSection() {
       {/* 1. EYEBROW (T6) — the tie-that-binds label */}
       <Eyebrow>Section Label</Eyebrow>
 
-      {/* 2. HEADING (T1) — clip-mask reveal, one line of intent */}
+      {/* 2. HEADING (T1) — clip-mask reveal; wrapping is measured, so pass the
+          whole sentence as one string and let it find its own line breaks */}
       <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
         <LineMask>A short, declarative heading.</LineMask>
       </h2>
@@ -96,7 +97,7 @@ Seven transitions cover every content need. Full, copy-ready source is in **`ref
 
 | ID | Name | What it does | Reach for it when… |
 | --- | --- | --- | --- |
-| **T1** | `LineMask` | Heading slides up from behind a mask (y 110%→0, 0.8s) | Every section heading. The default reveal for large type. |
+| **T1** | `LineMask` | Heading slides up from behind a mask (y 110%→0, 0.8s), **one mask per wrapped line, stagger 0.12** | Every section heading. The default reveal for large type. |
 | **T2** | `FadeUpList` / `FadeUpItem` | Children rise + fade in sequence (stagger 0.04) | Card grids, feature lists, numbered steps, row tables, mission bullets. |
 | **T3** | `ScrollHighlight` | Words brighten dim→bright driven by scroll | Manifesto / statement / mission prose. Use as a **bookend**: one high on the page, one low. |
 | **T4** | *(scroll-activated node reveal)* | Sequenced "unfolding" as a block scrolls | Diagrammatic / architecture / stepped narratives. Ship the simplified inline version (progress-driven opacity per node); defer full sticky-pin unless the section truly needs it. |
@@ -133,6 +134,7 @@ Result: a new project inherits the exact editorial-dark feel in an afternoon, an
 - ❌ Chromatic accent fills, gradients-as-decoration, or glassmorphism. This system is monochrome-by-discipline.
 - ❌ A bespoke animation for one section. Compose from T1–T7 or reshape the content.
 - ❌ Per-component easing/duration tweaks. Change `EASE`/`VIEWPORT` centrally or not at all.
+- ❌ Splitting a heading across two `LineMask`s just to stagger its lines. T1 measures where the text actually wraps and staggers them itself; a hand-split breaks at the wrong place on every width you didn't check. Two `LineMask`s are only for a break the design *insists* on — then space them with `delay={LINE_STAGGER}`, never a fresh number.
 - ❌ Heading without an eyebrow, or an eyebrow that isn't uppercase-tracked-widest.
 - ❌ Skipping `useReducedMotion` handling — every primitive must degrade gracefully.
 - ❌ Inline content literals scattered in JSX. Keep the `const ARRAY` + `.map()` pattern.
