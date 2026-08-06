@@ -71,7 +71,7 @@ body {
   height: 100%;
 }
 
-html {
+html:not(.lenis) {
   scroll-behavior: smooth;
 }
 

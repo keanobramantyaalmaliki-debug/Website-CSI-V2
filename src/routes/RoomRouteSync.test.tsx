@@ -40,8 +40,14 @@ const SRC = readFileSync(
 );
 
 /** Buang komentar — berkas ini menjelaskan guard-nya panjang lebar di prosa,
- *  dan penjelasan itu tidak boleh dihitung sebagai kode yang menjaga. */
-const CODE = SRC.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+ *  dan penjelasan itu tidak boleh dihitung sebagai kode yang menjaga.
+ *  Baris import juga dibuang: `import { scrollToTop, scrollToSection } from
+ *  "@/lib/smoothScroll"` mengandung substring "scrollTo" dan muncul di awal
+ *  berkas, jauh sebelum guard-nya — kalau ikut terhitung, assertion urutan di
+ *  bawah gagal padahal kodenya benar. */
+const CODE = SRC.replace(/\/\*[\s\S]*?\*\//g, "")
+  .replace(/\/\/[^\n]*/g, "")
+  .replace(/^import[^\n]*\n/gm, "");
 
 describe("RoomRouteSync tidak menyela tween kamera", () => {
   it("Arah 1 berhenti lebih dulu kalau room-nya sudah aktif", () => {
@@ -64,16 +70,16 @@ describe("RoomRouteSync tidak menyela tween kamera", () => {
     ).toBe(true);
   });
 
-  it("scrollTo berada SESUDAH guard, bukan sebelumnya", () => {
+  it("scrollToTop berada SESUDAH guard, bukan sebelumnya", () => {
     const guard = CODE.search(/if\s*\(\s*(key\s*===\s*currentRoom|currentRoom\s*===\s*key)\s*\)/);
-    const scroll = CODE.indexOf("scrollTo");
+    const scroll = CODE.search(/scrollToTop\s*\(/);
 
-    // Tidak ada scrollTo sama sekali → tidak ada yang perlu diurutkan.
+    // Tidak ada pemanggilan scrollToTop sama sekali → tidak ada yang perlu diurutkan.
     if (scroll === -1) return;
 
     expect(
       guard !== -1 && guard < scroll,
-      "`window.scrollTo` di RoomRouteSync.tsx berada SEBELUM guard " +
+      "`scrollToTop()` di RoomRouteSync.tsx berada SEBELUM guard " +
         "`key === currentRoom`, jadi ia tetap jalan pada perpindahan yang " +
         "dipicu waypoint — persis efek samping yang membuat tween kamera " +
         "tersendat. Pindahkan guard-nya ke atas.\n",

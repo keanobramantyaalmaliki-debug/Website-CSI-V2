@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSceneStore, pathFor, roomFromPath } from "@/lib/store/sceneStore";
+import { scrollToTop, scrollToSection } from "@/lib/smoothScroll";
 
 /**
  * Sinkronisasi dua-arah path URL ↔ currentRoom.
@@ -56,7 +57,7 @@ export default function RoomRouteSync() {
     // `!hash` — kalau URL-nya membawa anchor (mis. "/#contact"), Arah 3 di
     // bawah yang mengurus scroll-nya. Melompat ke atas dulu di sini membuat
     // pengunjung melihat halaman tersentak sebelum meluncur ke tujuannya.
-    if (!hash) window.scrollTo(0, 0);
+    if (!hash) scrollToTop();
   }, [pathname, goTo, currentRoom, hash]);
 
   // Arah 2: currentRoom → pathname (klik waypoint dalam Canvas)
@@ -77,7 +78,7 @@ export default function RoomRouteSync() {
     // rAF: beri satu frame untuk konten room yang baru saja mount (misal
     // pindah dari Office ke Lounge) selesai dirender sebelum discroll.
     const raf = requestAnimationFrame(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+      scrollToSection(id);
     });
     return () => cancelAnimationFrame(raf);
   }, [pathname, hash]);
