@@ -134,6 +134,7 @@ export default function FlowDiagram({ progress }: { progress: MotionValue<number
       style={{ fontFamily: "inherit" }}
       aria-hidden="true"
       focusable={false}
+      data-testid="flow-diagram"
     >
       {LABELS.slice(0, -1).map((_, i) => (
         <LineSegment key={i} i={i} progress={progress} />

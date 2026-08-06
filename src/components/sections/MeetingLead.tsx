@@ -30,7 +30,7 @@ export default function MeetingLead() {
             Meeting Room · The Work
           </motion.p>
 
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-100 sm:text-5xl">
+          <h2 className="mt-3 text-[clamp(1.875rem,5vw,3rem)] font-semibold tracking-tight text-zinc-100 leading-[1.05]">
             <LineMask>From Public Sector</LineMask>
             <LineMask delay={0.06}>to Enterprise.</LineMask>
           </h2>

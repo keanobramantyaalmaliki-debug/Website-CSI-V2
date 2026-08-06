@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import DeploymentRow, { type DeploymentData } from "@/components/sections/DeploymentRow";
+import DeploymentCard, { type DeploymentData } from "@/components/sections/DeploymentCard";
 import PhysicsHeading from "@/components/motion/PhysicsHeading";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -71,16 +71,16 @@ export default function Deployments() {
         className="relative mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl"
       />
 
-      {/* Deployment rows with stagger entrance */}
+      {/* Deployment cards with stagger entrance */}
       <motion.div
-        className="relative mt-12"
+        className="relative mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, margin: "0px 0px -60px 0px" }}
         variants={staggerContainer}
       >
         {DEPLOYMENTS.map((d) => (
-          <DeploymentRow key={d.num} d={d} />
+          <DeploymentCard key={d.num} d={d} />
         ))}
       </motion.div>
     </section>
