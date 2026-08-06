@@ -95,7 +95,7 @@ export default function TheCrew() {
                 key={f}
                 type="button"
                 onClick={() => setFilter(f)}
-                className={`text-[11px] uppercase tracking-widest transition-colors duration-200 ${
+                className={`whitespace-nowrap text-[11px] uppercase tracking-widest transition-colors duration-200 ${
                   filter === f
                     ? "border-b border-accent text-accent"
                     : "border-b border-transparent text-zinc-500 hover:text-zinc-300"

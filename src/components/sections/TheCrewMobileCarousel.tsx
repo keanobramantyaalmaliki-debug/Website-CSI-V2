@@ -99,7 +99,7 @@ export default function TheCrewMobileCarousel({ people }: { people: TeamMember[]
         ))}
       </FadeUpList>
 
-      <div className="flex flex-wrap justify-center gap-1.5">
+      <div className="flex flex-nowrap justify-center gap-1">
         {people.map((member, index) => (
           <button
             key={member.name}
@@ -109,7 +109,7 @@ export default function TheCrewMobileCarousel({ people }: { people: TeamMember[]
               setActive(index);
               scrollToIndex(index);
             }}
-            className={`h-1 w-6 rounded-full transition-colors duration-300 ${
+            className={`h-1 w-4 shrink-0 rounded-full transition-colors duration-300 ${
               index === active ? "bg-accent" : "bg-white/20"
             }`}
           />

@@ -121,3 +121,29 @@ body {
     scroll-behavior: auto;
   }
 }
+
+/* Careers mobile card idle glow — staggered pulse standing in for the
+   cursor-follow spotlight on touch devices where there is no cursor. */
+@keyframes careers-idle-glow {
+  0%,
+  100% {
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  50% {
+    border-color: rgba(249, 115, 22, 0.4);
+  }
+}
+
+/* Careers card icon sweep — slides a masked band across the accent-colored
+   icon overlay, revealing it over the gray base to read as a gray→orange
+   sweep in a continuous loop. */
+@keyframes careers-icon-sweep {
+  0% {
+    mask-position: 100% 0;
+    -webkit-mask-position: 100% 0;
+  }
+  100% {
+    mask-position: -200% 0;
+    -webkit-mask-position: -200% 0;
+  }
+}
