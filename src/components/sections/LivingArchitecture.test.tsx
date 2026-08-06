@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { act, render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import LivingArchitecture from "./LivingArchitecture";
 
-// jsdom lacks IntersectionObserver; motion's whileInView needs it.
+// jsdom lacks IntersectionObserver; motion's whileInView and useScrollStepper need it.
 class IntersectionObserverStub {
   observe() {}
   unobserve() {}
@@ -9,31 +10,14 @@ class IntersectionObserverStub {
 }
 vi.stubGlobal("IntersectionObserver", IntersectionObserverStub);
 
-let mockReduced = false;
-
-vi.mock("motion/react", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("motion/react")>();
-  return { ...actual, useReducedMotion: () => mockReduced };
-});
-
-const { default: LivingArchitecture } = await import("./LivingArchitecture");
-
-beforeEach(() => {
-  mockReduced = false;
-});
-
-afterEach(() => {
-  vi.useRealTimers();
-});
-
-const NODE_NAMES = [
-  "Citizen",
-  "Operations",
-  "Knowledge",
-  "Infrastructure",
-  "Intelligence",
-  "Decision",
-  "Action",
+const NODES = [
+  { name: "Citizen", desc: "Every interaction starts with people — their needs drive the system." },
+  { name: "Operations", desc: "Workflows that turn intent into action across every department." },
+  { name: "Knowledge", desc: "Data and institutional memory that give every decision context." },
+  { name: "Infrastructure", desc: "Cloud, APIs, and integrations that keep everything connected." },
+  { name: "Intelligence", desc: "AI and analytics that surface patterns before you ask." },
+  { name: "Decision", desc: "Where signals and intelligence converge into a clear course." },
+  { name: "Action", desc: "Outcomes in the real world — sent, deployed, delivered." },
 ];
 
 describe("LivingArchitecture", () => {
@@ -44,43 +28,25 @@ describe("LivingArchitecture", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders all 7 node names (desktop slider + mobile reveal both in DOM, so 2 occurrences each)", () => {
+  it("renders one h3 heading per node, in order", () => {
     render(<LivingArchitecture />);
-    for (const name of NODE_NAMES) {
-      expect(screen.getAllByText(name)).toHaveLength(2);
+    const headings = screen.getAllByRole("heading", { level: 3 });
+    expect(headings).toHaveLength(NODES.length);
+    expect(headings.map((h) => h.textContent)).toEqual(NODES.map((n) => n.name));
+  });
+
+  it("renders every node's description", () => {
+    render(<LivingArchitecture />);
+    for (const node of NODES) {
+      expect(screen.getByText(node.desc)).toBeInTheDocument();
     }
   });
 
-  it("renders 7 glyph SVGs per variant (14 total: desktop slider + mobile reveal)", () => {
+  it("renders the Foundation and Flow group labels", () => {
     render(<LivingArchitecture />);
-    expect(document.querySelectorAll("svg")).toHaveLength(14);
-  });
-
-  it("clicking a card in the desktop slider brings it to the front", () => {
-    render(<LivingArchitecture />);
-    const actionCard = screen.getByRole("button", { name: /action — bring to front/i });
-    expect(actionCard).toHaveAttribute("data-active", "false");
-
-    fireEvent.click(actionCard);
-    expect(actionCard).toHaveAttribute("data-active", "true");
-  });
-
-  it("auto-advances the front card every 5s", () => {
-    vi.useFakeTimers();
-    render(<LivingArchitecture />);
-    const citizenCard = screen.getByRole("button", { name: /citizen — bring to front/i });
-    expect(citizenCard).toHaveAttribute("data-active", "true");
-
-    act(() => {
-      vi.advanceTimersByTime(5000);
-    });
-    expect(citizenCard).toHaveAttribute("data-active", "false");
-  });
-
-  it("reduced-motion renders a static grid without crashing", () => {
-    mockReduced = true;
-    render(<LivingArchitecture />);
-    expect(document.querySelector('[data-testid="glyph-slider-static"]')).toBeInTheDocument();
-    expect(document.querySelector('[data-testid="glyph-slider"]')).not.toBeInTheDocument();
+    // Group label also appears per sticky-panel (StickyScroll renders every
+    // panel to the DOM — see Process.test.tsx), so assert presence, not count.
+    expect(screen.getAllByText("Foundation").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Flow").length).toBeGreaterThan(0);
   });
 });
