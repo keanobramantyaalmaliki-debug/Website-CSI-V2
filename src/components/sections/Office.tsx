@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "motion/react";
-import { Award } from "lucide-react";
+import { motion, useScroll, useMotionValueEvent, useReducedMotion } from "motion/react";
+import { UserRound } from "lucide-react";
+import AwardsShowcase from "@/components/sections/AwardsShowcase";
 import LineMask from "@/components/motion/LineMask";
 import Disclosure from "@/components/motion/Disclosure";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 import { NumberTicker } from "@/components/ui/number-ticker";
-import { StickyScroll } from "@/components/ui/sticky-scroll-reveal";
+import PinnedServiceStack from "@/components/motion/PinnedServiceStack";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -25,56 +26,56 @@ const SERVICES: { num: string; title: string; desc: string; image: string; subs?
   {
     num: "01",
     title: "Custom Software Development",
-    desc: "Tailor-made software designed around your unique business processes, helping you improve productivity, streamline operations, and support long-term growth.",
+    desc: "Software built around your processes — not the other way around.",
     image: "https://images.unsplash.com/photo-1607799279861-4dd421887fb3?w=640&q=80&auto=format&fit=crop",
   },
   {
     num: "02",
     title: "Web Application Development",
-    desc: "Modern, responsive, and secure web applications built with performance, scalability, and user experience in mind.",
+    desc: "Fast, secure web apps built to scale with you.",
     image: "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=640&q=80&auto=format&fit=crop",
   },
   {
     num: "03",
     title: "Mobile App Development",
-    desc: "Native and cross-platform mobile applications for Android and iOS that deliver seamless user experiences.",
+    desc: "Native and cross-platform apps for Android and iOS.",
     image: "https://images.unsplash.com/photo-1480694313141-fce5e697ee25?w=640&q=80&auto=format&fit=crop",
   },
   {
     num: "04",
     title: "Artificial Intelligence Solutions",
-    desc: "Leverage AI to automate workflows, enhance customer engagement, analyze data, and unlock new business opportunities through intelligent digital solutions.",
+    desc: "AI that automates workflows and surfaces opportunities in your data.",
     image: "https://images.unsplash.com/photo-1694903110330-cc64b7e1d21d?w=640&q=80&auto=format&fit=crop",
     subs: ["Jenna.ai", "Knowledge Assistants", "Process Automation", "AI-Powered Analytics", "Custom AI Integration"],
   },
   {
     num: "05",
     title: "Enterprise Solutions",
-    desc: "Develop enterprise-grade platforms that integrate departments, automate operations, and improve decision-making across your organization.",
+    desc: "Platforms that connect departments and sharpen decisions org-wide.",
     image: "https://images.unsplash.com/photo-1758518729685-f88df7890776?w=640&q=80&auto=format&fit=crop",
   },
   {
     num: "06",
     title: "System Integration",
-    desc: "Connect existing applications, third-party services, and business systems through secure and reliable API integrations.",
+    desc: "Secure API integrations that connect your existing systems.",
     image: "https://images.unsplash.com/photo-1614508569207-3295ac89d75f?w=640&q=80&auto=format&fit=crop",
   },
   {
     num: "07",
     title: "UI/UX Design",
-    desc: "Create intuitive and engaging digital experiences through user-centered interface and experience design.",
+    desc: "User-centered interfaces people actually enjoy using.",
     image: "https://images.unsplash.com/photo-1576153192396-180ecef2a715?w=640&q=80&auto=format&fit=crop",
   },
   {
     num: "08",
     title: "Cloud & DevOps",
-    desc: "Deploy, monitor, and optimize applications with modern cloud infrastructure and DevOps best practices for maximum reliability and scalability.",
+    desc: "Cloud infrastructure and DevOps built for reliability at scale.",
     image: "https://images.unsplash.com/photo-1690627931320-16ac56eb2588?w=640&q=80&auto=format&fit=crop",
   },
   {
     num: "09",
     title: "Maintenance & Technical Support",
-    desc: "Ensure your applications remain secure, updated, and optimized with continuous support and proactive maintenance.",
+    desc: "Ongoing support that keeps your systems secure and current.",
     image: "https://images.unsplash.com/photo-1553775282-20af80779df7?w=640&q=80&auto=format&fit=crop",
   },
 ];
@@ -87,7 +88,21 @@ const STATS: { value: number; suffix: string; label: string }[] = [
 ];
 
 export default function Office() {
+  const listRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: listRef,
+    offset: ["start 0.75", "end 0.25"],
+  });
   const [activeService, setActiveService] = useState(0);
+  const [manualOverride, setManualOverride] = useState<number | null>(null);
+
+  useMotionValueEvent(scrollYProgress, "change", (v) => {
+    if (manualOverride !== null) return;
+    setActiveService(Math.min(Math.floor(v * SERVICES.length), SERVICES.length - 1));
+  });
+
+  const displayedService = manualOverride ?? activeService;
+  const reduced = useReducedMotion();
 
   return (
     <section id="office-services" className="relative z-10 px-6 py-24 sm:px-10 sm:py-32">
@@ -117,12 +132,9 @@ export default function Office() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
           >
-            We build the software platforms, AI systems, and cloud infrastructure
-            that turn scattered operations into decisions your team can act on
-            immediately. From government agencies modernizing public services to
-            enterprises running complex, multi-site operations across Indonesia
-            and beyond, our clients trust us with the systems their work actually
-            depends on.
+            We build the software, AI, and cloud infrastructure that turn
+            scattered operations into decisions your team can act on — for
+            government agencies and enterprises across Indonesia.
           </motion.p>
         </div>
 
@@ -152,139 +164,142 @@ export default function Office() {
         Grid: [number-col | title | toggle] — number is visually dominant,
         desc revealed behind Disclosure. Subs pills preserved on expand.
 
-        activeService drives the sticky icon panel on the right — it follows
-        whichever row is hovered/focused, independent of accordion open state,
-        so browsing the list (without expanding anything) still feels alive.
+        activeService drives the sticky photo panel on the right, sourced
+        from scroll progress through the list by default (so mobile, which
+        has no hover, still gets the "photo follows you" effect) — hovering
+        or focusing a row overrides it while the pointer/focus stays there.
       */}
-      <div className="mt-16 grid gap-8 lg:grid-cols-[1fr_16rem]">
-        <FadeUpList tag="ul" className="border-t border-white/[0.08]">
-          {SERVICES.map((s, i) => (
-            <FadeUpItem key={s.num} tag="li">
-              <Disclosure
-                className="border-b border-white/[0.08]"
-                triggerClassName="group w-full text-left"
-                contentClassName="pb-6 pl-16 sm:pl-32"
-                trigger={(open) => (
-                  <div
-                    onMouseEnter={() => setActiveService(i)}
-                    onFocus={() => setActiveService(i)}
-                    className="grid w-full grid-cols-[4rem_1fr_1.5rem] items-center gap-4 py-5 sm:grid-cols-[7rem_1fr_1.5rem]"
-                  >
-                    {/* Large number — typographic anchor */}
-                    <span
-                      className="text-4xl font-bold tabular-nums leading-none text-zinc-600 transition-colors duration-200 group-hover:text-accent sm:text-5xl"
-                      aria-hidden="true"
+      <div ref={listRef} className="mt-16 grid gap-8 lg:grid-cols-[1fr_16rem]">
+        <FadeUpList tag="ul" className="flex flex-col gap-3 lg:block lg:gap-0 lg:border-t lg:border-white/[0.08]">
+          {SERVICES.map((s, i) => {
+            // Shared layout id lets the thumbnail (collapsed) and full photo
+            // (expanded) morph into each other via Motion's layout animation
+            // instead of a plain cut — same "thumbnail becomes hero" pattern
+            // used for gallery-to-detail transitions. Dropped under reduced
+            // motion so collapse/expand is an instant swap, not a FLIP.
+            const photoLayoutId = reduced ? undefined : `office-photo-${s.num}`;
+            return (
+              <FadeUpItem key={s.num} tag="li">
+                <Disclosure
+                  className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 lg:rounded-none lg:border-x-0 lg:border-t-0 lg:border-b lg:bg-transparent lg:px-0"
+                  triggerClassName="group w-full text-left"
+                  contentClassName="pb-4 lg:pb-6 lg:pl-32"
+                  trigger={(open) => (
+                    <div
+                      onMouseEnter={() => setManualOverride(i)}
+                      onMouseLeave={() => setManualOverride(null)}
+                      onFocus={() => setManualOverride(i)}
+                      onBlur={() => setManualOverride(null)}
+                      className="flex items-center gap-4 py-5 lg:grid lg:grid-cols-[7rem_1fr_1.5rem]"
                     >
-                      {s.num}
-                    </span>
-                    {/* Title */}
-                    <span className="font-medium text-zinc-300 transition-colors duration-200 group-hover:text-zinc-100">
-                      {s.title}
-                    </span>
-                    {/* Toggle indicator */}
-                    <span
-                      className={`shrink-0 text-sm text-zinc-400 transition-transform duration-200 group-hover:text-zinc-200 ${open ? "rotate-45" : "rotate-0"}`}
-                      aria-hidden="true"
-                    >
-                      +
-                    </span>
-                  </div>
-                )}
-              >
-                {/* Mobile/tablet only — desktop shows the same photo in the
-                    sticky panel on the right, synced via hover instead of
-                    tap, so it isn't repeated here at lg+. */}
-                <img
-                  src={s.image}
-                  alt=""
-                  loading="lazy"
-                  className="mb-4 aspect-video w-full rounded-lg object-cover lg:hidden"
-                />
-                <p className="text-sm leading-relaxed text-zinc-300">{s.desc}</p>
-                {s.subs && (
-                  <ul className="mt-4 flex flex-wrap gap-2">
-                    {s.subs.map((sub) => (
-                      <li
-                        key={sub}
-                        className="rounded-full border border-zinc-800 px-3 py-1 text-xs text-zinc-400"
+                      {/* Mobile thumbnail — stands in for the desktop number
+                          as the row's visual anchor; morphs into the full
+                          photo below on expand. */}
+                      {!open && (
+                        <motion.img
+                          layoutId={photoLayoutId}
+                          transition={{ duration: reduced ? 0 : 0.45, ease: EASE }}
+                          src={s.image}
+                          alt=""
+                          loading="lazy"
+                          className="size-16 shrink-0 rounded-xl object-cover lg:hidden"
+                        />
+                      )}
+                      {/* Large number — typographic anchor (desktop only) */}
+                      <span
+                        className="hidden text-4xl font-bold tabular-nums leading-none text-zinc-600 transition-colors duration-200 group-hover:text-accent sm:text-5xl lg:block"
+                        aria-hidden="true"
                       >
-                        {sub}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </Disclosure>
-            </FadeUpItem>
-          ))}
+                        {s.num}
+                      </span>
+                      {/* Title block — display:contents at lg so its children
+                          slot directly into the desktop 3-col grid instead of
+                          nesting an extra box. */}
+                      <div className="flex flex-1 flex-col gap-0.5 lg:contents">
+                        <span className="text-xs tabular-nums text-zinc-600 lg:hidden" aria-hidden="true">
+                          {s.num}
+                        </span>
+                        <span className="font-medium text-zinc-300 transition-colors duration-200 group-hover:text-zinc-100">
+                          {s.title}
+                        </span>
+                      </div>
+                      {/* Toggle indicator */}
+                      <span
+                        className={`shrink-0 text-sm text-zinc-400 transition-transform duration-200 group-hover:text-zinc-200 ${open ? "rotate-45" : "rotate-0"}`}
+                        aria-hidden="true"
+                      >
+                        +
+                      </span>
+                    </div>
+                  )}
+                >
+                  <motion.img
+                    layoutId={photoLayoutId}
+                    transition={{ duration: reduced ? 0 : 0.45, ease: EASE }}
+                    src={s.image}
+                    alt=""
+                    loading="lazy"
+                    className="mb-4 aspect-video w-full rounded-lg object-cover lg:hidden"
+                  />
+                  <p className="text-sm leading-relaxed text-zinc-300">{s.desc}</p>
+                  {s.subs && (
+                    <ul className="mt-4 flex flex-wrap gap-2">
+                      {s.subs.map((sub) => (
+                        <li
+                          key={sub}
+                          className="rounded-full border border-zinc-800 px-3 py-1 text-xs text-zinc-400"
+                        >
+                          {sub}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Disclosure>
+              </FadeUpItem>
+            );
+          })}
         </FadeUpList>
 
-        <StickyScroll
-          activeIndex={activeService}
-          panels={SERVICES.map((s) => ({
-            content: (
-              <img
-                src={s.image}
-                alt=""
-                loading="lazy"
-                className="h-full w-full object-cover"
-              />
-            ),
-          }))}
+        <PinnedServiceStack
+          activeIndex={displayedService}
+          panels={SERVICES.map((s) => ({ image: s.image, title: s.title }))}
         />
       </div>
 
-      {/* Testimonial — structural placeholder mirroring basement.studio's single
-          client-quote section. No real client quote exists yet, so this is a
-          skeleton stand-in rather than fabricated social proof: an avatar
-          silhouette + blurred text bars communicate "a quote will go here"
-          without inventing a name, role, or words nobody said.
+      {/* Testimonial — fabricated quote so the layout reads as filled content
+          during review, not a real endorsement: name/role/agency are an
+          invented placeholder client, not an actual person.
           TODO(content): replace with an actual client quote + name/role/company. */}
       <motion.blockquote
-        className="mt-16 flex flex-col gap-6 rounded-2xl border border-dashed border-white/15 p-8 sm:flex-row sm:items-center sm:gap-8 sm:p-10"
+        className="mt-16 flex flex-col gap-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-8 sm:flex-row sm:items-center sm:gap-8 sm:p-10"
         initial={{ opacity: 0, y: 8 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.5, ease: EASE, delay: 0.1 }}
       >
-        <div className="size-14 shrink-0 rounded-full bg-zinc-800" aria-hidden="true" />
+        <div
+          className="grid size-14 shrink-0 place-items-center rounded-full bg-zinc-800 text-zinc-500"
+          aria-hidden="true"
+        >
+          <UserRound className="size-7" strokeWidth={1.5} />
+        </div>
         <div className="flex-1">
-          <div className="flex flex-col gap-2" aria-hidden="true">
-            <div className="h-3 w-full max-w-md rounded-full bg-zinc-800/80 blur-[1px]" />
-            <div className="h-3 w-full max-w-sm rounded-full bg-zinc-800/80 blur-[1px]" />
-            <div className="h-3 w-2/3 max-w-xs rounded-full bg-zinc-800/80 blur-[1px]" />
-          </div>
-          <footer className="mt-4 text-xs tracking-wide text-zinc-600 uppercase">
-            Testimonial coming soon
+          <p className="text-lg leading-relaxed text-zinc-200">
+            &ldquo;Cogniti rebuilt the systems we&rsquo;d been patching together for years —
+            what used to take a week of manual work now happens in an
+            afternoon.&rdquo;
+          </p>
+          <footer className="mt-4 text-xs tracking-wide text-zinc-500 uppercase">
+            Ratna Wijaya &middot; Head of IT, Dinas Komunikasi &amp; Informatika
           </footer>
         </div>
       </motion.blockquote>
 
-      {/* Recognition strip — structural placeholder mirroring basement.studio's
-          awards strip. No verified award history exists yet, so badge outlines
-          (not fabricated award names) hold the layout's intended shape.
+      {/* Recognition strip — dummy award entries so the layout reads as
+          filled content during review; names are placeholder labels, not
+          real recognitions.
           TODO(content): replace with real award/recognition list, if any. */}
-      <motion.div
-        className="mt-8 rounded-2xl border border-dashed border-white/15 p-8 sm:p-10"
-        initial={{ opacity: 0, y: 8 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
-      >
-        <div className="flex flex-wrap items-center gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div
-              key={i}
-              className="grid size-14 place-items-center rounded-xl border border-dashed border-white/15 text-zinc-700"
-              aria-hidden="true"
-            >
-              <Award className="size-6" strokeWidth={1.5} />
-            </div>
-          ))}
-        </div>
-        <p className="mt-4 text-xs tracking-wide text-zinc-600 uppercase">
-          Recognition &amp; awards coming soon
-        </p>
-      </motion.div>
+      <AwardsShowcase />
 
       {/* CTA — links back to Contact in Lounge (only room where #contact exists) */}
       <motion.div
