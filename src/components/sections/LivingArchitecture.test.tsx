@@ -44,9 +44,17 @@ describe("LivingArchitecture", () => {
 
   it("renders the Foundation and Flow group labels", () => {
     render(<LivingArchitecture />);
-    // Group label also appears per sticky-panel (StickyScroll renders every
-    // panel to the DOM — see Process.test.tsx), so assert presence, not count.
     expect(screen.getAllByText("Foundation").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Flow").length).toBeGreaterThan(0);
+  });
+
+  it("renders exactly one glyph svg per node, not duplicated in a sticky panel", () => {
+    const { container } = render(<LivingArchitecture />);
+    expect(container.querySelectorAll("svg")).toHaveLength(NODES.length);
+  });
+
+  it("shows the 01 / 07 counter on mount", () => {
+    render(<LivingArchitecture />);
+    expect(screen.getByText("01 / 07")).toBeInTheDocument();
   });
 });

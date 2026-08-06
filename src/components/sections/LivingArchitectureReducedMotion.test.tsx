@@ -39,7 +39,11 @@ describe("LivingArchitecture — reduced motion", () => {
     // eyebrow/intro motion.p elements above it use fixed initial offsets
     // that never resolve in this test env since whileInView never fires —
     // that's pre-existing behavior shared with Process.tsx, out of scope here.
-    const list = document.querySelector(".border-t.border-white\\/\\[0\\.08\\]") as HTMLElement;
+    // The sticky heading column also carries a border-t border-white/[0.08]
+    // element (the counter block), so locate the node list itself via a
+    // node heading's ancestor rather than a bare class selector.
+    const firstHeading = screen.getByRole("heading", { level: 3, name: "Citizen" });
+    const list = firstHeading.closest(".border-t.border-white\\/\\[0\\.08\\]") as HTMLElement;
     const offsetElements = [...list.querySelectorAll('[style*="translateY"]')].filter(
       (el) => !/translateY\(0px\)/.test(el.getAttribute("style") ?? ""),
     );

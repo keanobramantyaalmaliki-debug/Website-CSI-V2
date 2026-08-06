@@ -3,7 +3,6 @@
 import { motion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
-import { StickyScroll } from "@/components/ui/sticky-scroll-reveal";
 import { NODE_GLYPHS } from "@/components/motion/NodeGlyphs";
 import { useScrollStepper } from "@/lib/hooks/useScrollStepper";
 import { cn } from "@/lib/utils";
@@ -72,13 +71,14 @@ function GroupHeader({ group, showConnector }: { group: Group; showConnector: bo
           ↓ runs on
         </p>
       )}
-      <span className="text-xs tracking-widest text-orange-500 uppercase">{group}</span>
+      <span className="text-xs tracking-widest text-zinc-500 uppercase">{group}</span>
     </div>
   );
 }
 
 export default function LivingArchitecture() {
   const { activeIndex, setRef } = useScrollStepper(NODES.length);
+  const total = String(NODES.length).padStart(2, "0");
 
   return (
     <section
@@ -86,33 +86,50 @@ export default function LivingArchitecture() {
       className="relative z-10 border-y border-white/[0.08] bg-white/[0.02]"
     >
       <div className="px-6 py-24 sm:px-10 sm:py-32">
-        {/* T6 — eyebrow */}
-        <motion.p
-          className="text-xs tracking-widest text-zinc-400 uppercase"
-          initial={{ opacity: 0, x: -8 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, ease: EASE }}
-        >
-          Living Architecture
-        </motion.p>
+        <div className="grid gap-10 lg:grid-cols-[20rem_1fr]">
+          {/* Sticky heading column — occupies the dead space Process.tsx's
+              full-width heading would otherwise leave empty here, and keeps
+              the two neighboring sections visually distinct despite sharing
+              a glyph language. See ProcessGlyphs.tsx for the full rationale. */}
+          <div className="lg:sticky lg:top-32 lg:self-start">
+            <motion.p
+              className="text-xs tracking-widest text-zinc-400 uppercase"
+              initial={{ opacity: 0, x: -8 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, ease: EASE }}
+            >
+              Living Architecture
+            </motion.p>
 
-        {/* T1 — line-mask heading */}
-        <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
-          <LineMask>A Living Architecture For Decisions.</LineMask>
-        </h2>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
+              <LineMask>A Living Architecture For Decisions.</LineMask>
+            </h2>
 
-        <motion.p
-          className="mt-4 max-w-xl text-sm leading-relaxed text-zinc-400"
-          initial={{ opacity: 0, y: 8 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
-        >
-          Signals, context, and knowledge — adaptive systems that move organizations from awareness to action.
-        </motion.p>
+            <motion.p
+              className="mt-4 max-w-sm text-sm leading-relaxed text-zinc-400"
+              initial={{ opacity: 0, y: 8 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
+            >
+              Signals, context, and knowledge — adaptive systems that move organizations from awareness to action.
+            </motion.p>
 
-        <div className="mt-16 grid gap-8 lg:grid-cols-[1fr_20rem]">
+            <div
+              className="mt-10 hidden border-t border-white/[0.08] pt-6 lg:block"
+              aria-hidden="true"
+            >
+              <span className="text-xs tabular-nums text-zinc-500">
+                {String(activeIndex + 1).padStart(2, "0")} / {total}
+              </span>
+              <p className="mt-2 text-xs tracking-widest text-zinc-400 uppercase">
+                Signal Complete&nbsp;<span className="text-orange-500">→</span>&nbsp;From awareness to
+                action.
+              </p>
+            </div>
+          </div>
+
           <FadeUpList tag="div" className="border-t border-white/[0.08]">
             {NODES.map((node, i) => {
               const Glyph = NODE_GLYPHS[i];
@@ -122,50 +139,28 @@ export default function LivingArchitecture() {
                   {opensGroup && <GroupHeader group={node.group} showConnector={i > 0} />}
                   <div
                     ref={setRef(i)}
-                    className="relative grid gap-4 border-b border-l border-white/[0.08] py-10 pl-6 sm:grid-cols-[3rem_1fr] sm:py-14 sm:pl-8"
+                    className="grid grid-cols-[2.5rem_2.5rem_1fr] items-center gap-x-4 gap-y-2 border-b border-l border-white/[0.08] py-6 pl-6 sm:grid-cols-[2.5rem_2.5rem_10rem_1fr] sm:py-7"
                   >
                     <span className="flex items-center gap-3 text-xs tabular-nums text-zinc-500">
                       <span aria-hidden="true" className={railDotClass(i === activeIndex)} />
                       {node.num}
                     </span>
-                    <div>
-                      <h3 className="text-xl font-medium text-zinc-100 sm:text-2xl">{node.name}</h3>
-                      <p className="mt-3 max-w-md text-sm leading-relaxed text-zinc-400">{node.desc}</p>
-                      {/* Mobile/tablet — desktop shows the same glyph in the sticky panel. */}
-                      <div className="mt-6 h-32 w-32 text-zinc-500 lg:hidden">
-                        <Glyph />
-                      </div>
+                    <div className="h-10 w-10 text-zinc-500">
+                      <Glyph />
                     </div>
+                    <h3 className="text-lg font-medium text-zinc-100 sm:text-xl">{node.name}</h3>
+                    <p className="col-span-3 max-w-xl text-sm leading-relaxed text-zinc-400 sm:col-span-1">
+                      {node.desc}
+                    </p>
                   </div>
                 </FadeUpItem>
               );
             })}
           </FadeUpList>
-
-          <StickyScroll
-            activeIndex={activeIndex}
-            panels={NODES.map((node, i) => {
-              const Glyph = NODE_GLYPHS[i];
-              return {
-                content: (
-                  <div className="flex h-full flex-col items-center justify-center gap-4 p-8">
-                    <div className="h-32 w-32 text-zinc-400">
-                      <Glyph />
-                    </div>
-                    <div className="text-center">
-                      <span className="text-xs tracking-widest text-orange-500 uppercase">
-                        {node.group}
-                      </span>
-                      <p className="mt-1 text-sm text-zinc-400">{node.name}</p>
-                    </div>
-                  </div>
-                ),
-              };
-            })}
-          />
         </div>
 
-        <p className="mt-8 text-xs tracking-widest text-zinc-400 uppercase">
+        {/* Sub-lg only — the sticky column above renders this at lg and up. */}
+        <p className="mt-8 text-xs tracking-widest text-zinc-400 uppercase lg:hidden">
           Signal Complete&nbsp;
           <span className="text-orange-500">→</span>
           &nbsp;From awareness to action.
