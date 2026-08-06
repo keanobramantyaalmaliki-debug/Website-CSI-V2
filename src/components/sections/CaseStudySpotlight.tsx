@@ -76,7 +76,7 @@ function SpotlightItem({ spotlight }: { spotlight: Spotlight }) {
               src={spotlight.image}
               alt=""
               loading="lazy"
-              className="aspect-[3/4] w-full object-cover transition-[filter] duration-500 sm:aspect-[16/10] lg:aspect-[16/9] lg:group-hover:brightness-[0.45]"
+              className="aspect-[3/4] w-full object-cover transition-[filter] duration-500 sm:aspect-[16/10] lg:aspect-auto lg:h-[480px] lg:group-hover:brightness-[0.45]"
               style={{ y, scale }}
               transition={{ duration: 0.6, ease: EASE }}
             />
