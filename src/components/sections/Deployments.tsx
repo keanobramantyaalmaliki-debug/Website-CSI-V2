@@ -2,7 +2,9 @@
 
 import { motion } from "motion/react";
 import DeploymentCard, { type DeploymentData } from "@/components/sections/DeploymentCard";
+import DeploymentCta from "@/components/sections/DeploymentCta";
 import PhysicsHeading from "@/components/motion/PhysicsHeading";
+import { FadeUpList } from "@/components/motion/FadeUp";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -39,11 +41,6 @@ const DEPLOYMENTS: DeploymentData[] = [
   },
 ];
 
-const staggerContainer = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.08, delayChildren: 0.1 } },
-};
-
 export default function Deployments() {
   return (
     <section
@@ -72,17 +69,12 @@ export default function Deployments() {
       />
 
       {/* Deployment cards with stagger entrance */}
-      <motion.div
-        className="relative mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, margin: "0px 0px -60px 0px" }}
-        variants={staggerContainer}
-      >
+      <FadeUpList className="relative mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {DEPLOYMENTS.map((d) => (
           <DeploymentCard key={d.num} d={d} />
         ))}
-      </motion.div>
+        <DeploymentCta />
+      </FadeUpList>
     </section>
   );
 }
