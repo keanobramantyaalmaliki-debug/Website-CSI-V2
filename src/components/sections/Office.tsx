@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { motion } from "motion/react";
 import { Award } from "lucide-react";
 import LineMask from "@/components/motion/LineMask";
@@ -286,24 +285,6 @@ export default function Office() {
         </p>
       </motion.div>
 
-      {/* CTA — links back to Contact in Lounge (only room where #contact exists) */}
-      <motion.div
-        className="mt-16 flex flex-wrap items-center gap-4"
-        initial={{ opacity: 0, y: 8 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, ease: EASE, delay: 0.25 }}
-      >
-        <Link
-          to="/#contact"
-          className="group relative inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium text-black transition-colors hover:bg-zinc-200"
-        >
-          Talk to us
-          <span className="grid h-5 w-5 place-items-center rounded-full bg-zinc-900/10 text-zinc-900 transition-transform duration-200 group-hover:translate-x-0.5">
-            →
-          </span>
-        </Link>
-      </motion.div>
     </section>
   );
 }

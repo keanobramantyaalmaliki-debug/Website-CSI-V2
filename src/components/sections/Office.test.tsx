@@ -55,14 +55,22 @@ describe("Office", () => {
     expect(screen.getByText("Maintenance & Technical Support")).toBeInTheDocument();
   });
 
-  it("links the CTA back to Contact in the Lounge", () => {
+  it("does not send Talk to us out of the room", () => {
     render(
       <MemoryRouter>
         <Office />
       </MemoryRouter>,
     );
-    const cta = screen.getByRole("link", { name: /talk to us/i });
-    expect(cta).toHaveAttribute("href", "/#contact");
+    // This section used to end in a "Talk to us" link to "/#contact" — the only
+    // way to reach Contact while Office had none of its own. Office now renders
+    // <Contact /> right below it (see roomContent.tsx), so that link would only
+    // throw the visitor out of the page they are already reading; reported
+    // 2026-08-06 as "talk to us in Office has no component".
+    expect(
+      screen.queryByRole("link", { name: /talk to us/i }),
+      "Office links out to another room for Talk to us again. Its own " +
+        "Contact section is directly below — the link is a detour.",
+    ).not.toBeInTheDocument();
   });
 
   it("renders a testimonial placeholder without a fabricated quote", () => {

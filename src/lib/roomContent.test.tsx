@@ -48,6 +48,24 @@ describe("roomHasContact", () => {
     }
   });
 
+  it("tiap ruangan yang punya konten juga punya <Contact />", () => {
+    // Aturan produknya: tiap menu berujung di "Talk to us". Yang di atas cuma
+    // memastikan roomHasContact JUJUR soal isi ROOM_CONTENT — kalau sebuah
+    // ruangan memang tidak punya Contact, keduanya sepakat dan test itu tetap
+    // hijau. Persis itu yang terjadi pada Office (dilaporkan 6 Agu 2026):
+    // tombolnya "benar" karena melempar ke Lounge, tapi pengunjung terlempar
+    // keluar dari ruangan yang sedang dibacanya. Yang di sini menjaga
+    // aturannya, bukan konsistensinya.
+    for (const room of ROOM_KEYS_WITH_CONTENT) {
+      expect(
+        roomHasContact(room),
+        `Ruangan "${room}" tidak punya <Contact />, jadi "Talk to us" di ` +
+          `sana melempar pengunjung ke Lounge alih-alih menggulir ke ` +
+          `bawah. Tambahkan <Contact /> di ROOM_CONTENT["${room}"].`,
+      ).toBe(true);
+    }
+  });
+
   it("Pantry (konten null) dijawab false, bukan melempar", () => {
     // Pantry disabled dan ROOM_CONTENT-nya null. Ia tidak punya route, jadi
     // seharusnya tak pernah ditanyakan — tapi jawaban yang salah di sini akan

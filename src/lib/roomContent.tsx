@@ -48,7 +48,12 @@ export const ROOM_CONTENT: Record<RoomKey, ReactNode> = {
       <Contact />
     </>
   ),
-  Office: <Office />,
+  Office: (
+    <>
+      <Office />
+      <Contact />
+    </>
+  ),
   Meeting: (
     <>
       <MeetingLead />
@@ -88,8 +93,9 @@ export const ROOM_KEYS_WITH_CONTENT = (
  *
  * Dipakai Navbar untuk memutuskan "Talk to us" cukup menggulir di tempat, atau
  * harus pindah ke Lounge dulu. DITURUNKAN dari ROOM_CONTENT di atas, bukan
- * ditulis ulang sebagai daftar nama: begitu Office diberi <Contact />,
- * tombolnya ikut benar sendiri tanpa ada yang perlu ingat menyunting Navbar.
+ * ditulis ulang sebagai daftar nama: menambah ruangan baru berisi <Contact />
+ * membuat tombolnya benar sendiri, tanpa ada yang perlu ingat menyunting
+ * Navbar. (Office sempat terlewat justru saat daftarnya masih ditulis tangan.)
  *
  * Cara memeriksanya menelusuri pohon React element — `<Contact />` bisa berdiri
  * langsung di bawah fragment ruangan (seperti sekarang) maupun terbungkus
