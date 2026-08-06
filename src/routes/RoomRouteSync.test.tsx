@@ -10,8 +10,11 @@
  *
  * Semua itu terjadi selagi tween kamera 1400 ms masih berjalan. Panggilan
  * goTo()-nya sendiri tertahan guard `animating` di CameraController, tapi
- * `window.scrollTo(0, 0)` di sebelahnya TIDAK — ia tetap dieksekusi di tengah
+ * reset scroll ke atas di sebelahnya TIDAK — ia tetap dieksekusi di tengah
  * animasi.
+ *
+ * (Dulu `window.scrollTo(0, 0)`, kini `smooth.scrollTo(0, { immediate: true })`
+ * lewat Lenis. Yang dijaga tetap sama: urutannya, bukan pemanggilnya.)
  *
  * Dua akibatnya bertumpuk, dan keduanya terasa sebagai "perpindahan ruangan
  * jadi tersendat":
@@ -56,7 +59,7 @@ describe("RoomRouteSync tidak menyela tween kamera", () => {
       "Efek `pathname → room` di RoomRouteSync.tsx tidak lagi melewati kasus " +
         "\"URL cuma menyusul currentRoom yang sudah berubah\".\n\n" +
         "Tanpa guard itu, klik waypoint membuat efek ini menyala di tengah " +
-        "tween kamera 1400 ms, dan `window.scrollTo(0, 0)` di dalamnya " +
+        "tween kamera 1400 ms, dan reset scroll di dalamnya " +
         "memaksa repaint + melompatkan progress scroll — perpindahan ruangan " +
         "jadi TERSENDAT.\n\n" +
         "goTo() sendiri sudah dijaga `animating` di CameraController, jadi " +
@@ -73,7 +76,7 @@ describe("RoomRouteSync tidak menyela tween kamera", () => {
 
     expect(
       guard !== -1 && guard < scroll,
-      "`window.scrollTo` di RoomRouteSync.tsx berada SEBELUM guard " +
+      "Reset scroll di RoomRouteSync.tsx berada SEBELUM guard " +
         "`key === currentRoom`, jadi ia tetap jalan pada perpindahan yang " +
         "dipicu waypoint — persis efek samping yang membuat tween kamera " +
         "tersendat. Pindahkan guard-nya ke atas.\n",

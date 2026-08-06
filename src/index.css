@@ -1,4 +1,9 @@
 @import "tailwindcss";
+/* Dipakai SmoothScrollProvider. Isinya kecil tapi wajib: `html.lenis` menyetel
+   height: auto (menimpa `html, body { height: 100% }` di bawah), memasang
+   `overflow: clip` saat scroll ditahan, dan menghormati [data-lenis-prevent]
+   pada area yang punya scroll sendiri. */
+@import "lenis/dist/lenis.css";
 
 :root {
   /* Base — dark but NOT pure black. Lifted, slightly warm-neutral slate so it
@@ -72,7 +77,16 @@ body {
 }
 
 html {
-  scroll-behavior: smooth;
+  /* `scroll-behavior: smooth` sengaja TIDAK diset di sini — jangan ditambahkan
+     kembali. Scroll halus ditangani Lenis (lihat src/lib/smoothScroll/); dua
+     sistem yang menggulir dokumen yang sama akan saling menimpa, dan yang milik
+     CSS tidak bisa dimatikan saat loader/drawer menahan scroll. Tautan
+     <a href="#section"> tetap halus lewat useAnchorScroll.ts.
+
+     `scrollbar-gutter` mencegah lebar konten melompat ~15px pada platform
+     dengan scrollbar klasik ketika Lenis memasang `overflow: clip` untuk
+     menahan scroll. */
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -115,9 +129,7 @@ body {
   }
 }
 
-/* Honor reduced-motion globally for CSS-driven smooth scroll */
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-}
+/* Tidak ada override reduced-motion untuk scroll di sini lagi: sejak
+   `scroll-behavior: smooth` dicabut, `auto` sudah jadi nilai bawaan browser.
+   Reduced-motion untuk scroll ditangani di JS — SmoothScrollProvider tidak
+   membuat instance Lenis sama sekali. */

@@ -7,15 +7,27 @@ import { useSceneStore, pathFor, type RoomKey } from "@/lib/store/sceneStore";
 import { roomHasContact } from "@/lib/roomContent";
 import { ACTIVE_KEYS } from "@/components/canvas/CameraController";
 import MagneticButton from "@/components/motion/MagneticButton";
+import {
+  useScrollLock,
+  useSmoothScroll,
+} from "@/lib/smoothScroll/useSmoothScroll";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
+/** Id kunci scroll milik drawer mobile — unik supaya tidak bentrok dgn loader. */
+const DRAWER_LOCK = "navbar-drawer";
 
 export default function Navbar() {
   const heroInView  = useSceneStore((s) => s.heroInView);
   const currentRoom = useSceneStore((s) => s.currentRoom);
   const reduced     = useReducedMotion();
   const navigate    = useNavigate();
+  const smooth      = useSmoothScroll();
   const [open, setOpen] = useState(false);
+
+  // Drawer mobile menutupi layar penuh; halaman di belakangnya tidak boleh ikut
+  // bergulir saat jari menyapu di atas menunya.
+  useScrollLock(DRAWER_LOCK, open);
 
   function goRoom(room: RoomKey) {
     navigate(pathFor(room));
@@ -45,8 +57,14 @@ export default function Navbar() {
    */
   function goToContact() {
     setOpen(false);
+    // Lepas kunci drawer SEKARANG, jangan menunggu cleanup efek `open`. Selama
+    // kunci masih terpasang, Lenis menahan scroll lewat `overflow: clip` di
+    // <html> — dan itu memotong scroll programatik juga, jadi gulir di bawah
+    // akan diam-diam tidak menghasilkan apa-apa.
+    smooth.unlock(DRAWER_LOCK);
+
     if (roomHasContact(currentRoom)) {
-      document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" });
+      smooth.scrollTo("#contact");
       return;
     }
     navigate("/#contact");

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSceneStore, pathFor, roomFromPath } from "@/lib/store/sceneStore";
+import { useSmoothScroll } from "@/lib/smoothScroll/useSmoothScroll";
 
 /**
  * Sinkronisasi dua-arah path URL ↔ currentRoom.
@@ -25,6 +26,9 @@ export default function RoomRouteSync() {
   const { pathname, hash } = useLocation();
   const goTo       = useSceneStore((s) => s.goTo);
   const currentRoom = useSceneStore((s) => s.currentRoom);
+  // Objek non-destructured: identitasnya stabil (lihat SmoothScrollProvider),
+  // jadi aman jadi dependency efek di bawah.
+  const smooth = useSmoothScroll();
 
   // Arah 1: pathname → room (back/forward, deep-link React Router)
   //
@@ -35,7 +39,7 @@ export default function RoomRouteSync() {
   // itu terjadi SELAGI tween kamera 1400 ms masih berjalan.
   //
   // Panggilan goTo()-nya sendiri memang tertahan (`if (animating.current)
-  // return` di CameraController), tapi `window.scrollTo` di bawah TIDAK ikut
+  // return` di CameraController), tapi scroll di bawah TIDAK ikut
   // tertahan — ia dulu tetap dieksekusi di tengah animasi, memaksa layout +
   // repaint sementara useFrame menggerakkan kamera 60×/detik. Gejalanya:
   // perpindahan ruangan terasa TERSENDAT, dan penyebabnya tidak menunjuk ke
@@ -56,8 +60,13 @@ export default function RoomRouteSync() {
     // `!hash` — kalau URL-nya membawa anchor (mis. "/#contact"), Arah 3 di
     // bawah yang mengurus scroll-nya. Melompat ke atas dulu di sini membuat
     // pengunjung melihat halaman tersentak sebelum meluncur ke tujuannya.
-    if (!hash) window.scrollTo(0, 0);
-  }, [pathname, goTo, currentRoom, hash]);
+    //
+    // `immediate` — ganti ruangan adalah ganti halaman: pengunjung harus
+    // langsung berada di atas, bukan menyaksikan perjalanan ~16.000px ke sana.
+    // Ini juga menyetel ulang posisi internal Lenis, tanpanya progress scroll
+    // yang dibaca Hero akan memakai angka dari halaman sebelumnya.
+    if (!hash) smooth.scrollTo(0, { immediate: true });
+  }, [pathname, goTo, currentRoom, hash, smooth]);
 
   // Arah 2: currentRoom → pathname (klik waypoint dalam Canvas)
   useEffect(() => {
@@ -77,10 +86,11 @@ export default function RoomRouteSync() {
     // rAF: beri satu frame untuk konten room yang baru saja mount (misal
     // pindah dari Office ke Lounge) selesai dirender sebelum discroll.
     const raf = requestAnimationFrame(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+      const el = document.getElementById(id);
+      if (el) smooth.scrollTo(el);
     });
     return () => cancelAnimationFrame(raf);
-  }, [pathname, hash]);
+  }, [pathname, hash, smooth]);
 
   return null;
 }
