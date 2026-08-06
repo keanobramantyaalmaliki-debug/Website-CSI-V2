@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo, useEffect } from "react";
+import { useRef, useMemo, useEffect, useSyncExternalStore } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { useReducedMotion } from "motion/react";
 import * as THREE from "three";
@@ -22,15 +22,35 @@ const SAMPLE_CANVAS_HEIGHT = 550;
 // Target bounding box in Three.js space (mirrors ManifestoField's lattice extent).
 const TARGET_WIDTH = 6.6;
 const TARGET_HEIGHT = 4.275;
-const TARGET_CENTER_X = 1.8;
+const TARGET_CENTER_X_DESKTOP = 1.1;
+const TARGET_CENTER_X_MOBILE = 0;
 
-// Scatter: random sphere, radius 3-5 (right side bias)
-function scatterPosition(): [number, number, number] {
+// Narrow viewport = stacked layout with no text column beside the field,
+// so the letters center fully instead of keeping the desktop right-bias
+// (see ManifestoField's identical pattern for the two-column case).
+const NARROW_QUERY = "(max-width: 1023px)";
+
+function useNarrowViewport(): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      const mq = window.matchMedia(NARROW_QUERY);
+      mq.addEventListener("change", onChange);
+      return () => mq.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(NARROW_QUERY).matches,
+    () => false,
+  );
+}
+
+// Scatter: random sphere, radius 3-5 (right side bias on desktop; the bias
+// is reduced on narrow viewports so the dispersed state also stays centered).
+function scatterPosition(narrow: boolean): [number, number, number] {
   const theta = Math.random() * Math.PI * 2;
   const phi = Math.acos(2 * Math.random() - 1);
   const r = 3 + Math.random() * 2;
+  const xBias = narrow ? 0.5 : 1.5;
   return [
-    Math.sin(phi) * Math.cos(theta) * r + 1.5,
+    Math.sin(phi) * Math.cos(theta) * r + xBias,
     Math.sin(phi) * Math.sin(theta) * r * 0.6,
     Math.cos(phi) * r * 0.4 - 1,
   ];
@@ -83,16 +103,17 @@ function subsample<T>(arr: T[], count: number): T[] {
 
 // Sample `count` target points shaped like `text`, normalized into Three.js space.
 // Falls back to the ManifestoField-style lattice when canvas 2D isn't available.
-export function sampleTextPoints(text: string, count: number): Float32Array {
+export function sampleTextPoints(text: string, count: number, narrow = false): Float32Array {
   const positions = new Float32Array(count * 3);
   const pixels = getTextPixels(text, SAMPLE_CANVAS_WIDTH, SAMPLE_CANVAS_HEIGHT);
+  const centerX = narrow ? TARGET_CENTER_X_MOBILE : TARGET_CENTER_X_DESKTOP;
 
   if (!pixels || pixels.length === 0) {
     const cols = 40;
     for (let i = 0; i < count; i++) {
       const row = Math.floor(i / cols);
       const col = i % cols;
-      positions[i * 3] = (col - cols / 2) * 0.055 + TARGET_CENTER_X;
+      positions[i * 3] = (col - cols / 2) * 0.055 + centerX;
       positions[i * 3 + 1] = (row - count / cols / 2) * 0.055;
       positions[i * 3 + 2] = 0;
     }
@@ -102,7 +123,7 @@ export function sampleTextPoints(text: string, count: number): Float32Array {
   const sampled = subsample(pixels, count);
   for (let i = 0; i < count; i++) {
     const p = sampled[i % sampled.length];
-    positions[i * 3] = (p.x / SAMPLE_CANVAS_WIDTH - 0.5) * TARGET_WIDTH + TARGET_CENTER_X;
+    positions[i * 3] = (p.x / SAMPLE_CANVAS_WIDTH - 0.5) * TARGET_WIDTH + centerX;
     positions[i * 3 + 1] = -(p.y / SAMPLE_CANVAS_HEIGHT - 0.5) * TARGET_HEIGHT;
     positions[i * 3 + 2] = 0;
   }
@@ -159,7 +180,15 @@ export function sampleTimeline(
   return { from: last.from, to: last.to, eased: 1 };
 }
 
-function Particles({ active, particleCount }: { active: boolean; particleCount: number }) {
+function Particles({
+  active,
+  particleCount,
+  narrow,
+}: {
+  active: boolean;
+  particleCount: number;
+  narrow: boolean;
+}) {
   const { invalidate } = useThree();
   const pointsRef = useRef<THREE.Points>(null);
 
@@ -168,16 +197,16 @@ function Particles({ active, particleCount }: { active: boolean; particleCount: 
     const opacities = new Float32Array(particleCount);
 
     for (let i = 0; i < particleCount; i++) {
-      const [sx, sy, sz] = scatterPosition();
+      const [sx, sy, sz] = scatterPosition(narrow);
       scatter[i * 3] = sx;
       scatter[i * 3 + 1] = sy;
       scatter[i * 3 + 2] = sz;
       opacities[i] = 0.25 + Math.random() * 0.25;
     }
 
-    const letterTargets = LETTERS.map((letter) => sampleTextPoints(letter, particleCount));
+    const letterTargets = LETTERS.map((letter) => sampleTextPoints(letter, particleCount, narrow));
     return { scatter, opacities, timeline: buildTimeline(scatter, letterTargets) };
-  }, [particleCount]);
+  }, [particleCount, narrow]);
 
   const positions = useMemo(() => new Float32Array(scatter), [scatter]);
 
@@ -247,6 +276,7 @@ function Particles({ active, particleCount }: { active: boolean; particleCount: 
 export default function CsiParticleField({ active }: { active: boolean }) {
   const reduced = useReducedMotion();
   const coarse = useCoarsePointer();
+  const narrow = useNarrowViewport();
   const particleCount = coarse ? PARTICLE_COUNT_COARSE : PARTICLE_COUNT_FINE;
 
   // No-WebGL / reduced-motion: render subtle gradient instead
@@ -275,7 +305,7 @@ export default function CsiParticleField({ active }: { active: boolean }) {
         }}
         style={{ width: "100%", height: "100%" }}
       >
-        <Particles active={active} particleCount={particleCount} />
+        <Particles active={active} particleCount={particleCount} narrow={narrow} />
       </Canvas>
     </div>
   );

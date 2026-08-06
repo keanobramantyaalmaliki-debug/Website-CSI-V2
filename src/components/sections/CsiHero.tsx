@@ -51,7 +51,7 @@ export default function CsiHero() {
         </div>
 
         <aside className="relative mt-8 lg:mt-0">
-          <div className="h-40 lg:h-[20rem]">
+          <div className="h-56 lg:h-[20rem]">
             <CsiParticleField active={inView} />
           </div>
         </aside>
