@@ -131,12 +131,19 @@ export default function NetworkField({
     // Spring-lerped cursor for the soft glow (react-spring feel, hand-rolled).
     let gx = -1;
     let gy = -1;
+    // Link search is O(count^2) distance checks — recompute the pair list
+    // every other frame and reuse it in between. Positions still step (and
+    // links still redraw) every frame, so the drift stays smooth; only the
+    // pairwise distance scan runs at half rate.
+    let frame = 0;
+    let linkPairs: Array<{ i: number; j: number }> = [];
     const loop = () => {
       if (!visible) {
         raf = 0;
         return;
       }
       t += dt;
+      frame++;
       ctx.clearRect(0, 0, w, h);
 
       // Ease the glow toward the pointer; fade it out when the pointer leaves.
@@ -185,35 +192,51 @@ export default function NetworkField({
         vel[iy] = sy.vel;
       }
 
-      // Draw links first (behind nodes).
-      for (let i = 0; i < count; i++) {
+      // Refresh which pairs are close enough to link every other frame —
+      // drift is slow enough that stale membership for one frame is
+      // invisible, and this is the expensive O(count^2) part of the loop.
+      if (frame % 2 === 0) {
+        linkPairs = [];
+        for (let i = 0; i < count; i++) {
+          const ax = pos[i * 2];
+          const ay = pos[i * 2 + 1];
+          for (let j = i + 1; j < count; j++) {
+            const bx = pos[j * 2];
+            const by = pos[j * 2 + 1];
+            if (distance2(ax, ay, bx, by) < LINK_DIST2) linkPairs.push({ i, j });
+          }
+        }
+      }
+
+      // Draw links first (behind nodes). Opacity is recomputed every frame
+      // from current positions so brightness/tint still track the pointer
+      // smoothly even on frames that reuse last frame's pair list.
+      for (const { i, j } of linkPairs) {
         const ax = pos[i * 2];
         const ay = pos[i * 2 + 1];
-        for (let j = i + 1; j < count; j++) {
-          const bx = pos[j * 2];
-          const by = pos[j * 2 + 1];
-          const d2 = distance2(ax, ay, bx, by);
-          const lo = linkOpacity(d2, LINK_DIST2);
-          if (lo <= 0) continue;
-          // Brighten + tint links whose midpoint is near the pointer.
-          let a = lo * maxOpacity * 0.5;
-          let col = color;
-          if (px >= 0) {
-            const mx = (ax + bx) / 2;
-            const my = (ay + by) / 2;
-            const near = 1 - Math.min(1, Math.hypot(mx - px, my - py) / POINTER_GLOW);
-            if (near > 0) {
-              a += near * 0.35;
-              col = accent;
-            }
+        const bx = pos[j * 2];
+        const by = pos[j * 2 + 1];
+        const d2 = distance2(ax, ay, bx, by);
+        const lo = linkOpacity(d2, LINK_DIST2);
+        if (lo <= 0) continue;
+        // Brighten + tint links whose midpoint is near the pointer.
+        let a = lo * maxOpacity * 0.5;
+        let col = color;
+        if (px >= 0) {
+          const mx = (ax + bx) / 2;
+          const my = (ay + by) / 2;
+          const near = 1 - Math.min(1, Math.hypot(mx - px, my - py) / POINTER_GLOW);
+          if (near > 0) {
+            a += near * 0.35;
+            col = accent;
           }
-          ctx.beginPath();
-          ctx.moveTo(ax * w, ay * h);
-          ctx.lineTo(bx * w, by * h);
-          ctx.strokeStyle = `rgba(${col}, ${a})`;
-          ctx.lineWidth = 1;
-          ctx.stroke();
         }
+        ctx.beginPath();
+        ctx.moveTo(ax * w, ay * h);
+        ctx.lineTo(bx * w, by * h);
+        ctx.strokeStyle = `rgba(${col}, ${a})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
       }
 
       // Draw nodes. Those near the cursor brighten and gain a soft accent halo.

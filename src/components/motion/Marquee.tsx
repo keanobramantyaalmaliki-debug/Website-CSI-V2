@@ -1,6 +1,8 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { useRef } from "react";
+import { gsap, useGSAP, ScrollTrigger } from "@/lib/gsap/register";
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 
 /**
  * T5 — infinite horizontal marquee strip.
@@ -13,8 +15,32 @@ export default function Marquee({
   items: string[];
   speed?: number;
 }) {
-  const reduced = useReducedMotion();
+  const reduced = usePrefersReducedMotion();
+  const trackRef = useRef<HTMLDivElement>(null);
   const duration = items.length * speed;
+
+  useGSAP(
+    () => {
+      if (!trackRef.current) return;
+      // Paused by default and toggled by ScrollTrigger — without this the
+      // tween ticks forever from mount, even while the strip is nowhere near
+      // the viewport (e.g. still on Hero).
+      const tween = gsap.to(trackRef.current, {
+        xPercent: -50,
+        duration,
+        ease: "none",
+        repeat: -1,
+        paused: true,
+      });
+      ScrollTrigger.create({
+        trigger: trackRef.current,
+        start: "top bottom",
+        end: "bottom top",
+        onToggle: (self) => (self.isActive ? tween.play() : tween.pause()),
+      });
+    },
+    { scope: trackRef, dependencies: [duration] },
+  );
 
   if (reduced) {
     return (
@@ -33,17 +59,7 @@ export default function Marquee({
 
   return (
     <div className="overflow-hidden">
-      <motion.div
-        className="flex w-max gap-6"
-        initial={{ x: 0 }}
-        animate={{ x: "-50%" }}
-        transition={{
-          duration,
-          ease: "linear",
-          repeat: Infinity,
-          repeatType: "loop",
-        }}
-      >
+      <div ref={trackRef} className="flex w-max gap-6">
         {[...items, ...items].map((item, i) => (
           <span
             key={i}
@@ -52,7 +68,7 @@ export default function Marquee({
             {item}
           </span>
         ))}
-      </motion.div>
+      </div>
     </div>
   );
 }

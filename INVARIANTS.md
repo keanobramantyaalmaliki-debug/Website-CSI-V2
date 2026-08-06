@@ -198,6 +198,43 @@ yang kurang rapi.
 
 ---
 
+## §7 Dua mesin animasi hidup berdampingan — GSAP di Lounge, `motion` di ruangan lain
+
+**Aturan.** `src/components/gsap/**` adalah **satu-satunya** tempat varian GSAP
+dari komponen yang dipakai lintas-ruangan (`FadeUp`, `LineMask`,
+`MagneticButton`, `StickyScroll`). Aslinya di `src/components/motion/**` tetap
+memakai `motion/react` **tanpa perubahan** — Office, Meeting, dan Function
+masih mengimpor dari sana. Jangan menyuntik GSAP ke berkas `motion/**` yang
+masih dipakai ruangan lain, dan jangan mengimpor `motion/react` di berkas baru
+manapun di bawah `src/components/gsap/`.
+
+Beberapa berkas di `motion/**` (`Marquee`, `ScrollHighlight`, `FlipCard`,
+`StaggeredGlyphSlider`, `TrustedByGrid`) dimigrasikan **di tempat** (bukan
+disalin ke `gsap/`) karena konsumennya cuma Lounge — diverifikasi lewat
+`grep -rln` sebelum diedit. Kalau nanti ruangan lain mulai mengimpornya,
+migrasi itu harus ditinjau ulang: kembalikan ke `motion/react` atau pindahkan
+ke `gsap/` dengan pola yang sama seperti empat komponen bersama di atas.
+
+**Kenapa lintas-wilayah.** Ini seam antara konten Lounge (Nico) dan sisa
+kantor 3D (Keano): keduanya membagi komponen yang sama, dan tidak ada
+tooling yang mencegah salah satu pihak mengedit varian yang salah.
+
+**`ScrollTrigger.refresh()` wajib menunggu `loaderDone`.** `RoomContent.tsx`
+memanggilnya di `useEffect` yang digerbangi `loaderDone` dari `sceneStore`.
+ScrollTrigger mengukur posisi trigger relatif ke viewport **saat instance
+dibuat** — kalau itu terjadi sementara `LoadingScreen` (z-index 60, §2) masih
+menutupi layout, offset yang terukur salah dan animasi scroll Lounge trigger
+di posisi yang keliru setelah overlay hilang. Kalau nanti ada gerbang baru
+sebelum konten Lounge ter-mount (mirip pola §4), pastikan `ScrollTrigger.refresh()`
+tetap dipanggil setelah gerbang itu terbuka, bukan sebelumnya.
+
+**Belum ada penjaga otomatis** untuk larangan impor silang ini. Kalau nanti
+terasa perlu, bentuknya sama seperti §1: grep `from "motion/react"` di bawah
+`src/components/gsap/`, dan grep `from "@/lib/gsap` di berkas `motion/**` yang
+masih dipakai ruangan lain.
+
+---
+
 ## Kebiasaan yang menangkap sisanya
 
 Tiga hal ini menangkap lebih banyak daripada tooling mana pun di atas, karena

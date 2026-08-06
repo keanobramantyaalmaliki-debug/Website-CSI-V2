@@ -1,10 +1,9 @@
 "use client";
 
-import LineMask from "@/components/motion/LineMask";
-import MagneticButton from "@/components/motion/MagneticButton";
-import { motion } from "motion/react";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { useRef } from "react";
+import LineMask from "@/components/gsap/LineMask";
+import MagneticButton from "@/components/gsap/MagneticButton";
+import { gsap, useGSAP, CSI_EASE } from "@/lib/gsap/register";
 
 // TODO(content): update to cogniti social handles — issue pending
 const SOCIALS = [
@@ -13,41 +12,66 @@ const SOCIALS = [
 ];
 
 export default function Contact() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const eyebrowRef = useRef<HTMLParagraphElement>(null);
+  const paragraphRef = useRef<HTMLParagraphElement>(null);
+  const ctaRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      gsap.from(eyebrowRef.current, {
+        opacity: 0,
+        x: -8,
+        duration: 0.5,
+        ease: CSI_EASE,
+        scrollTrigger: { trigger: eyebrowRef.current, start: "top bottom", once: true },
+      });
+      gsap.from(paragraphRef.current, {
+        opacity: 0,
+        y: 8,
+        duration: 0.5,
+        ease: CSI_EASE,
+        delay: 0.15,
+        scrollTrigger: { trigger: paragraphRef.current, start: "top bottom", once: true },
+      });
+      gsap.from(ctaRef.current, {
+        opacity: 0,
+        y: 8,
+        duration: 0.5,
+        ease: CSI_EASE,
+        delay: 0.25,
+        scrollTrigger: { trigger: ctaRef.current, start: "top bottom", once: true },
+      });
+    },
+    { scope: sectionRef },
+  );
+
   return (
-    <section id="contact" className="px-6 py-24 sm:px-10 sm:py-32">
+    <section ref={sectionRef} id="contact" className="px-6 py-24 sm:px-10 sm:py-32">
       {/* T6 — eyebrow */}
-      <motion.p
+      <p
+        ref={eyebrowRef}
         className="text-xs tracking-widest text-zinc-400 uppercase"
-        initial={{ opacity: 0, x: -8 }}
-        whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, ease: EASE }}
       >
         Contact
-      </motion.p>
+      </p>
 
       {/* T1 — line-mask heading */}
       <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-5xl">
         <LineMask>Let&apos;s Start A Conversation.</LineMask>
       </h2>
 
-      <motion.p
+      <p
+        ref={paragraphRef}
         className="mt-4 max-w-lg text-sm leading-relaxed text-zinc-300 sm:text-base"
-        initial={{ opacity: 0, y: 8 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
       >
         We typically respond within one business day.
-      </motion.p>
+      </p>
 
       {/* T7 — CTA links with hover underline wipe */}
-      <motion.div
+      <div
+        ref={ctaRef}
         className="mt-10 flex flex-wrap items-center gap-4"
-        initial={{ opacity: 0, y: 8 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, ease: EASE, delay: 0.25 }}
       >
         <MagneticButton>
           <a
@@ -63,7 +87,7 @@ export default function Contact() {
         >
           ↑ Back to the office
         </a>
-      </motion.div>
+      </div>
 
       <footer className="mt-24 border-t border-white/[0.08] pt-6 text-xs text-zinc-400">
         <div className="flex flex-wrap items-center justify-between gap-4">

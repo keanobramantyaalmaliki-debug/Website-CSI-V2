@@ -1,10 +1,9 @@
 "use client";
 
-import { motion } from "motion/react";
-import LineMask from "@/components/motion/LineMask";
+import { useRef } from "react";
+import { gsap, useGSAP, CSI_EASE } from "@/lib/gsap/register";
+import LineMask from "@/components/gsap/LineMask";
 import Marquee from "@/components/motion/Marquee";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 const INDUSTRIES = [
   "Government & Public Sector",
@@ -23,19 +22,40 @@ const INDUSTRIES = [
 ];
 
 export default function Industries() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const eyebrowRef = useRef<HTMLParagraphElement>(null);
+
+  useGSAP(
+    () => {
+      gsap.from(eyebrowRef.current, {
+        opacity: 0,
+        x: -8,
+        duration: 0.5,
+        ease: CSI_EASE,
+        scrollTrigger: {
+          trigger: eyebrowRef.current,
+          start: "top bottom",
+          once: true,
+        },
+      });
+    },
+    { scope: sectionRef },
+  );
+
   return (
-    <section id="industries" className="relative z-10 border-y border-white/[0.08] bg-white/[0.02]">
+    <section
+      ref={sectionRef}
+      id="industries"
+      className="relative z-10 border-y border-white/[0.08] bg-white/[0.02]"
+    >
       <div className="px-6 py-24 sm:px-10 sm:py-32">
         {/* T6 — eyebrow */}
-        <motion.p
+        <p
+          ref={eyebrowRef}
           className="text-xs tracking-widest text-zinc-400 uppercase"
-          initial={{ opacity: 0, x: -8 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, ease: EASE }}
         >
           Industries
-        </motion.p>
+        </p>
 
         {/* T1 — line-mask heading */}
         <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">

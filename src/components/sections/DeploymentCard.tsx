@@ -1,6 +1,5 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
 import FlipCard from "@/components/motion/FlipCard";
 
 export type DeploymentData = {
@@ -25,22 +24,11 @@ const SECTOR_IMAGE: Record<string, string> = {
 
 const DEFAULT_IMAGE = SECTOR_IMAGE["Public Services"];
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 14 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.55 } },
-};
-
-const itemVariantsReduced = {
-  hidden: { opacity: 1, y: 0 },
-  show: { opacity: 1, y: 0 },
-};
-
 export default function DeploymentCard({ d }: { d: DeploymentData }) {
-  const reduced = !!useReducedMotion();
   const image = SECTOR_IMAGE[d.sector] ?? DEFAULT_IMAGE;
 
   return (
-    <motion.div variants={reduced ? itemVariantsReduced : itemVariants}>
+    <div data-deployment-card="">
       <FlipCard
         ariaLabel={`${d.sector} — detail`}
         className="h-56 w-full sm:h-64"
@@ -70,6 +58,6 @@ export default function DeploymentCard({ d }: { d: DeploymentData }) {
           </div>
         }
       />
-    </motion.div>
+    </div>
   );
 }

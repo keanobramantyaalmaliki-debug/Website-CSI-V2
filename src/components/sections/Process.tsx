@@ -1,13 +1,12 @@
 "use client";
 
-import { motion } from "motion/react";
-import LineMask from "@/components/motion/LineMask";
-import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
-import { StickyScroll } from "@/components/ui/sticky-scroll-reveal";
+import { useRef } from "react";
+import { gsap, useGSAP, CSI_EASE } from "@/lib/gsap/register";
+import LineMask from "@/components/gsap/LineMask";
+import { FadeUpList, FadeUpItem } from "@/components/gsap/FadeUp";
+import { StickyScroll } from "@/components/gsap/StickyScroll";
 import { PROCESS_GLYPHS } from "@/components/motion/ProcessGlyphs";
 import { useScrollStepper } from "@/lib/hooks/useScrollStepper";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 const STEPS: { num: string; kicker: string; title: string; desc: string }[] = [
   {
@@ -50,19 +49,31 @@ const STEPS: { num: string; kicker: string; title: string; desc: string }[] = [
 
 export default function Process() {
   const { activeIndex, setRef } = useScrollStepper(STEPS.length);
+  const sectionRef = useRef<HTMLElement>(null);
+  const eyebrowRef = useRef<HTMLParagraphElement>(null);
+
+  useGSAP(
+    () => {
+      gsap.from(eyebrowRef.current, {
+        opacity: 0,
+        x: -8,
+        duration: 0.5,
+        ease: CSI_EASE,
+        scrollTrigger: { trigger: eyebrowRef.current, start: "top bottom", once: true },
+      });
+    },
+    { scope: sectionRef },
+  );
 
   return (
-    <section id="process" className="px-6 py-24 sm:px-10 sm:py-32">
+    <section ref={sectionRef} id="process" className="px-6 py-24 sm:px-10 sm:py-32">
       {/* T6 — eyebrow */}
-      <motion.p
+      <p
+        ref={eyebrowRef}
         className="text-xs tracking-widest text-zinc-400 uppercase"
-        initial={{ opacity: 0, x: -8 }}
-        whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, ease: EASE }}
       >
         Our Process
-      </motion.p>
+      </p>
 
       {/* T1 — line-mask heading */}
       <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">

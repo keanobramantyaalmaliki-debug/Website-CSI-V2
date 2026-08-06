@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence, useReducedMotion } from "motion/react";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { gsap, useGSAP, CSI_EASE } from "@/lib/gsap/register";
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 
 export type Brand = {
   name: string;
@@ -14,6 +13,64 @@ export type Brand = {
 // no new dependency — see reference/diskusi/interactive-section-bg-2026-07-30.md.
 const DIAGONAL_PATTERN =
   "repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 8px)";
+
+const ABSOLUTE_OVERLAY: CSSProperties = { position: "absolute", inset: 0 };
+
+function renderLabel(brand: string | null): ReactNode {
+  return brand ? (
+    <>
+      Trusted by {brand} <span aria-hidden="true">↗</span>
+    </>
+  ) : (
+    "Trusted by Visionaries"
+  );
+}
+
+// Manual GSAP port of AnimatePresence mode="popLayout": the incoming label
+// takes normal flow (sizes the container), the outgoing label is pinned
+// absolute over the same box while it fades out — both visible mid-crossfade.
+function TrustedByHeading({ hoveredBrand }: { hoveredBrand: string | null }) {
+  const slotARef = useRef<HTMLSpanElement>(null);
+  const slotBRef = useRef<HTMLSpanElement>(null);
+  const prevBrand = useRef(hoveredBrand);
+  const [state, setState] = useState<{ active: "a" | "b"; a: ReactNode; b: ReactNode }>({
+    active: "a",
+    a: renderLabel(hoveredBrand),
+    b: null,
+  });
+
+  useEffect(() => {
+    if (prevBrand.current === hoveredBrand) return;
+    prevBrand.current = hoveredBrand;
+    setState((prev) => {
+      const next = prev.active === "a" ? "b" : "a";
+      return { ...prev, active: next, [next]: renderLabel(hoveredBrand) };
+    });
+  }, [hoveredBrand]);
+
+  useGSAP(
+    () => {
+      const activeEl = state.active === "a" ? slotARef.current : slotBRef.current;
+      const inactiveEl = state.active === "a" ? slotBRef.current : slotARef.current;
+      gsap.fromTo(activeEl, { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: 0.3, ease: CSI_EASE });
+      if (inactiveEl) {
+        gsap.to(inactiveEl, { opacity: 0, y: -6, duration: 0.3, ease: CSI_EASE });
+      }
+    },
+    { dependencies: [state.active] },
+  );
+
+  return (
+    <span className="relative inline-block">
+      <span ref={slotARef} className="inline-block" style={state.active === "a" ? undefined : ABSOLUTE_OVERLAY}>
+        {state.a}
+      </span>
+      <span ref={slotBRef} className="inline-block" style={state.active === "b" ? undefined : ABSOLUTE_OVERLAY}>
+        {state.b}
+      </span>
+    </span>
+  );
+}
 
 function BrandCell({
   brand,
@@ -72,33 +129,12 @@ function BrandCell({
  */
 export default function TrustedByGrid({ brands }: { brands: Brand[] }) {
   const [hoveredBrand, setHoveredBrand] = useState<string | null>(null);
-  const reduced = !!useReducedMotion();
+  const reduced = usePrefersReducedMotion();
 
   return (
     <div>
       <h2 className="relative text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
-        {reduced ? (
-          "Trusted by Visionaries"
-        ) : (
-          <AnimatePresence mode="popLayout">
-            <motion.span
-              key={hoveredBrand ?? "default"}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.3, ease: EASE }}
-              className="inline-block"
-            >
-              {hoveredBrand ? (
-                <>
-                  Trusted by {hoveredBrand} <span aria-hidden="true">↗</span>
-                </>
-              ) : (
-                "Trusted by Visionaries"
-              )}
-            </motion.span>
-          </AnimatePresence>
-        )}
+        {reduced ? "Trusted by Visionaries" : <TrustedByHeading hoveredBrand={hoveredBrand} />}
       </h2>
 
       <div className="mt-12 grid grid-cols-2 gap-0 sm:grid-cols-3 md:grid-cols-4">

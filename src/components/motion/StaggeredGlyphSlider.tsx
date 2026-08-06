@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ComponentType } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
+import { gsap, useGSAP, CSI_EASE } from "@/lib/gsap/register";
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 const AUTO_ADVANCE_MS = 5000;
 
 // Card size/opacity formula ported from basement.studio's staggered-slider
@@ -37,30 +37,43 @@ function NodeFigure({
   const size = BIGGEST_SIZE - ((BIGGEST_SIZE - SMALLEST_SIZE) * displayIndex) / divisor;
   const opacity = MAX_OPACITY - ((MAX_OPACITY - MIN_OPACITY) * displayIndex) / divisor;
   const { Glyph } = node;
+  const ref = useRef<HTMLButtonElement>(null);
+  const mounted = useRef(false);
 
-  return (
-    <motion.button
-      type="button"
-      onClick={onSelect}
-      data-active={displayIndex === 0 ? "true" : "false"}
-      aria-label={`${node.name} — bring to front`}
-      className="absolute top-1/2 -translate-y-1/2 flex flex-col justify-between overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 text-left"
-      initial={false}
-      animate={{
+  useGSAP(
+    () => {
+      const state = {
         width: size,
         height: size,
         left: `calc((100% - ${size}px) * ${displayIndex} / ${divisor})`,
         opacity,
         zIndex: total - displayIndex,
-      }}
-      transition={{ duration: 0.5, ease: EASE }}
+      };
+      if (!mounted.current) {
+        mounted.current = true;
+        gsap.set(ref.current, state);
+        return;
+      }
+      gsap.to(ref.current, { ...state, duration: 0.5, ease: CSI_EASE });
+    },
+    { dependencies: [size, displayIndex, divisor, opacity, total] },
+  );
+
+  return (
+    <button
+      ref={ref}
+      type="button"
+      onClick={onSelect}
+      data-active={displayIndex === 0 ? "true" : "false"}
+      aria-label={`${node.name} — bring to front`}
+      className="absolute top-1/2 -translate-y-1/2 flex flex-col justify-between overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 text-left"
     >
       <span className="size-2 rounded-full bg-orange-500" aria-hidden="true" />
       <div className="text-orange-500/80" style={{ width: size * 0.3, height: size * 0.3 }}>
         <Glyph className="h-full w-full" />
       </div>
       <h3 className="font-medium text-zinc-50">{node.name}</h3>
-    </motion.button>
+    </button>
   );
 }
 
@@ -87,7 +100,7 @@ function StaticGrid({ nodes }: { nodes: SliderNode[] }) {
 
 export default function StaggeredGlyphSlider({ nodes }: { nodes: SliderNode[] }) {
   const total = nodes.length;
-  const reduced = !!useReducedMotion();
+  const reduced = usePrefersReducedMotion();
   const [order, setOrder] = useState<number[]>(() => nodes.map((_, i) => i));
 
   useEffect(() => {

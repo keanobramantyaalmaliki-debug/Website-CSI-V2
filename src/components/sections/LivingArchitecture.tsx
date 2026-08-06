@@ -1,11 +1,10 @@
 "use client";
 
-import { motion } from "motion/react";
-import LineMask from "@/components/motion/LineMask";
+import { useRef } from "react";
+import { gsap, useGSAP, CSI_EASE } from "@/lib/gsap/register";
+import LineMask from "@/components/gsap/LineMask";
 import StaggeredGlyphSlider, { type SliderNode } from "@/components/motion/StaggeredGlyphSlider";
 import { NODE_GLYPHS } from "@/components/motion/NodeGlyphs";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 const NODES: { name: string; desc: string }[] = [
   {
@@ -45,14 +44,30 @@ const SLIDER_NODES: SliderNode[] = NODES.map((node, i) => ({
 
 function MobileNodeCard({ node, index }: { node: (typeof NODES)[0]; index: number }) {
   const Glyph = NODE_GLYPHS[index];
+  const ref = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      gsap.from(ref.current, {
+        opacity: 0,
+        y: 16,
+        duration: 0.5,
+        ease: CSI_EASE,
+        delay: index * 0.05,
+        scrollTrigger: {
+          trigger: ref.current,
+          start: "top bottom-=20%",
+          once: true,
+        },
+      });
+    },
+    { scope: ref, dependencies: [index] },
+  );
 
   return (
-    <motion.div
+    <div
+      ref={ref}
       className="flex flex-col justify-between rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5"
-      initial={{ opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-20%" }}
-      transition={{ duration: 0.5, ease: EASE, delay: index * 0.05 }}
     >
       <span className="size-2 rounded-full bg-orange-500" aria-hidden="true" />
       <div className="mt-4 h-16 w-16 text-orange-500/80 sm:h-20 sm:w-20">
@@ -65,42 +80,62 @@ function MobileNodeCard({ node, index }: { node: (typeof NODES)[0]; index: numbe
         <h3 className="mt-1 font-medium text-zinc-100">{node.name}</h3>
         <p className="mt-1 text-sm leading-relaxed text-zinc-300">{node.desc}</p>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
 export default function LivingArchitecture() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const eyebrowRef = useRef<HTMLParagraphElement>(null);
+  const paragraphRef = useRef<HTMLParagraphElement>(null);
+
+  useGSAP(
+    () => {
+      gsap.from(eyebrowRef.current, {
+        opacity: 0,
+        x: -8,
+        duration: 0.5,
+        ease: CSI_EASE,
+        scrollTrigger: { trigger: eyebrowRef.current, start: "top bottom", once: true },
+      });
+      gsap.from(paragraphRef.current, {
+        opacity: 0,
+        y: 8,
+        duration: 0.5,
+        ease: CSI_EASE,
+        delay: 0.15,
+        scrollTrigger: { trigger: paragraphRef.current, start: "top bottom", once: true },
+      });
+    },
+    { scope: sectionRef },
+  );
+
   return (
     <section
+      ref={sectionRef}
       id="living-architecture"
       className="relative z-10 border-y border-white/[0.08] bg-white/[0.02]"
     >
       <div className="px-6 py-24 sm:px-10 sm:py-32">
         {/* T6 — eyebrow */}
-        <motion.p
+        <p
+          ref={eyebrowRef}
           className="text-xs tracking-widest text-zinc-400 uppercase"
-          initial={{ opacity: 0, x: -8 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, ease: EASE }}
         >
           Living Architecture
-        </motion.p>
+        </p>
 
         {/* T1 — line-mask heading */}
         <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
           <LineMask>A Living Architecture For Decisions.</LineMask>
         </h2>
 
-        <motion.p
+        <p
+          ref={paragraphRef}
           className="mt-4 max-w-xl text-sm leading-relaxed text-zinc-400"
-          initial={{ opacity: 0, y: 8 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
         >
           Signals, context, and knowledge — adaptive systems that move organizations from awareness to action.
-        </motion.p>
+        </p>
 
         {/* Desktop — staggered glyph slider, port of basement.studio's
             experiments/58.staggered-slider.tsx pattern. */}

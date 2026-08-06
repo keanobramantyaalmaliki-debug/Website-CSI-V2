@@ -1,42 +1,13 @@
 "use client";
 
 import { useRef } from "react";
-import { motion, useScroll, useTransform, useReducedMotion } from "motion/react";
-
-/** Single word whose color is driven by scroll progress (or shown bright immediately if motion reduced). */
-function Word({
-  word,
-  progress,
-  index,
-  total,
-}: {
-  word: string;
-  progress: ReturnType<typeof useScroll>["scrollYProgress"];
-  index: number;
-  total: number;
-}) {
-  const reduced = useReducedMotion();
-  const start = index / total;
-  const end = Math.min((index + 2) / total, 1);
-  // Comfort-first: text is ALWAYS readable. The scroll effect is a subtle emphasis
-  // (already-legible → full-bright), never a dark→light reveal that hides content.
-  // When reduced: both stops are full-bright → no animation.
-  const color = useTransform(
-    progress,
-    [start, end],
-    reduced ? ["#f4f5f7", "#f4f5f7"] : ["#a9adb6", "#f4f5f7"]
-  );
-  return (
-    <motion.span style={{ color }} className="mr-[0.25em] inline-block">
-      {word}
-    </motion.span>
-  );
-}
+import { gsap, useGSAP } from "@/lib/gsap/register";
 
 /**
  * T3 — scroll-driven word highlight.
  * Words transition from zinc-600 to zinc-100 as the element scrolls through the viewport.
- * Renders consistent markup for SSR; reduced-motion handled inside Word.
+ * One scrubbed timeline drives all words; each word occupies [i/total, (i+2)/total]
+ * of the timeline, matching the original per-word progress window 1:1.
  */
 export default function ScrollHighlight({
   text,
@@ -46,23 +17,53 @@ export default function ScrollHighlight({
   className?: string;
 }) {
   const ref = useRef<HTMLParagraphElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start 0.85", "end 0.3"],
-  });
-
   const words = text.split(" ");
+
+  useGSAP(
+    () => {
+      const wordEls = ref.current?.querySelectorAll("[data-scroll-word]");
+      if (!wordEls) return;
+
+      const mm = gsap.matchMedia();
+
+      mm.add("(prefers-reduced-motion: reduce)", () => {
+        gsap.set(wordEls, { color: "#f4f5f7" });
+      });
+
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: ref.current,
+            start: "top 85%",
+            end: "bottom 30%",
+            scrub: 0.3,
+          },
+        });
+
+        wordEls.forEach((el, i) => {
+          tl.fromTo(
+            el,
+            { color: "#a9adb6" },
+            { color: "#f4f5f7", duration: 2 / words.length, ease: "none" },
+            i / words.length,
+          );
+        });
+      });
+    },
+    { scope: ref, dependencies: [text] },
+  );
 
   return (
     <p ref={ref} className={className}>
       {words.map((word, i) => (
-        <Word
+        <span
           key={`${word}-${i}`}
-          word={word}
-          progress={scrollYProgress}
-          index={i}
-          total={words.length}
-        />
+          data-scroll-word=""
+          className="mr-[0.25em] inline-block"
+          style={{ color: "#a9adb6" }}
+        >
+          {word}
+        </span>
       ))}
     </p>
   );

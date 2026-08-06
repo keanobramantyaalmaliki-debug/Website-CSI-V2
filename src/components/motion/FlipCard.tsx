@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { useRef, useState, type ReactNode } from "react";
+import { gsap, useGSAP, CSI_EASE } from "@/lib/gsap/register";
 import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 
 /**
  * 3D flip card, extracted from LivingArchitecture's original NodeCard so
@@ -26,7 +25,20 @@ export default function FlipCard({
 }) {
   const [flipped, setFlipped] = useState(false);
   const coarse = useCoarsePointer();
-  const reduced = !!useReducedMotion();
+  const reduced = usePrefersReducedMotion();
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      if (reduced) return;
+      gsap.to(cardRef.current, {
+        rotateY: flipped ? 180 : 0,
+        duration: 0.5,
+        ease: CSI_EASE,
+      });
+    },
+    { scope: cardRef, dependencies: [flipped, reduced] },
+  );
 
   return (
     <button
@@ -38,10 +50,9 @@ export default function FlipCard({
       onClick={coarse ? () => setFlipped((v) => !v) : undefined}
       className={`relative text-left [perspective:1000px] ${className}`}
     >
-      <motion.div
+      <div
+        ref={cardRef}
         className="relative h-full w-full rounded-2xl [transform-style:preserve-3d]"
-        animate={reduced ? undefined : { rotateY: flipped ? 180 : 0 }}
-        transition={{ duration: 0.5, ease: EASE }}
       >
         <div
           className="absolute inset-0 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] [backface-visibility:hidden]"
@@ -60,7 +71,7 @@ export default function FlipCard({
         >
           {back}
         </div>
-      </motion.div>
+      </div>
     </button>
   );
 }

@@ -1,5 +1,7 @@
-import type { RoomKey } from "@/lib/store/sceneStore";
+import { useEffect } from "react";
+import { useSceneStore, type RoomKey } from "@/lib/store/sceneStore";
 import { ROOM_CONTENT } from "@/lib/roomContent";
+import { ScrollTrigger } from "@/lib/gsap/register";
 
 /**
  * Konten di bawah hero untuk ruangan yang sedang aktif.
@@ -40,5 +42,15 @@ import { ROOM_CONTENT } from "@/lib/roomContent";
  * konteks GL sendiri antar-mount.
  */
 export default function RoomContent({ room }: { room: RoomKey }) {
+  const loaderDone = useSceneStore((s) => s.loaderDone);
+
+  // Lounge's GSAP ScrollTrigger instances are created while the loader
+  // overlay still covers the layout, so their measured start/end offsets are
+  // wrong. Recompute once the overlay is gone and real geometry is visible.
+  useEffect(() => {
+    if (!loaderDone) return;
+    ScrollTrigger.refresh();
+  }, [loaderDone]);
+
   return <>{ROOM_CONTENT[room]}</>;
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef } from "react";
-import { motion, useScroll, useTransform, useReducedMotion } from "motion/react";
+import { motionValue } from "motion/react";
+import { gsap, useGSAP, CSI_EASE } from "@/lib/gsap/register";
 import ScrollHighlight from "@/components/motion/ScrollHighlight";
 import ManifestoField from "@/components/motion/ManifestoField";
 
@@ -17,36 +18,17 @@ const LINES: LineConfig[] = [
   { text: "Intelligence should exist across every interaction. Every workflow. Every decision.", role: "close" },
 ];
 
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
-
-function ProgressSpine({ progress }: { progress: ReturnType<typeof useScroll>["scrollYProgress"] }) {
-  const reduced = useReducedMotion();
-  const scaleY = useTransform(progress, [0, 1], [0, 1]);
-
-  return (
-    <div className="absolute left-0 top-0 bottom-0 w-px bg-zinc-800" aria-hidden="true">
-      <motion.div
-        className="absolute inset-x-0 top-0 bg-zinc-400 origin-top"
-        style={{ scaleY: reduced ? 1 : scaleY, height: "100%" }}
-      />
-    </div>
-  );
-}
-
 function ManifestoLine({ config, index }: { config: LineConfig; index: number }) {
   const { role, text } = config;
 
   if (role === "thesis") {
     return (
-      <motion.p
+      <p
+        data-manifesto-thesis={index}
         className="text-3xl font-semibold italic leading-[1.15] tracking-tight text-zinc-100 md:text-5xl"
-        initial={{ opacity: 0, y: 12 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "-10%" }}
-        transition={{ duration: 0.7, ease: EASE, delay: index * 0.08 }}
       >
         {text}
-      </motion.p>
+      </p>
     );
   }
 
@@ -65,10 +47,66 @@ function ManifestoLine({ config, index }: { config: LineConfig; index: number })
 
 export default function Manifesto() {
   const sectionRef = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start 0.9", "end 0.2"],
-  });
+  const spineFillRef = useRef<HTMLDivElement>(null);
+  const eyebrowRef = useRef<HTMLParagraphElement>(null);
+  // Bridge for ManifestoField (r3f Canvas, frameloop="demand"): it subscribes
+  // via progress.on("change", ...) and calls invalidate() per change. This
+  // motionValue is a subscribable data structure, not an animation engine —
+  // ScrollTrigger drives it, ManifestoField's contract stays untouched.
+  const progress = useRef(motionValue(0)).current;
+
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        gsap.fromTo(
+          spineFillRef.current,
+          { scaleY: 0 },
+          {
+            scaleY: 1,
+            ease: "none",
+            scrollTrigger: {
+              trigger: sectionRef.current,
+              start: "top 90%",
+              end: "bottom 20%",
+              scrub: 0.3,
+              onUpdate: (self) => progress.set(self.progress),
+            },
+          },
+        );
+      });
+
+      mm.add("(prefers-reduced-motion: reduce)", () => {
+        gsap.set(spineFillRef.current, { scaleY: 1 });
+      });
+
+      gsap.from(eyebrowRef.current, {
+        opacity: 0,
+        x: -8,
+        duration: 0.5,
+        ease: CSI_EASE,
+        scrollTrigger: { trigger: eyebrowRef.current, start: "top bottom", once: true },
+      });
+
+      LINES.forEach((line, i) => {
+        if (line.role !== "thesis") return;
+        gsap.from(`[data-manifesto-thesis="${i}"]`, {
+          opacity: 0,
+          y: 12,
+          duration: 0.7,
+          ease: CSI_EASE,
+          delay: i * 0.08,
+          scrollTrigger: {
+            trigger: `[data-manifesto-thesis="${i}"]`,
+            start: "top bottom-=10%",
+            once: true,
+          },
+        });
+      });
+    },
+    { scope: sectionRef },
+  );
 
   return (
     <section
@@ -87,22 +125,25 @@ export default function Manifesto() {
       className="relative overflow-hidden bg-background px-6 pb-24 pt-16 sm:px-10 sm:pb-32 sm:pt-20"
     >
       {/* Particle field — absolute behind text */}
-      <ManifestoField progress={scrollYProgress} />
+      <ManifestoField progress={progress} />
 
       <div className="relative z-10 pl-6">
         {/* Progress spine */}
-        <ProgressSpine progress={scrollYProgress} />
+        <div className="absolute left-0 top-0 bottom-0 w-px bg-zinc-800" aria-hidden="true">
+          <div
+            ref={spineFillRef}
+            className="absolute inset-x-0 top-0 origin-top bg-zinc-400"
+            style={{ height: "100%" }}
+          />
+        </div>
 
         {/* Eyebrow — anchored above text block */}
-        <motion.p
+        <p
+          ref={eyebrowRef}
           className="mb-8 text-xs tracking-widest text-zinc-400 uppercase"
-          initial={{ opacity: 0, x: -8 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, ease: EASE }}
         >
           Manifesto
-        </motion.p>
+        </p>
 
         {/* Lines */}
         <div className="flex flex-col gap-8">

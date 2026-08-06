@@ -1,11 +1,11 @@
 "use client";
 
-import { motion } from "motion/react";
+import { useRef } from "react";
+import { gsap, useGSAP, CSI_EASE } from "@/lib/gsap/register";
 import ScrollHighlight from "@/components/motion/ScrollHighlight";
-import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
+import { FadeUpList, FadeUpItem } from "@/components/gsap/FadeUp";
 import NetworkField from "@/components/motion/backgrounds/NetworkField";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 
 const MISSIONS: { verb: string; detail: string }[] = [
   {
@@ -34,22 +34,52 @@ const VISION =
   "To become a trusted technology partner that empowers organizations through intelligent digital innovation — creating sustainable value for businesses and communities worldwide.";
 
 export default function Vision() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const visionEyebrowRef = useRef<HTMLParagraphElement>(null);
+  const missionEyebrowRef = useRef<HTMLParagraphElement>(null);
+  // Touch devices have no precise pointer to react to and the least headroom
+  // for a per-frame O(count^2) canvas loop — skip it entirely there rather
+  // than just shrinking it. See INVARIANTS.md §6 for the same coarse-pointer
+  // pattern applied to scene interactivity.
+  const coarse = useCoarsePointer();
+
+  useGSAP(
+    () => {
+      [visionEyebrowRef.current, missionEyebrowRef.current].forEach((el) => {
+        gsap.from(el, {
+          opacity: 0,
+          x: -8,
+          duration: 0.5,
+          ease: CSI_EASE,
+          scrollTrigger: {
+            trigger: el,
+            start: "top bottom",
+            once: true,
+          },
+        });
+      });
+    },
+    { scope: sectionRef },
+  );
+
   return (
-    <section id="vision" className="relative overflow-hidden px-6 py-24 sm:px-10 sm:py-32">
-      {/* Scatter constellation — "space / vision". Text stays above at z-10. */}
-      <NetworkField variant="scatter" className="-z-0" />
+    <section
+      ref={sectionRef}
+      id="vision"
+      className="relative overflow-hidden px-6 py-24 sm:px-10 sm:py-32"
+    >
+      {/* Scatter constellation — "space / vision". Text stays above at z-10.
+          Skipped on touch devices, see `coarse` above. */}
+      {!coarse && <NetworkField variant="scatter" count={40} className="-z-0" />}
 
       <div className="relative z-10">
       {/* T6 — eyebrow */}
-      <motion.p
+      <p
+        ref={visionEyebrowRef}
         className="text-xs tracking-widest text-zinc-400 uppercase"
-        initial={{ opacity: 0, x: -8 }}
-        whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, ease: EASE }}
       >
         Our Vision
-      </motion.p>
+      </p>
 
       {/* T3 — scroll word-highlight bookend */}
       <ScrollHighlight
@@ -58,15 +88,12 @@ export default function Vision() {
       />
 
       {/* T6 — mission eyebrow */}
-      <motion.p
+      <p
+        ref={missionEyebrowRef}
         className="mt-16 text-xs tracking-widest text-zinc-400 uppercase"
-        initial={{ opacity: 0, x: -8 }}
-        whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, ease: EASE }}
       >
         Our Mission
-      </motion.p>
+      </p>
 
       {/* 5 mission verbs — verb + detail on one row, always visible (comfort) */}
       <FadeUpList tag="ol" className="mt-6 border-t border-white/[0.08]">
