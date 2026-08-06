@@ -4,8 +4,7 @@ import { motion } from "motion/react";
 import ScrollHighlight from "@/components/motion/ScrollHighlight";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 import NetworkField from "@/components/motion/backgrounds/NetworkField";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { EASE } from "@/lib/motion/tokens";
 
 const MISSIONS: { verb: string; detail: string }[] = [
   {

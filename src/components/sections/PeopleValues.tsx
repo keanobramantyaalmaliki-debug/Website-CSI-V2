@@ -1,8 +1,7 @@
 import { motion } from "motion/react";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 import { VALUES } from "@/data/people";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { EASE } from "@/lib/motion/tokens";
 
 export default function PeopleValues() {
   return (

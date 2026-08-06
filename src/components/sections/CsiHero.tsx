@@ -4,8 +4,7 @@ import { useRef } from "react";
 import { motion, useInView } from "motion/react";
 import CsiParticleField from "@/components/motion/CsiParticleField";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { EASE } from "@/lib/motion/tokens";
 
 const HEADING_LINES = [
   ["Think", "Beyond", "Software."],

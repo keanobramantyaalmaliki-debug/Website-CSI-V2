@@ -3,8 +3,7 @@
 import LineMask from "@/components/motion/LineMask";
 import MagneticButton from "@/components/motion/MagneticButton";
 import { motion } from "motion/react";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { EASE } from "@/lib/motion/tokens";
 
 // TODO(content): update to cogniti social handles — issue pending
 const SOCIALS = [

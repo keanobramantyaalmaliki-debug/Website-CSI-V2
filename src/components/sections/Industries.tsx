@@ -3,8 +3,7 @@
 import { motion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
 import Marquee from "@/components/motion/Marquee";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { EASE } from "@/lib/motion/tokens";
 
 const INDUSTRIES = [
   "Government & Public Sector",

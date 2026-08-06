@@ -3,8 +3,7 @@
 import { motion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { EASE } from "@/lib/motion/tokens";
 
 const ROLES: { title: string; type: string; mode: string; tag: string }[] = [
   { title: "Innovation & Growth Manager", type: "Full-time", mode: "Remote",  tag: "Growth" },

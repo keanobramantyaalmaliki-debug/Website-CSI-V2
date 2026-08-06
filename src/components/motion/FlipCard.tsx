@@ -3,8 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { EASE } from "@/lib/motion/tokens";
 
 /**
  * 3D flip card, extracted from LivingArchitecture's original NodeCard so

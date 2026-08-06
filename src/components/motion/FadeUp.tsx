@@ -2,8 +2,7 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import { type ReactNode } from "react";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { EASE } from "@/lib/motion/tokens";
 
 const containerVariants = {
   hidden: {},

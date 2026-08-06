@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { EASE } from "@/lib/motion/tokens";
 
 const AUTO_ADVANCE_MS = 5000;
 

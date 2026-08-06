@@ -8,8 +8,7 @@ import Disclosure from "@/components/motion/Disclosure";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { StickyScroll } from "@/components/ui/sticky-scroll-reveal";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { EASE } from "@/lib/motion/tokens";
 
 /**
  * Office deep-dive services — moved from Services.tsx (former Lounge

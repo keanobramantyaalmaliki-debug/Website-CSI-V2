@@ -2,8 +2,7 @@
 
 import { motion } from "motion/react";
 import LineMask, { LINE_STAGGER } from "@/components/motion/LineMask";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { EASE } from "@/lib/motion/tokens";
 
 const STATS = [
   { value: "8+", label: "Years in Operation" },

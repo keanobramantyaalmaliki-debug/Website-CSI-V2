@@ -7,12 +7,11 @@ import { useSceneStore, pathFor, type RoomKey } from "@/lib/store/sceneStore";
 import { roomHasContact } from "@/lib/roomContent";
 import { ACTIVE_KEYS } from "@/components/canvas/CameraController";
 import MagneticButton from "@/components/motion/MagneticButton";
+import { EASE } from "@/lib/motion/tokens";
 import {
   useScrollLock,
   useSmoothScroll,
 } from "@/lib/smoothScroll/useSmoothScroll";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 /** Id kunci scroll milik drawer mobile — unik supaya tidak bentrok dgn loader. */
 const DRAWER_LOCK = "navbar-drawer";

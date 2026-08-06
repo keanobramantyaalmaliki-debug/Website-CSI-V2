@@ -3,8 +3,7 @@
 import { motion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { EASE } from "@/lib/motion/tokens";
 
 type Spotlight = {
   client: string;

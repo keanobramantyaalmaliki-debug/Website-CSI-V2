@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState, type ComponentType } from "react";
 import { motion, useReducedMotion } from "motion/react";
+import { EASE } from "@/lib/motion/tokens";
 
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 const AUTO_ADVANCE_MS = 5000;
 
 // Card size/opacity formula ported from basement.studio's staggered-slider

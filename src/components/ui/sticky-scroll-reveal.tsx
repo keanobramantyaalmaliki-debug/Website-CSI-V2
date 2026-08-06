@@ -1,8 +1,7 @@
 "use client";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { EASE } from "@/lib/motion/tokens";
 
 /**
  * Adapted from Aceternity UI's StickyScroll — the original tracks an

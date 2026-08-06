@@ -2,8 +2,7 @@
 
 import { useState, useId, type ReactNode } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { EASE } from "@/lib/motion/tokens";
 
 interface DisclosureProps {
   /** Static ReactNode or render prop receiving current open state. */

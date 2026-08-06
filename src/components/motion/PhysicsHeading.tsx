@@ -118,7 +118,10 @@ export default function PhysicsHeading({ text, className }: Props) {
       requestAnimationFrame(() => {
         wordRefs.current.forEach((el) => {
           if (!el) return;
-          el.style.transition = "transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)";
+          // Kurvanya lewat var, bukan angka: transisi ini ditulis sebagai CSS
+          // (bukan lewat motion), jadi padanannya `--ease-out` di index.css —
+          // sisi CSS dari EASE yang sama.
+          el.style.transition = "transform 0.6s var(--ease-out)";
           el.style.transform = "translate(0px, 0px) rotate(0rad)";
         });
       });

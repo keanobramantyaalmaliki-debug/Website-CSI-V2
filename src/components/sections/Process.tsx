@@ -6,8 +6,7 @@ import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 import { StickyScroll } from "@/components/ui/sticky-scroll-reveal";
 import { PROCESS_GLYPHS } from "@/components/motion/ProcessGlyphs";
 import { useScrollStepper } from "@/lib/hooks/useScrollStepper";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { EASE } from "@/lib/motion/tokens";
 
 const STEPS: { num: string; kicker: string; title: string; desc: string }[] = [
   {

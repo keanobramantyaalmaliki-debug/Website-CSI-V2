@@ -3,8 +3,7 @@
 import { motion } from "motion/react";
 import DeploymentCard, { type DeploymentData } from "@/components/sections/DeploymentCard";
 import PhysicsHeading from "@/components/motion/PhysicsHeading";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { EASE } from "@/lib/motion/tokens";
 
 const DEPLOYMENTS: DeploymentData[] = [
   {

@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { motion, useScroll, useTransform, useReducedMotion } from "motion/react";
 import ScrollHighlight from "@/components/motion/ScrollHighlight";
 import ManifestoField from "@/components/motion/ManifestoField";
+import { EASE } from "@/lib/motion/tokens";
 
 interface LineConfig {
   text: string;
@@ -16,8 +17,6 @@ const LINES: LineConfig[] = [
   { text: "The future belongs not to those who collect, but to those who act.", role: "thesis" },
   { text: "Intelligence should exist across every interaction. Every workflow. Every decision.", role: "close" },
 ];
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 function ProgressSpine({ progress }: { progress: ReturnType<typeof useScroll>["scrollYProgress"] }) {
   const reduced = useReducedMotion();

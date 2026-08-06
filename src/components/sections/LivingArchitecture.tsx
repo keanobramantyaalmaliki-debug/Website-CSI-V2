@@ -4,8 +4,7 @@ import { motion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
 import StaggeredGlyphSlider, { type SliderNode } from "@/components/motion/StaggeredGlyphSlider";
 import { NODE_GLYPHS } from "@/components/motion/NodeGlyphs";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { EASE } from "@/lib/motion/tokens";
 
 const NODES: { name: string; desc: string }[] = [
   {
