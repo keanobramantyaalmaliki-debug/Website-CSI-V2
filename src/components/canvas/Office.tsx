@@ -17,7 +17,6 @@ import {
   pauseScreenVideos,
   playScreenVideos,
 } from "./screenVideo";
-import { CHAR_LAYER } from "./CharacterLights";
 
 // GLB baked ada di public/ dan ter-track git (9 MB). Jangan kembalikan ke
 // /export-test/… — path itu mengandalkan symlink dev-only yang tidak pernah ada
@@ -140,9 +139,12 @@ function ScreenVideoGate() {
  * Kantor Cogniti — hasil bake lightmap (lihat Documentations.md §4g).
  *
  * GLB ini punya NOL lampu realtime: semua cahaya + bayangan sudah dipanggang
- * ke lightmap. Itu yang bikin 50-60 FPS. Jangan tambah lampu scene-wide di sini
- * — kalau butuh nyinari objek dinamis (karakter), pakai CharacterLights.tsx
- * yang memakai layers supaya tidak menyentuh 291 objek statis ini.
+ * ke lightmap. Itu yang bikin 50-60 FPS. Jangan tambah lampu scene-wide di
+ * sini. Karakter pun sengaja TANPA lampu (cukup ambient + envmap — dipilih
+ * Keano 6 Agu setelah tes point light per karakter; lihat komentar di
+ * Scene.tsx). Catatan penting kalau tergoda "lampu ber-layer": three TIDAK
+ * mendukung selective lighting per objek — layer lampu diuji terhadap
+ * KAMERA, lampu yang lolos menyinari semua material.
  *
  * Tiga fix-up di bawah wajib ada; semuanya hasil debugging panjang dan kalau
  * meleset visualnya rusak dengan cara yang tidak kelihatan jelas.
@@ -217,9 +219,6 @@ export default function Office() {
       // objek yang selalu ikut dirender.
       if (obj instanceof SkinnedMesh) {
         obj.frustumCulled = false;
-        // enable (bukan set): objek tetap di layer 0 supaya kamera & raycast
-        // biasa tetap melihatnya, plus ikut disinari lampu CHAR_LAYER.
-        obj.layers.enable(CHAR_LAYER);
         skinned++;
       }
 
@@ -241,6 +240,25 @@ export default function Office() {
         // — itu HARUS dibiarkan, kalau ikut dikonversi objeknya salah nyala.
         // Nama texture tidak bisa dipakai sebagai pembeda: glTF hasil export
         // Blender tidak menyimpan texture.name sama sekali.
+        //
+        // PENGECUALIAN: kaca transparan (M_Glass/GlassFrost/GlassSmoke/
+        // Pantry_Glass, alpha blend) ikut ter-bake tapi hasil bake-nya sampah —
+        // bake diffuse di permukaan alpha 0.08 cuma menangkap noise varian
+        // tinggi (LM_MG_Office_M_Glass: std 0.41 vs dinding 0.26, puncak 3.28).
+        // Noise itu × LIGHTMAP_INTENSITY bikin kaca keruh seperti susu penuh
+        // bintik. Kaca tidak butuh baked light — look-nya datang dari benda di
+        // baliknya — jadi buang lightmap DAN aoMap-nya sekalian.
+        // (Diuji 6 Agu: mengecualikan M_GlassSmoke dari aturan ini — alias
+        // mengembalikan lightmap-nya — mengubah <0,01% piksel. Wajar: lightMap
+        // dikali diffuseColor, dan diffuse smoke ~0,008 ≈ hitam. Jadi smoke
+        // ikut aturan yang sama, tanpa pengecualian.)
+        if (mat.transparent && /Glass/i.test(mat.name)) {
+          if (mat.aoMap && mat.aoMap.channel === 1) {
+            mat.aoMap = null;
+            mat.needsUpdate = true;
+          }
+          continue;
+        }
         const ao = mat.aoMap;
         if (ao && ao.channel === 1 && !mat.lightMap) {
           mat.lightMap = ao;
