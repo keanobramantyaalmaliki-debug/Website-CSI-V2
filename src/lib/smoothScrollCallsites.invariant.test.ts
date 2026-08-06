@@ -29,6 +29,7 @@ const SRC = join(dirname(fileURLToPath(import.meta.url)), "..");
 const GUARDED_FILES = [
   "components/Navbar.tsx",
   "routes/RoomRouteSync.tsx",
+  "components/sections/DeploymentCta.tsx",
 ] as const;
 
 function stripComments(src: string): string {
@@ -36,7 +37,7 @@ function stripComments(src: string): string {
 }
 
 describe("pemanggil scroll programatik lewat smoothScroll.ts", () => {
-  it("Navbar & RoomRouteSync tidak punya scrollIntoView atau window.scrollTo telanjang", () => {
+  it("tidak ada berkas yang dijaga punya scrollIntoView atau window.scrollTo telanjang", () => {
     const offenders = GUARDED_FILES.filter((path) => {
       const code = stripComments(readFileSync(join(SRC, path), "utf8"));
       return /\.scrollIntoView\s*\(/.test(code) || /window\.scrollTo\s*\(/.test(code);
@@ -52,7 +53,7 @@ describe("pemanggil scroll programatik lewat smoothScroll.ts", () => {
     ).toEqual([]);
   });
 
-  it("Navbar & RoomRouteSync mengimpor helper dari smoothScroll.ts", () => {
+  it("setiap berkas yang dijaga mengimpor helper dari smoothScroll.ts", () => {
     const offenders = GUARDED_FILES.filter((path) => {
       const code = stripComments(readFileSync(join(SRC, path), "utf8"));
       return !/from\s+["']@\/lib\/smoothScroll["']/.test(code);
