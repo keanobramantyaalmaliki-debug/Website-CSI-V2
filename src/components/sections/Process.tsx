@@ -1,22 +1,55 @@
 "use client";
 
-import { Fragment } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
+import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
+import { StickyScroll } from "@/components/ui/sticky-scroll-reveal";
+import { PROCESS_GLYPHS } from "@/components/motion/ProcessGlyphs";
+import { useScrollStepper } from "@/lib/hooks/useScrollStepper";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-const STEPS: { num: string; title: string }[] = [
-  { num: "01", title: "Discovery" },
-  { num: "02", title: "Strategy & Planning" },
-  { num: "03", title: "Design" },
-  { num: "04", title: "Development" },
-  { num: "05", title: "Testing & QA" },
-  { num: "06", title: "Deployment & Support" },
+const STEPS: { num: string; kicker: string; title: string; desc: string }[] = [
+  {
+    num: "01",
+    kicker: "UNDERSTAND",
+    title: "Discovery",
+    desc: "We map your current workflows, pain points, and goals before writing a line of code.",
+  },
+  {
+    num: "02",
+    kicker: "PLAN",
+    title: "Strategy & Planning",
+    desc: "Scope, architecture, and timeline locked in — so the build has a clear target.",
+  },
+  {
+    num: "03",
+    kicker: "SHAPE",
+    title: "Design",
+    desc: "Interfaces and flows prototyped and tested with real users before development starts.",
+  },
+  {
+    num: "04",
+    kicker: "BUILD",
+    title: "Development",
+    desc: "Engineers build in short, reviewable cycles — nothing lands without a second pair of eyes.",
+  },
+  {
+    num: "05",
+    kicker: "VERIFY",
+    title: "Testing & QA",
+    desc: "Automated and manual checks against real-world edge cases, not just the happy path.",
+  },
+  {
+    num: "06",
+    kicker: "LAUNCH",
+    title: "Deployment & Support",
+    desc: "Shipped with monitoring in place, and a team that stays on for what comes after launch.",
+  },
 ];
 
 export default function Process() {
-  const reduced = useReducedMotion();
+  const { activeIndex, setRef } = useScrollStepper(STEPS.length);
 
   return (
     <section id="process" className="px-6 py-24 sm:px-10 sm:py-32">
@@ -36,33 +69,61 @@ export default function Process() {
         <LineMask>How We Work</LineMask>
       </h2>
 
-      {/* Horizontal numbered flow — vertical list on mobile, arrow-connected on desktop */}
-      <ol className="mt-12 flex flex-col border-t border-white/[0.08] sm:flex-row sm:items-start sm:border-0 sm:gap-3">
-        {STEPS.map((step, i) => (
-          <Fragment key={step.num}>
-            <motion.li
-              className="flex items-center gap-4 border-b border-white/[0.08] py-5 last:border-0 sm:flex-1 sm:flex-col sm:items-start sm:border-0 sm:py-0 sm:gap-1.5"
-              initial={reduced ? false : { opacity: 0, y: 8 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.45, delay: i * 0.07, ease: EASE }}
-            >
-              <span className="shrink-0 text-xs tabular-nums text-zinc-400 sm:mb-0.5">
-                {step.num}
-              </span>
-              <h3 className="text-sm font-medium text-zinc-300">{step.title}</h3>
-            </motion.li>
-            {i < STEPS.length - 1 && (
-              <span
-                className="hidden sm:flex sm:items-start sm:pt-0.5 shrink-0 select-none text-zinc-600"
-                aria-hidden="true"
-              >
-                →
-              </span>
-            )}
-          </Fragment>
-        ))}
-      </ol>
+      <div className="mt-16 grid gap-8 lg:grid-cols-[1fr_20rem]">
+        <FadeUpList tag="div" className="border-t border-white/[0.08]">
+          {STEPS.map((step, i) => {
+            const Glyph = PROCESS_GLYPHS[i];
+            return (
+              <FadeUpItem key={step.num} tag="div">
+                <div
+                  ref={setRef(i)}
+                  className="grid gap-4 border-b border-white/[0.08] py-10 sm:grid-cols-[3rem_1fr] sm:py-14"
+                >
+                  <span className="text-xs tabular-nums text-zinc-500">{step.num}</span>
+                  <div>
+                    <span className="text-xs tracking-widest text-orange-500 uppercase">
+                      {step.kicker}
+                    </span>
+                    <h3 className="mt-2 text-xl font-medium text-zinc-100 sm:text-2xl">
+                      {step.title}
+                    </h3>
+                    <p className="mt-3 max-w-md text-sm leading-relaxed text-zinc-400">
+                      {step.desc}
+                    </p>
+                    {/* Mobile/tablet only — desktop shows the same glyph in the
+                        sticky panel, synced via scroll position instead. */}
+                    <div className="mt-6 h-32 w-32 text-zinc-500 lg:hidden">
+                      <Glyph />
+                    </div>
+                  </div>
+                </div>
+              </FadeUpItem>
+            );
+          })}
+        </FadeUpList>
+
+        <StickyScroll
+          activeIndex={activeIndex}
+          panels={STEPS.map((step, i) => {
+            const Glyph = PROCESS_GLYPHS[i];
+            return {
+              content: (
+                <div className="flex h-full flex-col items-center justify-center gap-4 p-8">
+                  <div className="h-32 w-32 text-zinc-400">
+                    <Glyph />
+                  </div>
+                  <div className="text-center">
+                    <span className="text-xs tracking-widest text-orange-500 uppercase">
+                      {step.kicker}
+                    </span>
+                    <p className="mt-1 text-sm text-zinc-400">{step.title}</p>
+                  </div>
+                </div>
+              ),
+            };
+          })}
+        />
+      </div>
     </section>
   );
 }

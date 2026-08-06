@@ -4,8 +4,8 @@ import type { TeamMember } from "./people";
 
 const VALID_CATEGORIES: TeamMember["category"][] = [
   "Management",
-  "Design",
-  "Engineering",
+  "Developer",
+  "R & D",
 ];
 const VALID_PLATFORMS = ["linkedin", "github", "x"];
 

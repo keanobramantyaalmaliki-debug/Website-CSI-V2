@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
+import CareersRoleCard from "./CareersRoleCard";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -40,26 +41,11 @@ export default function Careers() {
         <LineMask>Build What Comes Next.</LineMask>
       </h2>
 
-      {/* T7 — role rows with hover underline wipe */}
-      <FadeUpList className="mt-12 divide-y divide-white/[0.08] border-y border-white/[0.08]">
-        {ROLES.map((role) => (
-          <FadeUpItem
-            key={role.title}
-            tag="article"
-            className="group grid gap-2 py-6 sm:grid-cols-[1fr_auto] sm:gap-6"
-          >
-            <div>
-              {/* T7 — underline wipe on hover */}
-              <h3 className="relative w-fit font-medium text-zinc-100 after:absolute after:bottom-0 after:left-0 after:h-px after:w-0 after:bg-zinc-100 after:transition-[width] after:duration-300 after:content-[''] group-hover:after:w-full">
-                {role.title}
-              </h3>
-              <p className="mt-1 text-xs text-zinc-400">
-                {role.type} · {role.mode}
-              </p>
-            </div>
-            <span className="self-center rounded-full border border-zinc-800 px-3 py-1 text-xs text-zinc-400">
-              {role.tag}
-            </span>
+      {/* T7 — role cards with spotlight hover / idle-glow on mobile */}
+      <FadeUpList className="mt-12 grid gap-4 sm:grid-cols-2">
+        {ROLES.map((role, i) => (
+          <FadeUpItem key={role.title} tag="div">
+            <CareersRoleCard role={role} index={i} />
           </FadeUpItem>
         ))}
       </FadeUpList>

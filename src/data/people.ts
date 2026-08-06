@@ -1,8 +1,9 @@
 export type TeamMember = {
   name: string;
   role: string;
-  category: "Management" | "Design" | "Engineering";
+  category: "Management" | "Developer" | "R & D";
   social?: { platform: "linkedin" | "github" | "x"; url: string }[];
+  photoUrl?: string;
 };
 
 export type Value = {
@@ -14,58 +15,88 @@ export type Value = {
 
 export const TEAM_MEMBERS: TeamMember[] = [
   {
-    name: "Keano Ericsson",
+    name: "Fahmi Maliki",
     role: "Founder & Chief Executive",
     category: "Management",
     social: [{ platform: "linkedin", url: "#" }],
   },
   {
-    name: "Raka Mahardika",
+    name: "Lena Almaliki",
+    role: "Chief Executive",
+    category: "Management",
+    social: [{ platform: "linkedin", url: "#" }],
+  },
+  {
+    name: "Jun",
+    role: "Manager",
+    category: "Management",
+    social: [{ platform: "linkedin", url: "#" }],
+  },
+  {
+    name: "Imam Maliki",
     role: "Head of Operations",
     category: "Management",
     social: [{ platform: "linkedin", url: "#" }],
   },
   {
-    name: "Nadia Salsabila",
-    role: "Creative Director",
-    category: "Design",
+    name: "Lisa Puspitasari",
+    role: "Asistant Manager",
+    category: "Management",
+    social: [{ platform: "linkedin", url: "#" }],
+  },
+  {
+    name: "Bagas Nusantara Nabillah",
+    role: "Senior Developer",
+    category: "Developer",
     social: [
       { platform: "linkedin", url: "#" },
       { platform: "x", url: "#" },
     ],
   },
   {
-    name: "Tara Aqilah",
-    role: "Senior Product Designer",
-    category: "Design",
-    social: [{ platform: "linkedin", url: "#" }],
-  },
-  {
-    name: "Gilang Pratama",
-    role: "UX Researcher",
-    category: "Design",
-    social: [{ platform: "linkedin", url: "#" }],
-  },
-  {
-    name: "Rizky Firmansyah",
-    role: "Lead Engineer",
-    category: "Engineering",
+    name: "Amallia Dwi Yustianti",
+    role: "Senior Developer",
+    category: "Developer",
     social: [
-      { platform: "github", url: "#" },
       { platform: "linkedin", url: "#" },
+      { platform: "x", url: "#" },
     ],
   },
   {
-    name: "Dimas Arya",
-    role: "Full Stack Engineer",
-    category: "Engineering",
-    social: [{ platform: "github", url: "#" }],
+    name: "Nico Arya Putra Laksana",
+    role: "Junior Developer",
+    category: "Developer",
+    social: [{ platform: "linkedin", url: "#" }],
   },
   {
-    name: "Satria Nugroho",
-    role: "Full Stack Engineer",
-    category: "Engineering",
-    social: [{ platform: "github", url: "#" }],
+    name: "Keano Bramantya Almaliki",
+    role: "Junior Developer",
+    category: "Developer",
+    social: [{ platform: "linkedin", url: "#" }],
+  },
+  {
+    name: "Sayyid",
+    role: "Junior Developer",
+    category: "Developer",
+    social: [{ platform: "linkedin", url: "#" }],
+  },
+  {
+    name: "Bayu",
+    role: "Research & Development",
+    category: "R & D",
+    social: [{ platform: "linkedin", url: "#" }],
+  },
+  {
+    name: "Roni",
+    role: "Research & Development",
+    category: "R & D",
+    social: [{ platform: "linkedin", url: "#" }],
+  },
+  {
+    name: "Inno",
+    role: "Research & Development",
+    category: "R & D",
+    social: [{ platform: "linkedin", url: "#" }],
   },
 ];
 
