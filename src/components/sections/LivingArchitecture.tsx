@@ -1,93 +1,77 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useScroll, useTransform, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
-import FlowDiagram from "@/components/motion/FlowDiagram";
+import StaggeredGlyphSlider, { type SliderNode } from "@/components/motion/StaggeredGlyphSlider";
+import { NODE_GLYPHS } from "@/components/motion/NodeGlyphs";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 const NODES: { name: string; desc: string }[] = [
   {
     name: "Citizen",
-    desc: "Every interaction begins with people — citizens, users, and communities whose needs drive the system.",
+    desc: "Every interaction starts with people — their needs drive the system.",
   },
   {
     name: "Operations",
-    desc: "Processes and workflows that translate intent into action across departments and services.",
+    desc: "Workflows that turn intent into action across every department.",
   },
   {
     name: "Knowledge",
-    desc: "Structured data, documents, and institutional memory that give context to every decision.",
+    desc: "Data and institutional memory that give every decision context.",
   },
   {
     name: "Infrastructure",
-    desc: "The technical foundation — cloud, APIs, and integrations that keep systems connected and resilient.",
+    desc: "Cloud, APIs, and integrations that keep everything connected.",
   },
   {
     name: "Intelligence",
-    desc: "AI and analytics layers that surface patterns, predictions, and recommendations from the data.",
+    desc: "AI and analytics that surface patterns before you ask.",
   },
   {
     name: "Decision",
-    desc: "The moment of clarity — where signals, context, and intelligence converge into a clear course of action.",
+    desc: "Where signals and intelligence converge into a clear course.",
   },
   {
     name: "Action",
-    desc: "Outcomes executed in the real world: communications sent, resources deployed, services delivered.",
+    desc: "Outcomes in the real world — sent, deployed, delivered.",
   },
 ];
 
-/**
- * Scroll-activated node reveal. Name + description both visible (comfort: no
- * click to read); scroll only lifts a subtle dim→full emphasis, never hides text.
- */
-function NodeItem({
-  node,
-  index,
-  progress,
-}: {
-  node: (typeof NODES)[0];
-  index: number;
-  progress: ReturnType<typeof useScroll>["scrollYProgress"];
-}) {
-  const n = NODES.length;
-  const start = index / n;
-  const end = Math.min((index + 1.5) / n, 1);
+const SLIDER_NODES: SliderNode[] = NODES.map((node, i) => ({
+  ...node,
+  Glyph: NODE_GLYPHS[i],
+}));
 
-  // Emphasis only — floor at 0.6 so every node stays readable before it's "active".
-  const opacity = useTransform(progress, [start, end], [0.6, 1]);
-  const nameColor = useTransform(progress, [start, end], ["#a9adb6", "#f4f5f7"]);
+function MobileNodeCard({ node, index }: { node: (typeof NODES)[0]; index: number }) {
+  const Glyph = NODE_GLYPHS[index];
 
   return (
-    <motion.li style={{ opacity }} className="border-b border-white/[0.08]">
-      <div className="flex items-baseline gap-6 py-5">
-        <span className="w-10 shrink-0 text-sm tabular-nums text-zinc-400">
+    <motion.div
+      className="flex flex-col justify-between rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5"
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-20%" }}
+      transition={{ duration: 0.5, ease: EASE, delay: index * 0.05 }}
+    >
+      <span className="size-2 rounded-full bg-orange-500" aria-hidden="true" />
+      <div className="mt-4 h-16 w-16 text-orange-500/80 sm:h-20 sm:w-20">
+        <Glyph />
+      </div>
+      <div className="mt-4">
+        <span className="text-xs tabular-nums text-zinc-500">
           {String(index + 1).padStart(2, "0")}
         </span>
-        <div className="flex-1">
-          <motion.h3 style={{ color: nameColor }} className="font-medium">
-            {node.name}
-          </motion.h3>
-          <p className="mt-1 text-sm leading-relaxed text-zinc-400">{node.desc}</p>
-        </div>
+        <h3 className="mt-1 font-medium text-zinc-100">{node.name}</h3>
+        <p className="mt-1 text-sm leading-relaxed text-zinc-300">{node.desc}</p>
       </div>
-    </motion.li>
+    </motion.div>
   );
 }
 
 export default function LivingArchitecture() {
-  const sectionRef = useRef<HTMLElement>(null);
-  const reduced = useReducedMotion();
-
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start 0.7", "end 0.3"],
-  });
-
   return (
     <section
-      ref={sectionRef}
       id="living-architecture"
       className="relative z-10 border-y border-white/[0.08] bg-white/[0.02]"
     >
@@ -118,24 +102,17 @@ export default function LivingArchitecture() {
           Signals, context, and knowledge — adaptive systems that move organizations from awareness to action.
         </motion.p>
 
-        {/* 2-col layout: list left, flow diagram right (desktop only) */}
-        <div className="mt-12 lg:grid lg:grid-cols-[1fr_200px] lg:gap-12 xl:grid-cols-[1fr_220px] xl:gap-16">
-          {/* Node list — name + desc always visible; NodeItem's scroll emphasis
-              is inert under reduced motion (MotionValues stay at rest). */}
-          <ol className="border-t border-white/[0.08]">
-            {NODES.map((node, i) => (
-              <NodeItem key={node.name} node={node} index={i} progress={scrollYProgress} />
-            ))}
-          </ol>
+        {/* Desktop — staggered glyph slider, port of basement.studio's
+            experiments/58.staggered-slider.tsx pattern. */}
+        <div className="mt-12 hidden lg:block">
+          <StaggeredGlyphSlider nodes={SLIDER_NODES} />
+        </div>
 
-          {/* Flow diagram — desktop only, sticky so it tracks scroll alongside the list */}
-          {!reduced && (
-            <aside className="hidden lg:block">
-              <div className="sticky top-24 pt-1">
-                <FlowDiagram progress={scrollYProgress} />
-              </div>
-            </aside>
-          )}
+        {/* Mobile/tablet — scroll-reveal list, one card at a time. */}
+        <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:hidden">
+          {NODES.map((node, i) => (
+            <MobileNodeCard key={node.name} node={node} index={i} />
+          ))}
         </div>
 
         <p className="mt-8 text-xs tracking-widest text-zinc-400 uppercase">
