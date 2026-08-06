@@ -7,7 +7,14 @@
  * utuh sebagai kelas Tailwind (pemindainya membaca teks, bukan variabel), jadi
  * angka yang sama hidup di dua tempat dan tidak ada yang memaksa keduanya
  * sepakat. Lihat heroPin.test.ts.
+ *
+ * Rumus lepas pin-nya sendiri tinggal di lib/motion/pin.ts bersama primitif
+ * PinnedSection — Hero memakai rumus yang sama, cuma menuliskan tingginya
+ * sebagai kelas Tailwind karena ia mendahului primitifnya.
  */
+import { unpinRatio } from "@/lib/motion/pin";
+
+export { unpinRatio };
 
 /** Tinggi track dan anak sticky-nya per breakpoint, dalam dvh. */
 export const PIN_HEIGHTS = {
@@ -16,20 +23,6 @@ export const PIN_HEIGHTS = {
   /** `h-[126dvh]` pada track, `h-[70dvh]` pada sticky. */
   mobile: { track: 126, sticky: 70 },
 };
-
-/**
- * Titik anak sticky lepas dari pin, sebagai pecahan panjang track.
- *
- * `scrollYProgress` membentang sepanjang SELURUH track ("start start" → "end
- * start"), tapi yang sticky lepas di trackHeight − stickyHeight — bukan di 1,0.
- */
-export const unpinRatio = ({
-  track,
-  sticky,
-}: {
-  track: number;
-  sticky: number;
-}) => (track - sticky) / track;
 
 /**
  * 0,444 — dan angka ini HARUS sama di desktop maupun HP, kalau tidak satu
