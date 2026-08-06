@@ -240,13 +240,18 @@ export default function AwardsShowcase() {
         ))}
       </FadeUpList>
 
-      {/* Mobile — snap-scroll carousel, photo always visible (no hover on touch) */}
+      {/* Mobile — snap-scroll carousel, photo always visible (no hover on touch).
+          `-mx-8 px-8` bleeds the track to the card edge so cards scroll past it,
+          while insetting the first/last card back to the content column.
+          `scroll-px-8` is what makes that inset survive: the snapport otherwise
+          starts at the scrollport edge, so mandatory snap scrolls the left
+          padding straight out of view and card #1 sits flush on the border. */}
       <FadeUpList
         ref={trackRef}
         tag="div"
         onScroll={onTrackScroll}
         onPointerDown={pauseAndScheduleResume}
-        className="-mx-8 mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-8 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden"
+        className="-mx-8 mt-4 flex snap-x snap-mandatory scroll-px-8 gap-4 overflow-x-auto px-8 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden"
       >
         {AWARDS.map((award) => (
           <FadeUpItem
