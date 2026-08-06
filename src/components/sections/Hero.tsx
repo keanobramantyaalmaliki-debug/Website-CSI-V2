@@ -4,6 +4,7 @@ import { lazy, Suspense, useEffect, useRef } from "react";
 import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { useSceneStore } from "@/lib/store/sceneStore";
 import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
+import { CANVAS_EXIT_RANGE } from "./heroPin";
 
 const Scene = lazy(() => import("@/components/canvas/Scene"));
 const BilliardHUD = lazy(() => import("@/components/ui/BilliardHUD"));
@@ -92,38 +93,30 @@ export default function Hero() {
     setSceneReady(true);
   }, [reduced, setSceneReady]);
 
-  // Canvas surut: opacity 1→0, scale 1→0.96, sedikit naik. Murni transform CSS
-  // di pembungkusnya — kamera tidak disentuh, dan transform tidak membangunkan
+  // Canvas surut: opacity 1→0 sambil naik sedikit. Murni transform CSS di
+  // pembungkusnya — kamera tidak disentuh, dan transform tidak membangunkan
   // frameloop R3F.
   //
+  // ⚠️ UKURANNYA SENGAJA TIDAK DIUBAH. Dulu ada scale 1→0,96 di sini. Karena
+  // pembungkusnya `inset-0`, mengecilkannya menarik keempat tepinya ke dalam
+  // dan memunculkan pita latar di sekelilingnya — yang terlihat bukan canvas
+  // yang surut, melainkan canvas yang tiba-tiba mengecil ke kiri di tengah
+  // gulir (dilaporkan 6 Agu 2026). Memudar sambil naik sedikit sudah cukup
+  // untuk serah-terima ke HeroHandoff, dan tepinya tetap menempel di layar
+  // sampai habis.
+  //
   // ⚠️ Rentangnya HARUS selesai sebelum anak sticky-nya lepas dari pin, bukan
-  // sebelum track-nya habis. `scrollYProgress` membentang sepanjang seluruh
-  // track ("start start" → "end start"), tapi canvas sticky lepas pin di
-  // trackHeight − stickyHeight — bukan di progress 1,0. Memudarkan di
-  // [0.6, 1.0] membuat canvas masih pekat selama ±28dvh SETELAH ia lepas pin
-  // dan ikut menggulir bersama halaman, jadi ia terlihat muncul lagi di bawah
-  // seam HeroHandoff (dilaporkan sebagai "kepotong saat discroll").
-  //
-  // ⚠️ Titik lepas pin = (track − sticky) / track, dan angka itu HARUS SAMA di
-  // desktop maupun HP — kalau tidak, satu rentang [0.28, 0.44] tidak mungkin
-  // benar untuk keduanya. Itulah sebab tinggi track mobile 126dvh, bukan
-  // angka bulat:
-  //
-  //   desktop  (180dvh track, 100dvh sticky) → (180−100)/180 = 0,444
-  //   mobile   (126dvh track,  70dvh sticky) → (126− 70)/126 = 0,444  ✓ sama
-  //
-  // Dengan 150dvh (percobaan pertama) rasionya jadi 0,533, sehingga canvas di
-  // HP habis memudar ~13dvh SEBELUM lepas pin — pengunjung melihat area kosong
-  // yang masih terpaku di layar. Kalau salah satu tinggi diubah, hitung ulang
-  // pasangannya: track = sticky / (1 − 0,444).
+  // sebelum track-nya habis — dan titik lepas pin itu harus sama di desktop
+  // maupun HP. Kedua tinggi di JSX bawah terikat pada rentang ini; ubah salah
+  // satu tanpa yang lain dan hasilnya salah tanpa gejala yang menunjuk ke
+  // sebabnya. Angka, alasan, dan penjaganya ada di heroPin.ts + heroPin.test.ts.
 
   const { scrollYProgress } = useScroll({
     target: heroTrackRef,
     offset: ["start start", "end start"],
   });
-  const canvasOpacity = useTransform(scrollYProgress, [0.28, 0.44], [1, 0]);
-  const canvasScale   = useTransform(scrollYProgress, [0.28, 0.44], [1, 0.96]);
-  const canvasY       = useTransform(scrollYProgress, [0.28, 0.44], [0, -20]);
+  const canvasOpacity = useTransform(scrollYProgress, CANVAS_EXIT_RANGE, [1, 0]);
+  const canvasY = useTransform(scrollYProgress, CANVAS_EXIT_RANGE, [0, -20]);
 
   // Reduced-motion: hero normal-flow setinggi layar, tanpa pin/surut.
   if (reduced) {
@@ -192,7 +185,7 @@ export default function Hero() {
         {/* Pembungkus canvas — hanya transform CSS, kamera tak pernah disentuh */}
         <motion.div
           className="absolute inset-0"
-          style={{ opacity: canvasOpacity, scale: canvasScale, y: canvasY }}
+          style={{ opacity: canvasOpacity, y: canvasY }}
         >
           {/* fallback null: overlay LoadingScreen (di SiteLayout) yang menutupi
               layar selama chunk ini diunduh, jadi fallback di sini cuma akan
