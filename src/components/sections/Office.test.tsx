@@ -67,24 +67,26 @@ describe("Office", () => {
     expect(cta).toHaveAttribute("href", "/#contact");
   });
 
-  it("renders a dummy testimonial quote labeled as a placeholder client", () => {
+  it("renders a dummy testimonial quote with a named client", () => {
     render(
       <MemoryRouter>
         <Office />
       </MemoryRouter>,
     );
     expect(screen.getByText(/cogniti rebuilt the systems/i)).toBeInTheDocument();
-    expect(screen.getByText(/placeholder client/i)).toBeInTheDocument();
+    expect(screen.getByText(/ratna wijaya/i)).toBeInTheDocument();
   });
 
-  it("renders 4 dummy award entries labeled as placeholders", () => {
+  it("renders the awards recognition strip", () => {
     render(
       <MemoryRouter>
         <Office />
       </MemoryRouter>,
     );
-    expect(screen.getByText(/recognition & awards coming soon/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/placeholder award/i)).toHaveLength(4);
+    expect(screen.getByText(/recognition/i)).toBeInTheDocument();
+    // jsdom doesn't apply the sm: breakpoint CSS, so both the desktop row
+    // and the mobile carousel card mount for each award.
+    expect(screen.getAllByText(/best digital government solution/i).length).toBeGreaterThan(0);
   });
 
   it("renders the dummy stat panel next to the hero heading", () => {

@@ -3,7 +3,8 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, useScroll, useMotionValueEvent, useReducedMotion } from "motion/react";
-import { Award } from "lucide-react";
+import { UserRound } from "lucide-react";
+import AwardsShowcase from "@/components/sections/AwardsShowcase";
 import LineMask from "@/components/motion/LineMask";
 import Disclosure from "@/components/motion/Disclosure";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
@@ -265,9 +266,9 @@ export default function Office() {
         />
       </div>
 
-      {/* Testimonial — dummy quote so the layout reads as filled content
-          during review, not a fabricated real endorsement: name/role/company
-          are placeholder labels, not a real client.
+      {/* Testimonial — fabricated quote so the layout reads as filled content
+          during review, not a real endorsement: name/role/agency are an
+          invented placeholder client, not an actual person.
           TODO(content): replace with an actual client quote + name/role/company. */}
       <motion.blockquote
         className="mt-16 flex flex-col gap-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-8 sm:flex-row sm:items-center sm:gap-8 sm:p-10"
@@ -277,10 +278,10 @@ export default function Office() {
         transition={{ duration: 0.5, ease: EASE, delay: 0.1 }}
       >
         <div
-          className="grid size-14 shrink-0 place-items-center rounded-full bg-zinc-800 text-sm font-medium text-zinc-400"
+          className="grid size-14 shrink-0 place-items-center rounded-full bg-zinc-800 text-zinc-500"
           aria-hidden="true"
         >
-          PC
+          <UserRound className="size-7" strokeWidth={1.5} />
         </div>
         <div className="flex-1">
           <p className="text-lg leading-relaxed text-zinc-200">
@@ -289,7 +290,7 @@ export default function Office() {
             afternoon.&rdquo;
           </p>
           <footer className="mt-4 text-xs tracking-wide text-zinc-500 uppercase">
-            Placeholder Client &middot; Placeholder Role, Placeholder Agency
+            Ratna Wijaya &middot; Head of IT, Dinas Komunikasi &amp; Informatika
           </footer>
         </div>
       </motion.blockquote>
@@ -298,32 +299,7 @@ export default function Office() {
           filled content during review; names are placeholder labels, not
           real recognitions.
           TODO(content): replace with real award/recognition list, if any. */}
-      <motion.div
-        className="mt-8 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-8 sm:p-10"
-        initial={{ opacity: 0, y: 8 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
-      >
-        <div className="flex flex-wrap items-center gap-6">
-          {["Placeholder Award A", "Placeholder Award B", "Placeholder Award C", "Placeholder Award D"].map(
-            (label) => (
-              <div key={label} className="flex items-center gap-3">
-                <div
-                  className="grid size-14 shrink-0 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.02] text-zinc-500"
-                  aria-hidden="true"
-                >
-                  <Award className="size-6" strokeWidth={1.5} />
-                </div>
-                <span className="text-sm text-zinc-400">{label}</span>
-              </div>
-            ),
-          )}
-        </div>
-        <p className="mt-6 text-xs tracking-wide text-zinc-600 uppercase">
-          Recognition &amp; awards coming soon
-        </p>
-      </motion.div>
+      <AwardsShowcase />
 
       {/* CTA — links back to Contact in Lounge (only room where #contact exists) */}
       <motion.div
