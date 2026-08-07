@@ -8,6 +8,10 @@ const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 export type Brand = {
   name: string;
   href?: string;
+  // Optional monochrome SVG logo. Rendered with fill="currentColor" so it
+  // inherits the cell's zinc color and hover/dim transitions; falls back to
+  // the wordmark (brand.name) when absent.
+  logo?: { viewBox: string; path: string };
 };
 
 // Diagonal hairline pattern revealed on cell hover. Pure CSS (repeating-linear-gradient),
@@ -54,13 +58,28 @@ function BrandCell({
           aria-hidden="true"
         />
       )}
-      <span
-        className={`relative text-lg font-semibold tracking-tight transition-colors duration-300 sm:text-xl ${
-          dimmed ? "text-zinc-600" : "text-zinc-300"
-        }`}
-      >
-        {brand.name}
-      </span>
+      {brand.logo ? (
+        <svg
+          viewBox={brand.logo.viewBox}
+          role="img"
+          aria-label={brand.name}
+          className={`relative h-8 w-auto transition-colors duration-300 sm:h-9 ${
+            dimmed ? "text-zinc-600" : "text-zinc-300"
+          }`}
+          fill="currentColor"
+        >
+          <title>{brand.name}</title>
+          <path d={brand.logo.path} />
+        </svg>
+      ) : (
+        <span
+          className={`relative text-lg font-semibold tracking-tight transition-colors duration-300 sm:text-xl ${
+            dimmed ? "text-zinc-600" : "text-zinc-300"
+          }`}
+        >
+          {brand.name}
+        </span>
+      )}
     </Tag>
   );
 }
