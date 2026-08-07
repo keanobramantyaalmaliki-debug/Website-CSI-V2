@@ -1,7 +1,7 @@
 # Documentations — Cogniti Office 3D Tour
 
 Dokumentasi progres pembuatan 3D office tour ala [basement.studio](https://basement.studio) untuk **cogniti.id**.
-Terakhir diupdate: **6 Agustus 2026**.
+Terakhir diupdate: **7 Agustus 2026**.
 
 **Status ringkas:** **5 ruangan sudah ~95% jadi** dan seluruhnya sudah jalan di browser (lihat MVP 1 di bawah):
 - **Lounge/Billiard** (§2) & **Function Room** (eks Smoking, §3) — furniture & dekorasi lengkap
@@ -53,8 +53,9 @@ Terakhir diupdate: **6 Agustus 2026**.
 - **`CharacterLights` GUGUR permanen** (§4s) — bukan ditunda. Lampu ber-`layers` tidak pernah jalan di three r185 (pengujinya **kamera**, bukan objek yang disinari). Keano melihat perbandingannya dan memilih karakter tanpa lampu.
 - **EMPAT layar iMac terisi** (§6c) — situs cogniti, easter egg, wallpaper, dasbor PM. Mesh gabungan **dipecah saat runtime** di Three.js, bukan export ulang GLB. Pelajaran mahal: **emissive wajib DIUKUR** (menebak dari analogi meleset ~3×), dan resolusi aset mengikuti **ukuran tampil**, bukan tetangganya.
 - **Merge `origin/main` bersih** (§4o) — 25 commit dari Nico (careers/crew/awards), 189 test hijau. ⚠️ `bun install` dulu sebelum percaya hasil test setelah merge.
+- **SEMUA LAYAR TERISI — tidak ada lagi layar kosong** (§6c, 7 Agu, commit `2b247d4`) — TV meeting (rekaman Desa+) & TV function (logo cogniti mantul ala screensaver DVD). TV function sekaligus **membetulkan cacat**: materialnya me-render putih polos yang mekar seperti lampu. Gerbang video jadi **per-ruangan**, karena tiga video di tiga ruangan berarti men-dekode yang tidak terlihat.
 
-**⬅️ Berikutnya:** (a) review billiard di browser (§6d) — dua bug fisika sudah dibetulkan lewat simulasi headless, tapi **posisi stik, warna bola, framing kamera** masih belum pernah dilihat mata; (b) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker (§4n); (c) sisa layar (§6c) — TV meeting & TV smoking; (d) selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter, §4s); (e) post-processing PS1 (§4b), pass terakhir untuk look basement.studio.
+**⬅️ Berikutnya:** (a) review billiard di browser (§6d) — dua bug fisika sudah dibetulkan lewat simulasi headless, tapi **posisi stik, warna bola, framing kamera** masih belum pernah dilihat mata; (b) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker (§4n); (c) selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter, §4s); (d) post-processing PS1 (§4b), pass terakhir untuk look basement.studio.
 
 ## 🎉 MVP 1 SELESAI (27 Jul) — **50-60 FPS di browser**
 
@@ -664,7 +665,8 @@ GLB kantor sudah tidak lagi cuma jalan di viewer HTML — dia sekarang **hero fu
 | `src/components/canvas/Waypoints.tsx` | 🆕 **Waypoint navigasi 3D** — bidang di ruangan, hover → arsir + bingkai + label (§4k) |
 | `src/components/canvas/ContactShadowsRig.tsx` | 🆕 **Bayangan kontak per ruangan** — "gelap di bawah meja" (§4l) |
 | `src/components/canvas/revealSweep.ts` | 🆕 **Sapuan "kantor terbentuk"** — patch shader dither ke 233 material (§4m) |
-| `src/components/canvas/screens.ts` | 🆕 **Konten layar monitor** — pixel-art via `emissiveMap` (§6c) |
+| `src/components/canvas/screens.ts` | **Konten 8 layar** — gambar & video via `emissiveMap`, + `splitScreen()` pemecah mesh gabungan iMac (§6c) |
+| `src/components/canvas/screenVideo.ts` | **Cache `<video>` + `VideoTexture`**, play/pause per-URL untuk gerbang per-ruangan (§6c) |
 | `src/components/canvas/billiard/` | Minigame billiard — 6 file (§6d) |
 | `src/components/ui/BilliardHUD.tsx` | Bar tenaga kiri + tombol reset/exit + gestur bidik (§6d) |
 | `src/lib/store/sceneStore.ts` | Zustand: `currentRoom`, `heroInView`, `activeSection`, `goTo`, `goToView` + state billiard + **`START_ROOM`/`hashFor()`** (§4k) |
@@ -736,7 +738,7 @@ OrbitControls **diganti** dengan navigasi tur: kamera pindah antar 5 titik panda
 - Post-processing PS1 (§4b) — `@react-three/postprocessing` sudah terpasang, tinggal tambah pass
 - Interaksi klik pintu — `Bvh firstHitOnly` sudah dipasang di `Office.tsx` untuk mempercepat raycast. Klik **meja billiard** sudah jalan (§6d); waypoint 3D (§4k) sudah mengambil peran "klik untuk pindah ruangan"
 - ~~Karakter (§6b)~~ ✅ **SELESAI 29 Jul** — 5 karakter tampil & beranimasi (tanpa lampu khusus; `CharacterLights` dihapus 6 Agu, §6b)
-- ~~Gambar di layar monitor (§6c)~~ ✅ **SELESAI** — AOC 30 Jul, MacBook 5 Agu, 4 iMac 6–7 Agu. Sisa TV meeting & TV smoking.
+- ~~Gambar di layar monitor (§6c)~~ ✅ **SELESAI SEMUANYA** — AOC 30 Jul, MacBook 5 Agu, 4 iMac 6–7 Agu, TV meeting & TV function 7 Agu.
 - **Review visual billiard di browser** (§6d) — masih belum pernah dilakukan
 - **Verifikasi waypoint Lounge & Function** (§4k) — koordinatnya warisan lama, belum dicek dengan resep pengukuran
 
@@ -1499,7 +1501,7 @@ Sisa yang sengaja belum: dedup 29 image kembar (hemat kecil setelah LM mengecil;
 11c. **Navigasi waypoint 3D** ✅ **SELESAI 29–30 Jul** (§4k) — RoomNav + scroll/swipe/keyboard dicabut; 3 waypoint ternyata mustahil terlihat sejak ditulis
 11d. **Lighting dirombak** ✅ **SELESAI 30 Jul** (§4l) — lightmap dinyalakan, N8AO + contact shadow, bloom 1,6→0,4, ambient 0,12→0,03. Light cone dibangun lalu dihapus
 11e. **Sapuan "kantor terbentuk"** ✅ **SELESAI 30 Jul** (§4m) — dither Bayer 2,6 s, 60 FPS terverifikasi
-11f. **Konten layar monitor** ✅ **30 Jul – 7 Agu** (§6c) — Spotify pixel-art di AOC; video VS Code di MacBook (5 Agu, `VideoTexture`); **+ EMPAT layar iMac ✅ 6–7 Agu** (mesh gabungan dipecah runtime). **Sisa: TV meeting & TV smoking**
+11f. **Konten layar monitor** ✅ **TUNTAS 30 Jul – 7 Agu** (§6c) — Spotify pixel-art di AOC; video VS Code di MacBook (5 Agu, `VideoTexture`); EMPAT layar iMac (6–7 Agu, mesh gabungan dipecah runtime); **TV meeting & TV function (7 Agu)**. Tidak ada lagi layar kosong di scene
 11g. **Loading screen isometrik (loader saat mengunduh)** ✅ **SELESAI 31 Jul** (§4n) — di-render di Web Worker, menjawab permintaan awal user
 11h. **Semua pekerjaan 30 Jul di-merge ke `main`** ✅ **SELESAI 31 Jul** (§4o) — sekaligus perbaikan bug merge `frameloop="demand"` + `INVARIANTS.md`
 11i. **Perangkat sentuh: scene jadi pemandangan** ✅ **SELESAI 3 Agu** (§4p) — waypoint & billiard mati di `pointer: coarse`, hero 70dvh di HP
@@ -1509,16 +1511,17 @@ Sisa yang sengaja belum: dedup 29 image kembar (hemat kecil setelah LM mengecil;
 11m. **Dua bug billiard "bola keluar meja"** ✅ **SELESAI 4 Agu** (§6d) — melayang di sambungan pelat kain + tunneling bola cepat lewat lubang; branch `fix/billiard-bola-keluar-meja` sudah di-merge
 11n. **Tiga keluhan visual dari web + denoise** ✅ **SELESAI 6 Agu** (§4s, commit `514e8a7`) — hotspot oranye rak cubby A & B, cincin plafon meeting; denoise OIDN (noise −5,5×); `scripts/swap-lightmaps.mjs` bikin siklus re-bake jadi hitungan menit
 11o. **Empat layar iMac terisi** ✅ **SELESAI 6–7 Agu** (§6c) — situs cogniti, easter egg, wallpaper, dasbor PM; mesh gabungan dipecah runtime, emissive diukur bukan dihitung
+11p. **Dua TV terakhir terisi + gerbang video per-ruangan** ✅ **SELESAI 7 Agu** (§6c, commit `2b247d4`) — TV meeting (Desa+) & TV function (logo mantul DVD, disintesis `scripts/make-dvd-video.mjs`); TV function sekaligus membetulkan slab putih yang mekar
 12. **⬅️ BERIKUTNYA, urut prioritas:**
     - ~~**Bug billiard**: bola yang masuk lubang harus dibekukan jadi `fixed`~~ ✅ **4 Agu** (§6d)
     - ~~**Rombak `CharacterLights.tsx`**~~ ❌ **DIBATALKAN 6 Agu** (§4s) — lampu ber-`layers` tidak pernah jalan di three; Keano memilih karakter tanpa lampu
     - ~~**Jalankan ulang `shrink-lightmaps.mjs`**~~ ✅ **sudah** — diverifikasi dari GLB: 188/188 lightmap 256px
     - **a. Review billiard di browser** (§6d): posisi stik, apakah bola terlihat resin (bukan besi), framing kamera, timing fade lampu. Fisikanya sudah dibetulkan lewat simulasi headless, tapi **belum pernah dilihat mata**. Sekalian ukur FPS saat fisika jalan
     - **b. Uji anti-beku loader di browser sungguhan** (§4n) — DevTools Performance saat kompilasi 233 shader; inti keputusan Web Worker, baru bisa dibuktikan mata
-    - **c. Sisa layar** (§6c) — TV meeting (`MR_TV_Screen`, material sudah terpisah) & TV smoking (`SMK_TV_Screen`, belum punya UV)
-    - **d. Selidiki p95 33 ms** di `/office` & `/meeting` (§4s) — dugaan skinning karakter, bukan tekstur
-    - **e. Optimasi GLB lanjutan** (§4s) — atlas per ruangan + dedup 29 image kembar + audit pre-export (§4d)
-    - **f. Post-processing PS1** (§4b) — pass terakhir untuk look basement.studio
+    - ~~**c. Sisa layar** (§6c) — TV meeting & TV smoking~~ ✅ **SELESAI 7 Agu** — keduanya terisi; blocker "SMK_TV belum punya UV" ternyata tidak pernah ada
+    - **c. Selidiki p95 33 ms** di `/office` & `/meeting` (§4s) — dugaan skinning karakter, bukan tekstur
+    - **d. Optimasi GLB lanjutan** (§4s) — atlas per ruangan + dedup 29 image kembar + audit pre-export (§4d)
+    - **e. Post-processing PS1** (§4b) — pass terakhir untuk look basement.studio
     - ~~**Verifikasi waypoint Lounge & Function**~~ ✅ **SELESAI 3 Agu** (§4k) — semua waypoint terukur & terlihat
     - ~~**Sepakati satu lockfile**~~ ✅ **SELESAI 29 Jul — bun** (§7)
 13. Dekorasi tambahan (tanaman via Sketchfab kalau integrasi di-enable)
@@ -1625,7 +1628,7 @@ Dicoba 28 Jul, gagal, dibatalkan. Model "Low poly ordinary man" (3.296 tris) bag
 
 ~~**NEXT:** export GLB + load ke Next.js, lalu isi `CharacterLights.tsx`~~ ✅ **SELESAI 29 Jul** — lihat sub-bab export & integrasi di atas.
 
-## 6c. Video/Gambar di Layar 🚧 (diputuskan 28 Jul; monitor AOC ✅ jalan 30 Jul)
+## 6c. Video/Gambar di Layar ✅ SELESAI (diputuskan 28 Jul; tuntas 7 Agu — 8 layar terisi, tidak ada lagi yang kosong)
 
 Pertanyaan berulang: "nambahin video di laptop & iMac itu di mana?" — **Jawaban: di THREE.JS, bukan Blender.** Blender cuma bisa bake tekstur DIAM. Untuk video berputar atau konten yang bisa diganti tanpa export ulang, pakai `THREE.VideoTexture` yang membaca frame dari elemen `<video>` HTML. Gambar statis pakai `TextureLoader` biasa.
 
@@ -1633,17 +1636,20 @@ Pertanyaan berulang: "nambahin video di laptop & iMac itu di mana?" — **Jawaba
 
 | Layar | Material | Siap? |
 |---|---|---|
-| Monitor AOC `OMon_AOC_*` | `OMon_Screen` terpisah | ✅ SIAP |
-| TV meeting `MR_TV_Screen` | `MR_TVScreen` terpisah | ✅ SIAP |
-| TV smoking `SMK_TV_Screen` | `M_SM_TV_Screen` terpisah | ⚠️ **tidak punya UV** |
+| Monitor AOC `OMon_AOC_*` | `OMon_Screen` terpisah | ✅ **TERISI** 30 Jul — Spotify pixel-art |
+| TV meeting `MR_TV_Screen` | `MR_TVScreen` terpisah | ✅ **TERISI** 7 Agu — rekaman Desa+ |
+| TV smoking `SMK_TV_Screen` | `M_SM_TV_Screen` terpisah | ✅ **TERISI** 7 Agu — logo mantul DVD. ~~tidak punya UV~~ **keliru** |
 | iMac `OP_iMac_Screen.*` | `iMac_Screen` terpisah | ✅ **TERISI 4 layar** (6–7 Agu) — mesh gabungan dipecah runtime |
-| MacBook `OMacbook_D*` | ~~`ASSET_MAT_MR` dipakai SELURUH laptop~~ → `M_MacBook_Screen` terpisah | ✅ **SIAP** (terbukti 5 Agu) |
+| MacBook `OMacbook_D*` | ~~`ASSET_MAT_MR` dipakai SELURUH laptop~~ → `M_MacBook_Screen` terpisah | ✅ **TERISI** 5 Agu — video VS Code |
 
-**Sisa blocker: tinggal SMK_TV.** Dua klaim di tabel ini ternyata sudah basi saat diperiksa, dan dua-duanya **gugur sendiri, bukan dibereskan**:
+⚠️ **"TV smoking" = TV function room.** Ruangannya di-rename; nama objek Blender-nya masih `SMK_*` dan node hasil merge-nya `MG_Function_M_SM_TV_Screen`. Satu benda, tiga nama — sumber kebingungan yang nyata saat mencari di GLB.
+
+**KETIGA blocker di tabel ini gugur sendiri, tidak satu pun dibereskan:**
 - ~~Material MacBook belum terpisah~~ — saat mengisi video 5 Agu, `OMacbook_D7` sudah punya `M_MacBook_Screen` sendiri (ikut ternyalakan emission-nya di §4s).
 - ~~UV iMac cuma u[0.125, 0.875], perlu unwrap ulang~~ — UV-nya tidak pernah jadi masalah. Yang menghalangi adalah **kesepuluh layar iMac ada di satu mesh gabungan**; begitu dipecah saat runtime, UV-nya jalan apa adanya. Detail di bawah.
+- ~~SMK_TV tidak punya UV~~ — dicoba saja 7 Agu, dan videonya langsung tampil dengan rasio benar. UV-nya ada. Tidak jelas dari mana klaim ini dulu berasal.
 
-Pola yang berulang: **periksa ulang blocker sebelum mengerjakannya.** Dua dari tiga di tabel ini ternyata sudah tidak berlaku, dan yang satu lagi salah menuduh penyebabnya.
+Pola yang berulang, dan sekarang tiga dari tiga: **periksa ulang blocker sebelum mengerjakannya.** Biayanya beberapa menit; SMK_TV tercatat sebagai penghalang selama sepuluh hari padahal tidak pernah ada.
 
 Catatan: `OMacbook_D*` = **32.751 tris each** × 5 buah — kandidat decimate besar, jauh lebih berat dari karakter.
 
@@ -1696,13 +1702,13 @@ Sekalian: `toneMapped` sengaja **dibiarkan menyala** di sini — beda dari lampu
 
 ### ✅ Video VS Code di MacBook (5 Agu) — layar pertama yang bergerak
 
-`OMacbook_D7`, `public/screens/vscode-real.mp4` (713 KB). **Rekaman layar asli**, bukan animasi sintetis — sempat dibuat generator sintetis 72×50 (`scripts/make-vscode-video.mjs`, berkasnya tidak di-commit) tapi rekaman asli menang: teks yang benar-benar diketik terbaca sebagai "orang sedang bekerja", sedangkan yang sintetis terbaca sebagai pola.
+`OMacbook_D7`, `public/screens/vscode-real.mp4` (713 KB). **Rekaman layar asli**, bukan animasi sintetis — sempat dibuat generator sintetis 72×50 (`scripts/make-vscode-video.mjs`, skripnya di-commit tapi hasilnya tidak dipakai) tapi rekaman asli menang: teks yang benar-benar diketik terbaca sebagai "orang sedang bekerja", sedangkan yang sintetis terbaca sebagai pola.
 
 **Encode ala basement.studio — reduksi 4×, BUKAN 40×.** Resolusi 720×500 + `NearestFilter` di GPU sebagai sumber pixelasi. Ini menyimpang dari aturan "lebar-tampil ÷ 3" di atas, **dan itu disengaja**: aturan ÷3 berlaku untuk **pixel-art** (Spotify), di mana blok besar memang tujuannya. Untuk rekaman layar, ÷3 membuat teks kode hancur jadi bubur — yang dicari di sini keterbacaan "ada yang ngoding", bukan estetika blok.
 
 **`eq=gamma=1.4` untuk konten tema gelap.** VS Code dark theme di dalam scene yang juga gelap = tidak terbaca sama sekali. Gamma mengangkat midtone **tanpa memucatkan hitamnya** (min 0 → 20, luma rata-rata 31 → 63) — beda dari menaikkan brightness, yang akan mengabukan seluruh layar.
 
-**Arsitektur (`screenVideo.ts`):** cache `<video>` + `VideoTexture` di level modul, priming frame pertama supaya tidak ada kedipan hitam saat pertama tampil, play/pause seluruh layar sekaligus.
+**Arsitektur (`screenVideo.ts`):** cache `<video>` + `VideoTexture` di level modul, priming frame pertama supaya tidak ada kedipan hitam saat pertama tampil. Sejak 7 Agu play/pause-nya **per-URL**, bukan semua sekaligus (lihat gerbang per-ruangan di bawah).
 
 ⚠️ **`ScreenVideoGate` pakai `useEffect`, BUKAN `useFrame`** — ini pelajaran matter-js 3 Agu (§4r) yang terbayar. Video harus dipause saat hero keluar layar / pindah ruangan, tapi `useFrame` **ikut mati** saat `frameloop="never"` (§4r-frameloop) — gerbang yang dipasang di sana justru tidak pernah jalan persis saat paling dibutuhkan. Penjaganya: `screenVideo.invariant.test.ts` — "video wajib dipause saat hero keluar layar".
 
@@ -1733,7 +1739,77 @@ Empat yang diisi — hanya yang benar-benar terlihat dari `VIEWS.Office`, diveri
 
 **Trik `ANNOTATE` untuk menunjuk objek di mesh gabungan** — saat perlu memastikan "yang mana persis layar ini?" di Blender, objek merge tidak bisa di-klik per bagian. Membuat anotasi/penanda di koordinat bbox-nya jauh lebih cepat daripada menebak dari outliner.
 
-Sisa yang belum: **TV meeting (`MR_TV_Screen`) & TV smoking (`SMK_TV_Screen`)** — keduanya materialnya sudah terpisah, tinggal isi.
+### ✅ DUA TV TERAKHIR (7 Agu) — layar terakhir yang kosong
+
+**TV meeting** `MG_MeetingWest_MR_TVScreen` — rekaman **Desa+**, `public/screens/desa-plus.mp4` (212×120, 15 fps, 355 KB), `emissive` **0,8**.
+
+```bash
+ffmpeg -i sumber.mp4 -vf "crop=1908:1080:6:0,scale=w=212:h=120:flags=neighbor,fps=15" \
+  -c:v libx264 -pix_fmt yuv420p -crf 30 -g 30 -an -movflags +faststart desa-plus.mp4
+```
+
+**🔑 `neighbor` vs `area` itu soal RASIO REDUKSI, bukan soal jenis kontennya.** Catatan MacBook di atas menulis "neighbor pada sumber rekaman mengubah teks jadi bintik acak" — itu **terlalu pukul rata**, dan diperbaiki di sini setelah enam varian benar-benar dirender di dalam scene:
+
+| Aset | `area` | `neighbor` |
+|---|---|---|
+| 318 px (reduksi 6×) | lembek, tidak pernah jadi blok | ✅ tepi keras, huruf masih utuh |
+| 212 px (reduksi 9×) | lembek | ✅ **DIPAKAI** — teks kecil hancur, dan itu diterima |
+
+`area` merata-ratakan tetangga, jadi berapa pun resolusinya hasilnya blur — bukan PS1. `neighbor` mengambil satu piksel per blok, jadi tepinya keras. Yang rusak oleh reduksi besar bukan flag-nya, melainkan **detail setipis satu-dua piksel**. Efek samping yang berlawanan intuisi: pada resolusi sama, `neighbor` menghasilkan berkas h264 **lebih besar** dari `area` — tepi keras itu mahal untuk dikompres.
+
+⚠️ **Sub-headline yang beranimasi di video ini memang TIDAK TERBACA, dan itu disengaja.** Yang harus terbaca cuma "ada tayangan jalan di TV". Jangan "perbaiki" keterbacaannya dengan menaikkan resolusi — itu membuang kekasaran yang menyamakan TV ini dengan tetangganya. Asetnya mendarat di **0,38 teksel per piksel tampil**, dekat dengan monitor AOC (0,35) dan sejalan dengan aturan ÷3 di atas.
+
+⚠️ **Resolusi TIDAK selalu menggeser emissive.** Keenam varian mengukur max 243 dan 0% di atas ambang bloom, jadi 0,8 tetap dipakai tanpa ukur ulang. Aturan yang lebih tepat: **resolusi menggeser emissive hanya kalau piksel paling terangnya berasal dari detail setipis satu-dua piksel** — kalau begitu, mengecilkan aset akan menghapus puncak itu.
+
+---
+
+**TV function** `MG_Function_M_SM_TV_Screen` — **logo cogniti mantul ala screensaver DVD**, `public/screens/dvd-logo.mp4` (424×248, 15 fps, 19 KB), `emissive` **1,0**.
+
+**⚠️ Ini MEMBETULKAN CACAT, bukan cuma menghias.** Sebelum diisi, layar ini me-render **putih polos**: terukur avg 255,0 dengan **99,9% pikselnya di atas ambang bloom** — benda paling terang di ruangan, mekar seperti lampu. Itu bawaan material `M_SM_TV_Screen` di GLB. Jadi kalau entri-nya suatu saat dihapus, yang kembali **bukan** layar hitam yang netral melainkan slab menyilaukan itu lagi.
+
+emissive-nya **diukur**, seperti semua layar lain:
+
+| ei | max | >249 | |
+|---|---|---|---|
+| 1,7 | 255 | 2,4% | mekar |
+| 1,3 | 255 | 1,7% | mekar |
+| **1,0** | 234 | 0,0% | ✅ **DIPAKAI** |
+| 0,7 | 197 | 0,0% | |
+
+⚠️ Ditulis **eksplisit** di `screens.ts` walau kebetulan sama dengan `SCREEN_EMISSIVE`: kalau default bersama itu suatu hari dinaikkan demi layar lain, layar ini ikut naik lalu mulai mekar tanpa ada yang menghubungkannya dengan perubahan tadi.
+
+⚠️ Teksel paling terang di aset ini cuma **210** (silver brand `#d2d3d4`), bukan 255 — jadi angka 234 di atas **tidak sebanding langsung** dengan tingkat putih TV meeting (243, dari teksel 255). Ganti logonya dengan yang mengandung putih murni → **ukur ulang**.
+
+#### `scripts/make-dvd-video.mjs` — disintesis, deterministik, nol dependensi
+
+Isinya cuma satu gambar yang bergeser di atas hitam, jadi merekam atau meng-export dari tool lain berarti menyimpan aset yang tidak bisa diubah tanpa membuka tool-nya lagi. Di sini kecepatan, ukuran logo, dan panjang loop-nya **angka di kepala berkas**. Tidak ada undian sama sekali → menjalankan ulang menghasilkan berkas **identik byte demi byte**.
+
+- **Loop wajib mulus, dan itu yang menentukan angkanya.** Gerak mantul itu gelombang segitiga; kalau panjang video bukan kelipatan persekutuan periode X dan Y, logo **MELOMPAT** tiap video mengulang — cacat yang gampang lolos kalau cuma dicek 5 detik pertama, lalu bikin orang menyalahkan encode-nya. Dihindari dengan menurunkan kecepatan **DARI** panjang loop (`v = 2×rentang ÷ FRAMES`), bukan memilih kecepatan lalu berharap pas. Mau ubah kecepatan? ubah `FRAMES`.
+- **Fase Y digeser seperempat periode** supaya X dan Y tidak pernah sampai di ujung bersamaan — logonya **tidak pernah kena sudut**. Itu memang inti lelucon DVD-nya.
+- **`color=` di ffmpeg itu generator TAK TERBATAS.** Komposit logo ke latar hitam pakai `color=c=black[bg];[bg][0:v]overlay` **menggantung selamanya** tanpa `-frames:v 1`. Gejalanya bukan error melainkan hang, lalu `spawnSync` membunuhnya karena `maxBuffer` penuh **dengan stderr kosong** — nol petunjuk.
+- **Komposit ke hitam WAJIB di resolusi penuh sebelum diperkecil.** Memperkecil RGBA duluan membuat scaler ikut merata-ratakan piksel ber-alpha-nol — di logo ini piksel itu **PUTIH**, hasilnya garis terang tipis mengelilingi tiap huruf.
+- **Digambar 212 px lalu digandakan 2× ke 424.** Penggandaannya **bukan** menaikkan resolusi; itu melawan subsampling chroma yuv420 yang 2×2, yang kalau tidak dilawan membuat aksen **merah** logo lembek sementara silver-nya tetap tajam.
+
+**Ukuran logo 32 px (15% lebar layar) — kecil, dan itu disengaja.** Kandidat 100/76/60/44/32 semuanya dirender **di dalam scene**, bukan ditonton sebagai mp4 — ukuran yang terasa pas waktu videonya diputar sendirian selalu kegedean begitu ditempel ke TV. Dua hal yang cuma kelihatan di sana:
+
+1. **Makin besar logonya, makin sempit ruang mantulnya.** Di 100 px geraknya terbaca **bergetar**, bukan melayang. Yang dijual lelucon ini adalah perjalanan panjang menuju sudut, dan itu butuh layar kosong.
+2. **Di 32 px tulisan "cogniti" tidak terbaca lagi** (tingginya 12 px); yang tersisa siluet + titik merah brand. Diterima, karena yang dijual gerakannya. **Jangan "perbaiki" dengan membesarkan logonya** — biayanya poin 1.
+
+Ukuran logo **tidak** menggeser emissive: semua kandidat max 227–230, 0% di atas ambang. Angkanya argumen CLI: `node scripts/make-dvd-video.mjs 60`.
+
+**Kenapa video, bukan disimulasikan hidup** (pertanyaan yang wajar berulang): kena sudut itu **bukan soal keberuntungan** — di screensaver DVD asli pun geraknya deterministik, dan apakah dia kena sudut cuma ditentukan perbandingan kecepatan terhadap ukuran layar. Perbandingan itu selalu rasional di komputer, jadi polanya **pasti** berulang; yang berbeda cuma panjang periodenya. Di dalam loop 20 detik pilihannya tinggal dua, dan dua-duanya jelek: tidak pernah kena sudut (yang dipakai), atau kena sudut di detik yang sama persis tiap 20 detik — yang justru terbaca dijadwalkan. "Sekali-sekali dan tak ketebak" cuma bisa didapat dengan menghitung posisi per-frame secara hidup; kalau suatu saat mau, konsekuensinya layar ini keluar dari jalur `playScreenVideos` dan **butuh gerbang `heroInView` sendiri** (penjaga invariant yang sekarang cuma tahu soal elemen `<video>`).
+
+### 🚪 Gerbang video jadi PER-RUANGAN (7 Agu)
+
+Sebelumnya `playScreenVideos()` memutar **semua** video sekaligus dan hanya dinyalakan dari view Office. Dengan tiga layar video di tiga ruangan berbeda, itu berarti men-dekode video yang bahkan tidak ada di dalam frustum.
+
+- Daftar URL-nya **diturunkan dari `SCREENS`** (`s.video && s.room === currentRoom`), bukan ditulis tangan di gerbang — supaya menambah layar video baru tidak menuntut siapa pun ingat menyunting gerbangnya juga.
+- **Menghentikan yang tidak diizinkan dilakukan di `screenVideo.ts`**, bukan diserahkan ke pemanggil. Berpindah ruangan tidak boleh bisa meninggalkan video ruangan sebelumnya berjalan — kegagalan yang **nol gejalanya di layar** dan cuma terbaca sebagai kipas laptop menyala (§4r).
+- **Set `allowed` perlu ada terpisah dari flag `wantPlaying`** karena gerbangnya bekerja per-RUANGAN sementara priming bekerja per-VIDEO: saat `loadeddata` sebuah video akhirnya tiba, ia harus tahu apakah **dirinya sendiri** yang dikehendaki. Tanpa itu, membuka Meeting Room membuat video MacBook yang baru selesai memuat ikut jalan dan tidak pernah di-pause.
+
+Diverifikasi lewat `scripts/drive.mjs` + handle DEV `__screenVideos()`: di Function cuma `dvd-logo` yang jalan; pindah ke Meeting mem-pause-nya dan menjalankan `desa-plus`; balik lagi berbalik; `vscode-real` (Office) diam sepanjang itu.
+
+⚠️ **Regex di `screenVideo.invariant.test.ts` ikut berubah, dan hampir gagal diam-diam.** Versi lamanya mensyaratkan kurung **KOSONG** (`playScreenVideos\(\s*\)`), jadi begitu fungsinya menerima argumen, tidak ada berkas yang cocok, daftar pelanggar selalu kosong, dan test-nya **hijau justru saat ia berhenti memeriksa apa pun**. Sekarang ada pemeriksaan tambahan "minimal ada satu pemanggil" supaya penjaga ini tidak bisa lolos-hampa lagi. Pelajarannya umum: **penjaga yang polanya dicocokkan ke bentuk panggilan wajib punya assert bahwa ia masih menemukan sesuatu.**
 
 ### 🔒 Screenshot sumber TIDAK di-commit
 
@@ -1899,8 +1975,9 @@ Kode billiard cuma bergantung 3 hal dari `office.glb`: (a) nama node mengandung 
   - Cycles: **GPU Metal** (`prefs.compute_device_type='METAL'` + `cycles.device='GPU'`) — cek tiap sesi, default-nya CPU
 - **Polycam** untuk scanning (GLB)
 - **Vite + bun** (project web ini) — **GLB sudah terintegrasi (§4h)**. Stack: **Vite 6** (dulu Next 16.2, dimigrasikan 29 Jul — §4j), React 19, three 0.185, @react-three/fiber 9 + drei 10 + postprocessing 3, zustand 5, Tailwind 4, **react-router-dom 7** (routing per-ruangan, §4q), **cannon-es 0.20** (billiard, §6d), **motion 12** (animasi teks, §4i), **matter-js 0.20** (`PhysicsHeading`, §4r-3). Jalankan: `bun dev` → `http://localhost:3000`
-- **Vitest 4** — `bun run test`. **101 test di 19 berkas**, semuanya hijau per 3 Agu. Tiga di antaranya invariant lintas-wilayah (`INVARIANTS.md` §1, §3, §6). Norma repo: **buktikan test-nya MERAH di kondisi rusak dulu** sebelum dipakai memverifikasi perbaikan
-- **Pengukuran performa: CDP langsung, tanpa dependency** (§4r) — `scripts/measure-frames.mjs` (frame time) + `scripts/shoot.mjs` (screenshot). Pakai Chrome yang sudah terpasang. ⚠️ **Wajib jalankan di dpr 2**; dpr 1 mentok vsync dan semua setelan terlihat sama
+- **Vitest 4** — `bun run test`. **189 test di 34 berkas**, semuanya hijau per 7 Agu. Empat di antaranya invariant lintas-wilayah (`INVARIANTS.md` §1, §3, §6, §7). Norma repo: **buktikan test-nya MERAH di kondisi rusak dulu** sebelum dipakai memverifikasi perbaikan
+- **Pengukuran performa: CDP langsung, tanpa dependency** (§4r) — `scripts/measure-frames.mjs` (frame time) + `scripts/shoot.mjs` (screenshot) + `scripts/drive.mjs` (klik/eval/tembak berurutan). Pakai Chrome yang sudah terpasang. ⚠️ **Wajib jalankan di dpr 2**; dpr 1 mentok vsync dan semua setelan terlihat sama
+- **Generator aset layar** (§6c) — `scripts/make-dvd-video.mjs` (logo mantul TV function; deterministik, jalankan ulang → berkas identik byte demi byte) & `scripts/make-vscode-video.mjs` (sintetis, tidak dipakai). Aset lain hasil `ffmpeg` langsung; resepnya di komentar `screens.ts`
 - **Playwright 1.61.0** untuk verifikasi visual headless — **versi itu spesifik**, lihat §4m. Flag WebGL: `--use-gl=angle --use-angle=metal --enable-unsafe-swiftshader`. (Tidak ada di `package.json`; dipasang terpisah saat dibutuhkan. Untuk mengukur **frame time** pakai skrip CDP di atas, bukan ini.)
 
 ### 📦 Manajer paket: BUN (diputuskan 29 Jul) — pnpm sudah tidak dipakai
