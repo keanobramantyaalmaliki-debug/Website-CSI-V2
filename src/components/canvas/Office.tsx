@@ -444,6 +444,18 @@ export default function Office() {
   const revealDone = useRef(false);
   /** Waktu mulai sapuan, disetel di useFrame — lihat catatan tersendat di sana. */
   const startRef = useRef<number | null>(null);
+  /**
+   * Kapan penantian loaderDone DIMULAI — jam terpisah dari startRef, dan itu
+   * bukan kemubaziran. startRef digeser ke `now` tiap frame selama menunggu
+   * (supaya sapuan mulai dari nol saat gerbang terbuka), jadi ia tidak bisa
+   * sekaligus dipakai mengukur "sudah berapa lama menunggu": membandingkan
+   * `now - startRef` berarti membandingkan dua frame bersebelahan (~16 ms),
+   * bukan durasi penantian. Versi lama melakukan persis itu — jaring pengaman
+   * 3 detiknya kode mati sejak lahir (ketahuan 7 Agu 2026 saat analisis bug
+   * sweep; tidak pernah tersulut hanya karena LoadingScreen belum pernah gagal
+   * total).
+   */
+  const waitStartRef = useRef<number | null>(null);
 
   useLayoutEffect(() => {
     const sweep = prepareRevealSweep(prepared);
@@ -457,6 +469,7 @@ export default function Office() {
     sweepRef.current = sweep;
     revealDone.current = false;
     startRef.current = null;
+    waitStartRef.current = null;
 
     return () => {
       sweep.dispose();
@@ -537,15 +550,22 @@ export default function Office() {
     //
     // startRef ikut digeser tiap frame selama menunggu, sehingga saat gerbang
     // akhirnya terbuka jamnya mulai dari nol — bukan langsung meloncat ke
-    // tengah sapuan sebesar durasi loader tadi.
+    // tengah sapuan sebesar durasi loader tadi. Lamanya penantian diukur
+    // dengan waitStartRef yang TIDAK ikut digeser — lihat catatan di
+    // deklarasinya: memakai startRef untuk keduanya membuat batas ini tidak
+    // pernah tercapai (bug kode-mati yang dibetulkan 7 Agu 2026).
     //
     // Batas 3 detik itu jaring pengaman, bukan bagian dari koreografi. Tanpa
     // itu, satu bug di LoadingScreen (worker mati, komponen tidak ter-mount)
     // membuat loaderDone tidak pernah true — dan karena sapuan menahan kantor
     // di progress 0, kantornya TIDAK AKAN PERNAH TAMPIL. Kegagalan yang jauh
-    // lebih buruk daripada sekadar animasi yang bertabrakan.
+    // lebih buruk daripada sekadar animasi yang bertabrakan. Kalau batasnya
+    // tersulut, sapuan jalan begitu saja tanpa menunggu loader — di skenario
+    // gagal itu overlay-nya kemungkinan sudah/akan dilepas oleh jaring
+    // pengaman LoadingScreen sendiri (1500 ms), jadi sapuannya tetap terlihat.
     if (!useSceneStore.getState().loaderDone) {
-      if (now - startRef.current < 3000) {
+      if (waitStartRef.current === null) waitStartRef.current = now;
+      if (now - waitStartRef.current < 3000) {
         startRef.current = now;
         return;
       }
