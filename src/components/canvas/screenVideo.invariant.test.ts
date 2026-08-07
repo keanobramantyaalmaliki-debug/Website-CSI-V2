@@ -76,10 +76,27 @@ describe("video layar wajib digerbangi heroInView", () => {
     // lewat baris `export function playScreenVideos()`, padahal ia cuma
     // menyediakan mesinnya dan memang bukan tugasnya tahu soal ruangan atau
     // posisi scroll. Yang harus tahu adalah berkas yang MEMANGGILNYA.
-    const offenders = files
-      .filter(({ code }) =>
-        /(?<!function\s)\bplayScreenVideos\s*\(\s*\)/.test(code),
-      )
+    //
+    // ⚠️ Kurungnya HARUS dibiarkan terbuka (`\(` saja, bukan `\(\s*\)`).
+    // Versi pertama test ini mensyaratkan kurung KOSONG, dan itu berubah jadi
+    // lolos-hampa begitu playScreenVideos mulai menerima daftar URL (7 Agu):
+    // tidak ada lagi berkas yang cocok, offenders selalu kosong, dan test-nya
+    // hijau justru saat ia berhenti memeriksa apa pun. Penjaga yang gagal
+    // dengan cara diam seperti itu lebih buruk daripada tidak ada penjaga —
+    // makanya ada pemeriksaan "minimal ada satu pemanggil" di bawah.
+    const CALL = /(?<!function\s)\bplayScreenVideos\s*\(/;
+
+    const callers = files.filter(({ code }) => CALL.test(code));
+    expect(
+      callers.length,
+      `Tidak ada satu pun berkas yang memanggil playScreenVideos(). Entah ` +
+        `pemutaran videonya memang sudah dicabut — atau, jauh lebih mungkin, ` +
+        `bentuk panggilannya berubah sehingga pola di test ini tidak lagi ` +
+        `mengenalinya. Kalau yang kedua, test ini sedang hijau tanpa memeriksa ` +
+        `apa pun: perbaiki polanya, jangan hapus pemeriksaan ini.\n`,
+    ).toBeGreaterThan(0);
+
+    const offenders = callers
       .filter(({ code }) => !code.includes("heroInView"))
       .map(({ path }) => path.slice(path.indexOf("src/")));
 

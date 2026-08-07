@@ -13,7 +13,7 @@ Terakhir diupdate: **6 Agustus 2026**.
 
 **Per 29 Jul** — kemajuan besar di atas MVP1:
 - **GLB sudah terintegrasi ke web** (§4h) — bukan lagi cuma viewer HTML. Hero fullscreen + navigasi antar-ruangan + hash routing + scrollspy navbar. Blocker path model sudah dibetulkan.
-- **5 karakter sudah TAMPIL & BERANIMASI di web** (§6b) — Leonard (sofa lounge), Person2 & Person3 (mengetik di office), Person4 (meeting room), Person5 (function room). Sudah di-export ke `office.glb` dan `CharacterLights.tsx` sudah diisi.
+- **5 karakter sudah TAMPIL & BERANIMASI di web** (§6b) — Leonard (sofa lounge), Person2 & Person3 (mengetik di office), Person4 (meeting room), Person5 (function room). Sudah di-export ke `office.glb`; **tanpa lampu khusus** — `CharacterLights.tsx` dihapus 6 Agu setelah ketahuan lampu ber-layer tidak pernah jalan (§6b).
 - **Minigame billiard dibangun** (§6d) — fisika **cannon-es** (bukan Rapier lagi, lihat §6d) + kamera top-down + bar tenaga. ⏸️ **Ditunda**, belum di-review di browser.
 - **Konten web V1 di-port ke V2** oleh rekan tim (§4i) — 5 section baru + animasi teks pakai `motion`.
 - **Manajer paket disatukan ke `bun`** (§7) — `pnpm-lock.yaml` dihapus, build terverifikasi lolos.
@@ -49,8 +49,12 @@ Terakhir diupdate: **6 Agustus 2026**.
 - **Bake ulang lighting TUNTAS untuk 5 ruangan** (§4s) — lounge + office 5 Agu, lalu **meeting/function/pantry 6 Agu** (105 lightmap baru + re-bake arsitektur lintas ruangan). Tidak ada lagi ruangan yang memakai lightmap lama.
 - **Tone di-tuning + GLB dipangkas** (§4s) — resep "dibagi 4 saat export, dikali 4 di viewer" supaya HDR selamat dari 8-bit; `scripts/shrink-lightmaps.mjs` menciutkan lightmap di **level byte kontainer GLB** (GPU 508 → 315 MB, worst frame `/office` 350 → 83 ms). ⚠️ **Encode ulang Draco itu lossy** walau setelan maksimal — jangan pakai pipeline gltf-transform API untuk ini.
 - **Video rekaman VS Code di layar MacBook** (§6c) — layar kedua yang terisi, dan yang pertama memakai `VideoTexture`. Rekaman asli, encode ala basement.studio (720px + `NearestFilter`, reduksi 4× bukan 40×). Blocker material MacBook di tabel §6c **ternyata sudah tidak berlaku** — `OMacbook_D7` punya material layar sendiri.
+- **Tiga keluhan visual dari build web DIBETULKAN** (§4s) — hotspot oranye rak cubby A & B + cincin cahaya plafon meeting. Semuanya **diukur pada frame web**, bukan preview Blender. Tiga akar masalah yang tak terlihat dari gejalanya: objek terlewat dari daftar bake, dua rak berbagi mesh+UV sehingga satu lightmap melayani dua posisi, dan satu lightmap masih memakai konvensi lama tanpa ÷4. Sekalian **denoise OIDN** — bake 96 samples ternyata tidak pernah kena denoiser, itu biang "banyak noise".
+- **`CharacterLights` GUGUR permanen** (§4s) — bukan ditunda. Lampu ber-`layers` tidak pernah jalan di three r185 (pengujinya **kamera**, bukan objek yang disinari). Keano melihat perbandingannya dan memilih karakter tanpa lampu.
+- **EMPAT layar iMac terisi** (§6c) — situs cogniti, easter egg, wallpaper, dasbor PM. Mesh gabungan **dipecah saat runtime** di Three.js, bukan export ulang GLB. Pelajaran mahal: **emissive wajib DIUKUR** (menebak dari analogi meleset ~3×), dan resolusi aset mengikuti **ukuran tampil**, bukan tetangganya.
+- **Merge `origin/main` bersih** (§4o) — 25 commit dari Nico (careers/crew/awards), 189 test hijau. ⚠️ `bun install` dulu sebelum percaya hasil test setelah merge.
 
-**⬅️ Berikutnya:** (a) review billiard di browser (§6d) — dua bug fisika sudah dibetulkan lewat simulasi headless, tapi **posisi stik, warna bola, framing kamera** masih belum pernah dilihat mata; (b) rombak `CharacterLights.tsx` per tabel *motivated lighting* (§4s) — satu-satunya item bake yang belum dikerjakan; (c) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker (§4n); (d) sisa blocker layar (§6c) — unwrap ulang UV iMac & SMK_TV; (e) selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter, §4s); (f) post-processing PS1 (§4b), pass terakhir untuk look basement.studio.
+**⬅️ Berikutnya:** (a) review billiard di browser (§6d) — dua bug fisika sudah dibetulkan lewat simulasi headless, tapi **posisi stik, warna bola, framing kamera** masih belum pernah dilihat mata; (b) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker (§4n); (c) sisa layar (§6c) — TV meeting & TV smoking; (d) selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter, §4s); (e) post-processing PS1 (§4b), pass terakhir untuk look basement.studio.
 
 ## 🎉 MVP 1 SELESAI (27 Jul) — **50-60 FPS di browser**
 
@@ -656,7 +660,7 @@ GLB kantor sudah tidak lagi cuma jalan di viewer HTML — dia sekarang **hero fu
 | `src/components/canvas/Office.tsx` | Pemuat GLB + 3 fix-up wajib (di bawah) + klik meja billiard + fade lampu + **penggerak sapuan reveal** (§4m) + **pemasangan konten layar** (§6c) |
 | `src/components/canvas/SceneEnvironment.tsx` | `RoomEnvironment` + PMREM blur 0.04, `environmentIntensity` 0.18 |
 | `src/components/canvas/CameraController.tsx` | `VIEWS` 5 preset + tween 1400 ms + hash routing + `billiardView()` + `goToView`. **Tanpa handler wheel/keyboard/touch sejak 30 Jul** (§4k) |
-| `src/components/canvas/CharacterLights.tsx` | ✅ **terisi** — key hangat + fill dingin di layer 1, khusus karakter (§6b) |
+| ~~`src/components/canvas/CharacterLights.tsx`~~ | ❌ **DIHAPUS 6 Agu** — lampu ber-layer tidak pernah jalan di three; karakter kini hidup dari lightmap sekitar saja (§6b) |
 | `src/components/canvas/Waypoints.tsx` | 🆕 **Waypoint navigasi 3D** — bidang di ruangan, hover → arsir + bingkai + label (§4k) |
 | `src/components/canvas/ContactShadowsRig.tsx` | 🆕 **Bayangan kontak per ruangan** — "gelap di bawah meja" (§4l) |
 | `src/components/canvas/revealSweep.ts` | 🆕 **Sapuan "kantor terbentuk"** — patch shader dither ke 233 material (§4m) |
@@ -731,8 +735,8 @@ OrbitControls **diganti** dengan navigasi tur: kamera pindah antar 5 titik panda
 - **Loader saat mengunduh** — `Scene.tsx` sudah punya `<Loader>` dengan `useProgress`, tapi ia baru muncul setelah Suspense aktif. Jendela yang sebenarnya perlu ditutup adalah **unduhan GLB 8,09 MB + stall kompilasi shader 2,3 s** saat layar masih hitam (§4m).
 - Post-processing PS1 (§4b) — `@react-three/postprocessing` sudah terpasang, tinggal tambah pass
 - Interaksi klik pintu — `Bvh firstHitOnly` sudah dipasang di `Office.tsx` untuk mempercepat raycast. Klik **meja billiard** sudah jalan (§6d); waypoint 3D (§4k) sudah mengambil peran "klik untuk pindah ruangan"
-- ~~Karakter (§6b)~~ ✅ **SELESAI 29 Jul** — 5 karakter tampil & beranimasi, `CharacterLights` terisi
-- ~~Gambar di layar monitor (§6c)~~ ✅ **SELESAI 30 Jul** untuk monitor AOC. Layar lain (iMac, MacBook, TV) masih kena blocker Blender.
+- ~~Karakter (§6b)~~ ✅ **SELESAI 29 Jul** — 5 karakter tampil & beranimasi (tanpa lampu khusus; `CharacterLights` dihapus 6 Agu, §6b)
+- ~~Gambar di layar monitor (§6c)~~ ✅ **SELESAI** — AOC 30 Jul, MacBook 5 Agu, 4 iMac 6–7 Agu. Sisa TV meeting & TV smoking.
 - **Review visual billiard di browser** (§6d) — masih belum pernah dilakukan
 - **Verifikasi waypoint Lounge & Function** (§4k) — koordinatnya warisan lama, belum dicek dengan resep pengukuran
 
@@ -1098,13 +1102,31 @@ Repo ini dikerjakan berdua: **Keano** pegang `src/components/canvas/**` + `lib/s
 
 Keduanya **lolos** `tsc --noEmit`, `eslint`, dan `bun run build`. Yang menangkap cuma: membuka halamannya, atau test yang membaca sumber.
 
-**Penjaganya sekarang ada** (`INVARIANTS.md` di root):
-- `INVARIANTS.md` — 6 invariant lintas-wilayah + kebiasaan merge
-- `src/components/canvas/frameloop.invariant.test.ts`
-- `src/components/loader/loaderGate.invariant.test.tsx`
-- `src/lib/hooks/coarsePointer.invariant.test.ts` (3 Agu, §4p)
+**Penjaganya sekarang ada** (`INVARIANTS.md` di root — **7 pasal**, 4 di antaranya 🔒 dijaga test):
+- `src/components/canvas/frameloop.invariant.test.ts` (§1)
+- `src/components/loader/loaderGate.invariant.test.tsx` (§3)
+- `src/lib/hooks/coarsePointer.invariant.test.ts` (§6, 3 Agu, §4p)
+- `src/components/canvas/frameloopGate.invariant.test.ts` (§7, 4 Agu, §4r)
 
 Norma penulisan penjaga di repo ini: **buktikan test-nya MERAH di kondisi rusak dulu** sebelum dipakai memverifikasi perbaikan. Test yang tak pernah terlihat gagal tidak bisa dipercaya. Catatan: jsdom tidak punya `canvas.getContext('2d')`, jadi `LoadingScreen` selalu jatuh ke `finish()` seketika di test — jangan tulis test "overlay bertahan", itu memaksa orang melemahkan kode produksi.
+
+### ✅ Merge 6 Agu (`51a41cd`) — bersih, tapi diperiksa dulu
+
+`origin/main` maju **~25 commit** (merge cabang `join`: room refresh + careers/crew/awards, **61 berkas, +5633/−712**) sementara lokal memegang commit bake lighting `514e8a7`. Berkas yang disentuh **disjoint di atas kertas** — mereka `sections/`+`motion/`, aku `canvas/`+GLB — dan auto-merge memang lolos tanpa konflik. Tapi persis begitulah dua bug di atas dulu lolos, jadi diperiksa manual:
+
+| yang dicek | hasil |
+|---|---|
+| Ikatan §6 — room links `Navbar.tsx` (`ACTIVE_KEYS` → `goRoom`) | utuh |
+| Ikatan §7 — `heroInView` diproduksi `Hero.tsx`, dikonsumsi `canvas/` | utuh |
+| `bun run test` | 34 berkas / **189 test** hijau |
+| `npx tsc --noEmit` | exit 0 |
+| **Buka halamannya** (kebiasaan wajib INVARIANTS.md) | lounge & meeting benar |
+
+**⚠️ Jebakan: `bun run test` GAGAL 8 berkas tepat setelah merge** — `Failed to resolve import "lucide-react"`. Sekilas seperti kerusakan merge, padahal cuma **dependensi baru yang ikut lewat `package.json`** (`lucide-react`, `clsx`, `tailwind-merge`). **`bun install` dulu, baru percaya hasil test.**
+
+**Dua ikatan lintas-wilayah yang aktif sekarang dan TIDAK ADA test-nya** — keduanya harus dicek mata tiap merge:
+- Room links di `Navbar.tsx` = **satu-satunya** jalan pindah ruangan di perangkat sentuh (§6). Dihapus atau diubah jadi butuh hover → jalan buntu di HP. `coarsePointer.invariant.test.ts` menjaga *gerbangnya mati*, bukan menjaga *adanya jalan keluar*.
+- `heroInView` (§7) — putus berarti laptop panas lagi, atau loader menggantung selamanya.
 
 ---
 
@@ -1347,7 +1369,7 @@ Keano ingin look referensi Cycles yang gelap-kontras (kolam cahaya hangat, LED s
 - **Refleksi lantai glossy DICORET** — no SSR, no env probe. Kilau lantai = jatah envmap viewer yang sudah ada. Separuh "wah" referensi memang dari refleksi, tapi ongkosnya tidak sepadan.
 - **Emission 5 material layar dinyalakan** supaya spill-nya terpanggang: `iMac_Screen`/`OMon_Screen`/`MR_TVScreen` strength 3, `M_MacBook_Screen` 2.5, `M_SM_TV_Screen` 4 ("sedikit memancar" — function room tetap terang). Warna netral kebiruan (0.75, 0.82, 1.0) karena layar nanti diisi VideoTexture (§6c) — glow baked harus cocok dengan footage apapun. Glow-nya statis (tidak ikut kedip video) — trade-off standar, basement.studio juga begitu.
 - **Mood per ruangan:** office & meeting & pantry TIDAK diubah; function `FR_CeilLight` 150→**100W**; lounge dapat **`LNG_FillCard`** — AREA 4×3 m, 120W, warna hangat (1.0, 0.88, 0.72) di (-0.3, 4.6, 3.25). Lampu siluman = trik film: practical yang terlihat + fill tak terlihat; gratis karena cuma hidup saat bake. ⚠️ AREA tidak di-support glTF — tidak masalah, `export_lights=False`.
-- **CharacterLights akan dirombak** (SETELAH semua bake): 2 directional global → **1 point light per karakter, motivated** (P2/P3 monitor kebiruan, Leonard pendant hangat, P4 TV/ceiling netral, P5 TV function — "nonton TV di ruang gelap" tapi versi halus karena ruangannya tetap terang) + fill global redup dipertahankan. Ide "1 layar saja per orang" dari Keano — satu key dominan, bukan tiga lampu saling melawan.
+- ~~**CharacterLights akan dirombak**~~ ❌ **DIBATALKAN 6 Agu** — rencananya dulu: 1 point light *motivated* per karakter (P2/P3 monitor kebiruan, Leonard pendant hangat, P4 TV/ceiling netral, P5 TV function), ide "1 layar saja per orang" dari Keano. **Gugur karena premisnya salah**: lampu ber-`layers` tidak pernah jalan di three (§6b). Karakter kini hidup dari lightmap sekitar saja — pilihan Keano setelah melihat perbandingannya.
 
 ### Status bake: ✅ TUNTAS — 212 lightmap (107 pada 5 Agu + 105 pada 6 Agu)
 | Batch | Objek | Hasil |
@@ -1370,6 +1392,34 @@ Bake terakhir sekaligus membetulkan hal yang baru kelihatan setelah lounge/offic
 **🐛 Bug ORM merge (baru, mahal kalau tidak tahu):** lightmap kayu meeting **tergabung dengan roughness** yang beresolusi 1024px. Penyebabnya exporter glTF menggabungkan channel `occlusion` + `metallic-roughness` ke satu image **kalau ukurannya sama** — dan lightmap kita kebetulan seukuran. Perbaikannya: roughness di-resize ke **512** supaya ukurannya beda dan penggabungan tidak terjadi. Ini konsekuensi langsung dari memakai slot `occlusion` sebagai kanal lightmap (§4g) — awasi tiap kali resolusi lightmap berubah.
 
 `office.glb` sekarang **13,5 MB** (dari 7,3 MB) — backup `office.glb.bak-prebake3` disimpan sebelum batch ini.
+
+### Batch 6 Agu sore — denoise + 3 keluhan visual dari web ✅ (commit `514e8a7`)
+
+Setelah semua ruangan jadi, Keano menilai dari **build web** (satu-satunya sudut yang bisa dia nilai — tur tidak punya free view) dan mengajukan tiga keluhan. Ketiganya sudah dibetulkan dan **diukur pada frame web yang sama**, bukan di preview Blender:
+
+| Keluhan | Sebelum → sesudah | Cara ukur |
+|---|---|---|
+| Kolam cahaya oranye mencolok di rak cubby B | R/B 1,502 → **1,433**; luma 77,1 → 75,3 | crop tembok di belakang rak |
+| Cincin cahaya jelek di plafon meeting | halo 61,8 → **50,8** luma | crop plafon |
+| Sisa strip oranye di tepi kanan rak cubby A | R/B 1,996 → **1,771**; maxLuma 160 → 129 | crop strip-nya langsung |
+
+Perubahan lampunya: `OP_HangLamp_Glow` emission 5,0 → **2,0** + warna ke warm lembut; `OP_MR_CeilLight_*` 80 → **50W** + light-linking `LL_MR_CeilingBlock` yang **mengecualikan plafon** dari penerima cahaya; fixture `OP_MR_CeilLamp_*` disetel `visible_diffuse=False`/`visible_glossy=False`; `OP_CeilLight_B` 400 → **160W** + warm lembut.
+
+**Denoise: bake 96 samples TIDAK PERNAH kena denoiser.** Itu biang "kok banyak noise" yang dikeluhkan Keano — denoiser Cycles bekerja di render, bukan di `bpy.ops.object.bake`. Solusinya melewatkan EXR hasil bake lewat node **Denoise OIDN di compositor** (node group `DenoiseLM`, sudah ada di `.blend`); noise turun **5,5×**. ⚠️ Blender 5 mengganti nama `scene.node_tree` → `scene.compositing_node_group`.
+
+**Skrip baru `scripts/swap-lightmaps.mjs`** — saudara kandung `shrink-lightmaps.mjs`, menukar byte image lightmap di GLB tanpa menyentuh geometri (alasannya sama: encode ulang Draco itu lossy). Ini yang membuat siklus "bake ulang beberapa objek → masukkan ke GLB" jadi hitungan menit, bukan export ulang penuh.
+
+**🐛 Tiga akar masalah yang tidak kelihatan dari gejalanya** — semuanya "setelan sudah benar tapi hasilnya tidak berubah":
+
+1. **Cincin plafon meeting nyaris tidak bergerak** (61,81 → 59,63 luma, −3,5%) setelah re-bake 44 objek. Sebabnya `MG_MeetingWest_M_Ceiling` **tidak masuk daftar objek yang di-bake** — light-linking-nya benar, tapi hasil yang benar itu tidak pernah ditulis ke lightmap mana pun. Ditemukan lewat sapuan jarak bbox radius 3,5 m yang memunculkan **29 objek terlewat**. Pelajaran: kalau setelan sudah benar tapi angkanya tidak bergerak, curigai **daftar objeknya**, bukan setelannya.
+2. **Rak cubby A tetap oranye** walau rak B sudah beres. Dua sebab sekaligus: (a) `OP_Shelf_Cubby_A` dan `_B` **berbagi mesh data, material, DAN UV** (`A.data is B.data` → `True`; di GLB node 72 & 73 menunjuk mesh 13) sehingga satu lightmap harus melayani keduanya — dan lightmap lama itu dibake dari posisi rak B saja; (b) `LM_OP_Shelf_Cubby_B` masih memakai konvensi LAMA **tanpa ÷4** sementara 188 lightmap lain sudah `LMT8_*` ber-÷4, jadi ia tampil ~**4× lebih terang**. Perbaikannya: bake A dan B terpisah, dirata-rata, lalu ÷4. Mean 0,1245 → **0,0125**.
+3. **Node export-nya bukan yang diduga.** Material cubby mengekspor lightmap lewat `LM_TEX` (yang menyuapi `LM_OUT` → Material Output.Occlusion), **bukan** `LM_BakeTarget` seperti material lain. Ditemukan dengan menelusuri node tree, bukan diasumsikan — ini persis peringatan di handoff: jangan anggap 1 objek = 1 image.
+
+⚠️ **Bake menulis ke UV layer AKTIF, bukan `active_render`** — dan node image tujuan harus **`select=True` DAN `nodes.active`** sekaligus; salah satu saja, bake diam-diam mendarat di tempat lain.
+
+**Dua lightmap sengaja DIBIARKAN salah** (dilaporkan ke Keano, dia memilih berhenti di sini): `LM_MG_Office_ODesk_White` (mean 0,0242, R/B 2,124) dan `LM_MG_Lounge_M_PoolTable_Body` (mean 0,1058, R/B 1,944) masih memakai konvensi 4× yang sama seperti bug #2 di atas. Keduanya ada di ruangan yang Keano keluarkan dari lingkup bake. Kalau nanti terlihat terlalu terang, ini tersangkanya.
+
+**`office.glb` final: 13,02 MB.** Disiplin verifikasi tiap kali menukar byte: 2453 accessor **byte-identik**, 0 berbeda; jumlah mesh 240 / material 261 / image 246 / node 660 / texture 304 tak berubah; hanya image yang diniatkan yang berubah; clamp ÷4 mengenai **0,00%** piksel; diff lounge mean 0,004.
 
 ### Beda resep vs bake lama (§4g) — dan kenapa
 - **Semua objek dibake** (kecil pun), bukan hanya ≥8 m² — mood gelap butuh benda kecil ikut gelap; objek yang cuma dapat ambient akan mengambang terang.
@@ -1412,8 +1462,8 @@ Sisa yang sengaja belum: dedup 29 image kembar (hemat kecil setelah LM mengecil;
 1. ~~Review web bareng Keano~~ ✅ 5 Agu — tone di-tuning (lihat atas), GLB shrink direview OK
 2. ~~Bake 3 ruangan sisa dengan pipeline yang sama~~ ✅ **6 Agu** — meeting/function/pantry selesai, tidak ada lagi lightmap lama
 3. ~~Kalibrasi exposure/lightMapIntensity/bloom di viewer~~ ✅ 5 Agu
-4. **Rombak `CharacterLights.tsx`** per tabel motivated di atas — ⬅️ **satu-satunya item bake yang belum dikerjakan**
-5. Optimasi ukuran GLB (atlas per ruangan + dedup) + audit pre-export (§4d). ⚠️ GLB naik 7,3 → **13,5 MB** setelah batch 6 Agu — `shrink-lightmaps.mjs` **belum dijalankan ulang** untuk 105 lightmap baru; kemungkinan besar ini buah paling gampang dipetik
+4. ~~Rombak `CharacterLights.tsx`~~ ❌ **DIBATALKAN 6 Agu** — bukan ditunda, **gugur permanen**. Lampu ber-`layers` TIDAK PERNAH jalan di three r185: uji `light.layers.test(camera.layers)` — pengujinya **kamera**, bukan objek yang disinari, jadi lampu di layer 1 tidak pernah ikut terkumpul. `CharacterLights.tsx` dihapus, `Scene.tsx` menyimpan komentar alasannya. Keano melihat perbandingannya dan **memilih karakter tanpa lampu** — tabel *motivated lighting* di atas tinggal catatan sejarah
+5. ~~Jalankan ulang `shrink-lightmaps.mjs`~~ ✅ **sudah** — diverifikasi langsung dari GLB: **188 dari 188** lightmap `LMT8_*` sudah 256px, tidak ada yang tertinggal. Sisa optimasi: atlas per ruangan + dedup 29 image kembar + audit pre-export (§4d)
 6. Selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter)
 
 ---
@@ -1442,14 +1492,14 @@ Sisa yang sengaja belum: dedup 29 image kembar (hemat kecil setelah LM mengecil;
 7f. **Bake lightmap** (§4g) ✅ SELESAI 27 Jul — 39 lampu realtime → **0**
 8. ~~Export GLB seluruh scene~~ ✅ **MVP1 SELESAI 27 Jul — 8,0 MB, 50-60 FPS.** Pecah GLB per ruangan belum perlu
 9. ~~**Karakter PS1** (§6b)~~ ✅ **SELESAI** — 28 Jul 4 karakter di Blender, **29 Jul jadi 5 karakter + di-export + tampil beranimasi di web**. Rencana vertex-color diubah jadi texture 256px `Closest`
-10. **Integrasi ke web** (§4h) — 🚧 sebagian besar SELESAI 27–29 Jul: GLB jadi hero fullscreen, navigasi 5 ruangan + hash routing, navbar dropdown + scrollspy, `heroInView` gating, `MODEL_URL` dibetulkan, **karakter + CharacterLights**. **Sisa:** post-processing PS1, loader saat mengunduh
+10. **Integrasi ke web** (§4h) — 🚧 sebagian besar SELESAI 27–29 Jul: GLB jadi hero fullscreen, navigasi 5 ruangan + hash routing, navbar dropdown + scrollspy, `heroInView` gating, `MODEL_URL` dibetulkan, **karakter** (lampunya dihapus 6 Agu, §6b). **Sisa:** post-processing PS1
 10b. **Migrasi Next.js → Vite** ✅ **SELESAI 29 Jul** (§4j, rekan tim) — SPA client-only, dev server 276 ms
 11. ~~Minigame billiard~~ ✅ **DIBANGUN 28 Jul, engine diganti cannon-es 29 Jul** (§6d) — fisika terverifikasi lewat simulasi headless. ⏸️ Belum di-review di browser; bug bola di (0,0,0) dibetulkan 30 Jul
 11b. **Konten V1 → V2 + animasi teks** ✅ **SELESAI 29 Jul** (§4i, rekan tim) — 9 section + 4 komponen `motion`
 11c. **Navigasi waypoint 3D** ✅ **SELESAI 29–30 Jul** (§4k) — RoomNav + scroll/swipe/keyboard dicabut; 3 waypoint ternyata mustahil terlihat sejak ditulis
 11d. **Lighting dirombak** ✅ **SELESAI 30 Jul** (§4l) — lightmap dinyalakan, N8AO + contact shadow, bloom 1,6→0,4, ambient 0,12→0,03. Light cone dibangun lalu dihapus
 11e. **Sapuan "kantor terbentuk"** ✅ **SELESAI 30 Jul** (§4m) — dither Bayer 2,6 s, 60 FPS terverifikasi
-11f. **Konten layar monitor** ✅ **30 Jul** (§6c) — Spotify pixel-art di monitor AOC; **+ video VS Code di MacBook `OMacbook_D7` ✅ 5 Agu** (rekaman asli, `VideoTexture`, digerbangi `useEffect`). Sisa: iMac & SMK_TV (UV belum siap)
+11f. **Konten layar monitor** ✅ **30 Jul – 7 Agu** (§6c) — Spotify pixel-art di AOC; video VS Code di MacBook (5 Agu, `VideoTexture`); **+ EMPAT layar iMac ✅ 6–7 Agu** (mesh gabungan dipecah runtime). **Sisa: TV meeting & TV smoking**
 11g. **Loading screen isometrik (loader saat mengunduh)** ✅ **SELESAI 31 Jul** (§4n) — di-render di Web Worker, menjawab permintaan awal user
 11h. **Semua pekerjaan 30 Jul di-merge ke `main`** ✅ **SELESAI 31 Jul** (§4o) — sekaligus perbaikan bug merge `frameloop="demand"` + `INVARIANTS.md`
 11i. **Perangkat sentuh: scene jadi pemandangan** ✅ **SELESAI 3 Agu** (§4p) — waypoint & billiard mati di `pointer: coarse`, hero 70dvh di HP
@@ -1457,15 +1507,18 @@ Sisa yang sengaja belum: dedup 29 image kembar (hemat kecil setelah LM mengecil;
 11k. **Empat perbaikan performa** ✅ **SELESAI 3 Agu** (§4r) — MSAA dimatikan (**30 → 60 FPS**), engine matter-js dihentikan, mount-semua-ruangan dicabut, chunk billiard ditunda. Alat ukur CDP ikut disimpan
 11l. **Bake ulang lighting 5 ruangan** ✅ **SELESAI 4–6 Agu** (§4s) — 212 lightmap, mood gelap-kontras + emission layar; tone di-tuning (resep ÷4/×4) & GLB dipangkas di level byte
 11m. **Dua bug billiard "bola keluar meja"** ✅ **SELESAI 4 Agu** (§6d) — melayang di sambungan pelat kain + tunneling bola cepat lewat lubang; branch `fix/billiard-bola-keluar-meja` sudah di-merge
+11n. **Tiga keluhan visual dari web + denoise** ✅ **SELESAI 6 Agu** (§4s, commit `514e8a7`) — hotspot oranye rak cubby A & B, cincin plafon meeting; denoise OIDN (noise −5,5×); `scripts/swap-lightmaps.mjs` bikin siklus re-bake jadi hitungan menit
+11o. **Empat layar iMac terisi** ✅ **SELESAI 6–7 Agu** (§6c) — situs cogniti, easter egg, wallpaper, dasbor PM; mesh gabungan dipecah runtime, emissive diukur bukan dihitung
 12. **⬅️ BERIKUTNYA, urut prioritas:**
-    - ~~**a. Bug billiard**: bola yang masuk lubang harus dibekukan jadi `fixed`~~ ✅ **4 Agu** (§6d)
+    - ~~**Bug billiard**: bola yang masuk lubang harus dibekukan jadi `fixed`~~ ✅ **4 Agu** (§6d)
+    - ~~**Rombak `CharacterLights.tsx`**~~ ❌ **DIBATALKAN 6 Agu** (§4s) — lampu ber-`layers` tidak pernah jalan di three; Keano memilih karakter tanpa lampu
+    - ~~**Jalankan ulang `shrink-lightmaps.mjs`**~~ ✅ **sudah** — diverifikasi dari GLB: 188/188 lightmap 256px
     - **a. Review billiard di browser** (§6d): posisi stik, apakah bola terlihat resin (bukan besi), framing kamera, timing fade lampu. Fisikanya sudah dibetulkan lewat simulasi headless, tapi **belum pernah dilihat mata**. Sekalian ukur FPS saat fisika jalan
-    - **b. Rombak `CharacterLights.tsx`** (§4s) — 1 point light *motivated* per karakter; satu-satunya item bake yang belum dikerjakan
-    - **c. Jalankan ulang `shrink-lightmaps.mjs`** (§4s) — GLB naik 7,3 → 13,5 MB setelah batch 6 Agu; 105 lightmap baru belum diciutkan
-    - **d. Uji anti-beku loader di browser sungguhan** (§4n) — DevTools Performance saat kompilasi 233 shader; inti keputusan Web Worker, baru bisa dibuktikan mata
-    - **e. Sisa blocker layar** (§6c) — unwrap ulang UV iMac & SMK_TV (material MacBook ternyata sudah beres)
-    - **f. Selidiki p95 33 ms** di `/office` & `/meeting` (§4s) — dugaan skinning karakter, bukan tekstur
-    - **g. Post-processing PS1** (§4b) — pass terakhir untuk look basement.studio
+    - **b. Uji anti-beku loader di browser sungguhan** (§4n) — DevTools Performance saat kompilasi 233 shader; inti keputusan Web Worker, baru bisa dibuktikan mata
+    - **c. Sisa layar** (§6c) — TV meeting (`MR_TV_Screen`, material sudah terpisah) & TV smoking (`SMK_TV_Screen`, belum punya UV)
+    - **d. Selidiki p95 33 ms** di `/office` & `/meeting` (§4s) — dugaan skinning karakter, bukan tekstur
+    - **e. Optimasi GLB lanjutan** (§4s) — atlas per ruangan + dedup 29 image kembar + audit pre-export (§4d)
+    - **f. Post-processing PS1** (§4b) — pass terakhir untuk look basement.studio
     - ~~**Verifikasi waypoint Lounge & Function**~~ ✅ **SELESAI 3 Agu** (§4k) — semua waypoint terukur & terlihat
     - ~~**Sepakati satu lockfile**~~ ✅ **SELESAI 29 Jul — bun** (§7)
 13. Dekorasi tambahan (tanaman via Sketchfab kalau integrasi di-enable)
@@ -1506,11 +1559,15 @@ Tiga hal di sisi React (`Office.tsx`):
 2. **Dua klip berdurasi 0,03 detik itu POSE STATIS, bukan animasi.** `SittingIdle` & `Person4_Static92` = 1 frame dari Blender. Di-loop pun tak ada yang bergerak, jadi dimainkan sekali lalu `paused = true` supaya mixer tidak menghitungnya tiap frame selamanya. Tiga klip lain di-loop dengan **offset acak** (`action.time = Math.random() * duration`) supaya idle-nya tidak serempak seperti robot.
 3. **`frustumCulled = false` wajib untuk SkinnedMesh.** Bounding box-nya dihitung dari **bind pose** dan tidak ikut diperbarui saat tulang bergerak — pose duduk membuat karakter **berkedip hilang** di sudut pandang tertentu. Ini bug yang gejalanya mudah disalahartikan sebagai masalah loading.
 
-### `CharacterLights.tsx` ✅ sudah diisi
+### ❌ `CharacterLights.tsx` DIHAPUS (6 Agu) — premisnya keliru sejak awal
 
-Sebelumnya `return null`. Sekarang: **key light hangat** (`#ffe9d0`, intensity 2.2, dari [3,6,4]) + **fill dingin** (`#cfe0ff`, 0.7, dari [−4,3,−3]), keduanya di **layer 1** (`CHAR_LAYER`).
+Isinya dulu: key light hangat + fill dingin, keduanya di **layer 1** (`CHAR_LAYER`), dengan alasan yang terdengar masuk akal — scene punya 0 lampu realtime (semua baked, §4g), karakter tidak bisa ikut di-bake karena bergerak, dan lampu ber-layer diharapkan **dilewati** saat merender ~300 objek statis sehingga biayanya nyaris nol.
 
-Kenapa harus ber-layer: scene punya **0 lampu realtime** (semua baked, §4g) — itu yang bikin 50-60 FPS. Karakter tidak bisa ikut di-bake karena bergerak, tapi menyalakan lampu scene lagi berarti balik ke 14 FPS. Lampu di layer 1 **dilewati saat merender ~300 objek statis**, jadi biayanya nyaris nol. Sisi karakter di-opt-in dari `Office.tsx`.
+**Premis itu salah.** Di three r185 (`WebGLRenderer` ~baris 17387) pengumpulan lampu diuji dengan `light.layers.test(camera.layers)` — **yang diuji KAMERA, bukan objek yang disinari**. Kamera ada di layer 0, jadi lampu di layer 1 tidak pernah masuk daftar sama sekali. Artinya kedua lampu itu **tidak pernah menyinari apa pun**, sejak hari pertama; "biayanya nyaris nol" memang benar, tapi karena tidak ada efeknya, bukan karena optimasinya jalan.
+
+Rencana penggantinya (1 point light *motivated* per karakter, §4s) **juga dibatalkan**: begitu tahu lampu ber-layer tidak bisa dipakai, pilihannya tinggal menyalakan lampu realtime sungguhan untuk seluruh scene. Keano melihat perbandingannya dan **memilih karakter tanpa lampu** — mereka hidup dari lightmap sekitar saja. `Scene.tsx` menyimpan komentar alasannya supaya tidak ada yang mencoba lagi; `BilliardGame.tsx` (`DYN_LAYER`) juga diberi catatan yang sama.
+
+**Pelajaran umum: kalau sebuah "optimasi" tidak pernah terlihat memakan biaya, pastikan dulu ia benar-benar JALAN.** Fitur yang diam-diam mati dan fitur yang gratis punya gejala yang sama persis.
 
 **Duplikasi cara basement:** `n.data = o.data` — mesh data DIBAGI antar karakter (`users` 2–4), armature data di-copy (pose harus independen). Person2 menambah **0 tris**. Person3/4 punya rambut & sweater sendiri karena beda material.
 
@@ -1579,10 +1636,14 @@ Pertanyaan berulang: "nambahin video di laptop & iMac itu di mana?" — **Jawaba
 | Monitor AOC `OMon_AOC_*` | `OMon_Screen` terpisah | ✅ SIAP |
 | TV meeting `MR_TV_Screen` | `MR_TVScreen` terpisah | ✅ SIAP |
 | TV smoking `SMK_TV_Screen` | `M_SM_TV_Screen` terpisah | ⚠️ **tidak punya UV** |
-| iMac `OP_iMac_Screen.*` | `iMac_Screen` terpisah | ⚠️ UV cuma u[0.125, 0.875] — perlu unwrap ulang |
+| iMac `OP_iMac_Screen.*` | `iMac_Screen` terpisah | ✅ **TERISI 4 layar** (6–7 Agu) — mesh gabungan dipecah runtime |
 | MacBook `OMacbook_D*` | ~~`ASSET_MAT_MR` dipakai SELURUH laptop~~ → `M_MacBook_Screen` terpisah | ✅ **SIAP** (terbukti 5 Agu) |
 
-**Sisa 1 blocker:** UV iMac & SMK_TV belum benar. ~~Material MacBook belum terpisah~~ — **klaim ini ternyata sudah basi**: saat mengisi video 5 Agu, `OMacbook_D7` sudah punya `M_MacBook_Screen` sendiri (ikut ternyalakan emission-nya di §4s). Tidak ada pekerjaan Blender yang perlu dilakukan; blocker ini gugur dengan sendirinya, bukan dibereskan.
+**Sisa blocker: tinggal SMK_TV.** Dua klaim di tabel ini ternyata sudah basi saat diperiksa, dan dua-duanya **gugur sendiri, bukan dibereskan**:
+- ~~Material MacBook belum terpisah~~ — saat mengisi video 5 Agu, `OMacbook_D7` sudah punya `M_MacBook_Screen` sendiri (ikut ternyalakan emission-nya di §4s).
+- ~~UV iMac cuma u[0.125, 0.875], perlu unwrap ulang~~ — UV-nya tidak pernah jadi masalah. Yang menghalangi adalah **kesepuluh layar iMac ada di satu mesh gabungan**; begitu dipecah saat runtime, UV-nya jalan apa adanya. Detail di bawah.
+
+Pola yang berulang: **periksa ulang blocker sebelum mengerjakannya.** Dua dari tiga di tabel ini ternyata sudah tidak berlaku, dan yang satu lagi salah menuduh penyebabnya.
 
 Catatan: `OMacbook_D*` = **32.751 tris each** × 5 buah — kandidat decimate besar, jauh lebih berat dari karakter.
 
@@ -1644,6 +1705,35 @@ Sekalian: `toneMapped` sengaja **dibiarkan menyala** di sini — beda dari lampu
 **Arsitektur (`screenVideo.ts`):** cache `<video>` + `VideoTexture` di level modul, priming frame pertama supaya tidak ada kedipan hitam saat pertama tampil, play/pause seluruh layar sekaligus.
 
 ⚠️ **`ScreenVideoGate` pakai `useEffect`, BUKAN `useFrame`** — ini pelajaran matter-js 3 Agu (§4r) yang terbayar. Video harus dipause saat hero keluar layar / pindah ruangan, tapi `useFrame` **ikut mati** saat `frameloop="never"` (§4r-frameloop) — gerbang yang dipasang di sana justru tidak pernah jalan persis saat paling dibutuhkan. Penjaganya: `screenVideo.invariant.test.ts` — "video wajib dipause saat hero keluar layar".
+
+### ✅ EMPAT layar iMac terisi (6–7 Agu) — mesh gabungan dipecah saat RUNTIME
+
+Blocker "UV iMac perlu unwrap ulang" di tabel atas **dilewati, bukan dibereskan** — ternyata UV-nya tidak pernah jadi masalah. Yang jadi masalah: **kesepuluh layar iMac ruang Office duduk di satu mesh** `MG_Office_iMac_Screen` dengan satu material (buah dari merge per-material demi menekan draw call, §4). Menempelkan texture ke situ menyalakan kesepuluhnya, dan karena tiap layar punya UV 0..1 sendiri, kesepuluhnya menampilkan halaman yang sama.
+
+**Dipecah di Three.js, bukan di Blender.** Memecah di Blender lebih rapi sebagai aset tapi menuntut **export ulang seluruh GLB** — dan resep export itu penuh jebakan yang sudah tercatat mahal (texCoord lightmap, aoMap channel 1, WebP gagal diam-diam, ORM merge bikin magenta). Semua risiko itu mengenai **seluruh model**, demi memisahkan 12 segitiga. `splitScreen()` di `screens.ts` memindahkan segitiga milik satu layar ke mesh sendiri berdasarkan **kotak batas ruang dunia** (angkanya dibaca dari bbox Blender, dikonversi `three(x,y,z) = blender(x,z,−y)`, margin 2 cm). Ongkosnya satu draw call per layar.
+
+Empat yang diisi — hanya yang benar-benar terlihat dari `VIEWS.Office`, diverifikasi **raycast** (keempatnya jadi hit PERTAMA, tidak terhalang baris meja depan):
+
+| Layar | Isi | Aset | emissive |
+|---|---|---|---|
+| `OScreen_iMac_Cogniti` | beranda cogniti.id | 192 px | **6,2** |
+| `OScreen_iMac_EasterEgg` | desktop kerja: Blender berisi model kantor INI + logo kecil di Preview | 192 px | **1,5** |
+| `OScreen_iMac_Wallpaper` | wallpaper macOS polos | 96 px | **0,7** |
+| `OScreen_iMac_Dashboard` | dasbor manajer proyek tim ini, tab tur 3D ikut terbuka | 96 px | **2,6** |
+
+**🔑 emissive WAJIB DIUKUR, bukan dihitung.** Aku sempat menebak 2,4 untuk iMac pertama lewat analogi MacBook dan **meleset ~3×**; sekali lagi memperkirakan teksel 255 mendarat di 115 padahal hasil ukurnya 205. Caranya: naikkan emissive → tembak layar (`shoot.mjs`) → ukur kotak layarnya. Yang harus disamakan antar layar bersebelahan adalah **TINGKAT PUTIHNYA**, bukan rata-rata atau p90 — layar berisi konten terang memang seharusnya tampak lebih terang. Itu sebabnya angkanya berpencar 0,7–6,2 dan itu **bukan ketidakkonsistenan**: halaman yang nyaris hitam butuh emissive tinggi justru karena piksel terangnya jarang.
+
+**Resolusi mengikuti ukuran TAMPIL, bukan tetangganya.** Dua iMac depan tampil 322×192 px (jarak 2,5–2,9 m) → aset 192; dua di baris belakang cuma 98×63 px (jarak 7,4–7,7 m) → aset 96. Memberi 192 pada layar yang tampil 98 px berarti GPU **mengecilkan** 2× — dan karena mipmap dimatikan + `NearestFilter`, pengecilan itu tidak merata-ratakan apa pun: tiap piksel mengambil satu teksel acak → **berkedip**, bukan lebih tajam.
+
+**⚠️ Aturan "lebar-tampil ÷ 3" itu untuk PIXEL-ART saja.** Untuk screenshot/rekaman, sumbernya lebih baik dibiarkan besar lalu dikasarkan `NearestFilter` — sama seperti pelajaran MacBook. `flags=area`, bukan `neighbor` (neighbor pada sumber rekaman mengubah teks jadi bintik acak).
+
+**⚠️ Melebarkan RENTANG, bukan mengangkat gambar.** Mode gagal "latar memucat" kena tiga kali di berkas ini lewat pintu berbeda. Untuk konten tema gelap, refleks menyalin `eq=gamma` dari MacBook **keliru** kalau sumbernya tidak punya hitam sejati — gamma 1,6 mengangkat minimum 12 → 52 dan seluruh halaman jadi bidang kelabu. Yang bekerja: `contrast` + `brightness` yang memetakan [12, 227] → [7, 255] — hitamnya tetap hitam, puncaknya naik.
+
+**Easter egg: "ramai dan logonya kecil" itu SPESIFIKASI.** Versi pertama memakai logo yang memenuhi layar dan **ditolak** karena terbaca sebagai papan nama, bukan temuan. Mengganti dengan logo yang lebih besar dan bersih akan membatalkan gunanya.
+
+**Trik `ANNOTATE` untuk menunjuk objek di mesh gabungan** — saat perlu memastikan "yang mana persis layar ini?" di Blender, objek merge tidak bisa di-klik per bagian. Membuat anotasi/penanda di koordinat bbox-nya jauh lebih cepat daripada menebak dari outliner.
+
+Sisa yang belum: **TV meeting (`MR_TV_Screen`) & TV smoking (`SMK_TV_Screen`)** — keduanya materialnya sudah terpisah, tinggal isi.
 
 ### 🔒 Screenshot sumber TIDAK di-commit
 

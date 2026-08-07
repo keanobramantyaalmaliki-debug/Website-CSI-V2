@@ -106,23 +106,31 @@ function ScreenVideoGate() {
   const billiardActive = useSceneStore((s) => s.billiardActive);
   const reduced = useReducedMotion();
 
-  // Layar hanya benar-benar terlihat dari view Office. Di ruangan lain ia di
-  // luar frustum atau sejauh beberapa piksel — men-dekode 12 fps untuk itu
-  // murni pemborosan.
-  const wanted = heroInView && currentRoom === "Office" && !billiardActive && !reduced;
+  // Tiap layar video hanya benar-benar terlihat dari SATU ruangan (MacBook dari
+  // Office, TV dari Meeting). Di ruangan lain ia di luar frustum atau sejauh
+  // beberapa piksel — men-dekode untuk itu murni pemborosan, jadi yang diputar
+  // cuma milik ruangan yang sedang ditempati. Daftarnya diturunkan dari SCREENS
+  // supaya menambah layar video baru tidak menuntut siapa pun ingat menyunting
+  // gerbang ini juga.
+  const urls = useMemo(
+    () =>
+      SCREENS.filter((s) => s.video && s.room === currentRoom).map((s) => s.url),
+    [currentRoom],
+  );
+  const wanted = heroInView && urls.length > 0 && !billiardActive && !reduced;
 
   useEffect(() => {
     if (!wanted) {
       pauseScreenVideos();
       return;
     }
-    playScreenVideos();
+    playScreenVideos(urls);
 
     // Pindah tab: browser MEMANG menurunkan prioritas timer, tapi tidak
     // menghentikan dekode video. Dipause eksplisit — dan dinyalakan lagi saat
     // kembali, karena efek ini tidak dijalankan ulang oleh perpindahan tab.
     const onVisibility = () => {
-      if (document.visibilityState === "visible") playScreenVideos();
+      if (document.visibilityState === "visible") playScreenVideos(urls);
       else pauseScreenVideos();
     };
     document.addEventListener("visibilitychange", onVisibility);
@@ -130,7 +138,7 @@ function ScreenVideoGate() {
       document.removeEventListener("visibilitychange", onVisibility);
       pauseScreenVideos();
     };
-  }, [wanted]);
+  }, [wanted, urls]);
 
   return null;
 }
