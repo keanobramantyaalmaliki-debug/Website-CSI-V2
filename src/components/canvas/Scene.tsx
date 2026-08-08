@@ -5,6 +5,7 @@ import { EffectComposer, Bloom, N8AO, HueSaturation, BrightnessContrast } from "
 import { ACESFilmicToneMapping } from "three";
 import { Suspense } from "react";
 import Office from "./Office";
+import MaintenanceHologram from "./MaintenanceHologram";
 import SceneEnvironment from "./SceneEnvironment";
 import CameraController, { VIEWS } from "./CameraController";
 import { START_ROOM } from "@/lib/store/sceneStore";
@@ -125,6 +126,12 @@ export default function Scene() {
 
       <Suspense fallback={null}>
         <Office />
+        {/* Penutup lubang pintu buntu di sisi timur laut Office. HARUS di dalam
+            Suspense yang sama dengan <Office/>: ia ikut menumpang uniform
+            sapuan reveal, dan uniform itu baru digerakkan setelah GLB dimuat.
+            Di luar Suspense hologramnya menyala di ruang kosong selama GLB
+            masih diunduh. */}
+        <MaintenanceHologram />
         {/* Kerucut cahaya volumetrik (LightCone/LightCones) DIHAPUS 30 Jul.
             Kalau nanti dibuat lagi, dua catatan yang mahal didapat:
 
