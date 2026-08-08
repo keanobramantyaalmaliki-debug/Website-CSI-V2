@@ -53,10 +53,13 @@ import {
   Material,
   MeshStandardMaterial,
   SkinnedMesh,
+  Vector3,
   type IUniform,
   type Object3D,
   type WebGLProgramParametersWithUniforms,
 } from "three";
+import { useSceneStore } from "@/lib/store/sceneStore";
+import { VIEWS } from "./CameraController";
 
 /** Lama tanpa input sebelum dianggap idle. 8 detik: cukup lama supaya jeda
  *  membaca biasa (scroll berhenti sebentar) tidak memicunya, cukup pendek
@@ -117,6 +120,36 @@ const FLASH_MIN = 0.35;
 const FLASH_RANGE = 0.35;
 
 /**
+ * Fade glitch berdasar jarak vertex → TITIK TARGET pandangan ruangan yang
+ * sedang aktif (uGlitchCenter = VIEWS[currentRoom].tgt): penuh sampai
+ * FADE_FULL_M, memudar linier, nol di FADE_ZERO_M.
+ *
+ * Ini perbaikan "glitch kelihatan menembus kaca" (8 Agu): dari Lounge,
+ * karakter di Function dan Meeting ikut burst dan flash putihnya tampil jelas
+ * di balik kaca — kedipan terang di sudut mata yang menarik perhatian ke
+ * ruangan yang bukan sedang ditonton. Kaca-kaca itu transparan + depthWrite
+ * mati, jadi tidak ada cara "menyembunyikan di balik kaca"; yang bisa
+ * diandalkan adalah tata letaknya: karakter ruangan AKTIF selalu dekat suatu
+ * titik acuan, karakter ruangan lain selalu jauh darinya.
+ *
+ * ⚠️ Acuannya TARGET pandangan (tgt), BUKAN posisi kamera — dan itu hasil
+ * percobaan gagal, bukan selera. Versi pertama memakai cameraPosition:
+ * Leonard di sofa Lounge berjarak ~8–9 m dari kamera Lounge (kamera ruangan
+ * ini memang mundur jauh) sementara karakter lintas-ruangan mulai di ~10 m —
+ * celah sesempit itu tidak bisa dipisahkan, dan Leonard ikut ter-fade sampai
+ * bersih (terverifikasi screenshot ?glitch=1). Target pandangan tidak punya
+ * masalah itu: kamera tiap ruangan justru DIARAHKAN ke karakternya, jadi
+ * karakter ruangan aktif duduk beberapa meter saja dari tgt, sedangkan tgt
+ * ruangan lain belasan meter jauhnya (Lounge→Function ~11 m, →Meeting ~18 m).
+ *
+ * Kalau nanti ada karakter baru yang duduk jauh dari tgt ruangannya, ukur
+ * dulu jaraknya — jangan langsung melebarkan FADE_ZERO_M, itu membuka lagi
+ * kedipan lintas kaca.
+ */
+const FADE_FULL_M = 5.0;
+const FADE_ZERO_M = 8.0;
+
+/**
  * Ukuran sel dither & jumlah tangga warna saat burst — DISAMAKAN dengan
  * MaintenanceHologram (DITHER_PX 2, 4 tangga) dan itu intinya: kilasan dither
  * di karakter harus terbaca sebagai bahasa yang sama dengan panel maintenance,
@@ -149,6 +182,11 @@ let lastInputAt = 0;
 const uGlitch: IUniform<number> = { value: 0 };
 /** Detik, hanya maju selama burst. Sumber seed re-roll irisan di shader. */
 const uGlitchTime: IUniform<number> = { value: 0 };
+/** Titik acuan fade = VIEWS[currentRoom].tgt, di-copy tiap frame oleh driver
+ *  (lewat getState, bukan langganan — norma Office.tsx). Vector3 milik
+ *  sendiri, bukan referensi ke objek VIEWS: uniform yang menunjuk langsung ke
+ *  konstanta bersama akan ikut berubah kalau ada kode lain menganimasikannya. */
+const uGlitchCenter: IUniform<Vector3> = { value: new Vector3() };
 
 /**
  * onBeforeCompile ASLI tiap material, module-level dan WeakMap: useGLTF
@@ -167,6 +205,7 @@ const originals = new WeakMap<
 const patch = (shader: WebGLProgramParametersWithUniforms) => {
   shader.uniforms.uGlitch = uGlitch;
   shader.uniforms.uGlitchTime = uGlitchTime;
+  shader.uniforms.uGlitchCenter = uGlitchCenter;
 
   // ── VERTEX: geser irisan di ruang LAYAR, setelah project_vertex ──────────
   // Dua keputusan di blok ini:
@@ -195,20 +234,24 @@ const patch = (shader: WebGLProgramParametersWithUniforms) => {
       #include <project_vertex>
       {
         float gSeed = floor( uGlitchTime * ${REROLL_HZ.toFixed(1)} );
-        float gY = ( modelMatrix * vec4( transformed, 1.0 ) ).y;
-        float gBand = floor( gY / ${SLICE_H.toFixed(2)} );
+        vec3 gWorld = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;
+        float gBand = floor( gWorld.y / ${SLICE_H.toFixed(2)} );
         float gGate = fract( sin( gBand * 57.31 + gSeed * 7.77 ) * 24634.6345 );
         float gRand = fract( sin( gBand * 91.17 + gSeed * 13.73 ) * 43758.5453 );
         vGlitchRand = gRand;
         vGlitchGate = step( 0.55, gGate );
+        vGlitchFade = 1.0 - smoothstep( ${FADE_FULL_M.toFixed(1)}, ${FADE_ZERO_M.toFixed(1)},
+          distance( gWorld, uGlitchCenter ) );
         gl_Position.x += ( gRand - 0.5 ) * 2.0 * ${SHIFT_NDC.toFixed(3)}
-          * uGlitch * vGlitchGate * gl_Position.w;
+          * uGlitch * vGlitchGate * vGlitchFade * gl_Position.w;
       }
     `,
   );
   shader.vertexShader =
     "uniform float uGlitch;\nuniform float uGlitchTime;\n" +
+    "uniform vec3 uGlitchCenter;\n" +
     "varying float vGlitchRand;\nvarying float vGlitchGate;\n" +
+    "varying float vGlitchFade;\n" +
     shader.vertexShader;
 
   // ── FRAGMENT: kilasan dither, setelah dithering_fragment ─────────────────
@@ -242,7 +285,7 @@ const patch = (shader: WebGLProgramParametersWithUniforms) => {
         );
         vec3 gQ = floor( gC * ${STEPS.toFixed(1)} + gBayer ) / ${STEPS.toFixed(1)};
         gQ *= 0.85 + vGlitchRand * 0.30;
-        gl_FragColor.rgb = mix( gl_FragColor.rgb, gQ, uGlitch );
+        gl_FragColor.rgb = mix( gl_FragColor.rgb, gQ, uGlitch * vGlitchFade );
       }
     `,
   );
@@ -253,6 +296,7 @@ const patch = (shader: WebGLProgramParametersWithUniforms) => {
     uniform float uGlitch;
     varying float vGlitchRand;
     varying float vGlitchGate;
+    varying float vGlitchFade;
     float csiGlitchBayer( vec2 co ) {
       ivec2 p = ivec2( mod( co, 4.0 ) );
       int i = p.y * 4 + p.x;
@@ -375,6 +419,13 @@ export default function CharacterGlitch({ scene }: { scene: Object3D }) {
   useFrame(() => {
     if (!handleRef.current) return;
     const now = performance.now();
+
+    // Acuan fade mengikuti ruangan aktif. Di-copy (bukan di-assign) supaya
+    // uniform memegang Vector3-nya sendiri, dan lewat getState() karena kita
+    // di dalam useFrame — berlangganan store dari sini memicu render ulang
+    // tiap kali nilai APA PUN di store berubah (norma yang sama dengan
+    // pembacaan loaderDone di Office.tsx).
+    uGlitchCenter.value.copy(VIEWS[useSceneStore.getState().currentRoom].tgt);
 
     if (FORCED) {
       uGlitch.value = 1;
