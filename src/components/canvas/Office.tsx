@@ -11,6 +11,7 @@ import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import { billiardView } from "./CameraController";
 import { prepareLampFade } from "./billiard/lamps";
 import { prepareRevealSweep } from "./revealSweep";
+import CharacterGlitch from "./CharacterGlitch";
 import { applyScreens, SCREENS } from "./screens";
 import {
   getScreenVideo,
@@ -647,6 +648,12 @@ export default function Office() {
         <primitive object={prepared} onClick={onClick} />
       </Bvh>
       <ScreenVideoGate />
+      {/* Glitch karakter saat idle. HARUS anak Office, bukan dipindah ke
+          Scene.tsx: patch-nya harus terpasang SEBELUM prepareRevealSweep di
+          layout effect di atas (sweep menyimpan lalu memulihkannya), dan
+          jaminan urutannya justru datang dari React — layout effect ANAK
+          berjalan sebelum layout effect induk. Rincian di CharacterGlitch.tsx. */}
+      <CharacterGlitch scene={prepared} />
     </>
   );
 }
