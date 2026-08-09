@@ -25,7 +25,7 @@ export default function CsiHero() {
       <div className="relative z-10 lg:grid lg:grid-cols-2 lg:gap-12">
         <div>
           <FadeUpList tag="div">
-            <h2 className="text-5xl font-semibold tracking-tight text-zinc-100 sm:text-7xl lg:text-8xl">
+            <h2 className="break-words text-4xl font-semibold tracking-tight text-zinc-100 sm:text-7xl lg:text-8xl">
               {HEADING_LINES.map((line, lineIdx) => (
                 <span key={lineIdx} className="block">
                   {line.map((word) => (

@@ -32,7 +32,7 @@ export default function DeploymentCard({ d }: { d: DeploymentData }) {
   return (
     <FadeUpItem
       tag="article"
-      className="group relative flex aspect-[4/3] max-h-[22rem] min-h-[18rem] flex-col justify-end overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] transition-colors duration-500 hover:border-white/[0.16]"
+      className="group relative flex aspect-[4/3] w-full max-h-[22rem] min-h-[18rem] flex-col justify-end overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] transition-colors duration-500 hover:border-white/[0.16]"
     >
       {/* 1. Foto — selalu ter-mount, diredam saat diam */}
       <img
