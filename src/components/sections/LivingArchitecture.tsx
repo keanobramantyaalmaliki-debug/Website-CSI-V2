@@ -83,7 +83,7 @@ export default function LivingArchitecture() {
   return (
     <section
       id="living-architecture"
-      className="relative z-10 border-y border-white/[0.08] bg-white/[0.02]"
+      className="relative z-10 overflow-x-clip border-y border-white/[0.08] bg-white/[0.02]"
     >
       <div className="px-6 py-24 sm:px-10 sm:py-32">
         <div className="grid gap-10 lg:grid-cols-[20rem_1fr]">
