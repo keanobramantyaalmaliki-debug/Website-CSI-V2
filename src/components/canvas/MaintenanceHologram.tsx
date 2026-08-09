@@ -2,7 +2,7 @@
 
 /**
  * Hologram "under maintenance" yang menutup lubang pintu di sisi timur laut
- * area Office (7 Agu 2026).
+ * area Office (7 Agu 2026; interaktif sejak 9 Agu 2026).
  *
  * Lubang itu tidak menuju ke mana-mana: di balik y 1,75 tidak ada ruangan yang
  * dimodelkan, jadi dari dalam kantor ia terbaca sebagai kotak hitam pekat dan
@@ -15,19 +15,42 @@
  * Menambal di Blender berarti re-bake lightmap untuk dinding itu (dan lantai
  * di depannya, karena bidang baru mengubah bounce). Ongkosnya jauh melampaui
  * hasilnya untuk satu bukaan 1,6 × 2,5 m. Plane runtime tidak menyentuh GLB
- * sama sekali: satu draw call, nol perubahan pipeline aset.
+ * sama sekali: dua draw call (panel + teks), nol perubahan pipeline aset.
+ *
+ * ── Interaktivitas (9 Agu 2026) ─────────────────────────────────────────────
+ * Dua respons, dua input:
+ *   hover → teks "UNDER MAINTENANCE" meluncur maju ~44 cm, melayang di depan
+ *           dinding. Inilah alasan teks pindah ke plane TERPISAH — selama ia
+ *           digambar di shader panel, ia tidak bisa bergerak sendiri.
+ *   klik  → seluruh hologram (panel + teks) glitch dua burst pendek, satu
+ *           kisi & irama dengan CharacterGlitch (irisan 0,09 m dunia, re-roll
+ *           24 Hz, rumus hash sama — kalau CharacterGlitch mengubah angkanya,
+ *           ubah di sini juga), tapi dengan perubahan level dua arah milik
+ *           panel sendiri: irisan bolong + irisan naik setangga + brownout
+ *           seluruh bidang (lihat catatan di blok konstanta glitch).
+ *
+ * Interaksi digerbang: HANYA saat ruangan aktif Office, pointer fine, hero
+ * terlihat, dan billiard tidak berjalan — mengikuti kebijakan waypoint
+ * (INVARIANTS.md §6): di perangkat sentuh scene adalah pemandangan, bukan
+ * mainan, dan hover memang tidak punya makna di sana.
  */
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useFrame } from "@react-three/fiber";
+import { useReducedMotion } from "motion/react";
 import {
   AdditiveBlending,
   CanvasTexture,
   Color,
   DoubleSide,
+  Mesh,
   NearestFilter,
   ShaderMaterial,
+  type IUniform,
   type Object3D,
 } from "three";
+import { useSceneStore } from "@/lib/store/sceneStore";
+import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import {
   REVEAL_BAND,
   REVEAL_X_FROM,
@@ -48,6 +71,8 @@ import {
  * Konversi ke three memakai pemetaan yang sama dengan CameraController:
  *   bl(x, y, z) → Vector3(x, z, −y)
  * sehingga (−13,50 · 1,25 · −1,675) = titik tengah TEROWONGAN pintu.
+ * Sisi kantor ada di three-z LEBIH BESAR (muka dinding di z −1,60), jadi
+ * "maju ke arah pengunjung" = +z.
  */
 const CENTER: [number, number, number] = [-13.5, 1.25, -1.675];
 
@@ -62,9 +87,30 @@ const CENTER: [number, number, number] = [-13.5, 1.25, -1.675];
  * Bagian bawahnya (y −0,01) memang tenggelam di lantai — permukaan lantai ada
  * di z 0,10, bukan 0,00 — dan itu justru yang diinginkan: hologramnya terbit
  * dari lantai tanpa celah, bukan melayang 10 cm di atasnya.
+ *
+ * Plane teks memakai ukuran yang SAMA walau hurufnya cuma mengisi tengahnya:
+ * dengan begitu UV-nya identik dengan panel dan texture 256×398 dipetakan
+ * tanpa hitung ulang posisi.
  */
 const PLANE_W = 1.62;
 const PLANE_H = 2.52;
+
+/**
+ * Offset z plane teks relatif CENTER, dalam meter.
+ *
+ * REST 0,005: cukup untuk memisahkan dua bidang (tidak sebidang persis), cukup
+ * tipis supaya saat diam tampilannya tak bisa dibedakan dari waktu teksnya
+ * masih menyatu di shader panel. Tidak ada z-fighting yang perlu ditakuti —
+ * kedua material depthWrite mati dan blending-nya aditif (komutatif), jadi
+ * urutan gambar tidak mengubah hasil.
+ *
+ * HOVER 0,44: teks berhenti ~36 cm di DEPAN muka dinding (z −1,675 + 0,44 =
+ * −1,235; muka dinding di −1,60). Jauh cukup untuk terbaca "melayang lepas
+ * dari panel", dekat cukup supaya dari sudut pandang Office ia tetap di dalam
+ * siluet bukaan dan tidak menabrak perabot di depannya.
+ */
+const TEXT_REST_Z = 0.005;
+const TEXT_HOVER_Z = 0.44;
 
 /**
  * Warna hologram, putih netral (diganti dari cyan #4fd6e8 pada 7 Agu 2026).
@@ -72,9 +118,9 @@ const PLANE_H = 2.52;
  * Putih bekerja di sini justru karena ia TIDAK punya warna: seluruh ruangan
  * hangat (LED strip lantai + track light kuning), jadi bidang netral di antara
  * dinding krem tetap terbaca sebagai benda asing tanpa harus menjerit seperti
- * cyan. Dan yang lebih penting untuk versi ini — dither baru kelihatan sebagai
- * DITHER kalau kontras antar tangganya murni kecerahan; pada cyan, mata ikut
- * membaca perbedaan rona dan polanya melebur.
+ * cyan. Dan yang lebih penting — dither baru kelihatan sebagai DITHER kalau
+ * kontras antar tangganya murni kecerahan; pada cyan, mata ikut membaca
+ * perbedaan rona dan polanya melebur.
  *
  * Merah brand #ec2028 sengaja dihindari dengan alasan yang SAMA seperti di
  * revealSweep.ts — merah sepenuh bidang terbaca sebagai galat fatal, bukan
@@ -97,18 +143,17 @@ const COLOR = "#ffffff";
  * tanpa diredam — perlakuannya setara `toneMapped = false` pada lampu & LED
  * strip di Office.tsx.
  *
- * ⚠️ Turun 1,5 → 1,0 SEIRING pergantian ke putih, dan itu wajib, bukan selera.
- * Putih linear = (1 · 1 · 1); pada 1,5 setiap piksel yang menyala penuh masuk
- * jauh di atas ambang 0,95 dan Bloom melebarkannya sampai titik-titik dither
- * yang bersebelahan saling menutup — polanya berubah jadi kabut rata dan
- * seluruh usaha dither-nya hilang. Pada 1,0 hanya alpha PENUH (teks dan tepi)
- * yang menyentuh ambang; tangga-tangga di bawahnya tetap tajam.
+ * ⚠️ 0,65 dipilih atas permintaan "opacity-nya kurangin" (7 Agu), dan GAIN
+ * adalah SATU-SATUNYA tuas yang aman untuk itu: ia mengali warna SESUDAH
+ * kuantisasi, jadi panel meredup tanpa menggeser satu pun tangga dither.
+ * Menurunkan basis 0,125 atau level teks/tepi 0,625 akan merusak aritmetika
+ * yang bikin semuanya jatuh tepat di kelipatan 8/16 sel Bayer.
  *
- * Turun lagi 1,0 → 0,65 atas permintaan "opacity-nya kurangin". GAIN adalah
- * SATU-SATUNYA tuas yang aman untuk itu, karena ia mengali warna SESUDAH
- * kuantisasi — panelnya meredup tanpa menggeser satu pun tangga dither.
- * Menurunkan basis 0,125 atau bobot teks 0,50 akan merusak aritmetika yang
- * bikin keduanya jatuh tepat di 8/16 sel Bayer, dan papan caturnya bubar.
+ * Sejak teks pindah ke plane sendiri, kontribusinya MENUMPUK secara aditif di
+ * atas kabut panel: sel tercerah huruf = (0,75 teks + 0,25 kabut) × 0,65 =
+ * 0,65 — masih di bawah ambang Bloom 0,95, jadi hurufnya tidak ikut mekar.
+ * Flash glitch menyentuh tangga 1,0 → 0,65 juga aman. Kalau GAIN dinaikkan,
+ * hitung ulang kedua penjumlahan ini terhadap 0,95.
  */
 const GAIN = 0.65;
 
@@ -126,11 +171,125 @@ const GAIN = 0.65;
  * bukan bug, dan sengaja tidak dikompensasi lewat uniform: seluruh scene
  * memang lebih kasar di dpr 1 (NearestFilter, MSAA mati), jadi dither yang
  * ikut mengasar justru konsisten.
+ *
+ * Karena Bayer dibaca di RUANG LAYAR (gl_FragCoord), panel dan plane teks
+ * otomatis memakai kisi sel yang sama walau geometrinya beda kedalaman —
+ * tidak perlu sinkronisasi apa pun supaya polanya senada.
  */
 const DITHER_PX = 2.0;
 
+/**
+ * ⚠️ TIDAK ADA suku tepi/bingkai sama sekali, dan itu permintaan eksplisit
+ * (9 Agu 2026, revisi kedua). Sejarahnya dua tahap: pendar smoothstep 0,16 m ×
+ * 0,60 (7 Agu) tampil sebagai bingkai putih tebal yang terbaca artefak bake —
+ * diganti pita rata 4 cm di level teks — lalu pita itu pun masih terbaca
+ * "tepi putih" dan diminta hilang total. Bidangnya kini murni kabut dither
+ * rata + teks; batas panel didefinisikan oleh kusen pintunya sendiri, bukan
+ * oleh garis yang digambar. Kalau suatu saat mau bingkai lagi, mulai dari
+ * pelajaran ini: apa pun yang menempel di tepi akan dibaca sebagai cacat
+ * rendering, karena di situlah mata mengharapkan pertemuan bersih dua bidang.
+ */
+
+/**
+ * Level teks di plane-nya sendiri: 0,625 = kabut 0,125 + bobot lama 0,50.
+ *
+ * Angka gabungannya dipertahankan supaya aritmetika kuantisasinya tidak
+ * berubah: 0,625 × 4 tangga = TEPAT 2,5, jadi persis 8 dari 16 sel Bayer
+ * dibulatkan ke atas — hurufnya papan catur 0,50/0,75, "teks yang TERBUAT
+ * dari dither", bukan blok putih pejal (lihat sejarahnya di komentar shader).
+ *
+ * Ada perbedaan kecil yang DITERIMA: dulu huruf menggantikan kabut di piksel
+ * yang sama; sekarang keduanya bidang terpisah yang saling menjumlah, jadi
+ * sel-terang huruf bisa mencapai 0,75 + 0,25 = 1,0 sebelum GAIN. Hasil
+ * visualnya huruf sedikit lebih kontras — dan tetap di bawah ambang Bloom
+ * (lihat catatan GAIN).
+ */
+const TEXT_LEVEL = 0.625;
+
+/**
+ * Konstanta glitch. Kisi & iramanya DISALIN dari CharacterGlitch.tsx dan wajib
+ * tetap sama (SLICE_H meter dunia, REROLL_HZ, rumus hash di shader): kilasan
+ * di panel ini harus terbaca sebagai bahasa yang satu dengan glitch karakter,
+ * bukan efek ketiga.
+ *
+ * ⚠️ Tapi PERUBAHAN LEVEL-nya TIDAK disalin, dan itu revisi ketiga (9 Agu,
+ * "kaya tempelan yang menimpa"): flash-naik-saja milik karakter bekerja di
+ * sana karena ia mengubah piksel TUBUH yang gelap — di panel aditif yang
+ * dasarnya nyaris transparan (alpha 0/0,25), penambahan 0,35–0,70 membuat
+ * irisan gate 3–6× lebih terang dari bidangnya sendiri sementara irisan lain
+ * diam total: itu persis definisi "bar ditempel di atas". Bahasa panel harus
+ * DUA ARAH dan MENYELURUH:
+ *   LIFT_MIN/RANGE — irisan naik satu tangga-an saja (0,20–0,45), tetap
+ *     sekeluarga dengan bidangnya;
+ *   DROP_K — separuh irisan gate justru AMBRUK ke ~nol: hologram BOLONG per
+ *     irisan dan kegelapan pintu tembus — sinyal yang mati, bukan sinyal lain
+ *     yang menimpa;
+ *   FLICK_MAX — brownout SELURUH bidang per re-roll (0–35%), proyektor
+ *     tersendat — supaya irisan yang tidak kena gate pun ikut hidup;
+ *   JITTER — kecerahan per irisan pasca-kuantisasi pada SEMUA irisan selama
+ *     burst, rumus persis karakter (0,85 + 0,30 · rand).
+ *
+ * SHIFT_UV & STRETCH lokal: geseran irisan di plane ini dilakukan di FRAGMEN
+ * (offset + skala UV), bukan di vertex seperti karakter — plane cuma punya 4
+ * vertex, tidak ada yang bisa digeser per-irisan.
+ *
+ * ⚠️ SHIFT_UV 0,16, dan itu revisi dari 0,05 yang GAGAL (9 Agu, "nggak ada
+ * sobekannya"): panel cuma ~90 px lebar di layar pada pandangan Office, jadi
+ * 0,05 UV = 4 px — tak terbaca. Dan lebih fatal: papan caturnya digambar di
+ * ruang LAYAR (gl_FragCoord), jadi menggeser UV bidang yang isinya rata tidak
+ * menggeser apa-apa. Sobekan karakter kelihatan karena SILUETNYA tergeser;
+ * padanannya di sini = geseran besar + discard di luar bidang (siluet ikut
+ * koyak) + fase papan catur yang ikut meloncat per irisan (lihat shader).
+ * 0,16 UV ≈ 14 px layar ≈ bacaan 0,018 NDC milik karakter.
+ *
+ * STRETCH: skala horizontal per irisan ±40% — kesan "melar" pada irisan yang
+ * koyak. Karakter mendapatkannya gratis dari geseran antar-vertex yang tidak
+ * seragam; plane harus membayarnya eksplisit.
+ */
+const SLICE_H = 0.09;
+const REROLL_HZ = 24.0;
+const LIFT_MIN = 0.2;
+const LIFT_RANGE = 0.25;
+const DROP_K = 0.1;
+const FLICK_MAX = 0.35;
+const JITTER = 0.3;
+const SHIFT_UV = 0.16;
+const STRETCH = 0.4;
+
+/**
+ * Jendela burst glitch setelah klik, ms sejak klik. Dua burst dengan jeda
+ * 100 ms — "sinyal tersendat dua kali" khas CRT, bukan satu kedipan yang bisa
+ * dikira frame drop. Total 480 ms; pada 24 Hz re-roll itu ~11 pola irisan.
+ */
+const BURSTS: ReadonlyArray<readonly [number, number]> = [
+  [0, 200],
+  [300, 480],
+];
+
 /** Arah sapuan reveal, diturunkan dari batas X-nya — lihat revealSweep.ts. */
 const REVEAL_DIR = Math.sign(REVEAL_X_TO - REVEAL_X_FROM) || 1;
+
+/**
+ * Mode paksa untuk verifikasi visual (dev-only), pola yang sama dengan
+ * ?glitch=1 di CharacterGlitch: buka dengan ?holo=1 dan teksnya melayang penuh
+ * + glitch menyala terus, supaya scripts/shoot.mjs bisa memotret tanpa harus
+ * menirukan hover/klik. import.meta.env.DEV melenyapkan cabang ini di build
+ * produksi.
+ */
+const FORCED =
+  import.meta.env.DEV &&
+  typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).has("holo");
+
+/**
+ * Uniform glitch, module-level dan DIBAGI panel + teks: satu tulisan per frame
+ * menggerakkan keduanya serempak — irisan yang koyak di panel koyak juga di
+ * huruf yang melintasinya (band-nya dihitung dari Y dunia, jadi otomatis
+ * segaris). Nilainya di-nol-kan saat unmount; selamat dari replay StrictMode
+ * itu justru perilaku yang benar (pelajaran revealSweep).
+ */
+const uGlitch: IUniform<number> = { value: 0 };
+const uGlitchTime: IUniform<number> = { value: 0 };
 
 /**
  * Texture teks, digambar di canvas saat runtime alih-alih dimuat dari PNG.
@@ -143,7 +302,7 @@ const REVEAL_DIR = Math.sign(REVEAL_X_TO - REVEAL_X_FROM) || 1;
  * 256 × 398 mengikuti rasio plane (1,62 : 2,52 = 0,643). Ukurannya dipilih dari
  * ukuran TAMPIL, bukan dikira-kira: pada pandangan Office plane setinggi 2,52 m
  * berjarak ~10 m mengisi ≈ 190 px tinggi layar, jadi 398 px sudah di atas 1:1
- * dan masih menyisakan ruang kalau pengunjung mendekat lewat waypoint.
+ * dan masih menyisakan ruang saat teksnya maju 36 cm ke arah kamera saat hover.
  *
  * NearestFilter + tanpa mipmap: sama seperti seluruh layar monitor di
  * screens.ts — huruf harus bertangga tegas, bukan lembek ter-interpolasi.
@@ -169,26 +328,20 @@ function makeTextTexture(): CanvasTexture {
   // TIDAK di-flip (flipY bawaan three sudah menangani itu), jadi yang digambar
   // di y kecil memang muncul di bagian ATAS plane.
   //
-  // 179 & 219 bukan angka lama yang disisakan: dua barisnya berjarak 40 px,
-  // jadi titik tengah bloknya (179 + 219) / 2 = 199 = tepat setengah dari 398.
-  // Waktu masih ada empat elemen lain, blok ini sengaja duduk di ATAS tengah
-  // supaya seluruh susunannya seimbang; sendirian, ia harus benar-benar di
-  // tengah bidang.
+  // 179 & 219: dua barisnya berjarak 40 px, jadi titik tengah bloknya
+  // (179 + 219) / 2 = 199 = tepat setengah dari 398 — blok teks duduk persis
+  // di tengah bidang.
   //
-  // ── Kenapa hurufnya digedekan (30/23 → 38/28) ──────────────────────────
-  // Ini konsekuensi langsung dari menurunkan bobot teks jadi 0,50 supaya ia
-  // menyatu dengan dither. Begitu hurufnya ikut ter-dither, separuh piksel
-  // goresannya turun satu tangga — dan pada 23px, goresan yang sudah menyusut
-  // ~2:1 saat tampil tinggal ~2 piksel layar, jadi separuhnya yang meredup
-  // membuat hurufnya larut ke dalam papan catur di jarak kamera Office.
-  // Digedekan, tiap goresan punya cukup piksel untuk tetap terbaca sebagai
-  // huruf meski separuhnya bertangga lebih rendah.
+  // ── Kenapa hurufnya segede ini (38/28) ─────────────────────────────────
+  // Konsekuensi dari level teks 0,625 yang membuat hurufnya ikut ter-dither:
+  // separuh piksel goresannya duduk satu tangga lebih rendah, jadi pada 23px
+  // goresan yang menyusut ~2:1 saat tampil larut ke dalam papan catur. Pada
+  // 38/28 tiap goresan punya cukup piksel untuk tetap terbaca sebagai huruf.
   //
   // Pembesarannya dibayar dari letterSpacing, bukan dari lebar bidang:
-  // "MAINTENANCE" 11 huruf pada Courier bold (lebar maju 0,6em) = 11 × 16,8 px
-  // + 10 sela × 2 px ≈ 207 px, jadi masih menyisakan ~24 px di tiap sisi. Itu
-  // batas yang harus dijaga — pendar tepi selebar 0,16 m memakan ≈25 px di
-  // tiap sisi texture, dan huruf yang menembusnya akan tenggelam di pendar.
+  // "MAINTENANCE" 11 huruf pada Courier bold ≈ 207 px, menyisakan ~24 px di
+  // tiap sisi — dan sejak bingkai tepi dihapus total (9 Agu), margin itu
+  // sepenuhnya milik huruf.
   //
   // letterSpacing baru ada di Chrome 99+/Safari 17+. Dibiarkan gagal diam-diam
   // di browser lama: yang hilang cuma kerenggangan huruf, teksnya tetap terbaca.
@@ -207,13 +360,22 @@ function makeTextTexture(): CanvasTexture {
 }
 
 /**
- * Raycast dimatikan.
+ * Raycast kosong untuk plane TEKS, dan untuk panel saat interaksi digerbang
+ * mati (ruangan lain / pointer coarse / billiard).
  *
- * Plane ini menutupi bukaan setinggi 2,5 m tepat di jalur pandang beberapa
- * waypoint. Dibiarkan bisa di-raycast, ia akan menelan klik yang ditujukan ke
- * waypoint atau ke meja billiard di belakangnya — dan karena hologramnya
- * sendiri tidak punya handler, gejalanya "klik saya kok tidak ngapa-ngapain",
- * bukan error yang kelihatan.
+ * Sejarahnya: sampai 9 Agu panel juga selalu NO_RAYCAST, karena plane 2,5 m
+ * ini berdiri di jalur pandang beberapa waypoint dan raycast yang hidup akan
+ * menelan klik untuk mereka. Sekarang panel HARUS bisa di-raycast (hover +
+ * klik), jadi pengamannya pindah ke dua tempat:
+ *   1. handler-nya TIDAK memanggil stopPropagation — event R3F terus berjalan
+ *      ke objek yang lebih jauh di sepanjang ray, jadi waypoint di belakang
+ *      panel tetap menerima hover/klik-nya;
+ *   2. handler klik MENGALAH kalau sebuah waypoint sedang hover (lihat di
+ *      bawah) — klik ganda "glitch + pindah ruangan" tidak pernah terjadi.
+ *
+ * Plane teks tetap NO_RAYCAST selamanya: ia BERGERAK saat hover, dan bidang
+ * penangkap kursor yang berpindah-pindah di bawah kursor adalah resep hover
+ * yang berkedip. Panel yang diam jadi satu-satunya sumber kebenaran hover.
  */
 const NO_RAYCAST: Object3D["raycast"] = () => {};
 
@@ -229,22 +391,16 @@ const VERT = /* glsl */ `
   }
 `;
 
-const FRAG = /* glsl */ `
-  uniform vec3      uColor;
-  uniform sampler2D uText;
-  uniform float     uRevealProgress;
-
-  varying vec2 vUv;
-  varying vec3 vWorld;
-
-  // Matriks Bayer 4×4. Ditulis sebagai rantai if, bukan array const, dengan
-  // alasan yang sama seperti di revealSweep.ts: indexing array dinamis tidak
-  // dijamin didukung di GLSL ES 1.0, dan proyek ini belum mengunci WebGL2.
-  // Rantainya dikompilasi jadi lookup konstan.
-  //
-  // Koordinatnya jadi PARAMETER, tidak lagi membaca gl_FragCoord langsung,
-  // karena bidang ini butuh DUA skala dither yang berbeda — lihat pemakaiannya
-  // di main().
+// Matriks Bayer 4×4. Ditulis sebagai rantai if, bukan array const, dengan
+// alasan yang sama seperti di revealSweep.ts: indexing array dinamis tidak
+// dijamin didukung di GLSL ES 1.0, dan proyek ini belum mengunci WebGL2.
+// Rantainya dikompilasi jadi lookup konstan.
+//
+// (Catatan buat yang menyunting berkas ini: JANGAN pakai backtick di dalam
+// komentar shader. Seluruh string GLSL adalah template literal, jadi backtick
+// di komentar GLSL sekalipun akan MEMUTUS string-nya — galatnya muncul sebagai
+// "',' expected" di baris yang kelihatannya cuma komentar.)
+const BAYER4_GLSL = /* glsl */ `
   float bayer4( vec2 co ) {
     ivec2 p = ivec2( mod( co, 4.0 ) );
     int i = p.y * 4 + p.x;
@@ -265,43 +421,97 @@ const FRAG = /* glsl */ `
     if ( i == 14 ) return 13.0 / 16.0;
     return 5.0 / 16.0;
   }
+`;
+
+// ── Gerbang sapuan "kantor terbentuk" ────────────────────────────────────────
+// Rumus yang sama persis dengan revealSweep.ts, dengan objek uniform yang SAMA.
+// Tanpa ini hologram sudah menyala utuh di ruang kosong sementara dinding yang
+// memeganginya belum tergambar. fineBayer (1 px perangkat) dipakai HANYA di
+// sini, supaya tepi sapuan di bidang ini persis sekasar tepi sapuan di 233
+// material kantor lain — dither tampilannya sendiri memakai sel DITHER_PX.
+const REVEAL_GATE_GLSL = /* glsl */ `
+  {
+    float fineBayer = bayer4( gl_FragCoord.xy );
+    float head = mix(
+      ${REVEAL_X_FROM.toFixed(2)} - ${REVEAL_BAND.toFixed(2)} * ${REVEAL_DIR.toFixed(1)},
+      ${REVEAL_X_TO.toFixed(2)} + ${REVEAL_BAND.toFixed(2)} * ${REVEAL_DIR.toFixed(1)},
+      uRevealProgress
+    );
+    float ahead = ( vWorld.x - head ) * ${REVEAL_DIR.toFixed(1)};
+    float show  = 1.0 - smoothstep( 0.0, ${REVEAL_BAND.toFixed(2)}, ahead );
+    if ( show < fineBayer ) discard;
+  }
+`;
+
+// ── Irisan glitch, versi FRAGMEN ─────────────────────────────────────────────
+// Band, gate, dan rand memakai rumus hash yang PERSIS sama dengan patch vertex
+// CharacterGlitch (57.31/7.77 · 91.17/13.73), dari Y DUNIA yang sama — irisan
+// di panel, di huruf, dan di karakter yang kebetulan berdiri di dekatnya
+// meloncat pada kisi dan irama yang satu. step(0.55): hanya ~45% irisan
+// tergeser tiap re-roll — sebagian besar diam + beberapa meloncat = sobekan,
+// bukan getaran.
+//
+// Empat hal terjadi pada irisan yang kena gate, dan TIGA yang terakhir adalah
+// revisi 9 Agu setelah versi geser-UV-saja gagal terbaca (lihat catatan
+// SHIFT_UV):
+//   1. flash putih (di blok i, bukan di sini);
+//   2. stretch: uv.x diskalakan ±STRETCH di sekitar tengah bidang;
+//   3. geser: uv.x dioffset ±SHIFT_UV;
+//   4. DISCARD di luar 0..1: konten yang terdorong keluar bidang tidak
+//      dijepit balik melainkan hilang — SILUET panel ikut koyak, dan inilah
+//      padanan sesungguhnya dari geseran gl_Position karakter.
+// gPhase dipakai pemanggil untuk menggeser fase kisi Bayer per irisan: papan
+// catur 50% yang tergeser sel ganjil = pola negatif, jadi sobekan terbaca
+// bahkan di bagian bidang yang nilainya rata.
+const GLITCH_PRE_GLSL = /* glsl */ `
+  vec2 uv = vUv;
+  float gGate = 0.0;
+  float gRand = 0.0;
+  float gDual = 0.0;
+  float gFlick = 0.0;
+  float gPhase = 0.0;
+  if ( uGlitch > 0.001 ) {
+    float gSeed = floor( uGlitchTime * ${REROLL_HZ.toFixed(1)} );
+    float gBand = floor( vWorld.y / ${SLICE_H.toFixed(2)} );
+    gGate = step( 0.55, fract( sin( gBand * 57.31 + gSeed * 7.77 ) * 24634.6345 ) );
+    gRand = fract( sin( gBand * 91.17 + gSeed * 13.73 ) * 43758.5453 );
+    // Pemilih nasib irisan gate (drop vs lift) — hash TERPISAH dari gRand:
+    // gRand sudah dipakai arah geser & besaran lift, dan memakai angka yang
+    // sama berarti "semua irisan yang geser kiri mati, yang kanan terang".
+    gDual = fract( sin( gBand * 45.71 + gSeed * 11.13 ) * 7919.77 );
+    // Brownout global: SATU angka per re-roll untuk SELURUH bidang (tidak
+    // bergantung gBand) — seluruh hologram meredup-terang serempak 24 Hz.
+    gFlick = fract( sin( gSeed * 3.71 ) * 9731.53 );
+    float gStr = 1.0 + ( fract( sin( gBand * 73.93 + gSeed * 5.31 ) * 15731.743 ) - 0.5 )
+      * 2.0 * ${STRETCH.toFixed(2)} * gGate;
+    uv.x = 0.5 + ( uv.x - 0.5 ) * gStr + ( gRand - 0.5 ) * 2.0 * ${SHIFT_UV.toFixed(2)} * gGate;
+    if ( uv.x < 0.0 || uv.x > 1.0 ) discard;
+    gPhase = floor( gRand * 8.0 ) * ${DITHER_PX.toFixed(1)} * gGate;
+  }
+`;
+
+const PANEL_FRAG = /* glsl */ `
+  uniform vec3  uColor;
+  uniform float uRevealProgress;
+  uniform float uGlitch;
+  uniform float uGlitchTime;
+
+  varying vec2 vUv;
+  varying vec3 vWorld;
+
+  ${BAYER4_GLSL}
 
   void main() {
-    // ── Dua skala dither, dan itu disengaja ────────────────────────────────
-    // fineBayer (1 px perangkat) dipakai HANYA untuk gerbang reveal, supaya
-    // tepi sapuannya di bidang ini persis sekasar tepi sapuan di 233 material
-    // kantor lainnya — kalau ia ikut mengasar, satu bidang akan terlihat
-    // "beda pola" selama 2,6 detik sapuan berjalan.
-    //
-    // ditherBayer (DITHER_PX px perangkat) dipakai untuk tampilan hologramnya.
-    // Yang ini justru HARUS kasar; itu seluruh maksudnya.
-    float fineBayer   = bayer4( gl_FragCoord.xy );
-    float ditherBayer = bayer4( floor( gl_FragCoord.xy / ${DITHER_PX.toFixed(1)} ) );
+    ${REVEAL_GATE_GLSL}
+    ${GLITCH_PRE_GLSL}
 
-    // ── Ikut sapuan "kantor terbentuk" ─────────────────────────────────────
-    // Rumus yang sama persis dengan revealSweep.ts, dengan objek uniform yang
-    // SAMA. Tanpa ini hologramnya sudah menyala utuh di ruang kosong sementara
-    // dinding yang memeganginya belum tergambar.
-    {
-      float head = mix(
-        ${REVEAL_X_FROM.toFixed(2)} - ${REVEAL_BAND.toFixed(2)} * ${REVEAL_DIR.toFixed(1)},
-        ${REVEAL_X_TO.toFixed(2)} + ${REVEAL_BAND.toFixed(2)} * ${REVEAL_DIR.toFixed(1)},
-        uRevealProgress
-      );
-      float ahead = ( vWorld.x - head ) * ${REVEAL_DIR.toFixed(1)};
-      float show  = 1.0 - smoothstep( 0.0, ${REVEAL_BAND.toFixed(2)}, ahead );
-      if ( show < fineBayer ) discard;
-    }
+    // Kisi Bayer dibaca SETELAH glitch supaya fasenya bisa ikut tergeser per
+    // irisan (gPhase) — irisan yang koyak, koyak juga polanya.
+    float ditherBayer = bayer4( floor( ( gl_FragCoord.xy + vec2( gPhase, 0.0 ) ) / ${DITHER_PX.toFixed(1)} ) );
 
     // ── Kabut dasar ────────────────────────────────────────────────────────
     // Sengaja SANGAT rendah. Bidang ini HARUS tetap tembus pandang: kegelapan
     // di baliknya yang memberi kesan ada ruang, bukan tembok dempet.
-    //
-    // ⚠️ Angka-angka intensitas di blok ini SALING MENUMPUK dan hasilnya
-    // dijepit di 1,0. Percobaan pertama (7 Agu) memakai 0,14 + scan 0,30 +
-    // miring 0,10 dan itu SALAH: dijumlahkan, bidangnya nyaris selalu di atas
-    // 0,45 sehingga tampil sebagai panel padat — pintunya hilang, persis yang
-    // mau dihindari. Kalau menaikkan salah satunya, cek totalnya.
     //
     // 0,125 bukan angka bulat sembarangan: dikali 4 tangga hasilnya TEPAT 0,5,
     // dan ambang Bayer 4×4 punya 16 nilai yang tersebar rata, jadi persis 8
@@ -310,140 +520,50 @@ const FRAG = /* glsl */ `
     // kerapatannya jadi 6/16 atau 10/16 dan polanya berubah dari papan catur
     // jadi kisi yang timpang.
     //
-    // ⚠️ Nilai-nilai di bawah ini ditata ulang untuk kuantisasi 4 TANGGA (lihat
-    // blok alpha di bawah). Pada 16 tangga angka berapa pun "aman"; pada 4,
-    // rentang yang tidak melintasi batas 0,25 akan mendarat rata di satu
-    // tangga dan berhenti ter-dither sama sekali.
+    // ⚠️ Seluruh nilai di berkas ini ditata untuk kuantisasi 4 TANGGA (lihat
+    // blok alpha). Pola tambahan apa pun yang selisihnya SEORDE dengan satu
+    // tangga (0,25) akan diperbesar jadi belang — itu pelajaran dari diagonal
+    // hazard 0,05 yang gagal (7 Agu). Sejarah lengkap suku-suku yang pernah
+    // dicoba dan dibuang (scanline, bar sapuan, kedip) ada di git; ringkasnya:
+    // bidang ini DIAM dan RATA itu disengaja, dan setiap gerak yang kembali
+    // wajib dihitung terhadap tangga 0,25 itu.
     float i = 0.125;
 
-    // ── ⚠️ TIDAK ADA scanline di sini, dan itu diminta ──────────────────────
-    // Sampai 7 Agu ada gelombang sinus 7 garis/m di ruang dunia yang merayap
-    // naik 0,10 m/detik dengan amplitudo 0,34. Dibuang bersama bar sapuan
-    // supaya yang tersisa murni dither.
-    //
-    // Konsekuensi yang perlu diketahui kalau mau mengembalikannya: scanline
-    // itu satu-satunya suku yang memberi bidang ini GRADASI. Tanpa dia, nilai
-    // masukan kuantisasi sama persis di seluruh bidang, jadi yang tampil
-    // adalah matriks Bayer-nya sendiri yang berulang — pola tetap, bukan
-    // gradasi yang ter-dither. Itu justru yang dimaui di sini, tapi artinya
-    // menambahkan apa pun yang bervariasi secara spasial akan langsung terlihat
-    // jauh lebih menonjol daripada dulu waktu ia menumpang di atas scanline.
+    // ── TIDAK ADA suku tepi di sini, dan itu diminta (9 Agu) ───────────────
+    // Sejarah dua tahapnya ada di blok konstanta (di atas TEXT_LEVEL).
+    // Konsekuensi teknis yang
+    // perlu diketahui: sejak tepi hilang, uv hasil geseran glitch hanya
+    // dipakai oleh discard siluet di GLITCH_PRE — konten panel sendiri rata
+    // sempurna, dan sobekannya dibawa oleh siluet + lompatan fase Bayer.
 
-    // ── ⚠️ TIDAK ADA garis miring "hazard" di sini, dan itu hasil percobaan ──
-    // Versi pertama (7 Agu) punya diagonal 45° berperiode 0,34 m dengan bobot
-    // 0,05. Ia GAGAL, dan penyebabnya bukan bobotnya melainkan tabrakannya
-    // dengan kuantisasi alpha di bawah: 0,34 m ≈ 19 piksel perangkat pada
-    // jarak pandang Office, jadi selisih 0,05 antara jalur terang dan gelap
-    // jatuh tepat di batas satu tangga — separuh bidang dibulatkan ke atas,
-    // separuhnya ke bawah, dan hasilnya petak-petak ketupat sebesar 19 px yang
-    // terbaca sebagai kotoran, bukan garis.
-    //
-    // Pelajarannya umum: pola apa pun yang selisihnya SEORDE dengan satu
-    // tangga kuantisasi akan diperbesar jadi belang. Kalau mau menambah motif
-    // di sini, entah bobotnya jelas melampaui satu tangga atau periodenya
-    // dibuat serapat pola dither-nya sendiri.
-    //
-    // ⚠️ Satu tangga sekarang 0,25, bukan lagi 1/16 seperti waktu catatan ini
-    // ditulis — kuantisasinya turun ke 4 tingkat demi dither yang kelihatan.
-    // Artinya ambang "aman" untuk motif baru naik EMPAT KALI LIPAT, dan bobot
-    // 0,05 seperti diagonal yang gagal itu sekarang malah lebih berbahaya.
-
-    // ── Pendar tepi ────────────────────────────────────────────────────────
-    // Jarak ke tepi diubah ke METER dulu supaya lebar pendarnya sama di sisi
-    // pendek dan sisi panjang; dihitung di UV mentah, sisi 1,62 m akan dapat
-    // pendar yang jauh lebih tebal daripada sisi 2,52 m.
-    vec2 d = ( vec2( 0.5 ) - abs( vUv - 0.5 ) ) * vec2( ${PLANE_W.toFixed(2)}, ${PLANE_H.toFixed(2)} );
-    //
-    // Lebarnya dinaikkan 0,10 → 0,16 m dan bobotnya diturunkan 0,75 → 0,60.
-    // Alasannya kuantisasi lagi: pendar setebal 0,10 m yang langsung menghantam
-    // 0,75 melompati tiga tangga sekaligus dalam beberapa piksel, jadi tepinya
-    // tampil sebagai bingkai putih pejal tanpa dither. Melebar dan lebih pelan,
-    // gradasinya punya ruang untuk meluruh bertangga-tangga.
-    float edge = 1.0 - smoothstep( 0.0, 0.16, min( d.x, d.y ) );
-    i += edge * edge * 0.60;
-
-    // ── ⚠️ TIDAK ADA bar sapuan yang naik di sini, dan itu disengaja ────────
-    // Sampai 7 Agu ada satu pita terang selebar 0,16 m yang merayap dari bawah
-    // ke atas sekali tiap ~11 detik (bobot 0,45). Ia dibuang bersama pergantian
-    // ke tampilan dither.
-    //
-    // Alasannya bukan sekadar "terlalu ramai". Bar itu sisa dari versi cyan
-    // yang halus, tempat gradasi 0,45 punya belasan tangga untuk meluruh
-    // dengan mulus. Pada kuantisasi 4 tangga, 0,45 = hampir dua tangga penuh,
-    // jadi pitanya tidak lagi meluruh — ia MELOMPAT: satu blok yang tepinya
-    // keras bergerak naik, dan tiap kali tepinya menyeberangi batas tangga
-    // seluruh baris piksel berganti serempak. Yang terbaca bukan sapuan
-    // cahaya, melainkan pola dither yang ikut tergeret ke atas, dan itu
-    // merusak justru kesan bidangnya diam dan bertekstur.
-    //
-    // Kalau suatu saat mau dikembalikan, ia harus dihitung SEBELUM kuantisasi
-    // dengan bobot yang jelas di bawah satu tangga (< 0,25) — atau, lebih
-    // baik, dengan menaikkan jumlah tangganya khusus di daerah pita itu.
-
-    // ── Teks ───────────────────────────────────────────────────────────────
-    // Hanya kanal alpha yang dipakai: canvas-nya digambar putih di atas
-    // transparan, jadi .a adalah mask hurufnya dan warnanya tetap ikut uColor.
-    //
-    // ── Bobotnya 0,50, dan itu dihitung supaya HURUFNYA IKUT TER-DITHER ─────
-    // Sebelumnya 0,80. Dijumlah kabut dasar jadi 0,925; dikali 4 tangga = 3,7,
-    // artinya 70% piksel huruf mendarat di tangga tertinggi (1,0) dan sisanya
-    // di 0,75. Hurufnya jadi blok putih nyaris pejal yang DITEMPEL di atas
-    // papan catur — dua bahasa visual berbeda di satu bidang.
-    //
-    // Pada 0,50 totalnya 0,125 + 0,50 = 0,625; dikali 4 = TEPAT 2,5, jadi
-    // persis 8 dari 16 sel Bayer lolos. Hurufnya jadi papan catur juga —
-    // berselang-seling antara tangga 0,75 dan 0,50 — dengan kotak yang persis
-    // sebesar dan sefase dengan kotak latarnya. Bukan teks di atas dither,
-    // melainkan teks yang TERBUAT dari dither.
-    //
-    // Terbacanya tetap aman dan itu bukan kebetulan: KEDUA tangga huruf (0,75
-    // dan 0,50) berada di atas KEDUA tangga latar (0,25 dan 0). Tidak ada satu
-    // pun piksel huruf yang bisa jatuh serendah piksel latar paling terang,
-    // jadi hurufnya tak pernah bolong betulan — cuma bertekstur.
-    //
-    // ⚠️ Angka ini terikat pada kabut dasar 0,125 DAN pada 4 tangga. Mengubah
-    // salah satunya tanpa menghitung ulang 0,50 akan menggeser huruf keluar
-    // dari titik 50% dan polanya berhenti sefase dengan latar.
-    i += texture2D( uText, vUv ).a * 0.50;
-
-    // ── ⚠️ TIDAK ADA kedip di sini, dan itu KONSEKUENSI dari dua penghapusan ─
-    // di atas, bukan permintaan terpisah. Dulu ada i *= 0,95 + 0,05·sin·sin.
-    //
-    // (Catatan buat yang menyunting berkas ini: JANGAN pakai backtick di dalam
-    // komentar shader. Seluruh FRAG adalah template literal, jadi backtick di
-    // komentar GLSL sekalipun akan MEMUTUS string-nya — galatnya muncul sebagai
-    // "',' expected" di baris yang kelihatannya cuma komentar.)
-    //
-    // Selama masih ada scanline, kedip itu aman: tiap piksel punya nilai dasar
-    // yang berbeda-beda, jadi goyangan 0,05 cuma menyeret piksel yang KEBETULAN
-    // sedang duduk di batas tangga — hasilnya kelap-kelip butiran. Begitu
-    // scanline hilang, seluruh bidang bernilai sama persis, dan goyangan yang
-    // sama menyeret SEMUA piksel melewati ambangnya SEREMPAK: papan caturnya
-    // berdenyut rapat-renggang seperti panel lampu yang mau putus. Motif yang
-    // dulu tak terlihat jadi cacat paling mencolok di bidang ini.
-    //
-    // Jadi kalau scanline dikembalikan, kedipnya boleh ikut kembali. Selama
-    // bidangnya rata, jangan.
+    // ── Level glitch: brownout global + nasib dua arah per irisan ──────────
+    // Alasan bentuknya di catatan konstanta LIFT/DROP/FLICK: naik-saja terbaca
+    // "bar ditempel di atas panel"; yang menyatu adalah panel yang levelnya
+    // sendiri rusak — meredup serempak, sebagian irisan bolong, sebagian naik
+    // SATU tangga-an. Semua SEBELUM kuantisasi supaya hasilnya jatuh di tangga.
+    i *= 1.0 - ${FLICK_MAX.toFixed(2)} * gFlick * uGlitch;
+    {
+      float gLift = i + ${LIFT_MIN.toFixed(2)} + ${LIFT_RANGE.toFixed(2)} * gRand;
+      float gDrop = i * ${DROP_K.toFixed(2)};
+      i = mix( i, mix( gLift, gDrop, step( 0.5, gDual ) ), gGate * uGlitch );
+    }
 
     // ── Alpha bertangga ────────────────────────────────────────────────────
-    // Dibulatkan ke tingkat diskret dengan ambang Bayer per piksel. Ini yang
-    // menjaga gradasinya BERTITIK alih-alih mulus — sejalan dengan look PS1 di
-    // seluruh scene (NearestFilter, MSAA mati).
-    //
-    // 4 tangga (dari 16). Ini keputusan tampilan yang paling menentukan di
-    // berkas ini: jumlah tangga berbanding TERBALIK dengan seberapa kelihatan
-    // dither-nya. Pada 16 tangga selisih antar tangga cuma 6%, jadi Bayer cuma
-    // perlu menukar-nukar piksel antara dua nilai yang nyaris sama — mata
-    // membacanya sebagai gradasi mulus dan polanya tak pernah muncul. Pada 4
-    // tangga selisihnya 25%, cukup besar sampai pola kotak-kotaknya jadi
-    // tekstur yang benar-benar terbaca. Itu yang dimaksud "dither effect".
-    //
-    // Turun lagi ke 2 tangga (1-bit) sudah dicoba di kepala dan ditinggalkan:
-    // dengan warna putih dan Bloom di 0,95, piksel yang menyala pasti bernilai
-    // 1,0 dan ikut mekar, sehingga titik-titik yang bersebelahan saling
-    // menyambung — polanya balik jadi kabut, cuma lebih terang.
+    // Dibulatkan ke 4 tingkat diskret dengan ambang Bayer per sel. Ini
+    // keputusan tampilan paling menentukan di berkas ini: jumlah tangga
+    // berbanding TERBALIK dengan seberapa kelihatan dither-nya. Pada 16 tangga
+    // selisihnya cuma 6% dan mata membacanya gradasi mulus; pada 4, selisih
+    // 25% membuat pola kotaknya jadi tekstur yang benar-benar terbaca. 2
+    // tangga sudah dicoba di kepala dan gagal: putih penuh + Bloom 0,95 bikin
+    // titik bertetangga saling menyambung jadi kabut.
     float a = clamp( i, 0.0, 1.0 );
     a = floor( a * 4.0 + ditherBayer ) / 4.0;
+
+    // Jitter kecerahan per irisan PASCA-kuantisasi, pada SEMUA irisan selama
+    // burst — rumus persis CharacterGlitch (0,85 + 0,30 · rand). Sengaja
+    // merusak kerapian tangga: derau analog tipis inilah yang membuat seluruh
+    // bidang terasa ikut sakit, bukan cuma irisan yang kena gate.
+    a *= mix( 1.0, 0.85 + ${JITTER.toFixed(2)} * gRand, uGlitch );
 
     // Blending aditif: hasil akhir = uColor * GAIN * a, ditambahkan ke apa pun
     // yang sudah ada di belakang. Warna ditulis tanpa dikali a lebih dulu —
@@ -453,92 +573,279 @@ const FRAG = /* glsl */ `
   }
 `;
 
+const TEXT_FRAG = /* glsl */ `
+  uniform vec3      uColor;
+  uniform sampler2D uText;
+  uniform float     uRevealProgress;
+  uniform float     uGlitch;
+  uniform float     uGlitchTime;
+
+  varying vec2 vUv;
+  varying vec3 vWorld;
+
+  ${BAYER4_GLSL}
+
+  void main() {
+    ${REVEAL_GATE_GLSL}
+    ${GLITCH_PRE_GLSL}
+
+    // Kisi Bayer dibaca SETELAH glitch supaya fasenya bisa ikut tergeser per
+    // irisan (gPhase) — irisan yang koyak, koyak juga polanya.
+    float ditherBayer = bayer4( floor( ( gl_FragCoord.xy + vec2( gPhase, 0.0 ) ) / ${DITHER_PX.toFixed(1)} ) );
+
+    // Hanya kanal alpha yang dipakai: canvas-nya digambar putih di atas
+    // transparan, jadi .a adalah mask hurufnya dan warnanya tetap ikut uColor.
+    // Di luar huruf i = 0 → alpha terkuantisasi 0 → plane-nya tak terlihat;
+    // tidak perlu discard.
+    //
+    // Sampling di uv yang sudah tergeser glitch: hurufnya ikut koyak. Wrap
+    // CanvasTexture bawaan ClampToEdge dan tepi texture-nya transparan, jadi
+    // geseran yang keluar bidang menyeret kekosongan, bukan jejak huruf.
+    float mask = texture2D( uText, uv ).a;
+    float i = mask * ${TEXT_LEVEL.toFixed(3)};
+    // Level glitch yang sama dengan panel — dengan satu beda: lift dikalikan
+    // mask supaya latar KOSONG plane teks tidak ikut menyala (kalau ikut, bar
+    // terangnya kembali dua lapis: plane ini + panel di belakangnya saling
+    // menjumlah dan "tempelan"-nya balik lagi). Drop & brownout tidak perlu
+    // mask — mengalikan nol tetap nol.
+    i *= 1.0 - ${FLICK_MAX.toFixed(2)} * gFlick * uGlitch;
+    {
+      float gLift = i + ( ${LIFT_MIN.toFixed(2)} + ${LIFT_RANGE.toFixed(2)} * gRand ) * step( 0.001, mask );
+      float gDrop = i * ${DROP_K.toFixed(2)};
+      i = mix( i, mix( gLift, gDrop, step( 0.5, gDual ) ), gGate * uGlitch );
+    }
+
+    float a = clamp( i, 0.0, 1.0 );
+    a = floor( a * 4.0 + ditherBayer ) / 4.0;
+
+    // Jitter kecerahan per irisan PASCA-kuantisasi, pada SEMUA irisan selama
+    // burst — rumus persis CharacterGlitch (0,85 + 0,30 · rand). Sengaja
+    // merusak kerapian tangga: derau analog tipis inilah yang membuat seluruh
+    // bidang terasa ikut sakit, bukan cuma irisan yang kena gate.
+    a *= mix( 1.0, 0.85 + ${JITTER.toFixed(2)} * gRand, uGlitch );
+
+    gl_FragColor = vec4( uColor * ${GAIN.toFixed(2)}, a );
+  }
+`;
+
 /**
- * ⚠️ Komponen ini SENGAJA tidak punya useFrame, dan itu bukan kelalaian.
+ * Opsi material yang dibagi panel & teks.
  *
- * Sampai 7 Agu ada satu callback per frame yang menambah uniform uTime, plus
- * penjaga useReducedMotion() untuk membekukannya. Ketiga suku yang memakai
- * waktu — scanline, bar sapuan, kedip — sudah dibuang, jadi menyisakan uTime
- * berarti membayar satu callback per frame untuk menaikkan angka yang tidak
- * dibaca siapa pun.
+ * depthWrite mati: bidang tembus pandang yang menulis depth akan menghalangi
+ * apa pun yang digambar sesudahnya, termasuk kegelapan di balik pintu yang
+ * justru ingin terlihat.
  *
- * Efek sampingnya justru bagus dan patut dijaga: shader-nya kini sepenuhnya
- * statis kecuali uRevealProgress, yang berhenti berubah setelah sapuan pembuka
- * selesai. Kalau nanti ada mode "jeda render saat idle", bidang ini tidak
- * memberi alasan apa pun untuk membangunkan frameloop.
+ * depthTest TETAP menyala — kusen di sekelilingnya harus bisa menutupi
+ * hologram saat dilihat dari sudut miring, kalau tidak ia terlihat menembus
+ * dinding. (Teks yang sedang melayang pun tetap di dalam terowongan pandang
+ * bukaan dari sudut-sudut yang bisa dicapai kamera, jadi ia tidak terpotong.)
  *
- * useReducedMotion() ikut dilepas karena tanpa gerak ia tidak punya kerjaan —
- * bukan karena aksesibilitasnya diabaikan. Menambahkan gerak apa pun ke sini
- * berarti mengembalikan penjaganya juga.
+ * DoubleSide: bukaan ini secara teori cuma terlihat dari sisi kantor, tapi
+ * waypoint bisa membawa kamera ke sudut tak terduga dan plane satu sisi akan
+ * HILANG TOTAL dari belakang tanpa petunjuk apa pun.
+ */
+const MATERIAL_OPTS = {
+  transparent: true,
+  blending: AdditiveBlending,
+  depthWrite: false,
+  depthTest: true,
+  side: DoubleSide,
+} as const;
+
+/**
+ * ── Soal useFrame di sini ───────────────────────────────────────────────────
+ * Versi 7 Agu sengaja TIDAK punya useFrame — shader-nya statis penuh. Hover
+ * dan glitch mengubah itu (9 Agu): satu callback per frame yang kerjanya cuma
+ * satu lerp posisi + dua tulisan uniform, dan ikut tidur bersama canvas saat
+ * FrameloopGate menyetel frameloop "never". Tidak ada mesin yang berdetak
+ * sendiri (pelajaran PhysicsHeading 3 Agu); di luar hover/burst, callback-nya
+ * menyentuh nol state yang berubah.
+ *
+ * useReducedMotion ikut kembali bersama geraknya: teks tetap MAJU saat hover
+ * (responsnya informasi, bukan hiasan) tapi melompat tanpa animasi, dan klik
+ * tidak memicu glitch — flicker mendadak persis kelas gerakan yang preferensi
+ * itu minta hilangkan, sikap yang sama dengan CharacterGlitch.
  */
 export default function MaintenanceHologram() {
   const tex = useMemo(() => makeTextTexture(), []);
 
-  const material = useMemo(
+  const panelMaterial = useMemo(
     () =>
       new ShaderMaterial({
         vertexShader: VERT,
-        fragmentShader: FRAG,
+        fragmentShader: PANEL_FRAG,
+        uniforms: {
+          uColor: { value: new Color(COLOR) },
+          // Objek uniform BERSAMA dengan revealSweep.ts — bukan salinan. Lihat
+          // catatan di ekspornya. uGlitch/uGlitchTime juga bersama (module
+          // level), dibagi dengan material teks di bawah.
+          uRevealProgress: revealProgress,
+          uGlitch,
+          uGlitchTime,
+        },
+        ...MATERIAL_OPTS,
+      }),
+    [],
+  );
+
+  const textMaterial = useMemo(
+    () =>
+      new ShaderMaterial({
+        vertexShader: VERT,
+        fragmentShader: TEXT_FRAG,
         uniforms: {
           uColor: { value: new Color(COLOR) },
           uText: { value: tex },
-          // Objek uniform BERSAMA dengan revealSweep.ts — bukan salinan. Lihat
-          // catatan di ekspornya.
           uRevealProgress: revealProgress,
+          uGlitch,
+          uGlitchTime,
         },
-        transparent: true,
-        blending: AdditiveBlending,
-        // depthWrite mati: bidang tembus pandang yang menulis depth akan
-        // menghalangi apa pun yang digambar sesudahnya, termasuk kegelapan di
-        // balik pintu yang justru ingin terlihat.
-        depthWrite: false,
-        // depthTest TETAP menyala — kusen di sekelilingnya harus bisa menutupi
-        // hologram saat dilihat dari sudut miring, kalau tidak ia terlihat
-        // menembus dinding.
-        depthTest: true,
-        // Bukaan ini secara teori cuma terlihat dari sisi kantor (y < 1,60),
-        // tapi waypoint bisa membawa kamera ke sudut yang tidak terduga dan
-        // plane satu sisi akan HILANG TOTAL dari belakang tanpa petunjuk apa
-        // pun. Dua sisi ongkosnya nol di satu draw call.
-        side: DoubleSide,
+        ...MATERIAL_OPTS,
       }),
     [tex],
   );
 
   useEffect(
     () => () => {
-      material.dispose();
+      panelMaterial.dispose();
+      textMaterial.dispose();
       tex.dispose();
+      uGlitch.value = 0;
     },
-    [material, tex],
+    [panelMaterial, textMaterial, tex],
   );
 
+  // ── Gerbang interaksi ─────────────────────────────────────────────────────
+  // Office saja: dari ruangan lain hologram cuma tampak lewat kaca dan klik
+  // menembus kaca itu membingungkan. coarse mengikuti kebijakan waypoint
+  // (INVARIANTS.md §6) — hover tidak ada di jari, dan tanpa hover, klik yang
+  // tiba-tiba menggeglitchkan dinding tidak punya penanda sebab-akibat.
+  const currentRoom = useSceneStore((s) => s.currentRoom);
+  const heroInView = useSceneStore((s) => s.heroInView);
+  const billiardActive = useSceneStore((s) => s.billiardActive);
+  const coarse = useCoarsePointer();
+  const reduced = useReducedMotion();
+  const interactive =
+    currentRoom === "Office" && heroInView && !billiardActive && !coarse;
+
+  const [hovered, setHovered] = useState(false);
+  const textMesh = useRef<Mesh>(null);
+  /** 0 = menempel, 1 = melayang penuh. Dianimasikan di useFrame lewat ref,
+   *  bukan state — nilainya berubah tiap frame (norma Waypoints.tsx). */
+  const lift = useRef(0);
+  const clickAt = useRef(Number.NEGATIVE_INFINITY);
+
+  // Interaksi dicabut selagi kursor masih di atasnya (pindah ruangan lewat
+  // navbar, billiard dibuka): tanpa ini hover menggantung dan teksnya melayang
+  // selamanya. Kursor hanya dipulihkan kalau bukan waypoint yang memegangnya.
+  useEffect(() => {
+    if (interactive) return;
+    setHovered(false);
+    if (!useSceneStore.getState().hoveredWaypoint) {
+      document.body.style.cursor = "";
+    }
+  }, [interactive]);
+  useEffect(
+    () => () => {
+      if (!useSceneStore.getState().hoveredWaypoint) {
+        document.body.style.cursor = "";
+      }
+    },
+    [],
+  );
+
+  const enter = () => {
+    setHovered(true);
+    document.body.style.cursor = "pointer";
+  };
+  const leave = () => {
+    setHovered(false);
+    // Penjaga yang sama dengan Waypoints.tsx: saat kursor menyeberang langsung
+    // ke waypoint, enter(waypoint) bisa mendahului leave(panel) — jangan hapus
+    // kursor pointer yang baru saja dipasang pihak lain.
+    if (!useSceneStore.getState().hoveredWaypoint) {
+      document.body.style.cursor = "";
+    }
+  };
+  const click = () => {
+    // Mengalah pada waypoint: kalau ray yang sama juga mengenai waypoint
+    // (panel ini berdiri di jalur pandang beberapa di antaranya), enter
+    // waypoint sudah menyalakan hoveredWaypoint sebelum klik tiba — biarkan
+    // klik itu murni jadi navigasi, jangan ditumpangi glitch.
+    if (reduced || useSceneStore.getState().hoveredWaypoint) return;
+    clickAt.current = performance.now();
+  };
+
+  useFrame((_, dt) => {
+    // Peluruhan eksponensial dinormalkan dt (norma Waypoints.tsx), snap saat
+    // sudah dekat supaya tidak menggantung di 0,999.
+    const target = hovered || FORCED ? 1 : 0;
+    if (reduced) {
+      lift.current = target;
+    } else {
+      lift.current += (target - lift.current) * (1 - Math.exp(-dt * 9));
+      if (Math.abs(target - lift.current) < 0.001) lift.current = target;
+    }
+    if (textMesh.current) {
+      textMesh.current.position.z =
+        CENTER[2] + TEXT_REST_Z + lift.current * (TEXT_HOVER_Z - TEXT_REST_Z);
+    }
+
+    const now = performance.now();
+    if (FORCED) {
+      uGlitch.value = 1;
+      uGlitchTime.value = now / 1000;
+      return;
+    }
+    const t = now - clickAt.current;
+    let burst = false;
+    for (const [from, to] of BURSTS) {
+      if (t >= from && t < to) {
+        burst = true;
+        break;
+      }
+    }
+    if (burst) {
+      uGlitch.value = 1;
+      uGlitchTime.value = now / 1000;
+    } else if (uGlitch.value !== 0) {
+      uGlitch.value = 0;
+    }
+  });
+
   return (
-    <mesh
-      position={CENTER}
-      material={material}
-      raycast={NO_RAYCAST}
-      // ⚠️ JANGAN naikkan renderOrder di sini. Dulu nilainya 2, dengan alasan
-      // "mengunci urutan biar tidak bergantung urutan traverse GLB". Alasan itu
-      // salah dan menimbulkan bug nyata: dari Lounge, hologram terlihat menembus
-      // tembok.
-      //
-      // Sebabnya, kaca meeting room ikut antrean transparan dan depthWrite-nya
-      // mati, jadi ia tidak pernah menulis depth — depthTest tidak bisa menolak
-      // apa pun di belakangnya. Yang menentukan siapa menimpa siapa cuma urutan
-      // gambar, dan three.js mengurutkan antrean transparan pakai renderOrder
-      // SEBAGAI KUNCI UTAMA, jarak baru jadi kunci kedua. renderOrder 2 berarti
-      // hologram selalu digambar terakhir — termasuk di atas kaca yang berada di
-      // DEPANNYA. Aditif pula, jadi ia ditambahkan pada kaca dengan kecerahan
-      // penuh, tanpa diredam sedikit pun. Persis seperti menembus.
-      //
-      // Dengan renderOrder 0, pengurutan jarak belakang-ke-depan berlaku lagi:
-      // dari Lounge hologram digambar lebih dulu, lalu kaca menimpanya dan
-      // meredamnya — yang memang perilaku yang benar. Dari Office tidak ada kaca
-      // di antara kamera dan hologram, jadi tampilannya tidak berubah.
-      renderOrder={0}
-    >
-      <planeGeometry args={[PLANE_W, PLANE_H]} />
-    </mesh>
+    <>
+      {/* ⚠️ JANGAN naikkan renderOrder di kedua mesh. Dulu panel bernilai 2 dan
+          itu bug nyata: kaca meeting room (transparan, depthWrite mati) tidak
+          pernah menulis depth, jadi siapa menimpa siapa murni urutan gambar —
+          dan three.js memakai renderOrder sebagai KUNCI UTAMA antrean
+          transparan, jarak baru kunci kedua. renderOrder 2 berarti hologram
+          selalu digambar terakhir, termasuk DI ATAS kaca yang ada di depannya:
+          dari Lounge ia tampak menembus tembok. Pada 0, pengurutan jarak
+          belakang-ke-depan berlaku dan kaca meredamnya dengan benar. */}
+      <mesh
+        position={CENTER}
+        material={panelMaterial}
+        raycast={interactive ? Mesh.prototype.raycast : NO_RAYCAST}
+        onPointerOver={enter}
+        onPointerOut={leave}
+        onClick={click}
+        renderOrder={0}
+      >
+        <planeGeometry args={[PLANE_W, PLANE_H]} />
+      </mesh>
+      {/* Posisi z disetir useFrame; nilai awalnya = posisi rest supaya frame
+          pertama (sebelum useFrame jalan) sudah benar. NO_RAYCAST permanen —
+          lihat catatan di konstantanya. */}
+      <mesh
+        ref={textMesh}
+        position={[CENTER[0], CENTER[1], CENTER[2] + TEXT_REST_Z]}
+        material={textMaterial}
+        raycast={NO_RAYCAST}
+        renderOrder={0}
+      >
+        <planeGeometry args={[PLANE_W, PLANE_H]} />
+      </mesh>
+    </>
   );
 }
