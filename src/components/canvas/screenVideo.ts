@@ -50,6 +50,17 @@ const cache = new Map<string, Entry>();
 let wantPlaying = false;
 
 /**
+ * URL yang gerbang izinkan berjalan. null = belum ada yang diizinkan.
+ *
+ * Ada karena gerbang bekerja per-RUANGAN sementara priming bekerja per-VIDEO:
+ * saat `loadeddata` sebuah video akhirnya tiba, ia harus tahu apakah dirinya
+ * sendiri yang sedang dikehendaki — bukan sekadar bahwa ADA video yang sedang
+ * dimainkan. Tanpa pembedaan ini, membuka Meeting Room akan membuat video
+ * MacBook yang baru selesai memuat ikut jalan dan tidak pernah di-pause.
+ */
+let allowed: Set<string> | null = null;
+
+/**
  * Ambil (atau buat) texture video untuk sebuah URL.
  *
  * Memanggilnya berkali-kali dengan URL yang sama mengembalikan texture yang
@@ -94,14 +105,14 @@ export function getScreenVideo(url: string, flipX = false): Texture {
     () => {
       // Gerbang sudah menyuruh main duluan (video lambat dimuat) — jangan
       // sentuh. Lihat catatan balapan di `wantPlaying` di atas.
-      if (wantPlaying) return;
+      if (wantPlaying && allowed?.has(url)) return;
 
       el.play().then(
         () => {
           // Cek ULANG: gerbang bisa saja menyala selama play() masih pending.
           // Tanpa pemeriksaan kedua ini, pause() di bawah tetap membekukan
           // video yang barusan sengaja dinyalakan.
-          if (!wantPlaying) el.pause();
+          if (!wantPlaying || !allowed?.has(url)) el.pause();
         },
         () => {
           // Autoplay ditolak sebelum ada interaksi — wajar, dan tidak fatal:
@@ -137,26 +148,41 @@ export function getScreenVideo(url: string, flipX = false): Texture {
 }
 
 /**
- * Mainkan semua video layar yang sudah dibuat.
+ * Mainkan video layar yang URL-nya ada di `urls`, dan HENTIKAN sisanya.
+ *
+ * Daftar URL, bukan "semua": tiap layar hanya terlihat dari satu ruangan, jadi
+ * memutar seluruhnya berarti men-dekode video yang bahkan tidak ada di dalam
+ * frustum. Pemanggilnya (Office.tsx) yang tahu ruangan mana yang sedang
+ * ditempati; berkas ini sengaja tidak tahu apa-apa soal ruangan.
+ *
+ * Menghentikan yang tidak diizinkan dilakukan DI SINI, bukan diserahkan ke
+ * pemanggil, supaya berpindah ruangan tidak bisa meninggalkan video ruangan
+ * sebelumnya berjalan — kegagalan yang tak terlihat di layar dan hanya terbaca
+ * sebagai kipas laptop menyala.
  *
  * `play()` mengembalikan Promise yang DITOLAK kalau kebijakan autoplay browser
  * belum mengizinkan. Tanpa catch, penolakan itu muncul sebagai unhandled
  * rejection di konsol tiap kali pengunjung masuk ruangan — berisik, dan
  * menyamarkan error sungguhan.
  */
-export function playScreenVideos(): void {
+export function playScreenVideos(urls: readonly string[]): void {
   // Disetel SEBELUM loop: kalau ada video yang masih memuat, priming-nya akan
-  // membaca bendera ini dan tahu untuk tidak mem-pause balik.
+  // membaca keduanya dan tahu untuk tidak mem-pause balik.
   wantPlaying = true;
-  for (const { el } of cache.values()) {
-    if (!el.paused) continue;
-    el.play().catch(() => {});
+  allowed = new Set(urls);
+  for (const [url, { el }] of cache.entries()) {
+    if (allowed.has(url)) {
+      if (el.paused) el.play().catch(() => {});
+      continue;
+    }
+    if (!el.paused) el.pause();
   }
 }
 
 /** Hentikan semua video layar. Idempoten. */
 export function pauseScreenVideos(): void {
   wantPlaying = false;
+  allowed = null;
   for (const { el } of cache.values()) {
     if (el.paused) continue;
     el.pause();

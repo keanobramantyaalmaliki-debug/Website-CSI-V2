@@ -5,8 +5,8 @@ import { EffectComposer, Bloom, N8AO, HueSaturation, BrightnessContrast } from "
 import { ACESFilmicToneMapping } from "three";
 import { Suspense } from "react";
 import Office from "./Office";
+import MaintenanceHologram from "./MaintenanceHologram";
 import SceneEnvironment from "./SceneEnvironment";
-import CharacterLights from "./CharacterLights";
 import CameraController, { VIEWS } from "./CameraController";
 import { START_ROOM } from "@/lib/store/sceneStore";
 import BilliardLazy from "./billiard/BilliardLazy";
@@ -114,11 +114,24 @@ export default function Scene() {
           tampilan flat itu. */}
       <ambientLight intensity={0.18} color="#ffbd75" />
       <SceneEnvironment />
-      <CharacterLights />
+      {/* CharacterLights DIHAPUS 6 Agu — dan ini bukan sekadar beres-beres.
+          Lampunya di-layers.set(1) sejak lahir, sedangkan WebGLRenderer
+          menguji layer lampu terhadap layer KAMERA (r185 ~17387) yang cuma
+          di layer 0 → lampu itu TIDAK PERNAH dikumpulkan renderer. Artinya
+          look karakter yang disukai selama ini = ambient di atas + envmap
+          saja. Point light motivated per karakter sempat dites hidup beneran
+          (6 Agu, Person2) dan Keano memilih tanpa lampu. Kalau mau dicoba
+          lagi: lampu HARUS di layer 0, pagari dengan distance pendek. */}
       <CameraController />
 
       <Suspense fallback={null}>
         <Office />
+        {/* Penutup lubang pintu buntu di sisi timur laut Office. HARUS di dalam
+            Suspense yang sama dengan <Office/>: ia ikut menumpang uniform
+            sapuan reveal, dan uniform itu baru digerakkan setelah GLB dimuat.
+            Di luar Suspense hologramnya menyala di ruang kosong selama GLB
+            masih diunduh. */}
+        <MaintenanceHologram />
         {/* Kerucut cahaya volumetrik (LightCone/LightCones) DIHAPUS 30 Jul.
             Kalau nanti dibuat lagi, dua catatan yang mahal didapat:
 

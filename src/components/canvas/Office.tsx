@@ -11,13 +11,13 @@ import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import { billiardView } from "./CameraController";
 import { prepareLampFade } from "./billiard/lamps";
 import { prepareRevealSweep } from "./revealSweep";
+import CharacterGlitch from "./CharacterGlitch";
 import { applyScreens, SCREENS } from "./screens";
 import {
   getScreenVideo,
   pauseScreenVideos,
   playScreenVideos,
 } from "./screenVideo";
-import { CHAR_LAYER } from "./CharacterLights";
 
 // GLB baked ada di public/ dan ter-track git (9 MB). Jangan kembalikan ke
 // /export-test/… — path itu mengandalkan symlink dev-only yang tidak pernah ada
@@ -107,23 +107,31 @@ function ScreenVideoGate() {
   const billiardActive = useSceneStore((s) => s.billiardActive);
   const reduced = useReducedMotion();
 
-  // Layar hanya benar-benar terlihat dari view Office. Di ruangan lain ia di
-  // luar frustum atau sejauh beberapa piksel — men-dekode 12 fps untuk itu
-  // murni pemborosan.
-  const wanted = heroInView && currentRoom === "Office" && !billiardActive && !reduced;
+  // Tiap layar video hanya benar-benar terlihat dari SATU ruangan (MacBook dari
+  // Office, TV dari Meeting). Di ruangan lain ia di luar frustum atau sejauh
+  // beberapa piksel — men-dekode untuk itu murni pemborosan, jadi yang diputar
+  // cuma milik ruangan yang sedang ditempati. Daftarnya diturunkan dari SCREENS
+  // supaya menambah layar video baru tidak menuntut siapa pun ingat menyunting
+  // gerbang ini juga.
+  const urls = useMemo(
+    () =>
+      SCREENS.filter((s) => s.video && s.room === currentRoom).map((s) => s.url),
+    [currentRoom],
+  );
+  const wanted = heroInView && urls.length > 0 && !billiardActive && !reduced;
 
   useEffect(() => {
     if (!wanted) {
       pauseScreenVideos();
       return;
     }
-    playScreenVideos();
+    playScreenVideos(urls);
 
     // Pindah tab: browser MEMANG menurunkan prioritas timer, tapi tidak
     // menghentikan dekode video. Dipause eksplisit — dan dinyalakan lagi saat
     // kembali, karena efek ini tidak dijalankan ulang oleh perpindahan tab.
     const onVisibility = () => {
-      if (document.visibilityState === "visible") playScreenVideos();
+      if (document.visibilityState === "visible") playScreenVideos(urls);
       else pauseScreenVideos();
     };
     document.addEventListener("visibilitychange", onVisibility);
@@ -131,7 +139,7 @@ function ScreenVideoGate() {
       document.removeEventListener("visibilitychange", onVisibility);
       pauseScreenVideos();
     };
-  }, [wanted]);
+  }, [wanted, urls]);
 
   return null;
 }
@@ -140,9 +148,12 @@ function ScreenVideoGate() {
  * Kantor Cogniti — hasil bake lightmap (lihat Documentations.md §4g).
  *
  * GLB ini punya NOL lampu realtime: semua cahaya + bayangan sudah dipanggang
- * ke lightmap. Itu yang bikin 50-60 FPS. Jangan tambah lampu scene-wide di sini
- * — kalau butuh nyinari objek dinamis (karakter), pakai CharacterLights.tsx
- * yang memakai layers supaya tidak menyentuh 291 objek statis ini.
+ * ke lightmap. Itu yang bikin 50-60 FPS. Jangan tambah lampu scene-wide di
+ * sini. Karakter pun sengaja TANPA lampu (cukup ambient + envmap — dipilih
+ * Keano 6 Agu setelah tes point light per karakter; lihat komentar di
+ * Scene.tsx). Catatan penting kalau tergoda "lampu ber-layer": three TIDAK
+ * mendukung selective lighting per objek — layer lampu diuji terhadap
+ * KAMERA, lampu yang lolos menyinari semua material.
  *
  * Tiga fix-up di bawah wajib ada; semuanya hasil debugging panjang dan kalau
  * meleset visualnya rusak dengan cara yang tidak kelihatan jelas.
@@ -217,9 +228,6 @@ export default function Office() {
       // objek yang selalu ikut dirender.
       if (obj instanceof SkinnedMesh) {
         obj.frustumCulled = false;
-        // enable (bukan set): objek tetap di layer 0 supaya kamera & raycast
-        // biasa tetap melihatnya, plus ikut disinari lampu CHAR_LAYER.
-        obj.layers.enable(CHAR_LAYER);
         skinned++;
       }
 
@@ -241,6 +249,25 @@ export default function Office() {
         // — itu HARUS dibiarkan, kalau ikut dikonversi objeknya salah nyala.
         // Nama texture tidak bisa dipakai sebagai pembeda: glTF hasil export
         // Blender tidak menyimpan texture.name sama sekali.
+        //
+        // PENGECUALIAN: kaca transparan (M_Glass/GlassFrost/GlassSmoke/
+        // Pantry_Glass, alpha blend) ikut ter-bake tapi hasil bake-nya sampah —
+        // bake diffuse di permukaan alpha 0.08 cuma menangkap noise varian
+        // tinggi (LM_MG_Office_M_Glass: std 0.41 vs dinding 0.26, puncak 3.28).
+        // Noise itu × LIGHTMAP_INTENSITY bikin kaca keruh seperti susu penuh
+        // bintik. Kaca tidak butuh baked light — look-nya datang dari benda di
+        // baliknya — jadi buang lightmap DAN aoMap-nya sekalian.
+        // (Diuji 6 Agu: mengecualikan M_GlassSmoke dari aturan ini — alias
+        // mengembalikan lightmap-nya — mengubah <0,01% piksel. Wajar: lightMap
+        // dikali diffuseColor, dan diffuse smoke ~0,008 ≈ hitam. Jadi smoke
+        // ikut aturan yang sama, tanpa pengecualian.)
+        if (mat.transparent && /Glass/i.test(mat.name)) {
+          if (mat.aoMap && mat.aoMap.channel === 1) {
+            mat.aoMap = null;
+            mat.needsUpdate = true;
+          }
+          continue;
+        }
         const ao = mat.aoMap;
         if (ao && ao.channel === 1 && !mat.lightMap) {
           mat.lightMap = ao;
@@ -418,6 +445,18 @@ export default function Office() {
   const revealDone = useRef(false);
   /** Waktu mulai sapuan, disetel di useFrame — lihat catatan tersendat di sana. */
   const startRef = useRef<number | null>(null);
+  /**
+   * Kapan penantian loaderDone DIMULAI — jam terpisah dari startRef, dan itu
+   * bukan kemubaziran. startRef digeser ke `now` tiap frame selama menunggu
+   * (supaya sapuan mulai dari nol saat gerbang terbuka), jadi ia tidak bisa
+   * sekaligus dipakai mengukur "sudah berapa lama menunggu": membandingkan
+   * `now - startRef` berarti membandingkan dua frame bersebelahan (~16 ms),
+   * bukan durasi penantian. Versi lama melakukan persis itu — jaring pengaman
+   * 3 detiknya kode mati sejak lahir (ketahuan 7 Agu 2026 saat analisis bug
+   * sweep; tidak pernah tersulut hanya karena LoadingScreen belum pernah gagal
+   * total).
+   */
+  const waitStartRef = useRef<number | null>(null);
 
   useLayoutEffect(() => {
     const sweep = prepareRevealSweep(prepared);
@@ -431,6 +470,7 @@ export default function Office() {
     sweepRef.current = sweep;
     revealDone.current = false;
     startRef.current = null;
+    waitStartRef.current = null;
 
     return () => {
       sweep.dispose();
@@ -511,15 +551,22 @@ export default function Office() {
     //
     // startRef ikut digeser tiap frame selama menunggu, sehingga saat gerbang
     // akhirnya terbuka jamnya mulai dari nol — bukan langsung meloncat ke
-    // tengah sapuan sebesar durasi loader tadi.
+    // tengah sapuan sebesar durasi loader tadi. Lamanya penantian diukur
+    // dengan waitStartRef yang TIDAK ikut digeser — lihat catatan di
+    // deklarasinya: memakai startRef untuk keduanya membuat batas ini tidak
+    // pernah tercapai (bug kode-mati yang dibetulkan 7 Agu 2026).
     //
     // Batas 3 detik itu jaring pengaman, bukan bagian dari koreografi. Tanpa
     // itu, satu bug di LoadingScreen (worker mati, komponen tidak ter-mount)
     // membuat loaderDone tidak pernah true — dan karena sapuan menahan kantor
     // di progress 0, kantornya TIDAK AKAN PERNAH TAMPIL. Kegagalan yang jauh
-    // lebih buruk daripada sekadar animasi yang bertabrakan.
+    // lebih buruk daripada sekadar animasi yang bertabrakan. Kalau batasnya
+    // tersulut, sapuan jalan begitu saja tanpa menunggu loader — di skenario
+    // gagal itu overlay-nya kemungkinan sudah/akan dilepas oleh jaring
+    // pengaman LoadingScreen sendiri (1500 ms), jadi sapuannya tetap terlihat.
     if (!useSceneStore.getState().loaderDone) {
-      if (now - startRef.current < 3000) {
+      if (waitStartRef.current === null) waitStartRef.current = now;
+      if (now - waitStartRef.current < 3000) {
         startRef.current = now;
         return;
       }
@@ -601,6 +648,12 @@ export default function Office() {
         <primitive object={prepared} onClick={onClick} />
       </Bvh>
       <ScreenVideoGate />
+      {/* Glitch karakter saat idle. HARUS anak Office, bukan dipindah ke
+          Scene.tsx: patch-nya harus terpasang SEBELUM prepareRevealSweep di
+          layout effect di atas (sweep menyimpan lalu memulihkannya), dan
+          jaminan urutannya justru datang dari React — layout effect ANAK
+          berjalan sebelum layout effect induk. Rincian di CharacterGlitch.tsx. */}
+      <CharacterGlitch scene={prepared} />
     </>
   );
 }
