@@ -95,7 +95,7 @@ export default function TrustedByGrid({ brands }: { brands: Brand[] }) {
 
   return (
     <div>
-      <h2 className="relative text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
+      <h2 className="relative max-w-full break-words text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
         {reduced ? (
           "Trusted by Visionaries"
         ) : (

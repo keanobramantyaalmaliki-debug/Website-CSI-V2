@@ -52,7 +52,7 @@ export default function Process() {
   const { activeIndex, setRef } = useScrollStepper(STEPS.length);
 
   return (
-    <section id="process" className="px-6 py-24 sm:px-10 sm:py-32">
+    <section id="process" className="overflow-x-clip px-6 py-24 sm:px-10 sm:py-32">
       {/* T6 — eyebrow */}
       <motion.p
         className="text-xs tracking-widest text-zinc-400 uppercase"

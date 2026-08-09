@@ -45,7 +45,7 @@ export default function Deployments() {
   return (
     <section
       id="deployments"
-      className="relative px-6 py-24 sm:px-10 sm:py-32"
+      className="relative overflow-x-clip px-6 py-24 sm:px-10 sm:py-32"
       style={{
         background:
           "linear-gradient(to bottom, rgba(9,9,11,0.4) 0%, transparent 100%)",

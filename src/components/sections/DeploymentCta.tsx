@@ -10,7 +10,7 @@ import { scrollToSection } from "@/lib/smoothScroll";
  */
 export default function DeploymentCta() {
   return (
-    <FadeUpItem className="aspect-[4/3] max-h-[22rem] min-h-[18rem]">
+    <FadeUpItem className="aspect-[4/3] w-full max-h-[22rem] min-h-[18rem]">
       <button
         type="button"
         onClick={() => scrollToSection("contact")}
