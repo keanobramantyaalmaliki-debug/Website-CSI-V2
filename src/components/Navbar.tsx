@@ -7,6 +7,7 @@ import { useSceneStore, pathFor, type RoomKey } from "@/lib/store/sceneStore";
 import { roomHasContact } from "@/lib/roomContent";
 import { ACTIVE_KEYS } from "@/components/canvas/CameraController";
 import MagneticButton from "@/components/motion/MagneticButton";
+import { scrollToSection } from "@/lib/smoothScroll";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -46,7 +47,7 @@ export default function Navbar() {
   function goToContact() {
     setOpen(false);
     if (roomHasContact(currentRoom)) {
-      document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" });
+      scrollToSection("contact");
       return;
     }
     navigate("/#contact");

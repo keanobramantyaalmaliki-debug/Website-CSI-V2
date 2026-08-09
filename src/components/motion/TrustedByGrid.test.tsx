@@ -64,4 +64,29 @@ describe("TrustedByGrid", () => {
 
     expect(heading.textContent).toBe("Trusted by Visionaries");
   });
+
+  it("renders an accessible SVG logo (not text) when brand.logo is set", () => {
+    const branded = [
+      { name: "Vercel", logo: { viewBox: "0 0 24 24", path: "M24 22.525H0l12-21.05 12 21.05z" } },
+    ];
+    render(<TrustedByGrid brands={branded} />);
+
+    const logo = screen.getByRole("img", { name: "Vercel" });
+    expect(logo.tagName.toLowerCase()).toBe("svg");
+    expect(logo.querySelector("path")).toHaveAttribute("d", "M24 22.525H0l12-21.05 12 21.05z");
+    // Wordmark text must NOT render inside a cell when a logo is present.
+    expect(screen.queryByText("Vercel", { selector: "span" })).not.toBeInTheDocument();
+  });
+
+  it("full-motion: hovering a logo cell swaps the heading using brand.name", async () => {
+    const user = userEvent.setup();
+    const branded = [
+      { name: "Vercel", logo: { viewBox: "0 0 24 24", path: "M24 22.525H0l12-21.05 12 21.05z" } },
+    ];
+    render(<TrustedByGrid brands={branded} />);
+    const heading = screen.getByRole("heading");
+
+    await user.hover(screen.getByRole("img", { name: "Vercel" }));
+    await waitFor(() => expect(heading.textContent).toContain("Trusted by Vercel"));
+  });
 });

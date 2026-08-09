@@ -80,6 +80,19 @@ describe("AwardsShowcase", () => {
     expect(images).toHaveLength(4);
   });
 
+  it("keeps the mobile track's edge inset from being eaten by mandatory snap", () => {
+    const { container } = render(<AwardsShowcase />);
+    const track = container.querySelector(".snap-x") as HTMLDivElement;
+    // The track bleeds to the card edge (-mx-8) and pads the first/last card
+    // back in (px-8). With snap-mandatory the snapport defaults to the
+    // scrollport edge, so the browser snaps card #1 flush against the border
+    // and the left padding is scrolled out of view. scroll-px-8 insets the
+    // snapport to match, which is the only thing preserving that gap.
+    expect(track).toHaveClass("snap-mandatory");
+    expect(track).toHaveClass("px-8");
+    expect(track).toHaveClass("scroll-px-8");
+  });
+
   describe("mobile carousel auto-scroll", () => {
     // jsdom performs no layout, so card width / scrollWidth / clientWidth
     // are all 0 by default — stub them so the auto-scroll effect's

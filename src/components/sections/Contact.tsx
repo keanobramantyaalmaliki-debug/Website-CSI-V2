@@ -14,7 +14,7 @@ const SOCIALS = [
 
 export default function Contact() {
   return (
-    <section id="contact" className="px-6 py-24 sm:px-10 sm:py-32">
+    <section id="contact" className="overflow-x-clip px-6 py-24 sm:px-10 sm:py-32">
       {/* T6 — eyebrow */}
       <motion.p
         className="text-xs tracking-widest text-zinc-400 uppercase"
