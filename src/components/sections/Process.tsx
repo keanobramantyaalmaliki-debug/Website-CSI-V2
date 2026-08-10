@@ -23,7 +23,11 @@ function MobileGlyph({
   reduced: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "0px 0px -60px 0px" });
+  // amount: 0.4 — without it, useInView fires as soon as 1px of the glyph
+  // pokes past the bottom edge, so the reveal finishes before the user has
+  // actually scrolled it into view. Requiring 40% visible first means the
+  // trigger point roughly matches when the glyph is actually on screen.
+  const inView = useInView(ref, { once: true, amount: 0.4, margin: "0px 0px -60px 0px" });
 
   return (
     <div ref={ref} className="mt-6 h-32 w-32 text-zinc-500 lg:hidden">
