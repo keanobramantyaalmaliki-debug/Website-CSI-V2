@@ -69,9 +69,14 @@
 html,
 body {
   height: 100%;
+  max-width: 100%;
+  /* clip, NOT hidden — hidden would create a new scroll container on every
+     sticky ancestor and break position: sticky (Hero, Industries,
+     LivingArchitecture). clip stops sideways drag without that side effect. */
+  overflow-x: clip;
 }
 
-html {
+html:not(.lenis) {
   scroll-behavior: smooth;
 }
 

@@ -3,6 +3,7 @@ import LoadingScreen from "@/components/loader/LoadingScreen";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/sections/Hero";
 import HeroHandoff from "@/components/motion/HeroHandoff";
+import useSmoothScroll from "@/lib/hooks/useSmoothScroll";
 import RoomRouteSync from "./RoomRouteSync";
 
 /**
@@ -13,6 +14,8 @@ import RoomRouteSync from "./RoomRouteSync";
  * koreografi sticky/recede/HeroHandoff tetap utuh dan mencegah Canvas remount.
  */
 export default function SiteLayout() {
+  useSmoothScroll();
+
   return (
     <>
       <LoadingScreen />

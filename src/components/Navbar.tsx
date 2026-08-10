@@ -7,6 +7,7 @@ import { useSceneStore, pathFor, type RoomKey } from "@/lib/store/sceneStore";
 import { roomHasContact } from "@/lib/roomContent";
 import { ACTIVE_KEYS } from "@/components/canvas/CameraController";
 import MagneticButton from "@/components/motion/MagneticButton";
+import { scrollToSection } from "@/lib/smoothScroll";
 import { SOCIALS } from "@/data/socials";
 import { ID_ZONES, useZoneClocks } from "@/lib/hooks/useZoneClocks";
 import { useNarrowViewport } from "@/lib/hooks/useNarrowViewport";
@@ -165,9 +166,10 @@ export default function Navbar() {
    * ⚠️ Patokannya `open`, BUKAN `overlayUp` seperti urusan tampilan lainnya.
    * Kuncinya harus lepas di frame yang sama dengan tekanannya, karena
    * `goToContact()` menggulir ke `#contact` tepat setelah menutup menu — dan
-   * `scrollIntoView` tidak melakukan apa-apa selama body masih terkunci. Yang
-   * hilang karena ini cuma satu hal kecil: kalau jari menyapu layar di tengah
-   * 450 ms pudarnya, latar di baliknya ikut bergeser.
+   * `scrollToSection()` tidak ke mana-mana selama body masih terkunci, lewat
+   * Lenis maupun lewat `scrollIntoView` bawaannya. Yang hilang karena ini cuma
+   * satu hal kecil: kalau jari menyapu layar di tengah 450 ms pudarnya, latar
+   * di baliknya ikut bergeser.
    */
   useEffect(() => {
     if (!open) return;
@@ -207,7 +209,7 @@ export default function Navbar() {
   function goToContact() {
     setOpen(false);
     if (roomHasContact(currentRoom)) {
-      document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" });
+      scrollToSection("contact");
       return;
     }
     navigate("/#contact");

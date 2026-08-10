@@ -58,14 +58,23 @@ describe("TheCrew", () => {
     expect(screen.queryByText(developerOnlyName)).not.toBeInTheDocument();
   });
 
-  it("every person's name appears in both the desktop list and the mobile carousel", () => {
+  it("every person appears in the desktop list and is reachable via the mobile carousel", () => {
     render(<TheCrew />);
     const mobileCarousel = screen.getByTestId("crew-mobile-carousel");
 
+    // Mobile is a swipe deck — only the active card (+ a couple of peek
+    // cards behind it) is in the DOM at once, not the full list. Desktop
+    // still renders every name; on mobile, every person is reachable via
+    // their dot indicator, and the first person's card is visible on mount.
     for (const member of TEAM_MEMBERS) {
-      expect(screen.getAllByText(member.name).length).toBeGreaterThanOrEqual(2);
-      expect(within(mobileCarousel).getByText(member.name)).toBeInTheDocument();
+      expect(screen.getAllByText(member.name).length).toBeGreaterThanOrEqual(1);
+      expect(
+        within(mobileCarousel).getByRole("button", { name: `Show ${member.name}` }),
+      ).toBeInTheDocument();
     }
+    expect(
+      within(mobileCarousel).getByText(TEAM_MEMBERS[0].name),
+    ).toBeInTheDocument();
   });
 
   it("hovering/focusing a desktop row updates active state without throwing", async () => {

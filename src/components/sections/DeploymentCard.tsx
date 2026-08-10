@@ -1,7 +1,7 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
-import FlipCard from "@/components/motion/FlipCard";
+import { useReducedMotion } from "motion/react";
+import { FadeUpItem } from "@/components/motion/FadeUp";
 
 export type DeploymentData = {
   num: string;
@@ -25,51 +25,43 @@ const SECTOR_IMAGE: Record<string, string> = {
 
 const DEFAULT_IMAGE = SECTOR_IMAGE["Public Services"];
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 14 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.55 } },
-};
-
-const itemVariantsReduced = {
-  hidden: { opacity: 1, y: 0 },
-  show: { opacity: 1, y: 0 },
-};
-
 export default function DeploymentCard({ d }: { d: DeploymentData }) {
   const reduced = !!useReducedMotion();
   const image = SECTOR_IMAGE[d.sector] ?? DEFAULT_IMAGE;
 
   return (
-    <motion.div variants={reduced ? itemVariantsReduced : itemVariants}>
-      <FlipCard
-        ariaLabel={`${d.sector} — detail`}
-        className="h-56 w-full sm:h-64"
-        front={
-          <div className="flex h-full flex-col justify-between p-5">
-            <span className="font-mono text-xs tabular-nums text-zinc-500">{d.num}</span>
-            <div className="flex items-center gap-3">
-              <h3 className="flex-1 text-base font-medium text-zinc-100">{d.sector}</h3>
-              <span className="rounded-full border border-white/15 px-2.5 py-0.5 text-xs text-zinc-300">
-                {d.region}
-              </span>
-            </div>
-          </div>
-        }
-        back={
-          <div className="relative h-full w-full">
-            <img
-              src={image}
-              alt=""
-              loading="lazy"
-              className="h-full w-full object-cover"
-            />
-            <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/85 via-black/30 to-transparent p-5">
-              <h3 className="font-medium text-zinc-50">{d.sector}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-zinc-300">{d.desc}</p>
-            </div>
-          </div>
-        }
+    <FadeUpItem
+      tag="article"
+      className="group relative flex aspect-[4/3] w-full max-h-[22rem] min-h-[18rem] flex-col justify-end overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] transition-colors duration-500 hover:border-white/[0.16]"
+    >
+      {/* 1. Foto — selalu ter-mount, diredam saat diam */}
+      <img
+        src={image}
+        alt=""
+        loading="lazy"
+        className={`absolute inset-0 h-full w-full object-cover opacity-40 grayscale transition-[filter,opacity,transform] duration-500 group-hover:opacity-70 group-hover:grayscale-0 ${reduced ? "" : "group-hover:scale-[1.03]"}`}
       />
-    </motion.div>
+
+      {/* 2. Wash rata — menjaga baris meta di pita atas tetap terbaca di atas foto apa pun */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-black/45 transition-colors duration-500 group-hover:bg-black/55"
+      />
+
+      {/* 3. Scrim gradien — idiom sama dengan CaseStudySpotlight.tsx */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/90 via-black/40 to-transparent"
+      />
+
+      {/* 4. Blok teks — relative supaya di atas ketiga layer absolute di atas */}
+      <div className="relative flex flex-col gap-1.5 p-5">
+        <p className="font-mono text-[11px] tracking-widest text-zinc-300 sm:text-xs">
+          {d.num} · {d.region}
+        </p>
+        <h3 className="text-base font-medium text-zinc-100">{d.sector}</h3>
+        <p className="text-sm leading-relaxed text-zinc-300">{d.desc}</p>
+      </div>
+    </FadeUpItem>
   );
 }

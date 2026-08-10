@@ -39,19 +39,17 @@ export default function CsiHero() {
       <div className="relative z-10 lg:grid lg:grid-cols-2 lg:gap-12">
         <div>
           <FadeUpList tag="div">
-            {/* Ukurannya turun satu tingkat di layar PENDEK, dan patokannya
-                TINGGI viewport — bukan lebar, yang biasanya dipakai. Alasannya
-                aritmetika, bukan selera: hero mengambil 70dvh, jadi judul ini
-                hanya kebagian 30dvh. Di 640px tinggi itu = 192px, sementara
-                judul 4 baris `text-5xl` juga persis 192px — "Intelligence."
-                terpotong separuh, dan tak ada padding yang bisa dikorbankan.
-                `text-4xl` (4 × 40px = 160px) muat dengan sisa napas.
+            {/* `text-4xl` di HP menahan DUA hal sekaligus — kalau mau
+                menaikkannya lagi ke `text-5xl`, ukur keduanya:
 
-                Ambangnya 700px dipilih karena di 393×852 (iPhone 15, perangkat
-                acuan) `text-5xl` masih muat lega — jangan mengecilkannya di
-                sana. Kalau porsi hero 70dvh diubah, hitung ulang: judul harus
-                muat dalam (100 − porsi)dvh dikurangi `pt-6`. */}
-            <h2 className="text-5xl font-semibold tracking-tight text-zinc-100 [@media(max-height:700px)]:text-4xl sm:text-7xl lg:text-8xl">
+                1. LEBAR. Di ~360px "Intelligence." pada 48px meluber keluar
+                   layar, dan itu membuat SELURUH dokumen bisa digeser ke
+                   samping (f30614f). `break-words` jaring pengaman terakhirnya.
+                2. TINGGI. Hero 3D mengambil 70dvh, jadi judul ini cuma
+                   kebagian 30dvh. Di layar setinggi 640px itu = 192px, dan
+                   judul 4 baris pada 48px juga persis 192px — "Intelligence."
+                   terpotong separuh. Pada 36px ia muat dengan sisa napas. */}
+            <h2 className="break-words text-4xl font-semibold tracking-tight text-zinc-100 sm:text-7xl lg:text-8xl">
               {HEADING_LINES.map((line, lineIdx) => (
                 <span key={lineIdx} className="block">
                   {line.map((word) => (
