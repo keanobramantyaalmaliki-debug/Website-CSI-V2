@@ -11,6 +11,12 @@ import {
   type RoomKey,
   type Vec3,
 } from "@/lib/store/sceneStore";
+import {
+  applyParallax,
+  dampTowards,
+  usePointerParallax,
+  TAU as PARALLAX_TAU,
+} from "./mouseParallax";
 
 const bl = (x: number, y: number, z: number) => new Vector3(x, z, -y);
 
@@ -164,17 +170,36 @@ export default function CameraController() {
   const fromTgt        = useRef(new Vector3());
   const toPos          = useRef(new Vector3());
   const toTgt          = useRef(new Vector3());
+  /**
+   * Pose "resmi" kamera: hasil tween ruangan, TANPA geseran parallax.
+   *
+   * Ini yang jadi sumber kebenaran, bukan `camera.position` — sejak parallax
+   * ada, posisi kamera yang sebenarnya selalu basePos + geseran kursor.
+   * Memulai tween dari `camera.position` akan ikut membawa geseran itu masuk
+   * ke titik awal, lalu parallax ditambahkan sekali lagi di atasnya (dobel),
+   * dan setiap perpindahan ruangan mewariskan sisa geseran ke ruangan
+   * berikutnya.
+   */
+  const basePos        = useRef(new Vector3());
   const lookTarget     = useRef(new Vector3());
+  /** Titik pandang setelah digeser parallax — ini yang masuk ke lookAt(). */
+  const aimTarget      = useRef(new Vector3());
+  /** Posisi kursor yang sudah dihaluskan, −1…1. */
+  const smooth         = useRef({ x: 0, y: 0 });
   const fromUp         = useRef(new Vector3(0, 1, 0));
   const toUp           = useRef(new Vector3(0, 1, 0));
   const fromFov        = useRef(DEFAULT_FOV);
   const toFov          = useRef(DEFAULT_FOV);
 
+  const pointer = usePointerParallax();
+
   // snap to start on mount
   useEffect(() => {
     const v = VIEWS[START_ROOM];
+    basePos.current.copy(v.pos);
     camera.position.copy(v.pos);
     lookTarget.current.copy(v.tgt);
+    aimTarget.current.copy(v.tgt);
     camera.lookAt(v.tgt);
   }, [camera]);
 
@@ -184,7 +209,8 @@ export default function CameraController() {
       if (animating.current) return;
       if (name === currentRoomRef.current) return;
 
-      fromPos.current.copy(camera.position);
+      // Dari basePos, BUKAN camera.position — lihat catatan di basePos.
+      fromPos.current.copy(basePos.current);
       fromTgt.current.copy(lookTarget.current);
       fromUp.current.copy(camera.up);
       toPos.current.copy(VIEWS[name].pos);
@@ -218,7 +244,7 @@ export default function CameraController() {
    *  penjelasan di BilliardView.up. */
   const goToView = useCallback(
     (pos: Vec3, tgt: Vec3, up?: Vec3, fov?: number) => {
-      fromPos.current.copy(camera.position);
+      fromPos.current.copy(basePos.current);
       fromTgt.current.copy(lookTarget.current);
       fromUp.current.copy(camera.up);
       toPos.current.set(pos[0], pos[1], pos[2]);
@@ -270,26 +296,67 @@ export default function CameraController() {
     if (key && !VIEWS[key].disabled && key !== START_ROOM) {
       currentRoomRef.current = key;
       setCurrentRoom(key);
+      basePos.current.copy(VIEWS[key].pos);
       camera.position.copy(VIEWS[key].pos);
       lookTarget.current.copy(VIEWS[key].tgt);
+      aimTarget.current.copy(VIEWS[key].tgt);
       camera.lookAt(VIEWS[key].tgt);
     }
   }, [camera, setCurrentRoom]);
 
-  useFrame(() => {
-    if (!animating.current) return;
-    const t = Math.min((performance.now() - tweenStart.current) / TWEEN_MS, 1);
-    const e = ease(t);
-    camera.position.lerpVectors(fromPos.current, toPos.current, e);
-    lookTarget.current.lerpVectors(fromTgt.current, toTgt.current, e);
-    // up ikut di-tween supaya perpindahan ke/dari pandangan atas tidak
-    // "menjentik" di frame terakhir.
-    camera.up.lerpVectors(fromUp.current, toUp.current, e).normalize();
-    camera.lookAt(lookTarget.current);
-    if (fromFov.current !== toFov.current) {
-      setFov(camera, fromFov.current + (toFov.current - fromFov.current) * e);
+  useFrame((_, delta) => {
+    const tweening = animating.current;
+
+    if (tweening) {
+      const t = Math.min((performance.now() - tweenStart.current) / TWEEN_MS, 1);
+      const e = ease(t);
+      basePos.current.lerpVectors(fromPos.current, toPos.current, e);
+      lookTarget.current.lerpVectors(fromTgt.current, toTgt.current, e);
+      // up ikut di-tween supaya perpindahan ke/dari pandangan atas tidak
+      // "menjentik" di frame terakhir.
+      camera.up.lerpVectors(fromUp.current, toUp.current, e).normalize();
+      if (fromFov.current !== toFov.current) {
+        setFov(camera, fromFov.current + (toFov.current - fromFov.current) * e);
+      }
+      if (t >= 1) animating.current = false;
     }
-    if (t >= 1) animating.current = false;
+
+    // ── Parallax kursor ──────────────────────────────────────────────────
+    // Dimatikan selama minigame billiard, dan itu bukan sekadar selera:
+    // membidik memakai posisi bola putih yang DIPROYEKSIKAN ke piksel layar
+    // (BilliardGame.tsx), jadi kamera yang bergoyang menggeser titik pusat
+    // bidikan sementara kursornya diam. Menuju 0 lewat peredam yang sama,
+    // bukan dipotong mendadak, supaya masuk/keluar meja tetap mulus.
+    const idleAim = useSceneStore.getState().billiardActive;
+    const wantX = idleAim ? 0 : pointer.current.x;
+    const wantY = idleAim ? 0 : pointer.current.y;
+
+    const prevX = smooth.current.x;
+    const prevY = smooth.current.y;
+    let nx = dampTowards(prevX, wantX, PARALLAX_TAU, delta);
+    let ny = dampTowards(prevY, wantY, PARALLAX_TAU, delta);
+    // Pendekatan eksponensial tidak pernah benar-benar SAMPAI. Tanpa jepitan
+    // ini kamera menulis ulang posisinya tiap frame selamanya demi geseran
+    // sepersejuta milimeter — dan early-out di bawah tidak akan pernah kena.
+    if (Math.abs(nx - wantX) < 1e-4) nx = wantX;
+    if (Math.abs(ny - wantY) < 1e-4) ny = wantY;
+    smooth.current.x = nx;
+    smooth.current.y = ny;
+
+    // Kamera diam DAN kursor diam → tidak ada yang perlu ditulis. Ini yang
+    // menjaga perilaku lama untuk pengunjung yang menyalakan reduced-motion:
+    // pointer-nya tak pernah bergerak, jadi blok di bawah tak pernah jalan.
+    if (!tweening && nx === prevX && ny === prevY) return;
+
+    applyParallax(
+      camera,
+      basePos.current,
+      lookTarget.current,
+      aimTarget.current,
+      nx,
+      ny,
+    );
+    camera.lookAt(aimTarget.current);
   });
 
   return null;
