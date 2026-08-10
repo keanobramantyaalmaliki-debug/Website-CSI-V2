@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useLayoutEffect, useEffect, useRef } from "react";
+import { useMemo, useLayoutEffect, useEffect, useRef, useCallback } from "react";
 import { useReducedMotion } from "motion/react";
 import { useGLTF, useAnimations, useTexture, Bvh } from "@react-three/drei";
 import { useThree, useFrame, type ThreeEvent } from "@react-three/fiber";
@@ -12,6 +12,7 @@ import { billiardView } from "./CameraController";
 import { prepareLampFade } from "./billiard/lamps";
 import { prepareRevealSweep } from "./revealSweep";
 import CharacterGlitch from "./CharacterGlitch";
+import HoverScan, { hoverScanTargetOf, setHoverScanTarget } from "./HoverScan";
 import { applyScreens, SCREENS } from "./screens";
 import {
   getScreenVideo,
@@ -620,6 +621,73 @@ export default function Office() {
   const setTableRotated = useSceneStore((s) => s.setTableRotated);
   const coarse = useCoarsePointer();
 
+  // ── Hover: pemindaian dither + label pengekor kursor ────────────────────
+  //
+  // onPointerMove, BUKAN onPointerOver/Out — dan ini bukan selera. Handler-nya
+  // menempel di <primitive> akar, jadi bagi R3F SELURUH kantor adalah satu
+  // event object: over/out hanya menyala di batas kantor terhadap langit, tak
+  // pernah saat kursor menyeberang dari lantai ke meja. Yang membedakan
+  // keduanya cuma `e.object` (mesh yang benar-benar kena ray), dan itu hanya
+  // tersedia lewat move.
+  //
+  // Tidak ada ongkos raycast tambahan: primitive ini sudah memegang onClick,
+  // jadi ia sudah masuk daftar interaksi R3F dan sudah di-raycast tiap gerakan
+  // pointer. Yang bertambah cuma penyusuran rantai induk di JS.
+  const setHoveredLabel = useSceneStore((s) => s.setHoveredLabel);
+  /** Label yang sedang KITA pasang, atau null. Ref, bukan state: nilainya
+   *  berubah saat kursor menyeberangi tepi meja dan tidak ada satu pun
+   *  render React yang perlu ikut berubah karenanya. */
+  const hoverLabelRef = useRef<string | null>(null);
+
+  const clearHover = useCallback(() => {
+    setHoverScanTarget(null);
+    // Kosongkan HANYA kalau label yang tampil memang milik kita — penjaga yang
+    // sama dengan Waypoints.tsx:401, karena kursor bisa menyeberang langsung
+    // dari meja ke waypoint dan enter(waypoint) tiba lebih dulu.
+    if (
+      hoverLabelRef.current !== null &&
+      useSceneStore.getState().hoveredLabel === hoverLabelRef.current
+    ) {
+      setHoveredLabel(null);
+      document.body.style.cursor = "";
+    }
+    hoverLabelRef.current = null;
+  }, [setHoveredLabel]);
+
+  const onPointerMove = (e: ThreeEvent<PointerEvent>) => {
+    if (coarse || billiardActive) return;
+    // ⚠️ Keputusan diambil dari SELURUH sinar (e.intersections), bukan dari
+    // e.object milik panggilan ini — dan ini bug yang sudah terjadi sekali
+    // (10 Agu). R3F memanggil handler SEKALI PER PERPOTONGAN: satu gerakan
+    // mouse di atas meja menghasilkan rentetan
+    //   MG_Lounge_M_PoolTable_Body → MG_Lounge_M_Alu_Trim → Rug_Lounge009
+    //   → MG_Office_M_Floor
+    // (terverifikasi lewat penghitung sementara). Panggilan pertama menyalakan
+    // hover, tiga sisanya — yang bukan meja — langsung memadamkannya lagi,
+    // sehingga efeknya tidak pernah terlihat sama sekali.
+    //
+    // Membaca seluruh daftar juga membuat gerbangnya SAMA PERSIS dengan
+    // onClick di bawah, yang lolos ke meja lewat stopPropagation begitu
+    // menemukannya di kedalaman mana pun.
+    let t: ReturnType<typeof hoverScanTargetOf> = null;
+    for (const hit of e.intersections) {
+      t = hoverScanTargetOf(hit.object);
+      if (t) break;
+    }
+    if (!t) {
+      clearHover();
+      return;
+    }
+    // Sudah menyala untuk target ini: pointermove menyala puluhan kali per
+    // detik, jadi jangan menulis ke store tiap kalinya — itu render React per
+    // gerakan mouse, persis yang dihindari di seluruh scene ini.
+    if (hoverLabelRef.current === t.label) return;
+    hoverLabelRef.current = t.label;
+    setHoverScanTarget(t.id);
+    setHoveredLabel(t.label);
+    document.body.style.cursor = "pointer";
+  };
+
   const onClick = (e: ThreeEvent<MouseEvent>) => {
     // Di perangkat sentuh minigame dimatikan bersama waypoint (INVARIANTS.md
     // §6): kantor tampil sebagai pemandangan saja. Dijaga DI SINI, bukan cuma
@@ -627,25 +695,37 @@ export default function Office() {
     // menyisakan pemain terkunci di pandangan atas meja tanpa tombol keluar.
     if (coarse) return;
     if (billiardActive) return;
-    let o: THREE.Object3D | null = e.object;
-    while (o) {
-      if (o.name.includes("PoolTable")) {
-        e.stopPropagation();
-        const v = billiardView(size.width / size.height);
-        enterBilliard();
-        setTableRotated(v.rotated);
-        goToView?.(v.pos, v.tgt, v.up, v.fov);
-        return;
-      }
-      o = o.parent;
-    }
+    // Pengecekan nama dipinjam dari HoverScan supaya "apa yang berkilau saat
+    // di-hover" dan "apa yang bereaksi saat diklik" mustahil berbeda — dulu
+    // string "PoolTable" ditulis di sini sendiri.
+    if (!hoverScanTargetOf(e.object)) return;
+    e.stopPropagation();
+    clearHover();
+    const v = billiardView(size.width / size.height);
+    enterBilliard();
+    setTableRotated(v.rotated);
+    goToView?.(v.pos, v.tgt, v.up, v.fov);
   };
+
+  // Jaring pengaman: minigame dibuka selagi kursor masih di atas meja, atau
+  // komponennya di-unmount. Tanpa ini labelnya menggantung di layar selamanya
+  // (bug yang sudah pernah dibayar di Waypoints.tsx:416). Kursor yang keluar
+  // dari kantor ke langit ditangani onPointerOut di <primitive>.
+  useEffect(() => {
+    if (billiardActive) clearHover();
+  }, [billiardActive, clearHover]);
+  useEffect(() => () => clearHover(), [clearHover]);
 
   // Bvh mempercepat raycast di 291 objek — dipakai nanti untuk klik pintu (B2).
   return (
     <>
       <Bvh firstHitOnly>
-        <primitive object={prepared} onClick={onClick} />
+        <primitive
+          object={prepared}
+          onClick={onClick}
+          onPointerMove={onPointerMove}
+          onPointerOut={clearHover}
+        />
       </Bvh>
       <ScreenVideoGate />
       {/* Glitch karakter saat idle. HARUS anak Office, bukan dipindah ke
@@ -654,6 +734,11 @@ export default function Office() {
           jaminan urutannya justru datang dari React — layout effect ANAK
           berjalan sebelum layout effect induk. Rincian di CharacterGlitch.tsx. */}
       <CharacterGlitch scene={prepared} />
+      {/* Pemindaian dither saat hover. Kontrak urutan yang SAMA dengan
+          CharacterGlitch di atas — jangan dipindah ke Scene.tsx. Tidak
+          di-mount di perangkat sentuh: tidak ada hover di sana (INVARIANTS §6),
+          jadi satu program shader tambahan itu murni ongkos. */}
+      {!coarse && <HoverScan scene={prepared} />}
     </>
   );
 }

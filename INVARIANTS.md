@@ -133,11 +133,30 @@ selalu ada jalan menuju `t >= 1`. Yang ada sekarang punya batas 3 detik di
 `this.onBeforeCompile.toString()`. Selama semua material memakai **referensi
 fungsi yang sama**, WebGL cuma mengompilasi satu program tambahan.
 
-Kalau nanti ada patch shader **kedua** (efek baru di scene yang sama), keduanya
-tidak boleh saling menimpa `onBeforeCompile` secara buta — `revealSweep.ts`
-sudah menyimpan yang sebelumnya di `Map` dan mengembalikannya saat `dispose()`.
-Ikuti pola itu. Menimpanya buta akan menghapus patch orang lain diam-diam, dan
-gejalanya muncul sebagai "efek X tiba-tiba hilang" berbulan-bulan kemudian.
+Patch itu sekarang ada **tiga**, dan ketiganya berbagi material yang sama:
+
+| Patch | Berkas | Sasaran |
+|---|---|---|
+| Sapuan reveal | `revealSweep.ts` | semua `MeshStandardMaterial` |
+| Glitch idle | `CharacterGlitch.tsx` | material 5 `SkinnedMesh` |
+| Selubung hover | `HoverScan.tsx` | material benda interaktif (meja billiard) |
+
+Tidak boleh ada yang menimpa `onBeforeCompile` secara **buta**: ketiganya
+menyimpan yang sebelumnya (`Map`/`WeakMap`) dan mengembalikannya saat
+`dispose()`, dan yang dua terakhir hanya melepas kalau slot-nya **masih milik
+mereka**. Menimpa buta akan menghapus patch orang lain diam-diam, dan gejalanya
+muncul sebagai "efek X tiba-tiba hilang" berbulan-bulan kemudian.
+
+**Kontrak urutan.** `CharacterGlitch` dan `HoverScan` **wajib jadi anak
+`Office`**, bukan saudaranya di `Scene.tsx`. Sapuan reveal dipasang di layout
+effect `Office` sendiri, dan yang membuat urutannya benar adalah React: layout
+effect **anak** berjalan sebelum layout effect induk, jadi sapuan menyimpan
+kedua patch itu sebagai "previous" dan memulihkannya saat selesai. Dipindah jadi
+saudara, keduanya ditelan sapuan tanpa dikembalikan.
+
+Uniform tiap patch juga **wajib module-level**, bukan dibuat di dalam fungsi
+prepare — lihat catatan panjang "sweep hilang di load pertama" (7 Agu) di
+`revealSweep.ts`.
 
 ---
 

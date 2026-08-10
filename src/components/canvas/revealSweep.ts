@@ -170,6 +170,13 @@ export {
   X_TO as REVEAL_X_TO,
   BAND as REVEAL_BAND,
   uProgress as revealProgress,
+  /**
+   * Silver brand, diekspor supaya efek dither lain (HoverScan) memakai warna
+   * yang SAMA PERSIS alih-alih mengetik ulang heksanya. Kalau warna ini
+   * berubah, seluruh bahasa dither ikut berubah bersamaan — itu yang
+   * diinginkan.
+   */
+  EDGE_COLOR as REVEAL_EDGE_COLOR,
 };
 
 export function prepareRevealSweep(scene: Object3D): RevealSweep | null {

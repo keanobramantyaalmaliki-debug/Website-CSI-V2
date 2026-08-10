@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
+import { useReducedMotion } from "motion/react";
 import { Vector3, type Camera, type PerspectiveCamera } from "three";
 import {
   useSceneStore,
@@ -17,6 +18,7 @@ import {
   usePointerParallax,
   TAU as PARALLAX_TAU,
 } from "./mouseParallax";
+import { driveTear, resetTear } from "./transitionTear";
 
 const bl = (x: number, y: number, z: number) => new Vector3(x, z, -y);
 
@@ -190,8 +192,16 @@ export default function CameraController() {
   const toUp           = useRef(new Vector3(0, 1, 0));
   const fromFov        = useRef(DEFAULT_FOV);
   const toFov          = useRef(DEFAULT_FOV);
+  /** basePos frame sebelumnya — satu-satunya sumber laju kamera untuk sobekan
+   *  transisi. Dari basePos, BUKAN camera.position: geseran parallax kursor
+   *  akan terbaca sebagai laju dan merobek layar saat orang menggerakkan mouse
+   *  di ruangan yang diam. */
+  const prevBase       = useRef(new Vector3());
 
   const pointer = usePointerParallax();
+  const reduced = useReducedMotion();
+
+  useEffect(() => resetTear, []);
 
   // snap to start on mount
   useEffect(() => {
@@ -320,6 +330,28 @@ export default function CameraController() {
       }
       if (t >= 1) animating.current = false;
     }
+
+    // ── Sobekan transisi ─────────────────────────────────────────────────
+    // Amplitudonya digerakkan LAJU kamera, bukan waktu tween — alasan lengkap
+    // (pulih sendiri, sebanding jarak, ikut semua pemanggil goToView) ada di
+    // kepala transitionTear.tsx.
+    //
+    // Letaknya DI SINI, sebelum blok parallax, dengan sengaja: early-out di
+    // bawah ("kamera diam DAN kursor diam") akan melewati penulisan uniform,
+    // dan uniform yang tidak pernah ditulis lagi berarti mode paksa ?tear=1
+    // tak punya tempat berpijak.
+    //
+    // Saat tidak tween, prevBase tetap disamakan tapi lajunya dilaporkan 0.
+    // Itu yang membuat SNAP kamera (mount, deep-link dari URL) tidak terbaca
+    // sebagai gerakan secepat kilat dan merobek layar di frame pertama.
+    driveTear(
+      tweening && delta > 0
+        ? prevBase.current.distanceTo(basePos.current) / delta
+        : 0,
+      performance.now(),
+      !!reduced,
+    );
+    prevBase.current.copy(basePos.current);
 
     // ── Parallax kursor ──────────────────────────────────────────────────
     // Dimatikan selama minigame billiard, dan itu bukan sekadar selera:

@@ -347,7 +347,7 @@ function Waypoint({
 }) {
   const [hovered, setHovered] = useState(false);
   const mesh = useRef<Mesh>(null);
-  const setHoveredWaypoint = useSceneStore((s) => s.setHoveredWaypoint);
+  const setHoveredLabel = useSceneStore((s) => s.setHoveredLabel);
 
   /** Teks label waypoint ini — dipakai sebagai identitasnya di store. */
   const text = def.label ?? LABELS[def.to];
@@ -389,7 +389,7 @@ function Waypoint({
   const enter = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     setHovered(true);
-    setHoveredWaypoint(text);
+    setHoveredLabel(text);
     document.body.style.cursor = "pointer";
   };
   const leave = () => {
@@ -398,8 +398,8 @@ function Waypoint({
     // Saat kursor berpindah langsung dari waypoint A ke B yang bersinggungan,
     // R3F mengirim enter(B) SEBELUM leave(A); tanpa penjaga ini leave(A) akan
     // menghapus label B yang baru saja menyala dan labelnya berkedip hilang.
-    if (useSceneStore.getState().hoveredWaypoint === text) {
-      setHoveredWaypoint(null);
+    if (useSceneStore.getState().hoveredLabel === text) {
+      setHoveredLabel(null);
     }
     document.body.style.cursor = "";
   };
@@ -415,8 +415,8 @@ function Waypoint({
   // dipanggil — labelnya akan menggantung di layar selamanya.
   useEffect(() => {
     return () => {
-      if (useSceneStore.getState().hoveredWaypoint === text) {
-        useSceneStore.getState().setHoveredWaypoint(null);
+      if (useSceneStore.getState().hoveredLabel === text) {
+        useSceneStore.getState().setHoveredLabel(null);
       }
       document.body.style.cursor = "";
     };

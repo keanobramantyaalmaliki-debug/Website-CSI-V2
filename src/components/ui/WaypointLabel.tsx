@@ -4,12 +4,16 @@ import { useEffect, useRef } from "react";
 import { useSceneStore } from "@/lib/store/sceneStore";
 
 /**
- * Label waypoint yang MENGEKOR KURSOR.
+ * Label benda interaktif yang MENGEKOR KURSOR.
  *
- * Saat kursor menyentuh waypoint, nama ruangan muncul di samping kursor dan
- * mengikutinya dengan sedikit tertinggal — seperti ditarik tali, bukan
- * dipaku. Menggantikan label <Html> yang dulu menempel di tengah bidang
+ * Saat kursor menyentuh sesuatu yang bisa diklik, namanya muncul di samping
+ * kursor dan mengikutinya dengan sedikit tertinggal — seperti ditarik tali,
+ * bukan dipaku. Menggantikan label <Html> yang dulu menempel di tengah bidang
  * waypoint (Waypoints.tsx, sampai 31 Jul).
+ *
+ * Penulisnya bukan cuma waypoint: sejak 10 Agu 2026 meja billiard memakai
+ * overlay yang sama lewat `hoveredLabel` (HoverScan.tsx). Nama berkasnya
+ * dibiarkan supaya riwayat git-nya tidak putus.
  *
  * ── Kenapa di LUAR Canvas, bukan <Html> dari drei ──────────────────────────
  *
@@ -48,7 +52,7 @@ const OFFSET_X = 18;
 const OFFSET_Y = 10;
 
 export default function WaypointLabel() {
-  const label = useSceneStore((s) => s.hoveredWaypoint);
+  const label = useSceneStore((s) => s.hoveredLabel);
   const box = useRef<HTMLDivElement>(null);
 
   /** Titik tujuan (kursor) dan titik gambar (label) dalam piksel layar. */

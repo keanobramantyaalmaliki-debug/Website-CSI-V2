@@ -737,17 +737,18 @@ export default function MaintenanceHologram() {
 
   // Interaksi dicabut selagi kursor masih di atasnya (pindah ruangan lewat
   // navbar, billiard dibuka): tanpa ini hover menggantung dan teksnya melayang
-  // selamanya. Kursor hanya dipulihkan kalau bukan waypoint yang memegangnya.
+  // selamanya. Kursor hanya dipulihkan kalau tidak ada benda interaktif lain
+  // (waypoint, meja billiard) yang sedang memegangnya.
   useEffect(() => {
     if (interactive) return;
     setHovered(false);
-    if (!useSceneStore.getState().hoveredWaypoint) {
+    if (!useSceneStore.getState().hoveredLabel) {
       document.body.style.cursor = "";
     }
   }, [interactive]);
   useEffect(
     () => () => {
-      if (!useSceneStore.getState().hoveredWaypoint) {
+      if (!useSceneStore.getState().hoveredLabel) {
         document.body.style.cursor = "";
       }
     },
@@ -761,18 +762,18 @@ export default function MaintenanceHologram() {
   const leave = () => {
     setHovered(false);
     // Penjaga yang sama dengan Waypoints.tsx: saat kursor menyeberang langsung
-    // ke waypoint, enter(waypoint) bisa mendahului leave(panel) — jangan hapus
-    // kursor pointer yang baru saja dipasang pihak lain.
-    if (!useSceneStore.getState().hoveredWaypoint) {
+    // ke benda interaktif lain, enter-nya bisa mendahului leave(panel) — jangan
+    // hapus kursor pointer yang baru saja dipasang pihak itu.
+    if (!useSceneStore.getState().hoveredLabel) {
       document.body.style.cursor = "";
     }
   };
   const click = () => {
     // Mengalah pada waypoint: kalau ray yang sama juga mengenai waypoint
     // (panel ini berdiri di jalur pandang beberapa di antaranya), enter
-    // waypoint sudah menyalakan hoveredWaypoint sebelum klik tiba — biarkan
+    // waypoint sudah menyalakan hoveredLabel sebelum klik tiba — biarkan
     // klik itu murni jadi navigasi, jangan ditumpangi glitch.
-    if (reduced || useSceneStore.getState().hoveredWaypoint) return;
+    if (reduced || useSceneStore.getState().hoveredLabel) return;
     clickAt.current = performance.now();
   };
 

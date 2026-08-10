@@ -107,16 +107,21 @@ interface SceneStore {
   registerGoTo: (fn: (room: RoomKey) => void) => void;
 
   /**
-   * Teks label waypoint yang sedang di-hover, atau null kalau tidak ada.
+   * Teks label benda interaktif yang sedang di-hover, atau null kalau tidak ada.
    *
-   * Jembatan dari dalam Canvas (Waypoints) ke overlay DOM di luar Canvas
-   * (ui/WaypointLabel) — pola yang sama dengan `cueScreen`, tapi TANPA ongkos
-   * per-frame: nilainya cuma berubah saat kursor masuk/keluar waypoint, bukan
-   * tiap frame. Posisi kursornya sendiri TIDAK lewat sini; overlay melacaknya
-   * sendiri lewat ref supaya tidak ada render React per gerakan mouse.
+   * Jembatan dari dalam Canvas ke overlay DOM di luar Canvas (ui/WaypointLabel)
+   * — pola yang sama dengan `cueScreen`, tapi TANPA ongkos per-frame: nilainya
+   * cuma berubah saat kursor masuk/keluar benda, bukan tiap frame. Posisi
+   * kursornya sendiri TIDAK lewat sini; overlay melacaknya sendiri lewat ref
+   * supaya tidak ada render React per gerakan mouse.
+   *
+   * Dulu bernama `hoveredWaypoint`. Diganti 10 Agu 2026 saat meja billiard ikut
+   * memakai label yang sama (HoverScan): penulisnya bukan cuma waypoint lagi,
+   * dan penjaga kursor di MaintenanceHologram membacanya sebagai "apakah ADA
+   * label hover yang menyala?" — pertanyaan yang memang tidak spesifik waypoint.
    */
-  hoveredWaypoint: string | null;
-  setHoveredWaypoint: (label: string | null) => void;
+  hoveredLabel: string | null;
+  setHoveredLabel: (label: string | null) => void;
 
   /** Tween kamera ke posisi bebas (bukan preset ruangan) — dipakai minigame
    *  billiard supaya bisa ikut memakai mesin tween 1400ms yang sudah ada.
@@ -181,8 +186,8 @@ export const useSceneStore = create<SceneStore>((set) => ({
   goTo: null,
   registerGoTo: (fn) => set({ goTo: fn }),
 
-  hoveredWaypoint: null,
-  setHoveredWaypoint: (hoveredWaypoint) => set({ hoveredWaypoint }),
+  hoveredLabel: null,
+  setHoveredLabel: (hoveredLabel) => set({ hoveredLabel }),
 
   goToView: null,
   registerGoToView: (fn) => set({ goToView: fn }),

@@ -6,8 +6,10 @@ import { ACESFilmicToneMapping } from "three";
 import { Suspense } from "react";
 import Office from "./Office";
 import MaintenanceHologram from "./MaintenanceHologram";
+import Dust from "./Dust";
 import SceneEnvironment from "./SceneEnvironment";
 import CameraController, { VIEWS } from "./CameraController";
+import TransitionTear from "./transitionTear";
 import { START_ROOM } from "@/lib/store/sceneStore";
 import BilliardLazy from "./billiard/BilliardLazy";
 import Waypoints from "./Waypoints";
@@ -132,6 +134,18 @@ export default function Scene() {
             Di luar Suspense hologramnya menyala di ruang kosong selama GLB
             masih diunduh. */}
         <MaintenanceHologram />
+        {/* Debu melayang. HARUS di dalam Suspense yang sama dengan <Office/>
+            dengan alasan yang sama seperti hologram: ia menumpang uniform
+            sapuan reveal, dan uniform itu baru digerakkan setelah GLB dimuat.
+            Di luar Suspense, debunya sudah beterbangan di ruang kosong selama
+            GLB masih diunduh.
+
+            Tapi TIDAK perlu jadi anak <Office/> seperti CharacterGlitch:
+            kontrak urutan di sana ada karena glitch menambal onBeforeCompile
+            material GLB dan harus terpasang sebelum sapuan menimpanya. Debu
+            punya ShaderMaterial sendiri dan tidak menyentuh satu pun material
+            kantor, jadi tidak ada urutan yang bisa salah. */}
+        <Dust />
         {/* Kerucut cahaya volumetrik (LightCone/LightCones) DIHAPUS 30 Jul.
             Kalau nanti dibuat lagi, dua catatan yang mahal didapat:
 
@@ -249,6 +263,28 @@ export default function Scene() {
           halfRes
           depthAwareUpsampling
         />
+        {/* ── Sobekan transisi ────────────────────────────────────────────────
+            Irisan layar tergeser saat kamera terbang paling cepat antar
+            ruangan, pulih sendiri saat tiba. Amplitudonya digerakkan LAJU
+            kamera (CameraController), jadi nol di luar perpindahan.
+
+            ⚠️ HARUS EFEK PERTAMA — sebelum <Bloom>, <HueSaturation>, dan
+            <BrightnessContrast>. Bukan selera, mekanis: efek-efek ini digabung
+            postprocessing jadi SATU fragment shader, dan di dalamnya satu-
+            satunya tekstur yang bisa di-sample pada UV yang digeser adalah
+            `inputBuffer` — gambar MASUKAN pass. Ditaruh belakangan, pita yang
+            tergeser mengambil piksel yang belum di-grade sementara pita yang
+            diam sudah, dan hasilnya belang warna antar pita.
+
+            Ditaruh di sini, grade per-piksel di bawah kena rata ke pita yang
+            tergeser maupun yang diam, dan Bloom tidak tersentuh sama sekali:
+            piramida blur-nya dirender dari inputBuffer di pass-nya sendiri
+            SEBELUM shader gabungan jalan. Kalibrasi ambang 0,95 di seluruh
+            berkas ini tetap berlaku persis — efek ini tidak bisa mengangkat
+            satu piksel pun melewatinya.
+
+            Nol pass tambahan. Saat mati: satu cabang uniform lalu keluar. */}
+        <TransitionTear />
         {/* Bloom BUKAN sekadar hiasan di scene ini: LED strip lantai & bohlam
             mengandalkannya untuk terlihat menyala. Tanpa bloom sama sekali, LED
             strip cuma garis putih tipis dan ruangan terasa jauh lebih mati.

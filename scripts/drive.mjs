@@ -14,6 +14,7 @@
  *
  * Format langkah.json — array, dijalankan berurutan:
  *   {"t":"emulate","w":393,"h":852,"dpr":3,"mobile":true}
+ *   {"t":"media","features":{"prefers-reduced-motion":"reduce"}}
  *   {"t":"scroll","y":600}
  *   {"t":"wait","ms":12000}
  *   {"t":"click","x":720,"y":450}
@@ -191,6 +192,21 @@ async function main() {
       for (const type of ["keyDown", "keyUp"]) {
         await send("Input.dispatchKeyEvent", { type, key: s.key });
       }
+    } else if (s.t === "media") {
+      // Paksa media feature — dipakai untuk menguji cabang
+      // prefers-reduced-motion, yang TIDAK bisa dipalsukan dari dalam halaman
+      // (komponen membacanya lewat matchMedia saat layout effect, jadi
+      // menimpanya dari `eval` sudah terlambat dan tidak terbawa ke React).
+      //
+      // ⚠️ Taruh SEBELUM langkah `wait` pemuatan pertama: cabangnya dipilih
+      // sekali saat komponen dipasang, bukan dibaca ulang tiap frame.
+      await send("Emulation.setEmulatedMedia", {
+        features: Object.entries(s.features ?? {}).map(([name, value]) => ({
+          name,
+          value,
+        })),
+      });
+      console.log(`media ${JSON.stringify(s.features)}`);
     } else if (s.t === "eval") {
       const m = await send("Runtime.evaluate", {
         expression: s.expr,
