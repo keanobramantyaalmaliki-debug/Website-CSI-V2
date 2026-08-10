@@ -4,6 +4,7 @@ import { lazy, Suspense, useEffect, useRef } from "react";
 import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { useSceneStore } from "@/lib/store/sceneStore";
 import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
+import { useNarrowViewport } from "@/lib/hooks/useNarrowViewport";
 import ChunkBoundary from "@/components/ChunkBoundary";
 
 const Scene = lazy(() => import("@/components/canvas/Scene"));
@@ -68,6 +69,7 @@ export default function Hero() {
   const setSceneReady = useSceneStore((s) => s.setSceneReady);
   const reduced = useReducedMotion();
   const coarse = useCoarsePointer();
+  const narrow = useNarrowViewport();
 
   /**
    * ⚠️ SEMUA HOOK WAJIB DI ATAS `if (reduced) return` DI BAWAH.
@@ -83,9 +85,12 @@ export default function Hero() {
    * menangkapnya; `bun run test` tidak. Jalankan lint sebelum commit.
    */
 
-  // heroInView diikat ke viewport sticky (div h-dvh di dalam), BUKAN ke track
-  // 180dvh-nya. Transparansi Navbar & unmount Waypoints bergantung pada kapan
-  // 3D benar-benar terlihat di layar, bukan kapan track-nya tersentuh.
+  // heroInView diikat ke VIEWPORT 3D (div di dalam), BUKAN ke track-nya.
+  // Transparansi Navbar, unmount Waypoints, dan gerbang frameloop
+  // (INVARIANTS.md §7) bergantung pada kapan 3D benar-benar terlihat di layar,
+  // bukan kapan track-nya tersentuh — dan di layar lebar keduanya beda jauh:
+  // track 180dvh, viewport-nya cuma 100dvh yang dipaku di dalamnya. Di HP
+  // viewport = track (tanpa pin), jadi di sana perbedaannya memang nihil.
   useEffect(() => {
     const el = reduced ? heroTrackRef.current : stickyRef.current;
     if (!el) return;
@@ -119,6 +124,18 @@ export default function Hero() {
   // di pembungkusnya — kamera tidak disentuh, dan transform tidak membangunkan
   // frameloop R3F.
   //
+  // ⚠️ HANYA DI LAYAR LEBAR. Surut itu melayani pin: 3D diam di layar sementara
+  // konten meluncur menutupinya, jadi ia harus memudar supaya tidak menabrak
+  // konten. Di HP tidak ada pin sama sekali (lihat blok besar di bawah), jadi
+  // tidak ada yang perlu disurutkan — dan memasangnya di sana justru MERUSAK,
+  // dua-duanya terlaporkan:
+  //
+  //   1. `scale: 0.96` mengecilkan canvas di tempat → muncul lajur gelap di
+  //      tepi kiri & kanan. Inilah "3D kepotong samping kiri kanan".
+  //   2. Menganimasikan opacity+scale sebuah layer WebGL seukuran layar pada
+  //      setiap frame scroll adalah pekerjaan compositing termahal yang ada di
+  //      halaman ini. Di HP itu terasa sebagai scroll "tersendat".
+  //
   // ⚠️ Rentangnya HARUS selesai sebelum anak sticky-nya lepas dari pin, bukan
   // sebelum track-nya habis. `scrollYProgress` membentang sepanjang seluruh
   // track ("start start" → "end start"), tapi canvas sticky lepas pin di
@@ -127,18 +144,15 @@ export default function Hero() {
   // dan ikut menggulir bersama halaman, jadi ia terlihat muncul lagi di bawah
   // seam HeroHandoff (dilaporkan sebagai "kepotong saat discroll").
   //
-  // ⚠️ Titik lepas pin = (track − sticky) / track, dan angka itu HARUS SAMA di
-  // desktop maupun HP — kalau tidak, satu rentang [0.28, 0.44] tidak mungkin
-  // benar untuk keduanya. Itulah sebab tinggi track mobile 126dvh, bukan
-  // angka bulat:
+  //   titik lepas pin = (track − sticky) / track
+  //   desktop (180dvh track, 100dvh sticky) → (180−100)/180 = 0,444
   //
-  //   desktop  (180dvh track, 100dvh sticky) → (180−100)/180 = 0,444
-  //   mobile   (126dvh track,  70dvh sticky) → (126− 70)/126 = 0,444  ✓ sama
+  // Rentang [0.28, 0.44] berakhir tepat di angka itu. Kalau salah satu tinggi
+  // diubah, hitung ulang: rentangnya harus selesai di (track − sticky) / track.
   //
-  // Dengan 150dvh (percobaan pertama) rasionya jadi 0,533, sehingga canvas di
-  // HP habis memudar ~13dvh SEBELUM lepas pin — pengunjung melihat area kosong
-  // yang masih terpaku di layar. Kalau salah satu tinggi diubah, hitung ulang
-  // pasangannya: track = sticky / (1 − 0,444).
+  // Dulu tinggi track HP 126dvh dipilih khusus supaya rasionya ikut 0,444 —
+  // satu rentang untuk dua perangkat. Perhitungan itu GUGUR bersama pin-nya;
+  // di HP `scrollYProgress` sekarang tidak menggerakkan apa pun.
 
   const { scrollYProgress } = useScroll({
     target: heroTrackRef,
@@ -147,6 +161,9 @@ export default function Hero() {
   const canvasOpacity = useTransform(scrollYProgress, [0.28, 0.44], [1, 0]);
   const canvasScale   = useTransform(scrollYProgress, [0.28, 0.44], [1, 0.96]);
   const canvasY       = useTransform(scrollYProgress, [0.28, 0.44], [0, -20]);
+  const recede = narrow
+    ? undefined
+    : { opacity: canvasOpacity, scale: canvasScale, y: canvasY };
 
   // Reduced-motion: hero normal-flow setinggi layar, tanpa pin/surut.
   if (reduced) {
@@ -168,16 +185,36 @@ export default function Hero() {
 
   return (
     /**
-     * Track scroll: 180dvh di desktop, 150dvh di HP. Kelebihan di atas 100dvh
-     * adalah "landasan pin" — bagian tempat 3D tetap di layar sementara konten
-     * meluncur menutupinya.
+     * DUA KOREOGRAFI, dipisah di breakpoint `md` (768px).
      *
-     * ⚠️ Tinggi VIEWPORT sticky-nya berbeda per perangkat: `h-[70dvh]` di HP,
-     * `h-dvh` mulai `md`. Dua alasan yang kebetulan dijawab angka yang sama:
+     * ── Layar lebar: track 180dvh, viewport sticky 100dvh ────────────────────
+     * Kelebihan 80dvh di atas layar adalah "landasan pin" — bagian tempat 3D
+     * tetap terpaku sementara konten meluncur menutupinya, dan canvas surut
+     * (lihat blok transform di atas).
      *
-     * 1. KONTEN TERLIHAT. Mengikuti basement.studio: canvas mereka ±71,5% dari
-     *    tinggi layar di potret, sisanya konten. Hero setinggi layar penuh
-     *    tidak memberi petunjuk bahwa ada halaman di bawahnya.
+     * ── HP: track 70dvh, TANPA pin, TANPA surut ──────────────────────────────
+     * 3D dan konten satu aliran: begitu canvas habis, konten langsung menyambung
+     * di bawahnya. Layar pertama = 70% kantor + 30% konten, tanpa perlu digulir
+     * dulu. Ini yang diminta ("3D scene dan konten gabung"), dan bentuknya sama
+     * dengan basement.studio di potret.
+     *
+     * 70dvh itu 70% YANG BENAR-BENAR TERLIHAT, bukan sekadar angka di kelas.
+     * Saat masih 62dvh, seam HeroHandoff menimpa 40px terakhir canvas (`-mt-10
+     * h-10`), jadi kantor yang betul-betul tampak cuma 57%. Karena itu seam-nya
+     * sekarang `hidden` di HP — di sana tak ada canvas surut untuk ditutupi,
+     * satu-satunya efeknya memakan 3D. Ukur dari piksel 3D terakhir yang
+     * terlihat, jangan dari tinggi track.
+     *
+     * Susunan lama (track 126dvh + pin 70dvh) menyisakan 30dvh KOSONG di layar
+     * pertama: canvas berhenti di 70dvh sementara konten baru mulai setelah
+     * 126dvh, dan celah di antaranya adalah badan track yang memang tidak berisi
+     * apa-apa. Di layar lebar celah itu tak pernah terlihat karena canvas-nya
+     * setinggi layar penuh — itulah sebab bug ini hanya muncul di HP.
+     *
+     * Kenapa 70dvh dan bukan setinggi layar:
+     *
+     * 1. KONTEN TERLIHAT. Hero setinggi layar penuh tidak memberi petunjuk
+     *    bahwa ada halaman di bawahnya.
      *
      * 2. FRAMING 3D MELEBAR — ini yang tidak terlihat sebagai soal layout.
      *    `fov: 60` di Scene.tsx itu fov VERTIKAL; yang tampak kiri-kanan
@@ -188,8 +225,10 @@ export default function Hero() {
      *       70dvh → hFOV 41,7°   ← +40% lebih lebar
      *      (desktop 16:9 → 91,5° sebagai pembanding)
      *
-     *    Itulah sebab kantor terasa "kepotong kanan-kirinya" di HP. Memendekkan
-     *    hero MELEBARKAN framing-nya, bukan mengecilkan pemandangan.
+     *    Memendekkan hero MELEBARKAN framing-nya, bukan mengecilkan
+     *    pemandangan. Karena itu menaikkan 62dvh → 70dvh ada ONGKOSNYA:
+     *    pandangan kiri-kanan menyempit dari 46,5° ke 41,7°. Porsi 70% dibayar
+     *    dengan framing yang sedikit lebih tele — bukan makan siang gratis.
      *
      * ⚠️ Patokannya breakpoint LEBAR (`md:`), sengaja BEDA dari gerbang
      * interaksi di INVARIANTS.md §6 yang memakai `pointer: coarse`. Bukan
@@ -197,26 +236,24 @@ export default function Hero() {
      * HOVER. Dua pertanyaan berbeda, dua patokan berbeda. Bonusnya, layout
      * tetap benar sebelum JS jalan — tidak ada lompatan tinggi saat hidrasi.
      *
-     * ⚠️ Angka ini BERPASANGAN dengan `-mt-32` di HeroHandoff dan `pt-16` di
-     * Manifesto. Sisa layar di HP harus cukup untuk eyebrow + baris pertama
-     * Manifesto; mengubah satu tanpa menengok dua lainnya membuat konten tidak
-     * mengintip sama sekali dan seluruh susunan ini kehilangan maksudnya.
+     * ⚠️ `md:` di sini BERPASANGAN dengan useNarrowViewport di atas (768px) dan
+     * dengan `md:-mt-32` di HeroHandoff. Ketiganya menjalankan SATU keputusan;
+     * mengubah salah satu sendirian menghasilkan keadaan yang tidak pernah
+     * dirancang — mis. dipaku tapi tak pernah surut.
      */
     <section
       ref={heroTrackRef}
       id="office"
-      className="relative h-[126dvh] w-full md:h-[180dvh]"
+      className="relative h-[70dvh] w-full md:h-[180dvh]"
     >
-      {/* Viewport sticky — diam di atas selagi track melintas */}
+      {/* Viewport 3D. Di layar lebar sticky — diam di atas selagi track
+          melintas; di HP mengalir biasa bersama halaman. */}
       <div
         ref={stickyRef}
-        className="sticky top-0 h-[70dvh] w-full md:h-dvh"
+        className="relative h-full w-full md:sticky md:top-0 md:h-dvh"
       >
         {/* Pembungkus canvas — hanya transform CSS, kamera tak pernah disentuh */}
-        <motion.div
-          className="absolute inset-0"
-          style={{ opacity: canvasOpacity, scale: canvasScale, y: canvasY }}
-        >
+        <motion.div className="absolute inset-0" style={recede}>
           {/* fallback null: overlay LoadingScreen (di SiteLayout) yang menutupi
               layar selama chunk ini diunduh, jadi fallback di sini cuma akan
               berkedip di belakangnya tanpa pernah terlihat.
@@ -268,7 +305,7 @@ export default function Hero() {
         )}
 
         {/* "see our work" — petunjuk scroll, HANYA di layar lebar.
-            Di HP hero cuma 70dvh sehingga konten sudah mengintip sendiri di
+            Di HP hero cuma 62dvh sehingga konten sudah mengintip sendiri di
             bawah canvas; petunjuk "ada halaman di bawah" jadi mubazir, dan ia
             memakan ruang yang justru dibutuhkan konten itu. Di desktop hero
             setinggi layar penuh, jadi di sana petunjuk ini masih bekerja.

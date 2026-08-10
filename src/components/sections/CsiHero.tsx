@@ -20,12 +20,38 @@ export default function CsiHero() {
     <section
       id="csi"
       ref={sectionRef}
-      className="relative overflow-hidden bg-background px-6 py-16 sm:px-10 sm:py-20"
+      /* Padding ATAS dipisah dari padding bawah, dan patokannya `md:` bukan
+         `sm:` — mengikuti breakpoint yang memisah dua koreografi hero.
+
+         Di HP CsiHero adalah section pertama yang menempel langsung ke hero
+         (tanpa seam — lihat motion/HeroHandoff.tsx), jadi padding-atasnya
+         adalah SATU-SATUNYA jarak antara kantor 3D dan "Think Beyond
+         Software.". `pt-16` (64px) di sana terbaca sebagai celah menganga:
+         judulnya terlempar ke bawah lipatan padahal hero sengaja disisakan
+         30% supaya judul itu terbaca tanpa digulir. `pt-6` (24px) menyamai
+         padding kiri-kanan `px-6`, jadi jaraknya terbaca disengaja.
+
+         ≥768px padding atasnya kembali 80px (`md:pt-20`, sama seperti
+         `sm:py-20` sebelumnya) — di sana hero dipaku setinggi layar dan
+         section ini meluncur menutupinya, jadi butuh ruang napas. */
+      className="relative overflow-hidden bg-background px-6 pt-6 pb-16 sm:px-10 sm:pb-20 md:pt-20"
     >
       <div className="relative z-10 lg:grid lg:grid-cols-2 lg:gap-12">
         <div>
           <FadeUpList tag="div">
-            <h2 className="text-5xl font-semibold tracking-tight text-zinc-100 sm:text-7xl lg:text-8xl">
+            {/* Ukurannya turun satu tingkat di layar PENDEK, dan patokannya
+                TINGGI viewport — bukan lebar, yang biasanya dipakai. Alasannya
+                aritmetika, bukan selera: hero mengambil 70dvh, jadi judul ini
+                hanya kebagian 30dvh. Di 640px tinggi itu = 192px, sementara
+                judul 4 baris `text-5xl` juga persis 192px — "Intelligence."
+                terpotong separuh, dan tak ada padding yang bisa dikorbankan.
+                `text-4xl` (4 × 40px = 160px) muat dengan sisa napas.
+
+                Ambangnya 700px dipilih karena di 393×852 (iPhone 15, perangkat
+                acuan) `text-5xl` masih muat lega — jangan mengecilkannya di
+                sana. Kalau porsi hero 70dvh diubah, hitung ulang: judul harus
+                muat dalam (100 − porsi)dvh dikurangi `pt-6`. */}
+            <h2 className="text-5xl font-semibold tracking-tight text-zinc-100 [@media(max-height:700px)]:text-4xl sm:text-7xl lg:text-8xl">
               {HEADING_LINES.map((line, lineIdx) => (
                 <span key={lineIdx} className="block">
                   {line.map((word) => (

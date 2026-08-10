@@ -15,7 +15,10 @@ export default function MeetingLead() {
   return (
     <section
       id="meeting-lead"
-      className="relative z-10 border-b border-white/[0.06] px-6 py-20 sm:px-10 sm:py-28"
+      /* Section pertama ruangan Meeting = yang menempel ke hero 3D; `pt-6` di
+         HP menutup celahnya (aturan padding-tipis, lihat Manifesto.tsx),
+         ≥768px kembali 112px seperti `sm:py-28` semula. */
+      className="relative z-10 border-b border-white/[0.06] px-6 pt-6 pb-20 sm:px-10 sm:pb-28 md:pt-28"
     >
       <div className="grid gap-12 lg:grid-cols-[1fr_auto]">
         {/* Left — heading */}

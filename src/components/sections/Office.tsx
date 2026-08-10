@@ -105,7 +105,14 @@ export default function Office() {
   const reduced = useReducedMotion();
 
   return (
-    <section id="office-services" className="relative z-10 px-6 py-24 sm:px-10 sm:py-32">
+    <section
+      id="office-services"
+      /* Section pertama ruangan Office = yang menempel ke hero 3D. Di HP
+         `pt-6` menutup celah antara kantor dan judul (aturan padding-tipis
+         untuk section pertama tiap ruangan, lihat Manifesto.tsx); ≥768px
+         kembali ke 128px seperti `sm:py-32` semula. */
+      className="relative z-10 px-6 pt-6 pb-24 sm:px-10 sm:pb-32 md:pt-32"
+    >
       <div className="grid gap-12 lg:grid-cols-[1fr_auto] lg:items-end lg:gap-8">
         <div>
           {/* T6 — eyebrow */}
