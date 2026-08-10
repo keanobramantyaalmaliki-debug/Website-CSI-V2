@@ -13,6 +13,8 @@
  * DUA sebelum jadi koordinat klik. Ini sumber salah yang paling sering.
  *
  * Format langkah.json — array, dijalankan berurutan:
+ *   {"t":"emulate","w":393,"h":852,"dpr":3,"mobile":true}
+ *   {"t":"scroll","y":600}
  *   {"t":"wait","ms":12000}
  *   {"t":"click","x":720,"y":450}
  *   {"t":"move","x":700,"y":400}
@@ -126,6 +128,26 @@ async function main() {
   for (const s of STEPS) {
     if (s.t === "wait") {
       await sleep(s.ms);
+    } else if (s.t === "emulate") {
+      // Emulasi perangkat. `mobile: true` + emulasi sentuh membuat
+      // `(pointer: coarse)` benar-benar cocok — tanpa itu halaman terbaca
+      // sebagai desktop sempit dan gerbang INVARIANTS.md §6 tidak ikut teruji.
+      await send("Emulation.setDeviceMetricsOverride", {
+        width: s.w,
+        height: s.h,
+        deviceScaleFactor: s.dpr ?? 3,
+        mobile: s.mobile ?? true,
+      });
+      await send("Emulation.setTouchEmulationEnabled", {
+        enabled: s.mobile ?? true,
+        maxTouchPoints: 5,
+      });
+      console.log(`emulasi ${s.w}x${s.h} @${s.dpr ?? 3}`);
+    } else if (s.t === "scroll") {
+      await send("Runtime.evaluate", {
+        expression: `window.scrollTo({top:${s.y},behavior:"instant"})`,
+      });
+      await sleep(s.ms ?? 400);
     } else if (s.t === "move") {
       await move(s.x, s.y);
       await sleep(s.ms ?? 120);
@@ -178,7 +200,8 @@ async function main() {
       console.log(`${s.label ?? "eval"}: ${JSON.stringify(v)}`);
     } else if (s.t === "shot") {
       mkdirSync(dirname(s.file), { recursive: true });
-      const m = await send("Page.captureScreenshot", { format: "png" });
+      const m = await send("Page.captureScreenshot", { format: "png", fromSurface: false });
+      if (!m.result?.data) throw new Error(`potret gagal: ${JSON.stringify(m.error ?? m)}`);
       writeFileSync(s.file, Buffer.from(m.result.data, "base64"));
       console.log(`tersimpan: ${s.file}`);
     }
