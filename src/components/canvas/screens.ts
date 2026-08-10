@@ -919,6 +919,26 @@ export function splitMergedScreens(root: Object3D): number {
 }
 
 /**
+ * Material layar hasil clone → emissiveIntensity kalibrasinya.
+ *
+ * Ada supaya efek lain (ScreensSleep) bisa meredupkan layar tanpa menebak
+ * material mana yang layar. Menebaknya lewat nama bisa saja — clone-nya diberi
+ * nama `<asli>__<node>` beberapa baris di bawah — tapi itu mengikat efek lain
+ * pada pola penamaan internal berkas ini, dan pola begitu berubah diam-diam.
+ *
+ * Nilai yang disimpan adalah emissive KALIBRASI per layar, bukan satu angka
+ * global: tiap entri SCREENS punya emissive-nya sendiri (0,7 sampai 6,2) dan
+ * semuanya hasil PENGUKURAN, bukan rumus — lihat catatan panjang di masing-
+ * masing entri. Peredup wajib bekerja sebagai pecahan dari angka ini.
+ */
+const screenMaterials = new Map<MeshStandardMaterial, number>();
+
+/** Lihat screenMaterials. Kosong sebelum applyScreens() berjalan. */
+export function getScreenMaterials(): ReadonlyMap<MeshStandardMaterial, number> {
+  return screenMaterials;
+}
+
+/**
  * Pasang satu texture ke material layar sebuah node.
  *
  * ── Kenapa materialnya di-CLONE ─────────────────────────────────────────────
@@ -959,6 +979,7 @@ function applyScreen(root: Object3D, cfg: ScreenContent, tex: Texture): boolean 
       // "texture-nya gagal dimuat".
       clone.emissive.setScalar(1);
       clone.emissiveIntensity = cfg.emissive ?? SCREEN_EMISSIVE;
+      screenMaterials.set(clone, clone.emissiveIntensity);
       // map ikut dipasang supaya layar yang mati/redup tetap punya warna dasar
       // yang masuk akal, dan supaya AO & bayangan kontak punya sesuatu untuk
       // digelapkan alih-alih bidang hitam rata.
@@ -1044,6 +1065,13 @@ export function applyScreens(
   // node-nya tak ditemukan dan hitungan kembalian di bawah ikut turun — yang
   // langsung tertangkap pemeriksaan DEV di Office.tsx.
   splitMergedScreens(root);
+
+  // Dikosongkan tiap kali, bukan diakumulasi: pemanggilan ini menghasilkan
+  // material clone yang BARU (StrictMode memanggilnya dua kali, ChunkBoundary
+  // bisa me-mount ulang seluruh scene). Tanpa reset, peredup layar akan terus
+  // memegang clone dari scene yang sudah dibuang dan menulis ke material yang
+  // tidak ada lagi di layar — tidak error, cuma diam-diam tidak bekerja.
+  screenMaterials.clear();
 
   let n = 0;
   for (const cfg of SCREENS) {

@@ -46,7 +46,7 @@
  * useFrame yang ikut tidur bersama canvas-nya.
  */
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useReducedMotion } from "motion/react";
 import {
@@ -60,11 +60,7 @@ import {
 } from "three";
 import { useSceneStore } from "@/lib/store/sceneStore";
 import { VIEWS } from "./CameraController";
-
-/** Lama tanpa input sebelum dianggap idle. 8 detik: cukup lama supaya jeda
- *  membaca biasa (scroll berhenti sebentar) tidak memicunya, cukup pendek
- *  supaya orang yang memang menonton kantornya masih kebagian efeknya. */
-const IDLE_MS = 8000;
+import { IDLE_MS, idleFor, useIdleClock } from "./idleClock";
 
 /** Rentang jeda antar burst saat idle (ms). Acak supaya tidak metronomik. */
 const GAP_MIN_MS = 4000;
@@ -169,13 +165,6 @@ const FORCED =
   import.meta.env.DEV &&
   typeof window !== "undefined" &&
   new URLSearchParams(window.location.search).has("glitch");
-
-/**
- * Timestamp input terakhir, module-level: listener-nya hidup-mati mengikuti
- * mount komponen, tapi nilainya sengaja selamat dari remount (ChunkBoundary,
- * replay StrictMode) — remount bukan interaksi pengunjung.
- */
-let lastInputAt = 0;
 
 /** 0 = mati, 1 = burst penuh. Dibagi semua material karakter — satu tulisan
  *  per frame, bukan satu per material (pelajaran revealSweep). */
@@ -383,34 +372,10 @@ export default function CharacterGlitch({ scene }: { scene: Object3D }) {
     };
   }, [scene]);
 
-  // Pelacak input. passive + satu penulisan timestamp per event — pointermove
-  // menyala ratusan kali per detik saat kursor bergerak, jadi handler-nya
-  // tidak boleh mengerjakan apa pun selain menulis angka.
-  useEffect(() => {
-    const bump = () => {
-      lastInputAt = performance.now();
-    };
-    bump();
-    const events = [
-      "pointermove",
-      "pointerdown",
-      "wheel",
-      "keydown",
-      "touchstart",
-    ] as const;
-    for (const e of events) window.addEventListener(e, bump, { passive: true });
-    // Kembali dari tab lain ≠ idle: tanpa reset ini, jam idle terus berjalan
-    // selama tab tersembunyi dan pengunjung yang baru kembali langsung
-    // disambut burst — terbaca "pas saya balik kok rusak", bukan easter egg.
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") bump();
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      for (const e of events) window.removeEventListener(e, bump);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, []);
+  // Jam idle-nya bersama (idleClock.ts) — dulu blok listener sendiri di sini.
+  // Ambangnya tetap milik efek ini: IDLE_MS 8 detik, sengaja jauh lebih pendek
+  // dari ambang layar tidur.
+  useIdleClock();
 
   /** null = belum idle / baru keluar idle; jadwal burst berikutnya (ms). */
   const nextBurstAt = useRef<number | null>(null);
@@ -436,7 +401,7 @@ export default function CharacterGlitch({ scene }: { scene: Object3D }) {
     // Reduced motion: karakter tetap beranimasi idle (gerak kontinu ringan),
     // tapi flicker mendadak persis kelas gerakan yang preferensi ini minta
     // hilangkan — sama seperti video layar yang ikut dipause di ScreenVideoGate.
-    if (reduced || now - lastInputAt < IDLE_MS) {
+    if (reduced || idleFor(now) < IDLE_MS) {
       nextBurstAt.current = null;
       if (uGlitch.value !== 0) uGlitch.value = 0;
       return;

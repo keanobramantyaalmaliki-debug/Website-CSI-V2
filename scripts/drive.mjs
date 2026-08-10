@@ -29,7 +29,10 @@ import { get as httpGet } from "node:http";
 import { writeFileSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 
-const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+// Brave, bukan Chrome — verifikasi di repo ini dilakukan di browser yang
+// benar-benar dipakai. Protokol CDP-nya identik, jadi yang berbeda cuma path.
+const CHROME =
+  "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser";
 const PORT = 9225;
 const URL = process.argv[2] ?? "http://localhost:3000/";
 const STEPS = JSON.parse(readFileSync(process.argv[3], "utf8"));

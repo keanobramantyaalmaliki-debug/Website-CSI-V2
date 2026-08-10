@@ -13,6 +13,10 @@ import { prepareLampFade } from "./billiard/lamps";
 import { prepareRevealSweep } from "./revealSweep";
 import CharacterGlitch from "./CharacterGlitch";
 import HoverScan, { hoverScanTargetOf, setHoverScanTarget } from "./HoverScan";
+import LedBreath from "./LedBreath";
+import { isLedStripMaterial } from "./ledStrip";
+import ScreensSleep, { SCREEN_SLEEP_MS } from "./ScreensSleep";
+import { useIdleFlag } from "./idleClock";
 import { applyScreens, SCREENS } from "./screens";
 import {
   getScreenVideo,
@@ -62,8 +66,25 @@ const LIGHTMAP_INTENSITY = 5;
  * Catatan: cahaya LED yang JATUH DI LANTAI sudah di-bake ke lightmap dan tidak
  * ikut berubah di sini — yang berubah cuma pendar strip-nya sendiri. Jadi
  * lantainya tetap kena tumpahan warnanya, tidak mendadak gelap.
+ *
+ * ⚠️ 10 Agu 2026 — kenapa angkanya 8 dan bukan 3 lagi.
+ * Override ini TIDAK PERNAH BERJALAN. Syaratnya dulu `mat.name === "M_LEDStrip"`,
+ * padahal nama material di GLB berakhiran nama mesh pemakainya
+ * ("M_LEDStrip__MG_Office_M_LEDStrip"), jadi cocoknya selalu meleset — diam,
+ * tanpa error, dan `ledStrip=0` di log DEV di bawah adalah peringatan yang
+ * memang sudah dipasang untuk kasus ini tapi tidak sempat terbaca.
+ *
+ * Artinya seluruh look yang selama ini dilihat dan disetujui — termasuk semua
+ * kalibrasi bake dan ambang Bloom sesudahnya — berjalan pada 8, bukan 3.
+ * Pencocokannya sekarang dibetulkan (isLedStripMaterial), jadi angka di sini
+ * untuk pertama kalinya benar-benar sampai ke material. Ia disetel ke 8 supaya
+ * pembetulan itu TIDAK mengubah tampilan: 8 adalah yang sudah ada di layar.
+ *
+ * Efek sampingnya menyenangkan — kenop ini akhirnya hidup. Menurunkannya ke 3
+ * sekarang benar-benar menipiskan pendar LED seperti yang dulu dimaksud; itu
+ * keputusan look, bukan perbaikan bug, jadi dibiarkan untuk diputuskan terpisah.
  */
-const LED_STRIP_EMISSIVE = 3;
+const LED_STRIP_EMISSIVE = 8;
 
 /**
  * Lama sapuan "kantor terbentuk" (detik) — lihat revealSweep.ts.
@@ -102,7 +123,7 @@ const REVEAL_DELAY_MS = 150;
  * sana, tiap perpindahan ruangan me-render ulang komponen yang memegang scene
  * 660-node — sia-sia, karena tak satu pun output-nya berubah.
  */
-function ScreenVideoGate() {
+function ScreenVideoGate({ asleep }: { asleep: boolean }) {
   const heroInView = useSceneStore((s) => s.heroInView);
   const currentRoom = useSceneStore((s) => s.currentRoom);
   const billiardActive = useSceneStore((s) => s.billiardActive);
@@ -119,7 +140,13 @@ function ScreenVideoGate() {
       SCREENS.filter((s) => s.video && s.room === currentRoom).map((s) => s.url),
     [currentRoom],
   );
-  const wanted = heroInView && urls.length > 0 && !billiardActive && !reduced;
+  // `asleep` ikut di sini, BUKAN jadi pause terpisah dari ScreensSleep. Kalau
+  // peredup mem-pause sendiri, gerbang ini tidak tahu dan tidak akan pernah
+  // memutar ulang: efeknya cuma dijalankan lagi kalau `wanted`/`urls` berubah,
+  // dan bangun dari idle tidak mengubah satu pun dari keduanya. Gejalanya
+  // "video mati permanen setelah ditinggal sebentar".
+  const wanted =
+    heroInView && urls.length > 0 && !billiardActive && !reduced && !asleep;
 
   useEffect(() => {
     if (!wanted) {
@@ -143,6 +170,28 @@ function ScreenVideoGate() {
   }, [wanted, urls]);
 
   return null;
+}
+
+/**
+ * Pemilik tunggal keadaan "layar sedang tidur".
+ *
+ * Dua pemakainya butuh boolean yang SAMA, dan masing-masing memanggil
+ * useIdleFlag sendiri akan memberi dua timer yang menyeberang beberapa ratus
+ * milidetik berbeda — video mati sebelum layarnya sempat meredup, atau
+ * sebaliknya. Dihitung sekali di sini lalu dioper.
+ *
+ * Sekalian mengurung render ulangnya: flag ini berubah dua kali per siklus
+ * idle, dan komponen inilah yang ikut render, bukan Office yang jauh lebih
+ * besar.
+ */
+function ScreensIdle({ scene }: { scene: THREE.Object3D }) {
+  const asleep = useIdleFlag(SCREEN_SLEEP_MS);
+  return (
+    <>
+      <ScreenVideoGate asleep={asleep} />
+      <ScreensSleep asleep={asleep} scene={scene} />
+    </>
+  );
 }
 
 /**
@@ -341,7 +390,11 @@ export default function Office() {
         //
         // Jangan dipasang ulang tanpa mengukur DUA-DUANYA: apakah garis
         // gelapnya benar-benar terlihat, DAN apa yang ikut kehilangan bayangan.
-        if (mat.name === "M_LEDStrip") {
+        // Lewat helper, bukan `=== LED_MATERIAL`: nama di GLB berakhiran nama
+        // mesh. Lihat catatan panjang di isLedStripMaterial() dan di
+        // LED_STRIP_EMISSIVE — perbandingan sama-dengan di sini sempat mematikan
+        // FIX 4 tanpa suara.
+        if (isLedStripMaterial(mat)) {
           ledStrips++;
           // GLTFLoader menaruh KHR_materials_emissive_strength (8) di
           // emissiveIntensity. Diturunkan supaya pendarnya tidak setebal
@@ -727,7 +780,7 @@ export default function Office() {
           onPointerOut={clearHover}
         />
       </Bvh>
-      <ScreenVideoGate />
+      <ScreensIdle scene={prepared} />
       {/* Glitch karakter saat idle. HARUS anak Office, bukan dipindah ke
           Scene.tsx: patch-nya harus terpasang SEBELUM prepareRevealSweep di
           layout effect di atas (sweep menyimpan lalu memulihkannya), dan
@@ -739,6 +792,11 @@ export default function Office() {
           di-mount di perangkat sentuh: tidak ada hover di sana (INVARIANTS §6),
           jadi satu program shader tambahan itu murni ongkos. */}
       {!coarse && <HoverScan scene={prepared} />}
+      {/* LED strip bernapas saat idle. Beda dengan dua efek di atas, ini TIDAK
+          terikat kontrak urutan §5: ia cuma menulis emissiveIntensity, tidak
+          menyentuh onBeforeCompile, jadi revealSweep tidak punya apa pun
+          darinya untuk disimpan atau ditimpa. */}
+      <LedBreath scene={prepared} />
     </>
   );
 }
