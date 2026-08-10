@@ -23,17 +23,21 @@ export default function CsiHero() {
       /* Padding ATAS dipisah dari padding bawah, dan patokannya `md:` bukan
          `sm:` — mengikuti breakpoint yang memisah dua koreografi hero.
 
-         Di HP CsiHero adalah section pertama yang menempel langsung ke hero
-         (tanpa seam — lihat motion/HeroHandoff.tsx), jadi padding-atasnya
-         adalah SATU-SATUNYA jarak antara kantor 3D dan "Think Beyond
-         Software.". `pt-16` (64px) di sana terbaca sebagai celah menganga:
-         judulnya terlempar ke bawah lipatan padahal hero sengaja disisakan
-         30% supaya judul itu terbaca tanpa digulir. `pt-6` (24px) menyamai
-         padding kiri-kanan `px-6`, jadi jaraknya terbaca disengaja.
+         CsiHero adalah section pertama yang menempel LANGSUNG ke hero — tidak
+         ada seam di antaranya di lebar layar mana pun (dulu ada, lihat
+         routes/SiteLayout.tsx) — jadi padding-atasnya adalah SATU-SATUNYA
+         jarak antara kantor 3D dan "Think Beyond Software.".
 
-         ≥768px padding atasnya kembali 80px (`md:pt-20`, sama seperti
-         `sm:py-20` sebelumnya) — di sana hero dipaku setinggi layar dan
-         section ini meluncur menutupinya, jadi butuh ruang napas. */
+         Di HP `pt-16` (64px) terbaca sebagai celah menganga: judulnya
+         terlempar ke bawah lipatan padahal hero sengaja disisakan 30% supaya
+         judul itu terbaca tanpa digulir. `pt-6` (24px) menyamai padding
+         kiri-kanan `px-6`, jadi jaraknya terbaca disengaja.
+
+         ≥768px padding atasnya 80px (`md:pt-20`) — di sana hero setinggi layar
+         penuh dan judulnya memang baru muncul setelah digulir, jadi ruang
+         napas itu tidak memakan apa pun. Ini padding SECTION, bukan celah:
+         warnanya `bg-background` yang sama, jadi 3D tetap bertemu konten tanpa
+         garis pemisah. */
       className="relative overflow-hidden bg-background px-6 pt-6 pb-16 sm:px-10 sm:pb-20 md:pt-20"
     >
       <div className="relative z-10 lg:grid lg:grid-cols-2 lg:gap-12">

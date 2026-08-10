@@ -229,9 +229,16 @@ yang kurang rapi.
 `"never"` saat `!heroInView && sceneReady`, dan `canvas/Scene.tsx` memasangnya
 sebagai **prop** `frameloop` di `<Canvas>`. Wajib prop, bukan `setFrameloop()`
 imperatif — bentuk imperatif sudah dicoba dan terukur gagal: tiap re-render
-`<Canvas>` (dipicu `react-use-measure` saat fade scroll men-scale pembungkus
-hero) menyinkronkan ulang prop `frameloop` yang tidak diset = `"always"`,
-menimpa panggilan imperatif persis di momen ia dibutuhkan.
+`<Canvas>` (dulu dipicu `react-use-measure` saat fade scroll men-scale
+pembungkus hero) menyinkronkan ulang prop `frameloop` yang tidak diset =
+`"always"`, menimpa panggilan imperatif persis di momen ia dibutuhkan.
+
+> Pemicu spesifik itu — surut scroll yang men-scale pembungkus hero — sudah
+> dibongkar 10 Agu bersama pin desktop (lihat `sections/Hero.tsx`). Aturannya
+> TIDAK ikut gugur: yang dibuktikan kejadian itu adalah "prop menang atas
+> panggilan imperatif di setiap re-render", dan re-render `<Canvas>` bisa
+> datang dari mana saja (resize jendela, ganti route, StrictMode). Hilangnya
+> satu pemicu bukan alasan menghidupkan lagi bentuk imperatifnya.
 
 Dua konsekuensi, satu ke tiap arah:
 

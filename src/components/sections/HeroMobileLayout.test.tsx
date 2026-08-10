@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render } from "@testing-library/react";
 
 /**
- * Hero punya DUA koreografi yang dipisah di breakpoint `md`, dan yang di HP
- * lahir dari tiga laporan sekaligus (10 Agu):
+ * Hero MENGALIR bersama halaman di semua lebar layar — satu koreografi, yang
+ * beda cuma tingginya (70dvh di HP, setinggi layar di ≥768px).
+ *
+ * Bentuk itu lahir dari lima laporan, tiga di HP lalu dua di desktop (10 Agu):
  *
  *   1. "40% layar kosong"    — hero dipaku 70dvh di dalam track 126dvh, jadi
  *                              ada 30dvh badan track yang tak berisi apa pun
@@ -11,17 +13,21 @@ import { render } from "@testing-library/react";
  *   2. "3D kepotong kiri-kanan" — `scale: 0.96` mengecilkan canvas di tempat.
  *   3. "scroll tersendat"    — opacity+scale sebuah layer WebGL seukuran layar
  *                              dianimasikan tiap frame scroll.
+ *   4. "di desktop masih mengecil & tersendat" — (2) dan (3) yang sama, di sana
+ *                              masih disengaja karena melayani pin.
+ *   5. "masih ada radius"    — sudut membulat seam HeroHandoff, yang cuma masuk
+ *                              akal sebagai panel terangkat DI ATAS canvas
+ *                              surut.
  *
- * Ketiganya hilang dengan satu keputusan: di HP hero MENGALIR (tanpa sticky)
- * dan pembungkus canvas TIDAK menerima style transform apa pun.
+ * Semuanya hilang dengan satu keputusan yang berlaku di mana saja: TANPA pin,
+ * TANPA style di pembungkus canvas, TANPA seam.
  *
- * ⚠️ Kenapa perlu dijaga test. Style surut itu benar dan perlu di desktop, jadi
- * ia tidak akan pernah "kelihatan salah" saat dibaca — yang salah cuma
- * PEMASANGANNYA di layar sempit. Mengembalikannya ke `style={{...}}` polos
- * adalah penyederhanaan yang tampak tidak berbahaya, lolos typecheck & lint,
- * dan gejalanya baru muncul di HP. Persis pola INVARIANTS.md.
- *
- * Pasangan yang dijaga di berkas lain: `md:-mt-32` di HeroHandoff.test.tsx.
+ * ⚠️ Kenapa perlu dijaga test. Pin + surut itu koreografi yang tampak "benar"
+ * saat dibaca — sticky yang rapi, fade yang halus — jadi menghidupkannya lagi
+ * terasa seperti perbaikan, bukan kemunduran. Ia lolos typecheck & lint, dan
+ * gejalanya (3D mengecil dengan lajur gelap di tepi, scroll tersendat, jeda
+ * hitam sebelum konten) baru terlihat saat digulir sungguhan. Persis pola
+ * INVARIANTS.md.
  */
 
 let width = 400;
@@ -68,20 +74,23 @@ function canvasWrapper(container: HTMLElement) {
   return el as HTMLElement;
 }
 
-describe("Hero — koreografi HP vs layar lebar", () => {
-  it("HP: track 70dvh dan viewport 3D TIDAK dipaku", async () => {
+describe("Hero — mengalir, tanpa pin & tanpa surut", () => {
+  it("HP: track 70dvh, desktop setinggi layar — dan tidak ada yang dipaku", async () => {
     width = 400;
     const { container } = await renderHero();
     const track = container.querySelector("section#office") as HTMLElement;
     const viewport = track.firstElementChild as HTMLElement;
 
-    // 70dvh = 70% yang BENAR-BENAR terlihat, dan itu hanya benar selama seam
-    // HeroHandoff `hidden` di HP (dijaga di motion/HeroHandoff.test.tsx).
-    // Menghidupkan seam lagi diam-diam mengembalikannya ke 65%.
+    // 70dvh = 70% yang BENAR-BENAR terlihat. Itu hanya benar selama tak ada
+    // seam yang menimpa bagian bawah canvas — seam HeroHandoff dulu memakan
+    // 40px terakhirnya dan diam-diam mengembalikannya ke 65%.
     expect(track.className).toContain("h-[70dvh]");
-    // `sticky` polos = pin bocor ke HP; yang boleh cuma varian md:
-    expect(viewport.className).not.toMatch(/(^|\s)sticky(\s|$)/);
-    expect(viewport.className).toContain("md:sticky");
+    expect(track.className).toContain("md:h-dvh");
+    // track 180dvh = landasan pin balik lagi; setinggi layar tidak punya sisa
+    // untuk dipaku.
+    expect(track.className).not.toContain("180dvh");
+    // `sticky` dalam bentuk APA PUN = pin balik lagi, termasuk varian md:
+    expect(viewport.className).not.toContain("sticky");
   });
 
   it("HP: pembungkus canvas tanpa transform — sumber 'kepotong' & 'tersendat'", async () => {
@@ -94,12 +103,21 @@ describe("Hero — koreografi HP vs layar lebar", () => {
     expect(style).not.toContain("opacity");
   });
 
-  it("layar lebar: surut TETAP terpasang (opacity + transform)", async () => {
+  /**
+   * Cerminan test di atas, dan justru yang ini yang dulu menjaga hal
+   * SEBALIKNYA ("surut TETAP terpasang di layar lebar"). Surut memang melayani
+   * pin selama pin masih ada; begitu pin dibongkar, ia tinggal ongkos: canvas
+   * mengecil dengan lajur gelap di tepi, `react-use-measure` mengukur ulang
+   * tiap frame scroll, dan layar hitam di antara fade selesai dan konten
+   * datang.
+   */
+  it("layar lebar: pembungkus canvas juga TANPA style — surut sudah dibongkar", async () => {
     width = 1440;
     const { container } = await renderHero();
     const style = canvasWrapper(container).getAttribute("style") ?? "";
 
-    expect(style).toContain("opacity");
-    expect(style).toContain("transform");
+    expect(style).not.toContain("transform");
+    expect(style).not.toContain("scale");
+    expect(style).not.toContain("opacity");
   });
 });

@@ -74,9 +74,12 @@ export default function Manifesto() {
     <section
       id="manifesto"
       ref={sectionRef}
-      /* `bg-background` WAJIB (dari `join`): Manifesto meluncur DI ATAS canvas
-         yang memudar, jadi ia harus buram — tanpa itu kantor 3D terlihat
-         menembus teks.
+      /* `bg-background` (dari `join`) membuat section ini buram. Dulu itu
+         WAJIB: Manifesto meluncur DI ATAS canvas yang memudar, dan tanpa latar
+         buram kantor 3D terlihat menembus teks. Sekarang hero tidak lagi
+         dipaku sehingga tak ada yang saling menimpa — tapi latarnya tetap
+         dipasang supaya section punya dasar sendiri, tidak menumpang pada
+         warna body.
 
          `pt-16` (64px, dulu `pt-40` = 160px) juga menopang hal lain: di HP hero
          setinggi 70dvh (lihat Hero.tsx), dan section pertama di bawahnya harus
@@ -88,7 +91,7 @@ export default function Manifesto() {
          CsiHero (`pt-6` di HP; ia yang benar-benar bersebelahan dengan kantor
          3D), dan Manifesto menyusul di bawahnya (lihat lib/roomContent). Berkas
          ini tidak lagi menyentuh hero, jadi 64px-nya aman.
-         Pasangannya: tinggi hero di Hero.tsx + seam di HeroHandoff. */
+         Pasangannya: tinggi hero di Hero.tsx. */
       className="relative overflow-hidden bg-background px-6 pb-24 pt-16 sm:px-10 sm:pb-32 sm:pt-20"
     >
       {/* Particle field — absolute behind text */}
