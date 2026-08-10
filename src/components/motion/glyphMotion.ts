@@ -17,25 +17,25 @@ export function makeContainer(reduced: boolean, stagger = 0.08) {
 }
 
 /** Stroked lines/circles/rects that trace themselves in via pathLength. */
-export function makeDraw(reduced: boolean) {
+export function makeDraw(reduced: boolean, duration = 0.6) {
   return {
     hidden: { pathLength: reduced ? 1 : 0, opacity: reduced ? 1 : 0 },
     show: {
       pathLength: 1,
       opacity: 1,
-      transition: { duration: reduced ? 0 : 0.6, ease: EASE },
+      transition: { duration: reduced ? 0 : duration, ease: EASE },
     },
   };
 }
 
 /** Nodes/points that scale in. `toOpacity` preserves a dimmed final state. */
-export function makePop(reduced: boolean, toOpacity = 1) {
+export function makePop(reduced: boolean, toOpacity = 1, duration = 0.4) {
   return {
     hidden: { scale: reduced ? 1 : 0, opacity: reduced ? toOpacity : 0 },
     show: {
       scale: 1,
       opacity: toOpacity,
-      transition: { duration: reduced ? 0 : 0.4, ease: EASE },
+      transition: { duration: reduced ? 0 : duration, ease: EASE },
     },
   };
 }
