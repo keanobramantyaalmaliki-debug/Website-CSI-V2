@@ -64,19 +64,30 @@ export default function CareersPromote({ roles }: { roles: CareerRole[] }) {
         viewport={{ once: true, margin: "0px 0px -60px 0px" }}
         transition={{ duration: 0.5, ease: EASE }}
       >
-        <CareersRoleHero ref={heroRef} role={featured} reduced={!!reduced} />
+        {/* z-0: the hero is a Framer `layout` element (transform → own stacking
+            context). Pinning it below the strip stops its transparent box from
+            drifting over the strip during scroll re-projection and eating the
+            strip's clicks. */}
+        <div className="relative z-0">
+          <CareersRoleHero ref={heroRef} role={featured} reduced={!!reduced} />
+        </div>
 
-        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {/* z-10 keeps the strip above the hero; buttons are direct grid items
+            (no `display:contents` wrapper) so Framer measures them cleanly. */}
+        <div
+          role="group"
+          aria-label="Other open roles"
+          className="relative z-10 grid grid-cols-1 gap-4 sm:grid-cols-3"
+        >
           {state.strip.map((id) => (
-            <li key={id} className="contents">
-              <CareersRoleChip
-                role={byId(id)}
-                reduced={!!reduced}
-                onPromote={() => promote(id)}
-              />
-            </li>
+            <CareersRoleChip
+              key={id}
+              role={byId(id)}
+              reduced={!!reduced}
+              onPromote={() => promote(id)}
+            />
           ))}
-        </ul>
+        </div>
       </motion.div>
     </LayoutGroup>
   );
