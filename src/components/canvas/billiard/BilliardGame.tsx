@@ -12,6 +12,7 @@ import {
   BALL_MASS,
   aimDistance,
   createWorld,
+  dampAirborne,
   overPocket,
   placeBall,
   removeBall,
@@ -19,7 +20,18 @@ import {
   type BilliardWorld,
 } from "./physics";
 
-/** Lapisan khusus benda dinamis — lihat komentar di CharacterLights.tsx. */
+/**
+ * Lapisan khusus benda dinamis.
+ *
+ * ⚠️ TEMUAN 6 Agu: skema "lampu ber-layer" ini TIDAK PERNAH JALAN. three
+ * menguji layer lampu terhadap layer KAMERA (r185 ~17387), bukan terhadap
+ * objek yang disinari — kamera cuma di layer 0, jadi lampu layer 1 tidak
+ * pernah dikumpulkan renderer. BilliardLights di bawah tidak menyinari
+ * apa-apa; bola tampak seperti sekarang berkat ambient + envmap saja.
+ * CharacterLights (kasus kembar) sudah dihapus dari Scene.tsx atas dasar
+ * temuan ini. Kalau bola mau disinari beneran: lampu HARUS di layer 0,
+ * dan itu menyapu seluruh scene — pagari dengan point light ber-distance.
+ */
 const DYN_LAYER = 1;
 
 /**
@@ -213,6 +225,12 @@ export default function BilliardGame() {
     // Dijeda saat meja tidak dipakai — tanpa ini 16 body tetap disimulasikan
     // sepanjang kunjungan dan memakan CPU/baterai percuma.
     s.step(Math.min(dt, 0.1));
+
+    // Rusuk sambungan antar-pelat kain sesekali melontarkan bola ke atas, dan
+    // dari kamera tegak lurus itu terbaca sebagai bola menembus benda lain.
+    // Harus SETELAH step dan SEBELUM salin ke mesh, kalau tidak frame ini
+    // sempat menggambar posisi yang melayang. Duduk perkaranya di physics.ts.
+    dampAirborne(s);
 
     // Salin posisi fisika → mesh. Inilah harga memakai cannon-es langsung:
     // tidak ada wrapper R3F yang melakukannya otomatis.

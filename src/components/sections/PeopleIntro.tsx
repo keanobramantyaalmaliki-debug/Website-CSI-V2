@@ -3,7 +3,14 @@ import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 
 export default function PeopleIntro() {
   return (
-    <section id="people-intro" className="px-6 pt-32 pb-24 sm:px-10">
+    <section
+      id="people-intro"
+      /* Section pertama ruangan Function = yang menempel ke hero 3D. `pt-32`
+         (128px) di HP adalah celah terbesar dari keempat ruangan; `pt-6`
+         menutupnya (aturan padding-tipis, lihat Manifesto.tsx). ≥768px tetap
+         128px. */
+      className="px-6 pt-6 pb-24 sm:px-10 md:pt-32"
+    >
       <h1 className="text-[clamp(3rem,9vw,6.5rem)] font-semibold tracking-tight text-zinc-100 leading-[1.05]">
         <LineMask>The People Behind CSI.</LineMask>
       </h1>

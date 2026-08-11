@@ -111,17 +111,68 @@ export interface RevealSweep {
  * memakai itu sebagai tanda untuk langsung menampilkan scene apa adanya, bukan
  * menggantung di layar kosong.
  */
-export function prepareRevealSweep(scene: Object3D): RevealSweep | null {
-  // Satu objek uniform yang DIBAGI semua material. Menyetel progress = menulis
-  // satu angka, bukan 233.
-  const uProgress: IUniform<number> = { value: 0 };
-  const uBand: IUniform<number> = { value: BAND };
-  const uEdge: IUniform<number> = { value: EDGE };
-  const uEdgeColor: IUniform<Color> = { value: new Color(EDGE_COLOR) };
-  // Tanda arah sapuan, diturunkan dari X_FROM/X_TO — bukan konstanta terpisah
-  // yang bisa lupa disesuaikan saat arahnya dibalik.
-  const uDir: IUniform<number> = { value: Math.sign(X_TO - X_FROM) || 1 };
+/**
+ * Satu objek uniform yang DIBAGI semua material. Menyetel progress = menulis
+ * satu angka, bukan 233.
+ *
+ * ⚠️ HARUS MODULE-LEVEL, bukan dibuat di dalam prepareRevealSweep() — ini
+ * perbaikan bug "sweep tidak muncul di load pertama" (7 Agu 2026, dev-only).
+ * Kronologinya race tiga pihak:
+ *
+ *   1. StrictMode me-replay layout effect Office (pasang patch #1 → dispose →
+ *      pasang patch #2), tapi replay-nya ASINKRON di React 19 dan bisa datang
+ *      TERLAMBAT — tertahan stall kompilasi shader 2,3 s di frame pertama.
+ *   2. Kalau frame pertama keburu tergambar, 233 program terkompilasi dengan
+ *      objek uniform milik patch #1.
+ *   3. Saat patch #2 dipasang, `customProgramCacheKey` bawaan three =
+ *      `onBeforeCompile.toString()` — dan source kedua patch identik → cache
+ *      key sama → three memakai program lama TANPA memanggil onBeforeCompile
+ *      lagi → program tetap membaca uniform #1 yang beku di progress 0.
+ *
+ * Gejalanya: dither statis (pola Bayer progress 0 = 1 dari 16 piksel) selama
+ * durasi sapuan, lalu kantor muncul POP saat dispose(). Kena hanya di load
+ * dingin (kompilasi lambat, frame menang dari replay); refresh aman karena
+ * cache program GPU membuat replay menang. Build produksi tidak pernah kena
+ * (tidak ada replay StrictMode) — diverifikasi screenshot 7 Agu.
+ *
+ * Dengan uniform di module scope, patch #1 dan #2 menulis & membaca OBJEK YANG
+ * SAMA, jadi program yang terlanjur terkompilasi dengan patch #1 pun tetap
+ * menerima nilai yang digerakkan useFrame. Nol kompilasi ekstra. JANGAN
+ * "perbaiki" lewat customProgramCacheKey unik per instance: itu memaksa
+ * recompile 233 program = menggandakan stall 2,3 detiknya.
+ */
+const uProgress: IUniform<number> = { value: 0 };
+const uBand: IUniform<number> = { value: BAND };
+const uEdge: IUniform<number> = { value: EDGE };
+const uEdgeColor: IUniform<Color> = { value: new Color(EDGE_COLOR) };
+// Tanda arah sapuan, diturunkan dari X_FROM/X_TO — bukan konstanta terpisah
+// yang bisa lupa disesuaikan saat arahnya dibalik.
+const uDir: IUniform<number> = { value: Math.sign(X_TO - X_FROM) || 1 };
 
+/**
+ * Dibuka untuk material NON-standard yang perlu ikut tersapu.
+ *
+ * prepareRevealSweep() hanya menjangkau MeshStandardMaterial (lihat traverse di
+ * bawah). ShaderMaterial buatan sendiri — mis. hologram maintenance — tidak
+ * ikut ter-patch, jadi tanpa ini ia sudah tampil utuh di tengah kantor yang
+ * belum terbentuk. Yang diekspor SENGAJA objek uniform-nya, bukan salinan
+ * angkanya: pemakai harus menunjuk objek YANG SAMA supaya nilainya tetap
+ * sinkron tanpa ada yang perlu menyalin tiap frame.
+ *
+ * ⚠️ uProgress TIDAK direset ke 1 saat sapuan selesai — Office.tsx memanggil
+ * dispose() begitu t ≥ 1 tanpa set(1) lebih dulu, jadi nilai terakhirnya bisa
+ * berhenti di ~0,98. Itu aman untuk pemakaian di bawah (pada 0,98 garis sapuan
+ * sudah jauh melewati seluruh kantor), tapi jangan dipakai sebagai penanda
+ * "sapuan sudah selesai" — untuk itu pakai sinyal lain.
+ */
+export {
+  X_FROM as REVEAL_X_FROM,
+  X_TO as REVEAL_X_TO,
+  BAND as REVEAL_BAND,
+  uProgress as revealProgress,
+};
+
+export function prepareRevealSweep(scene: Object3D): RevealSweep | null {
   /**
    * Fungsi patch TUNGGAL — lihat catatan customProgramCacheKey di atas.
    *

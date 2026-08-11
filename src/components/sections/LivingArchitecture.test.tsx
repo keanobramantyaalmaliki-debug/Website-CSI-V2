@@ -2,7 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import LivingArchitecture from "./LivingArchitecture";
 
-// jsdom lacks IntersectionObserver; motion's whileInView and useScrollStepper need it.
+// jsdom lacks IntersectionObserver; motion's whileInView, useInView and
+// useScrollStepper all need it.
 class IntersectionObserverStub {
   observe() {}
   unobserve() {}
@@ -21,21 +22,21 @@ const NODES = [
 ];
 
 describe("LivingArchitecture", () => {
-  it("renders without crashing and shows the heading", () => {
+  it("renders without crashing and shows the section heading", () => {
     render(<LivingArchitecture />);
     expect(
       screen.getByRole("heading", { name: /a living architecture for decisions/i }),
     ).toBeInTheDocument();
   });
 
-  it("renders one h3 heading per node, in order", () => {
+  it("renders one h3 heading per node, in narrative order", () => {
     render(<LivingArchitecture />);
     const headings = screen.getAllByRole("heading", { level: 3 });
     expect(headings).toHaveLength(NODES.length);
     expect(headings.map((h) => h.textContent)).toEqual(NODES.map((n) => n.name));
   });
 
-  it("renders every node's description", () => {
+  it("renders every node's description (payload always in the DOM)", () => {
     render(<LivingArchitecture />);
     for (const node of NODES) {
       expect(screen.getByText(node.desc)).toBeInTheDocument();
@@ -44,17 +45,12 @@ describe("LivingArchitecture", () => {
 
   it("renders the Foundation and Flow group labels", () => {
     render(<LivingArchitecture />);
-    expect(screen.getAllByText("Foundation").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Flow").length).toBeGreaterThan(0);
+    expect(screen.getByText("Foundation")).toBeInTheDocument();
+    expect(screen.getByText("Flow")).toBeInTheDocument();
   });
 
-  it("renders exactly one glyph svg per node, not duplicated in a sticky panel", () => {
+  it("renders exactly one glyph svg per node", () => {
     const { container } = render(<LivingArchitecture />);
     expect(container.querySelectorAll("svg")).toHaveLength(NODES.length);
-  });
-
-  it("shows the 01 / 07 counter on mount", () => {
-    render(<LivingArchitecture />);
-    expect(screen.getByText("01 / 07")).toBeInTheDocument();
   });
 });

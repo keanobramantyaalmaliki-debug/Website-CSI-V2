@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSceneStore, pathFor, roomFromPath } from "@/lib/store/sceneStore";
 import { scrollToTop, scrollToSection } from "@/lib/smoothScroll";
@@ -23,9 +23,12 @@ import { scrollToTop, scrollToSection } from "@/lib/smoothScroll";
  */
 export default function RoomRouteSync() {
   const navigate = useNavigate();
-  const { pathname, hash } = useLocation();
+  const { pathname, hash, search } = useLocation();
   const goTo       = useSceneStore((s) => s.goTo);
   const currentRoom = useSceneStore((s) => s.currentRoom);
+
+  /** Pathname terakhir yang sudah selesai diurus Arah 1 — lihat Arah 2. */
+  const resolvedPath = useRef<string | null>(null);
 
   // Arah 1: pathname → room (back/forward, deep-link React Router)
   //
@@ -51,6 +54,16 @@ export default function RoomRouteSync() {
   // urusan DOM yang memang wilayahnya di sini.
   useEffect(() => {
     const key = roomFromPath(pathname);
+
+    // Satu-satunya keadaan yang menyisakan pekerjaan untuk efek ini adalah
+    // "ada ruangan tujuan yang belum dijalankan, tapi `goTo` belum terdaftar".
+    // Itu dipulangkan LEBIH DULU, tanpa menandai `resolvedPath` — dan itulah
+    // yang menahan Arah 2 menimpa deep-link (catatannya di bawah).
+    if (key && key !== currentRoom && !goTo) return;
+
+    // Selebihnya pathname ini selesai diurus, apa pun cabang yang diambil.
+    resolvedPath.current = pathname;
+
     if (!key || !goTo) return;
     if (key === currentRoom) return;
     goTo(key);
@@ -61,12 +74,57 @@ export default function RoomRouteSync() {
   }, [pathname, goTo, currentRoom, hash]);
 
   // Arah 2: currentRoom → pathname (klik waypoint dalam Canvas)
+  //
+  // ⚠️ `search` & `hash` DIBAWA SERTA, jangan kembali ke `pathFor()` telanjang.
+  // pathFor() cuma tahu soal ruangan, jadi menavigasi ke hasilnya apa adanya
+  // MENULIS ULANG seluruh URL — dan membuang query string pengunjung pada
+  // perpindahan ruangan pertama.
+  //
+  // Ketahuan lewat overlay dev ber-query (`?perf=1`) yang menyala di Lounge
+  // lalu lenyap tepat saat ganti ruangan. Gejalanya menyesatkan — tampak
+  // seperti overlay-nya yang rusak, padahal URL-nya yang ditulis ulang di sini.
+  //
+  // Dampaknya jauh lebih luas dari alat dev: `?utm_source=` dari tautan
+  // kampanye ikut hilang diam-diam, jadi kunjungan yang berpindah ruangan
+  // kehilangan atribusinya.
+  //
+  // Perbandingannya tetap `target !== pathname` — MURNI path, tanpa search.
+  // Kalau search ikut dibandingkan, efek ini menyala lagi tiap query berubah
+  // dan menavigasi ke URL yang isinya persis sama (riwayat browser terisi
+  // entri kembar, dan Arah 1 ikut menyala di tengah tween kamera).
+  //
+  // ⚠️ `pending` menahan efek ini pada MUAT PERTAMA sebuah deep-link.
+  //
+  // Dua arah di sini balapan saat mount. Arah 1 tertahan `if (!goTo) return` —
+  // `goTo` baru terdaftar setelah CameraController mount, dan itu ada di dalam
+  // chunk <Scene> yang di-lazy-load, ratusan milidetik kemudian. Arah 2 tidak
+  // punya penahan apa pun: saat mount `currentRoom` masih START_ROOM, jadi ia
+  // melihat "/" ≠ "/office" lalu menavigasi ke "/" — MENIMPA tujuan pengunjung
+  // sebelum Arah 1 sempat bekerja.
+  //
+  // Sesudah itu tidak ada yang terasa salah dari dalam: pathname "/" memang
+  // cocok dengan currentRoom "Lounge", jadi Arah 1 melewatinya dengan benar.
+  //
+  // Gejalanya: setiap tautan ruangan yang dibagikan, dan setiap refresh di
+  // dalam ruangan, mendarat di Lounge. Klik navbar TETAP JALAN (saat itu Scene
+  // sudah mount), jadi ini tidak terlihat kecuali URL-nya dibuka langsung.
+  //
+  // Yang dijaga BUKAN "apakah goTo sudah ada", melainkan "apakah Arah 1 sudah
+  // selesai berurusan dengan pathname ini" — itu yang dicatat `resolvedPath`.
+  //
+  // Bedanya penting. Menolak menavigasi selama `roomFromPath(pathname) !==
+  // currentRoom` terdengar setara, tapi jauh lebih lebar: "/" selalu memetakan
+  // ke Lounge, jadi syarat itu ikut memblokir perpindahan SAH keluar dari
+  // Lounge (klik waypoint Office dari "/") — persis yang dijaga
+  // roomRouteSearch.test.tsx. Yang ditahan di sini hanya satu keadaan sempit:
+  // pathname yang Arah 1 belum sempat proses karena `goTo` belum terdaftar.
   useEffect(() => {
     const target = pathFor(currentRoom);
-    if (target !== pathname) {
-      navigate(target, { replace: false });
-    }
-  }, [currentRoom, navigate, pathname]);
+    if (target === pathname) return;
+    if (resolvedPath.current !== pathname) return;
+
+    navigate(target + search + hash, { replace: false });
+  }, [currentRoom, navigate, pathname, search, hash]);
 
   // Arah 3: hash → scroll. Dipisah dari efek pathname supaya klik "Talk to us"
   // dari room lain (navigate ke "/#contact") ikut ter-scroll setelah konten

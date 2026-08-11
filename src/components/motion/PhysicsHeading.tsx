@@ -62,9 +62,36 @@ export default function PhysicsHeading({ text, className }: Props) {
     ];
 
     Composite.add(engine.world, [...bodies, ...walls]);
-    Runner.run(runner, engine);
 
+    /**
+     * ⚠️ Runner TIDAK dijalankan di sini — hanya saat benar-benar ada yang
+     * dianimasikan. Jangan kembalikan `Runner.run()` ke tempat ini.
+     *
+     * Dulu ia dipanggil langsung saat mount, dan `physicsActive` di bawah
+     * cuma menggerbangi PENULISAN transform di `afterUpdate`. Akibatnya
+     * simulasi tetap berdetak ~60×/detik selamanya walau kursor tak pernah
+     * menyentuh judulnya — dan `<PhysicsHeading>` dipakai 2× di
+     * Deployments.tsx, jadi DUA engine berjalan sepanjang Lounge terbuka.
+     *
+     * Ini beban CPU, bukan GPU: gejalanya laptop panas & kipas menyala,
+     * bukan sekadar FPS turun. Dilaporkan Keano 3 Agu 2026.
+     *
+     * Penjaganya PhysicsHeading.test.tsx, sudah dibuktikan MERAH dulu.
+     */
     let physicsActive = false;
+    let runnerOn = false;
+
+    const startRunner = () => {
+      if (runnerOn) return;
+      runnerOn = true;
+      Runner.run(runner, engine);
+    };
+
+    const stopRunner = () => {
+      if (!runnerOn) return;
+      runnerOn = false;
+      Runner.stop(runner);
+    };
 
     // Drive span transforms directly from physics — no React re-render
     Events.on(engine, "afterUpdate", () => {
@@ -81,6 +108,7 @@ export default function PhysicsHeading({ text, className }: Props) {
     const fall = () => {
       if (physicsActive) return;
       physicsActive = true;
+      startRunner();
 
       // Clear any CSS transition so physics drives freely
       wordRefs.current.forEach((el) => {
@@ -114,7 +142,11 @@ export default function PhysicsHeading({ text, className }: Props) {
         Body.setAngularVelocity(body, 0);
       });
 
-      // CSS transition from current visual position back to exact origin
+      // CSS transition from current visual position back to exact origin.
+      // Perjalanan pulang ini murni CSS — badan fisikanya sudah diteleport ke
+      // rumah di atas dan `physicsActive` sudah false, jadi engine tidak punya
+      // pekerjaan tersisa dan boleh berhenti SEKARANG, tidak perlu menunggu
+      // transisi 0,6 s selesai.
       requestAnimationFrame(() => {
         wordRefs.current.forEach((el) => {
           if (!el) return;
@@ -122,6 +154,8 @@ export default function PhysicsHeading({ text, className }: Props) {
           el.style.transform = "translate(0px, 0px) rotate(0rad)";
         });
       });
+
+      stopRunner();
     };
 
     container.addEventListener("mouseenter", fall);
@@ -129,7 +163,7 @@ export default function PhysicsHeading({ text, className }: Props) {
 
     return () => {
       Events.off(engine, "afterUpdate");
-      Runner.stop(runner);
+      stopRunner();
       Engine.clear(engine);
       container.removeEventListener("mouseenter", fall);
       container.removeEventListener("mouseleave", restore);

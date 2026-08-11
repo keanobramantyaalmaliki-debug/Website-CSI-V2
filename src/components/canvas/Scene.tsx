@@ -1,17 +1,18 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { EffectComposer, Bloom, N8AO } from "@react-three/postprocessing";
+import { EffectComposer, Bloom, N8AO, HueSaturation, BrightnessContrast } from "@react-three/postprocessing";
 import { ACESFilmicToneMapping } from "three";
 import { Suspense } from "react";
 import Office from "./Office";
+import MaintenanceHologram from "./MaintenanceHologram";
 import SceneEnvironment from "./SceneEnvironment";
-import CharacterLights from "./CharacterLights";
 import CameraController, { VIEWS } from "./CameraController";
 import { START_ROOM } from "@/lib/store/sceneStore";
-import BilliardGame from "./billiard/BilliardGame";
+import BilliardLazy from "./billiard/BilliardLazy";
 import Waypoints from "./Waypoints";
 import ContactShadowsRig from "./ContactShadowsRig";
+import { useGatedFrameloop } from "./FrameloopGate";
 
 // Posisi awal kamera. DIAMBIL dari VIEWS[START_ROOM], bukan angka yang ditulis
 // ulang: sebelumnya di sini ada tuple hardcode [-6.0, 1.6, 4.0] yang bahkan
@@ -64,19 +65,39 @@ const START_POS = VIEWS[START_ROOM].pos.toArray() as [number, number, number];
  * dengan menyebut berkas yang belum patuh. Selama sapuan reveal & minigame
  * billiard masih ada, hemat GPU-nya kecil dan risikonya besar.
  *
- * Catatan: dua Canvas kecil di motion/ (DeploymentsField, ManifestoField)
- * TETAP memakai `demand` dan itu benar — keduanya menggerakkan animasinya
- * sendiri lewat invalidate() dan tidak berbagi kontrak dengan scene ini.
+ * Catatan: Canvas kecil di motion/ (CsiParticleField, ManifestoField) TETAP
+ * memakai `demand` dan itu benar — keduanya menggerakkan animasinya sendiri
+ * lewat invalidate() dan tidak berbagi kontrak dengan scene ini.
+ * (DeploymentsField juga begitu, tapi per 3 Agu 2026 ia sudah tidak diimpor
+ * siapa pun — jangan cari jejaknya di halaman.)
  */
 export default function Scene() {
+  // "always" saat hero terlihat ATAU scene belum siap; "never" selebihnya.
+  // HARUS lewat prop (bukan setFrameloop imperatif): tiap re-render Canvas —
+  // termasuk yang dipicu react-use-measure saat fade scroll men-scale
+  // pembungkusnya — menyinkronkan ulang prop ini, jadi panggilan imperatif
+  // akan ditimpa balik ke default "always". Rincian + syarat sceneReady di
+  // FrameloopGate.tsx; penjaganya frameloopGate.invariant.test.ts.
+  const frameloop = useGatedFrameloop();
   return (
     <Canvas
+      frameloop={frameloop}
       camera={{ position: START_POS, fov: 60, near: 0.05, far: 120 }}
       dpr={[1, 1.5]}
-      gl={{ antialias: true, powerPreference: "high-performance" }}
+      // antialias: false — dan ini BUKAN bagian dari uji MSAA di bawah.
+      // Terukur terpisah: dengan multisampling 8 tetap menyala, mengubah flag
+      // ini true→false TIDAK mengubah frame time sama sekali (33,3 ms
+      // dua-duanya). Sebabnya ia memang tak pernah terpakai: flag ini berlaku
+      // pada default framebuffer, sedangkan EffectComposer merender ke buffer
+      // offscreen-nya sendiri dan melewati framebuffer itu. Jadi MSAA
+      // dialokasikan dua kali, satu menganggur.
+      //
+      // Konsekuensinya: menyalakan kembali flag ini tidak akan mengembalikan
+      // tepi yang mulus — yang menentukan hanya `multisampling` di bawah.
+      gl={{ antialias: false, powerPreference: "high-performance" }}
       onCreated={({ gl }) => {
         gl.toneMapping = ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.0;
+        gl.toneMappingExposure = 1.6;
       }}
     >
       <color attach="background" args={["#0a0a0c"]} />
@@ -91,13 +112,26 @@ export default function Scene() {
           Naikkan hanya kalau ada yang gelap total sampai tidak terbaca, dan
           naikkan sedikit-sedikit; 0.10 saja sudah cukup untuk mengembalikan
           tampilan flat itu. */}
-      <ambientLight intensity={0.03} />
+      <ambientLight intensity={0.18} color="#ffbd75" />
       <SceneEnvironment />
-      <CharacterLights />
+      {/* CharacterLights DIHAPUS 6 Agu — dan ini bukan sekadar beres-beres.
+          Lampunya di-layers.set(1) sejak lahir, sedangkan WebGLRenderer
+          menguji layer lampu terhadap layer KAMERA (r185 ~17387) yang cuma
+          di layer 0 → lampu itu TIDAK PERNAH dikumpulkan renderer. Artinya
+          look karakter yang disukai selama ini = ambient di atas + envmap
+          saja. Point light motivated per karakter sempat dites hidup beneran
+          (6 Agu, Person2) dan Keano memilih tanpa lampu. Kalau mau dicoba
+          lagi: lampu HARUS di layer 0, pagari dengan distance pendek. */}
       <CameraController />
 
       <Suspense fallback={null}>
         <Office />
+        {/* Penutup lubang pintu buntu di sisi timur laut Office. HARUS di dalam
+            Suspense yang sama dengan <Office/>: ia ikut menumpang uniform
+            sapuan reveal, dan uniform itu baru digerakkan setelah GLB dimuat.
+            Di luar Suspense hologramnya menyala di ruang kosong selama GLB
+            masih diunduh. */}
+        <MaintenanceHologram />
         {/* Kerucut cahaya volumetrik (LightCone/LightCones) DIHAPUS 30 Jul.
             Kalau nanti dibuat lagi, dua catatan yang mahal didapat:
 
@@ -123,13 +157,51 @@ export default function Scene() {
             layar (pojok & celah rapat), sedangkan ini menjatuhkan bayangan
             ARAH pada lantai dari benda di atasnya — kolong meja, bawah kursi. */}
         <ContactShadowsRig />
-        <BilliardGame />
+        {/* Minigame billiard — kodenya + ~1 MB GLB baru diunduh saat pengunjung
+            sampai di Lounge (tempat mejanya), dan baru di-mount saat mejanya
+            benar-benar diklik. Di perangkat sentuh keduanya tidak pernah
+            terjadi. Lihat BilliardLazy.tsx. */}
+        <BilliardLazy />
         {/* Waypoint harus di dalam Suspense: posisinya mengacu ke ruangan yang
             baru ada setelah GLB dimuat. */}
         <Waypoints />
       </Suspense>
 
-      <EffectComposer>
+      {/* ── multisampling: 0 — DIPUTUSKAN, MSAA dimatikan (3 Agu 2026) ───────
+          Keano melihat sendiri hasilnya berdampingan dan menerima tepi yang
+          lebih bergerigi sebagai harga yang pantas untuk 2× frame rate.
+          Bukan asumsi "60 FPS pasti lebih baik" — penilaian tampilan yang
+          diambil setelah melihat.
+
+          Ditulis EKSPLISIT, bukan dibiarkan kosong. Tanpa props, library
+          memakai default `multisampling: 8` (diverifikasi di node_modules:
+          `multisampling:_=8`) — setelan termahal di berkas ini, dan dulu tidak
+          disebut sama sekali di komentar mana pun.
+
+          Terukur di M2, dpr 2 (2,63 Mpx — mendekati layar Retina):
+            multisampling 8 → p50 33,3 ms · 30 FPS
+            multisampling 4 → p50 33,3 ms · 30 FPS   ← TIDAK menolong sama sekali
+            multisampling 0 → p50 16,7 ms · 60 FPS   ← DIPAKAI SEKARANG
+          Di dpr 1 ketiganya sama-sama 16,7 ms (mentok vsync), jadi mengukur di
+          jendela kecil akan menyimpulkan "tidak ada bedanya" — SALAH. Ongkos
+          MSAA itu per piksel; ia baru terlihat di kerapatan piksel Retina.
+
+          Bahwa 4 sama mahalnya dengan 8 berarti pilihannya BINER: ada MSAA atau
+          tidak. Tidak ada jalan tengah yang bisa ditawar.
+
+          Tampilannya memang berubah — 18,84% piksel, tepi plafon diagonal &
+          pilar jadi bertangga, cincin lampu gantung pecah jadi putus-putus.
+          Tapi itu BUKAN sekadar kompromi yang ditelan demi FPS: Keano melihat
+          hasilnya lalu menyatakan ia LEBIH SUKA tepi yang sedikit bergigi.
+          Sejalan juga dengan arah look PS1/basement.studio yang bersandar pada
+          NearestFilter + piksel tegas.
+
+          ⚠️ Jadi aliasing di sini adalah PILIHAN ESTETIK, bukan utang teknis.
+          Laporan "tepinya kasar" = keputusan yang sudah ditimbang, bukan bug.
+          JANGAN menambahkan SMAA/FXAA untuk "memperbaikinya", dan JANGAN
+          kembali ke `multisampling={4}` — terukur sama mahalnya dengan 8,
+          membayar penuh tanpa dapat apa-apa. */}
+      <EffectComposer multisampling={0}>
         {/* ── AO runtime: pojok & celah jadi gelap ────────────────────────────
             Ini yang mengisi lubang terbesar lightmap. Bake cuma mencakup
             objek ≥8 m² (Documentations.md §4g) = 39 dari 233 material; 189
@@ -201,6 +273,13 @@ export default function Scene() {
             threshold 0.95 = hanya emissive yang berpendar. JANGAN diturunkan:
             lantai & permukaan terang ikut glow seperti lava. */}
         <Bloom intensity={0.4} luminanceThreshold={0.95} mipmapBlur />
+        {/* Color grade hangat — mengejar tone render Cycles (5 Agu).
+            ACES pada exposure tinggi menekan saturasi, jadi dinding cream
+            tampak pucat kelabu meski sudah terang. Dua pass murah ini
+            mengembalikannya DI LEVEL FRAME, setelah bloom, tanpa melawan
+            lightmap (beda dengan menaikkan ambient yang meratakan pojok). */}
+        <HueSaturation saturation={0.3} />
+        <BrightnessContrast brightness={0.03} contrast={0.08} />
       </EffectComposer>
     </Canvas>
   );

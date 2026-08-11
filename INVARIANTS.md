@@ -162,8 +162,8 @@ atau tidaknya hover, bukan sempitnya layar. `max-width` akan meloloskan tablet
 landscape yang masalahnya sama persis.
 
 **Kenapa lintas-wilayah.** Ini seam paling tajam sekarang, dan bentuknya beda
-dari §1–§5 — ia tidak menunggu merge untuk rusak, ia **sudah** bergantung pada
-pekerjaan yang belum ada:
+dari §1–§5 — saat ditulis ia tidak menunggu merge untuk rusak, ia **sudah**
+bergantung pada pekerjaan yang belum ada:
 
 > Saat gerbang ini ditulis (3 Agu), `Navbar.tsx` **belum punya** pemilih
 > ruangan sama sekali — grep `goTo` di seluruh `src/` dan satu-satunya
@@ -172,14 +172,20 @@ pekerjaan yang belum ada:
 > ada lagi (komentarnya sudah dibetulkan). Artinya untuk sementara pengunjung
 > HP **terkunci di Lounge** — diterima sadar sambil menunggu koordinasi.
 
-**Sudah terjawab di branch `join`:** Nico membangun room links di `Navbar.tsx`
-(`ACTIVE_KEYS.map` → `goRoom`) plus routing berbasis path lewat
-`routes/RoomRouteSync.tsx`. Begitu `join` masuk, kunci itu terbuka.
+**✅ TERJAWAB — `join` sudah di-merge (3 Agu, `455eae7`).** Nico membangun room
+links di `Navbar.tsx` (`ACTIVE_KEYS.map` → `goRoom`) plus routing berbasis path
+lewat `routes/RoomRouteSync.tsx`. Kuncinya terbuka; pengunjung HP bisa berpindah
+ruangan lewat navbar.
 
-Yang tetap berlaku: **jangan "memperbaiki" §6 dengan menghidupkan lagi waypoint
-di perangkat sentuh.** Jalan keluarnya adalah navbar, dan sekarang navbar itu
-ada. Kalau suatu saat room links-nya dihapus/diubah, §6 ikut jadi jalan buntu —
-keduanya terikat, dan tidak ada test yang bisa melihat ikatan itu.
+⚠️ **Yang berlaku sekarang adalah ikatannya.** Room links di `Navbar.tsx`
+bukan sekadar kenyamanan — ia **satu-satunya** jalan pindah ruangan di
+perangkat sentuh. Kalau suatu saat dihapus atau diubah jadi butuh hover, §6
+langsung berubah jadi jalan buntu di HP, dan **tidak ada test yang bisa melihat
+ikatan itu**: `coarsePointer.invariant.test.ts` menjaga gerbangnya mati, bukan
+menjaga adanya jalan keluar.
+
+Dan tetap: **jangan "memperbaiki" §6 dengan menghidupkan lagi waypoint di
+perangkat sentuh.** Jalan keluarnya adalah navbar, dan sekarang navbar itu ada.
 
 **Urutan gerbang yang tidak boleh dibalik.** Tiga berkas menjalankan satu
 keputusan ini, dan dua di antaranya punya kegagalan lebih buruk dari sekadar
@@ -195,6 +201,49 @@ Gerbang di `Hero.tsx` bersifat kosmetik + hemat bundle; yang benar-benar
 mematikan interaksi adalah dua yang pertama. **Menyembunyikan HUD tanpa
 mematikan pintu masuknya menghasilkan jalan buntu**, bukan sekadar tampilan
 yang kurang rapi.
+
+---
+
+## §7 🔒 Render loop mati saat hero di-scroll lewat
+
+**Aturan.** `useGatedFrameloop()` (di `canvas/FrameloopGate.tsx`) mengembalikan
+`"never"` saat `!heroInView && sceneReady`, dan `canvas/Scene.tsx` memasangnya
+sebagai **prop** `frameloop` di `<Canvas>`. Wajib prop, bukan `setFrameloop()`
+imperatif — bentuk imperatif sudah dicoba dan terukur gagal: tiap re-render
+`<Canvas>` (dipicu `react-use-measure` saat fade scroll men-scale pembungkus
+hero) menyinkronkan ulang prop `frameloop` yang tidak diset = `"always"`,
+menimpa panggilan imperatif persis di momen ia dibutuhkan.
+
+Dua konsekuensi, satu ke tiap arah:
+
+1. **Untuk siapa pun yang menulis kode di `canvas/`:** `useFrame` TIDAK
+   berdetak saat pengunjung berada di konten bawah halaman. Komponen baru tidak
+   boleh mengandalkan tick untuk pekerjaan yang harus jalan saat hero
+   off-screen (polling, sinkronisasi state, timer). Pakai efek/DOM biasa untuk
+   itu. Animasi visual justru aman — toh canvasnya tak terlihat.
+2. **Untuk siapa pun yang menyentuh gate-nya:** kondisi jalan wajib menyertakan
+   `|| !sceneReady`. `sceneReady` dipancarkan `useFrame` di `Office.tsx` — kalau
+   loop dipause sebelum frame pertama, sinyal tak pernah datang dan overlay
+   loader menutupi situs **selamanya** (kegagalan yang sama dengan §3).
+   `heroInView` default `true` tidak cukup: reload di posisi scroll tengah
+   halaman membuat observer menyetelnya `false` sebelum GLB selesai dimuat.
+
+**Penjaga.** `src/components/canvas/frameloopGate.invariant.test.ts`
+
+**Kenapa BUKAN `frameloop="demand"` (§1).** `"never"` beda kelas: ia
+menghentikan SEMUA `useFrame` serempak — mixer karakter, sweep, tween — tidak
+ada file yang bisa "lupa invalidate" sebagian. Kontrak demand↔invalidate yang
+rapuh itu tetap tidak dihidupkan lagi.
+
+**Kenapa lintas-wilayah.** Gejala aslinya (3 Agu) ada di wilayah Nico — "laptop
+panas saat baca konten" — tapi sebabnya di wilayah Keano: canvas tetap merender
+60 fps di balik pembungkus `opacity: 0` milik `sections/Hero.tsx`. Dan sinyal
+gerbangnya (`heroInView`) diproduksi `Hero.tsx` (Nico) lalu dikonsumsi
+`canvas/` (Keano) — persis jenis ikatan yang putus diam-diam saat salah satu
+pihak mengubah observernya.
+
+Ikatan turunannya: `BilliardHUD` keluar otomatis saat `!heroInView` — HUD-nya
+`position: fixed`, tanpa itu bar tenaga melayang di atas konten halaman.
 
 ---
 

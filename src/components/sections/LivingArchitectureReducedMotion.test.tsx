@@ -2,7 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import LivingArchitecture from "./LivingArchitecture";
 
-// jsdom lacks IntersectionObserver; motion's whileInView and useScrollStepper need it.
+// jsdom lacks IntersectionObserver; motion's whileInView, useInView and
+// useScrollStepper all need it.
 class IntersectionObserverStub {
   observe() {}
   unobserve() {}
@@ -26,27 +27,25 @@ const DESCS = [
 ];
 
 describe("LivingArchitecture — reduced motion", () => {
-  it("every node description still renders when prefers-reduced-motion is set", () => {
+  it("every node description renders and is visible when prefers-reduced-motion is set", () => {
     render(<LivingArchitecture />);
     for (const desc of DESCS) {
-      expect(screen.getByText(desc)).toBeInTheDocument();
+      const el = screen.getByText(desc);
+      expect(el).toBeInTheDocument();
+      // Payload must not be opacity-gated behind a hover the user can't perform.
+      expect(el).not.toHaveStyle({ opacity: "0" });
     }
   });
 
-  it("no translateY offset on any node item when prefers-reduced-motion is set", () => {
+  it("no lingering translateY offset on any node description under reduced motion", () => {
+    // Scope to the node descriptions themselves — the section's intro
+    // <motion.p> keeps a fixed initial y-offset that whileInView never
+    // resolves in jsdom (pre-existing, shared with Process.tsx), which is
+    // out of scope for the reveal mechanic under test here.
     render(<LivingArchitecture />);
-    // Scope to the node list (FadeUpItem is reduced-motion aware); the
-    // eyebrow/intro motion.p elements above it use fixed initial offsets
-    // that never resolve in this test env since whileInView never fires —
-    // that's pre-existing behavior shared with Process.tsx, out of scope here.
-    // The sticky heading column also carries a border-t border-white/[0.08]
-    // element (the counter block), so locate the node list itself via a
-    // node heading's ancestor rather than a bare class selector.
-    const firstHeading = screen.getByRole("heading", { level: 3, name: "Citizen" });
-    const list = firstHeading.closest(".border-t.border-white\\/\\[0\\.08\\]") as HTMLElement;
-    const offsetElements = [...list.querySelectorAll('[style*="translateY"]')].filter(
-      (el) => !/translateY\(0px\)/.test(el.getAttribute("style") ?? ""),
-    );
-    expect(offsetElements).toHaveLength(0);
+    for (const desc of DESCS) {
+      const style = screen.getByText(desc).getAttribute("style") ?? "";
+      expect(/translateY\((?!0px\))/.test(style)).toBe(false);
+    }
   });
 });

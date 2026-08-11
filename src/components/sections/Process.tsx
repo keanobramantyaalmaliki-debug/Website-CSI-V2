@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "motion/react";
+import { useRef } from "react";
+import { motion, useInView, useReducedMotion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 import { StickyScroll } from "@/components/ui/sticky-scroll-reveal";
@@ -8,6 +9,32 @@ import { PROCESS_GLYPHS } from "@/components/motion/ProcessGlyphs";
 import { useScrollStepper } from "@/lib/hooks/useScrollStepper";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
+/**
+ * Mobile/tablet-only glyph reveal — plays once when scrolled into view.
+ * Separate from the desktop sticky panel, which replays on every step
+ * change via `activeIndex` instead of an inView observer.
+ */
+function MobileGlyph({
+  Glyph,
+  reduced,
+}: {
+  Glyph: (typeof PROCESS_GLYPHS)[number];
+  reduced: boolean;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  // amount: 0.4 — without it, useInView fires as soon as 1px of the glyph
+  // pokes past the bottom edge, so the reveal finishes before the user has
+  // actually scrolled it into view. Requiring 40% visible first means the
+  // trigger point roughly matches when the glyph is actually on screen.
+  const inView = useInView(ref, { once: true, amount: 0.4, margin: "0px 0px -60px 0px" });
+
+  return (
+    <div ref={ref} className="mt-6 h-32 w-32 text-zinc-500 lg:hidden">
+      <Glyph play={inView} reduced={reduced} />
+    </div>
+  );
+}
 
 const STEPS: { num: string; kicker: string; title: string; desc: string }[] = [
   {
@@ -50,6 +77,7 @@ const STEPS: { num: string; kicker: string; title: string; desc: string }[] = [
 
 export default function Process() {
   const { activeIndex, setRef } = useScrollStepper(STEPS.length);
+  const reduced = !!useReducedMotion();
 
   return (
     <section id="process" className="overflow-x-clip px-6 py-24 sm:px-10 sm:py-32">
@@ -92,9 +120,7 @@ export default function Process() {
                     </p>
                     {/* Mobile/tablet only — desktop shows the same glyph in the
                         sticky panel, synced via scroll position instead. */}
-                    <div className="mt-6 h-32 w-32 text-zinc-500 lg:hidden">
-                      <Glyph />
-                    </div>
+                    <MobileGlyph Glyph={Glyph} reduced={reduced} />
                   </div>
                 </div>
               </FadeUpItem>
@@ -110,7 +136,7 @@ export default function Process() {
               content: (
                 <div className="flex h-full flex-col items-center justify-center gap-4 p-8">
                   <div className="h-32 w-32 text-zinc-400">
-                    <Glyph />
+                    <Glyph play={activeIndex === i} reduced={reduced} />
                   </div>
                   <div className="text-center">
                     <span className="text-xs tracking-widest text-orange-500 uppercase">

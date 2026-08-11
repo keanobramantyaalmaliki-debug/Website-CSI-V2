@@ -78,12 +78,17 @@ export default function Manifesto() {
          yang memudar, jadi ia harus buram — tanpa itu kantor 3D terlihat
          menembus teks.
 
-         `pt-16` (64px, dulu `pt-40` = 160px) juga menopang hal lain: di HP
-         hero cuma setinggi 70dvh (lihat Hero.tsx), dan eyebrow + baris pertama
-         section ini harus MENGINTIP di sisa 30% layar. Padding besar sendirian
-         menghabiskan jatah itu. Ketiganya terikat — Hero 70dvh, `-mt` di
-         HeroHandoff, dan padding ini; mengubah satu tanpa menengok dua lainnya
-         membuat Manifesto tidak mengintip sama sekali. */
+         `pt-16` (64px, dulu `pt-40` = 160px) juga menopang hal lain: di HP hero
+         setinggi 70dvh (lihat Hero.tsx), dan section pertama di bawahnya harus
+         MENGINTIP di sisa 30% layar. Padding besar sendirian menghabiskan
+         jatah itu.
+
+         ⚠️ Aturan padding-tipis ini berlaku untuk SECTION PERTAMA TIAP RUANGAN,
+         bukan khusus berkas ini — di Lounge yang menempel ke hero sekarang
+         CsiHero (`pt-6` di HP; ia yang benar-benar bersebelahan dengan kantor
+         3D), dan Manifesto menyusul di bawahnya (lihat lib/roomContent). Berkas
+         ini tidak lagi menyentuh hero, jadi 64px-nya aman.
+         Pasangannya: tinggi hero di Hero.tsx + seam di HeroHandoff. */
       className="relative overflow-hidden bg-background px-6 pb-24 pt-16 sm:px-10 sm:pb-32 sm:pt-20"
     >
       {/* Particle field — absolute behind text */}
