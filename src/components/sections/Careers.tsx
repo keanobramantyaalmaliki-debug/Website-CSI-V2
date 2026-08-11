@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 import CareersRoleCard from "./CareersRoleCard";
+import HiringStack from "./HiringStack";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -12,14 +13,6 @@ const ROLES: { title: string; type: string; mode: string; tag: string }[] = [
   { title: "Technical Lead",              type: "Full-time", mode: "Hybrid",  tag: "Engineering" },
   { title: "Product Builder",             type: "Full-time", mode: "Remote",  tag: "Product" },
   { title: "Full Stack Engineer",         type: "Full-time", mode: "Hybrid",  tag: "Engineering" },
-];
-
-const HIRING_STAGES = [
-  "Application",
-  "Conversation",
-  "Practical Challenge",
-  "Final Interview",
-  "Welcome Aboard",
 ];
 
 export default function Careers() {
@@ -59,18 +52,9 @@ export default function Careers() {
           viewport={{ once: true }}
           transition={{ duration: 0.5, ease: EASE }}
         >
-          How We Hire
+          How We Works
         </motion.p>
-        <FadeUpList tag="ol" className="mt-6 flex flex-wrap items-center gap-3">
-          {HIRING_STAGES.map((stage, i) => (
-            <FadeUpItem key={stage} tag="li" className="flex items-center gap-3">
-              <span className="text-sm text-zinc-300">{stage}</span>
-              {i < HIRING_STAGES.length - 1 && (
-                <span className="text-orange-500">→</span>
-              )}
-            </FadeUpItem>
-          ))}
-        </FadeUpList>
+        <HiringStack />
       </div>
     </section>
   );
