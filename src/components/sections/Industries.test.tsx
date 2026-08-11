@@ -1,8 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, afterEach, vi } from "vitest";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import Industries from "./Industries";
+import { INDUSTRIES } from "@/data/industries";
 
-// jsdom lacks IntersectionObserver; motion's whileInView needs it.
+// jsdom lacks IntersectionObserver; motion's whileInView/useInView need it.
 class IntersectionObserverStub {
   observe() {}
   unobserve() {}
@@ -10,52 +12,111 @@ class IntersectionObserverStub {
 }
 vi.stubGlobal("IntersectionObserver", IntersectionObserverStub);
 
-const SECTORS = [
-  { name: "Government & Public Sector", desc: "National platforms and citizen services, built to scale and stay accountable." },
-  { name: "Smart Cities", desc: "Connected infrastructure that turns urban data into livable outcomes." },
-  { name: "Digital Villages", desc: "Bringing modern services to rural communities, one connected village at a time." },
-  { name: "Healthcare", desc: "Systems that keep patient care coordinated, secure, and on time." },
-  { name: "Education", desc: "Platforms that put learning and administration on the same page." },
-  { name: "Finance", desc: "Secure, compliant systems for money that has to move and be trusted." },
-  { name: "Hospitality", desc: "Guest experiences that feel effortless from booking to checkout." },
-  { name: "Retail & E-Commerce", desc: "Storefronts and operations that keep pace with demand." },
-  { name: "Manufacturing", desc: "Floor-to-cloud visibility that keeps production moving." },
-  { name: "Logistics", desc: "Tracking and routing that make every shipment predictable." },
-  { name: "Property & Real Estate", desc: "Tools that manage spaces, tenants, and portfolios in one place." },
-  { name: "Professional Services", desc: "Workflows that let expert teams bill, deliver, and scale." },
-  { name: "Startups & Enterprises", desc: "From first MVP to enterprise rollout, built to grow with you." },
-];
+function mockMatchMedia({
+  minWidthMatches = false,
+  reducedMotionMatches = false,
+}: {
+  minWidthMatches?: boolean;
+  reducedMotionMatches?: boolean;
+}) {
+  window.matchMedia = (query: string) =>
+    ({
+      matches: query.includes("prefers-reduced-motion")
+        ? reducedMotionMatches
+        : minWidthMatches,
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }) as unknown as MediaQueryList;
+}
+
+const originalMatchMedia = window.matchMedia;
+
+afterEach(() => {
+  window.matchMedia = originalMatchMedia;
+});
 
 describe("Industries", () => {
   it("renders without crashing and shows the heading", () => {
+    mockMatchMedia({ minWidthMatches: false });
     render(<Industries />);
     expect(
       screen.getByRole("heading", { name: /built across sectors/i }),
     ).toBeInTheDocument();
   });
 
-  it("renders one heading per sector, in order", () => {
+  it("renders every sector name, in order", () => {
+    mockMatchMedia({ minWidthMatches: false });
     render(<Industries />);
-    const headings = screen.getAllByRole("heading", { level: 3 });
-    expect(headings).toHaveLength(SECTORS.length);
-    expect(headings.map((h) => h.textContent)).toEqual(SECTORS.map((s) => s.name));
-  });
-
-  it("renders every sector's description", () => {
-    render(<Industries />);
-    for (const sector of SECTORS) {
-      expect(screen.getByText(sector.desc)).toBeInTheDocument();
+    for (const industry of INDUSTRIES) {
+      expect(screen.getByText(industry.name)).toBeInTheDocument();
     }
   });
 
-  it("renders the Core Focus and Also Serving group labels", () => {
+  it("renders every sector's description", () => {
+    mockMatchMedia({ minWidthMatches: false });
     render(<Industries />);
-    expect(screen.getByText("Core Focus")).toBeInTheDocument();
-    expect(screen.getByText("Also Serving")).toBeInTheDocument();
+    for (const industry of INDUSTRIES) {
+      expect(screen.getByText(industry.desc)).toBeInTheDocument();
+    }
   });
 
   it("shows the sector/core count stat", () => {
+    mockMatchMedia({ minWidthMatches: true });
     render(<Industries />);
     expect(screen.getByText("13 SECTORS · 3 core")).toBeInTheDocument();
+  });
+
+  describe("desktop gallery", () => {
+    it("renders the expanding gallery with one image per sector", () => {
+      mockMatchMedia({ minWidthMatches: true });
+      render(<Industries />);
+      const gallery = screen.getByTestId("industries-gallery");
+      expect(gallery.querySelectorAll("img")).toHaveLength(INDUSTRIES.length);
+    });
+
+    it("every sector description stays in the DOM even when not hovered", () => {
+      mockMatchMedia({ minWidthMatches: true });
+      render(<Industries />);
+      const gallery = screen.getByTestId("industries-gallery");
+      for (const industry of INDUSTRIES) {
+        expect(within(gallery).getByText(industry.desc)).toBeInTheDocument();
+      }
+    });
+
+    it("hovering a column marks it as the active one", async () => {
+      mockMatchMedia({ minWidthMatches: true });
+      const user = userEvent.setup();
+      render(<Industries />);
+      const gallery = screen.getByTestId("industries-gallery");
+      const target = within(gallery)
+        .getByText(INDUSTRIES[3].name)
+        .closest("button");
+      expect(target).not.toBeNull();
+
+      await user.hover(target as HTMLElement);
+
+      expect(target).toHaveAttribute("aria-current", "true");
+    });
+
+    it("respects prefers-reduced-motion: content still renders, nothing crashes", () => {
+      mockMatchMedia({ minWidthMatches: true, reducedMotionMatches: true });
+      render(<Industries />);
+      const gallery = screen.getByTestId("industries-gallery");
+      expect(gallery.querySelectorAll("img")).toHaveLength(INDUSTRIES.length);
+    });
+  });
+
+  describe("mobile fallback", () => {
+    it("renders a vertical list instead of the gallery below 1024px", () => {
+      mockMatchMedia({ minWidthMatches: false });
+      render(<Industries />);
+      expect(screen.queryByTestId("industries-gallery")).not.toBeInTheDocument();
+      expect(screen.getAllByRole("img")).toHaveLength(INDUSTRIES.length);
+    });
   });
 });

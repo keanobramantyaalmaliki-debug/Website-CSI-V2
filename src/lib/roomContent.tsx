@@ -32,7 +32,9 @@ import TheCrew from "@/components/sections/TheCrew";
  * Office as the single services deep-dive, see diskusi/bedah-content-lounge;
  * updated 2026-08-11: TrustedBy dropped — placeholder client logos carried
  * no real endorsement, and its hover-swap mechanic now lives in
- * LivingArchitecture's glyph grid):
+ * LivingArchitecture's glyph grid; Industries is now an expanding
+ * horizontal gallery (spine columns reveal image + desc on hover/focus)
+ * instead of the old Core/Also card grid):
  * Hero → CsiHero → Manifesto → Deployments
  *      → LivingArchitecture → Process → Industries → Vision → Contact
  */
