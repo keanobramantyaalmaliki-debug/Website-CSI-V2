@@ -4,7 +4,6 @@ import type { RoomKey } from "@/lib/store/sceneStore";
 // ── Section imports ──────────────────────────────────────────────────────────
 import CsiHero from "@/components/sections/CsiHero";
 import Manifesto from "@/components/sections/Manifesto";
-import TrustedBy from "@/components/sections/TrustedBy";
 import Deployments from "@/components/sections/Deployments";
 import LivingArchitecture from "@/components/sections/LivingArchitecture";
 import Process from "@/components/sections/Process";
@@ -30,8 +29,13 @@ import TheCrew from "@/components/sections/TheCrew";
  * Page structure (decided 2026-07-07, see reference/ROADMAP.md B5; updated
  * 2026-08-03: Careers → Function, FeaturedProjects dropped (duplicated
  * CaseGrid in Meeting), Services dropped from Lounge and merged into
- * Office as the single services deep-dive, see diskusi/bedah-content-lounge):
- * Hero → CsiHero → Manifesto → TrustedBy → Deployments
+ * Office as the single services deep-dive, see diskusi/bedah-content-lounge;
+ * updated 2026-08-11: TrustedBy dropped — placeholder client logos carried
+ * no real endorsement, and its hover-swap mechanic now lives in
+ * LivingArchitecture's glyph grid; Industries is now an expanding
+ * horizontal gallery (spine columns reveal image + desc on hover/focus)
+ * instead of the old Core/Also card grid):
+ * Hero → CsiHero → Manifesto → Deployments
  *      → LivingArchitecture → Process → Industries → Vision → Contact
  */
 export const ROOM_CONTENT: Record<RoomKey, ReactNode> = {
@@ -39,7 +43,6 @@ export const ROOM_CONTENT: Record<RoomKey, ReactNode> = {
     <>
       <CsiHero />
       <Manifesto />
-      <TrustedBy />
       <Deployments />
       <LivingArchitecture />
       <Process />
