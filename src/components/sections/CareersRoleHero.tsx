@@ -2,19 +2,12 @@
 
 import { forwardRef, useRef } from "react";
 import {
-  AnimatePresence,
   motion,
   useMotionTemplate,
   useMotionValue,
   type Transition,
 } from "motion/react";
-import {
-  ArrowUpRight,
-  Code2,
-  Layers,
-  TrendingUp,
-  type LucideIcon,
-} from "lucide-react";
+import { Code2, Layers, TrendingUp, type LucideIcon } from "lucide-react";
 import type { CareerRole } from "./CareersPromote";
 
 const TAG_ICON: Record<string, LucideIcon> = {
@@ -39,11 +32,17 @@ const SWEEP_MASK = {
 
 /**
  * The big featured card. Shares its `layoutId` with the strip chip of the same
- * role so Framer FLIP-morphs position + size on promote. Extra hero-only content
- * (blurb + Apply) is what makes the larger size carry information, not just scale.
+ * role so Framer FLIP-morphs position + size on promote. The extra hero-only
+ * blurb is what makes the larger size carry information, not just scale.
+ *
+ * The parent gives this a `key={role.title}` so each promote remounts the hero
+ * as a fresh entering element — Framer then pairs it with the exiting chip and
+ * morphs chip → hero, instead of dragging a persistent node into the chip.
  */
-const CareersRoleHero = forwardRef<HTMLElement, { role: CareerRole; reduced: boolean }>(
-  function CareersRoleHero({ role, reduced }, ref) {
+const CareersRoleHero = forwardRef<
+  HTMLElement,
+  { role: CareerRole; reduced: boolean }
+>(function CareersRoleHero({ role, reduced }, ref) {
     const cardRef = useRef<HTMLElement | null>(null);
     const mouseX = useMotionValue(0);
     const mouseY = useMotionValue(0);
@@ -130,23 +129,6 @@ const CareersRoleHero = forwardRef<HTMLElement, { role: CareerRole; reduced: boo
           <p className="mt-4 max-w-md text-sm leading-relaxed text-zinc-300">
             {role.blurb}
           </p>
-
-          {/* Hero-only Apply: separate <a> (never nested in the promote button)
-              and cross-fades as the featured role changes. */}
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.a
-              key={role.title}
-              href={role.applyHref}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: reduced ? 0 : 0.18 }}
-              className="mt-6 inline-flex w-fit items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-black transition-colors hover:bg-accent/90"
-            >
-              Apply for this role
-              <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-            </motion.a>
-          </AnimatePresence>
         </div>
       </motion.article>
     );

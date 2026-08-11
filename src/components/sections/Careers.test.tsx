@@ -42,16 +42,15 @@ describe("Careers — promote", () => {
     }
   });
 
-  it("features the first role in the hero with a working Apply link", () => {
+  it("features the first role in the hero, with no Apply CTA", () => {
     render(<Careers />);
     const hero = screen.getByTestId("career-hero");
     expect(within(hero).getByText(ROLE_TITLES[0])).toBeInTheDocument();
 
-    const apply = within(hero).getByRole("link", { name: /apply for this role/i });
-    expect(apply).toHaveAttribute(
-      "href",
-      expect.stringContaining("mailto:hello@cogniti.id"),
-    );
+    // The Apply CTA was removed — the hero is presentational + promote-only.
+    expect(
+      within(hero).queryByRole("link", { name: /apply for this role/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("exposes the other three roles as promote buttons", () => {

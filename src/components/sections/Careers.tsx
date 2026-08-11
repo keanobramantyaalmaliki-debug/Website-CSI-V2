@@ -7,13 +7,9 @@ import HiringStack from "./HiringStack";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-// Shared hiring inbox; each role routes via the subject line. Swap the copy
-// (blurb / this address) freely — it is content, not configuration.
-const APPLY_EMAIL = "hello@cogniti.id";
-
 // TODO(careers): blurbs are placeholder copy — replace with the real role
 // descriptions from the hiring team before this ships publicly.
-const RAW_ROLES: Omit<CareerRole, "applyHref">[] = [
+const ROLES: CareerRole[] = [
   {
     title: "Innovation & Growth Manager",
     type: "Full-time",
@@ -47,13 +43,6 @@ const RAW_ROLES: Omit<CareerRole, "applyHref">[] = [
       "Build across the stack on real features that reach users fast, with room to go deep where it counts.",
   },
 ];
-
-const ROLES: CareerRole[] = RAW_ROLES.map((role) => ({
-  ...role,
-  applyHref: `mailto:${APPLY_EMAIL}?subject=${encodeURIComponent(
-    `Application — ${role.title}`,
-  )}`,
-}));
 
 export default function Careers() {
   return (

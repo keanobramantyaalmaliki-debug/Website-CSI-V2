@@ -15,7 +15,6 @@ export type CareerRole = {
   mode: string;
   tag: string;
   blurb: string;
-  applyHref: string;
 };
 
 /**
@@ -48,7 +47,7 @@ export default function CareersPromote({ roles }: { roles: CareerRole[] }) {
   const promote = useCallback((id: string) => {
     setState((s) => promoteReflow(s, id));
     // The clicked chip becomes the hero, so its old node unmounts — move focus
-    // to the freshly promoted hero so keyboard users land on the Apply action.
+    // to the freshly promoted hero so keyboard users land on it.
     requestAnimationFrame(() => heroRef.current?.focus());
   }, []);
 
@@ -69,7 +68,17 @@ export default function CareersPromote({ roles }: { roles: CareerRole[] }) {
             drifting over the strip during scroll re-projection and eating the
             strip's clicks. */}
         <div className="relative z-0">
-          <CareersRoleHero ref={heroRef} role={featured} reduced={!!reduced} />
+          {/* key remounts the hero per feature so each promote is a clean
+              entering-hero ↔ exiting-chip pair. Without it the hero is one
+              persistent node that just swaps layoutId, and Framer picks the
+              unmounting chip as the layout "lead" — dragging the hero down to
+              the chip's 437×118 box at opacity 0 (it "disappears"). */}
+          <CareersRoleHero
+            key={featured.title}
+            ref={heroRef}
+            role={featured}
+            reduced={!!reduced}
+          />
         </div>
 
         {/* z-10 keeps the strip above the hero; buttons are direct grid items
