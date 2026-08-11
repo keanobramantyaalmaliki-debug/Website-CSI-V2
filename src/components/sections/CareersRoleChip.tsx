@@ -44,15 +44,20 @@ export default function CareersRoleChip({
       onClick={onPromote}
       aria-label={`Feature the ${role.title} role`}
       style={{ borderRadius: 18 }}
-      className="group relative flex h-full w-full flex-col justify-between gap-5 overflow-hidden border border-white/[0.08] bg-white/[0.02] p-5 text-left outline-none transition-colors hover:border-accent/40 focus-visible:border-accent/60"
+      // cursor-pointer is explicit: Tailwind v4 no longer sets it on <button>.
+      // Transform is left to Framer (layout morph), so the hover lift is done
+      // with color/surface/shadow only — never `translate`/`scale` here.
+      className="group relative flex h-full w-full cursor-pointer flex-col justify-between gap-5 overflow-hidden border border-white/[0.08] bg-white/[0.02] p-5 text-left outline-none transition-colors duration-300 hover:border-accent/50 hover:bg-white/[0.04] hover:shadow-[0_10px_40px_-12px_rgba(0,0,0,0.6)] focus-visible:border-accent/60"
     >
       <div className="flex items-center justify-between">
         <span className="inline-flex items-center gap-1.5 text-xs text-zinc-400">
           <TagIcon className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
           {role.tag}
         </span>
+        {/* Resting hint (not fully hidden) so the card visibly invites a click;
+            fills in on hover. */}
         <ArrowUpRight
-          className="h-4 w-4 -translate-x-1 text-accent opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
+          className="h-4 w-4 text-accent opacity-40 transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:opacity-100"
           aria-hidden="true"
         />
       </div>
@@ -60,7 +65,7 @@ export default function CareersRoleChip({
       <div>
         <motion.h4
           layout="position"
-          className="text-sm font-medium text-zinc-100"
+          className="text-sm font-medium text-zinc-100 transition-colors duration-300 group-hover:text-white"
         >
           {role.title}
         </motion.h4>
