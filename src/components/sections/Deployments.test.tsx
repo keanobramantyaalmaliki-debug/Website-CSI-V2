@@ -52,20 +52,20 @@ describe("Deployments", () => {
     render(<Deployments />);
     expect(
       screen.getByText(
-        /digital transformation for citizen engagement/i,
+        /citizens reach government services online/i,
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/integrated monitoring linking physical assets/i),
+      screen.getByText(/physical assets and field crews report in/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/operational intelligence for supply-chain visibility/i),
+      screen.getByText(/every shipment stays visible from origin to delivery/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/operational platforms linking property management/i),
+      screen.getByText(/property operations and guest service share one system/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/civic platforms connecting residents/i),
+      screen.getByText(/a single platform ties residents/i),
     ).toBeInTheDocument();
   });
 
