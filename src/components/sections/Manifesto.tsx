@@ -12,9 +12,9 @@ interface LineConfig {
 
 const LINES: LineConfig[] = [
   { text: "Software connects information. Intelligence connects decisions.", role: "setup" },
-  { text: "Organizations are drowning in data. Yet struggling to act.", role: "body" },
-  { text: "The future belongs not to those who collect, but to those who act.", role: "thesis" },
-  { text: "Intelligence should exist across every interaction. Every workflow. Every decision.", role: "close" },
+  { text: "Organizations have more data than ever, and still struggle to act on it.", role: "body" },
+  { text: "The advantage no longer goes to whoever collects the most. It goes to whoever acts.", role: "thesis" },
+  { text: "Intelligence belongs in every interaction, every workflow, every decision.", role: "close" },
 ];
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];

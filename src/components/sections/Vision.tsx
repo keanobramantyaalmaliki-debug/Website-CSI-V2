@@ -55,7 +55,7 @@ const MISSIONS: Mission[] = [
 ];
 
 const VISION =
-  "To become a trusted technology partner that empowers organizations through intelligent digital innovation — creating sustainable value for businesses and communities worldwide.";
+  "To be the partner organizations rely on to turn technology into real value for the businesses and communities they serve.";
 
 export default function Vision() {
   return (
