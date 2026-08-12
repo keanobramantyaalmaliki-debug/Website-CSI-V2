@@ -28,7 +28,7 @@ export default function Contact() {
 
       {/* T1 — line-mask heading */}
       <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-5xl">
-        <LineMask>Let&apos;s Start A Conversation.</LineMask>
+        <LineMask>Let&apos;s Start a Conversation.</LineMask>
       </h2>
 
       <motion.p

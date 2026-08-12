@@ -40,7 +40,7 @@ export const TEAM_MEMBERS: TeamMember[] = [
   },
   {
     name: "Lisa Puspitasari",
-    role: "Asistant Manager",
+    role: "Assistant Manager",
     category: "Management",
     social: [{ platform: "linkedin", url: "#" }],
   },

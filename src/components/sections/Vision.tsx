@@ -29,7 +29,7 @@ const MISSIONS: Mission[] = [
     n: "03",
     tag: "Integration",
     verb: "Integrate",
-    detail: "Artificial Intelligence into practical business applications.",
+    detail: "Artificial intelligence turned into practical business applications.",
     image:
       "https://images.unsplash.com/photo-1744324509518-d61c11a4d509?w=1200&q=80&auto=format&fit=crop",
     imageAlt: "Abstract electronic circuit board glowing in neon green",
@@ -47,7 +47,7 @@ const MISSIONS: Mission[] = [
     n: "05",
     tag: "Innovation",
     verb: "Innovate",
-    detail: "Continuously help organizations thrive in the digital era.",
+    detail: "Ongoing work that helps organizations thrive in the digital era.",
     image:
       "https://images.unsplash.com/photo-1756908992398-2e8429f667ec?w=1200&q=80&auto=format&fit=crop",
     imageAlt: "Abstract glowing particles with light rays",
@@ -55,7 +55,7 @@ const MISSIONS: Mission[] = [
 ];
 
 const VISION =
-  "To become a trusted technology partner that empowers organizations through intelligent digital innovation — creating sustainable value for businesses and communities worldwide.";
+  "To be the partner organizations rely on to turn technology into real value for the businesses and communities they serve.";
 
 export default function Vision() {
   return (
