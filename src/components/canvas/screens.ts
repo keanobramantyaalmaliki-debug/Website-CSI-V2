@@ -139,6 +139,94 @@ export interface ScreenContent {
 export const SCREENS: ScreenContent[] = [
   { node: "OMon_AOC_2", url: "/screens/spotify-home.png", flipX: true },
   /**
+   * Monitor AOC di meja SEBELAHNYA (1,20 m ke +Z three, baris yang sama) —
+   * wallpaper foto: sebuah MacBook menyala di ruangan gelap.
+   *
+   * ── Kenapa foto, bukan antarmuka ─────────────────────────────────────────
+   * Layar ini tampil 219 px dan duduk tepat di sebelah AOC yang menampilkan
+   * Spotify. Dua antarmuka bersebelahan pada kekasaran ini saling berebut
+   * perhatian dan dua-duanya kalah — tidak ada yang cukup besar untuk terbaca.
+   * Foto terbaca dari BENTUK dan WARNA saja, jadi ia masih bekerja di 80 px,
+   * dan kontras "satu layar kerja, satu layar nganggur" itu sendiri yang
+   * membuat deretan meja ini terbaca sebagai kantor yang dipakai orang.
+   *
+   * ── Resep aset ────────────────────────────────────────────────────────────
+   *   ffmpeg -i "wallpaper monitor AOC.jpg" \
+   *     -vf "crop=4846:2728:0:351,scale=80:45:flags=area,\
+   *          eq=contrast=1.4:brightness=0.2:gamma=2.0" \
+   *     public/screens/aoc-wallpaper.png
+   *
+   * • crop 4846×2728 dari sumber 4846×3431: sumbernya beraspek 1,412 sedangkan
+   *   quad-nya 1,776, jadi 703 px HARUS dibuang dari TINGGI atau gambarnya
+   *   melar tinggi. Dipotong dari tengah (offset 351) — laptopnya memang duduk
+   *   di tengah bingkai, jadi tidak ada yang hilang.
+   * • flags=area, BUKAN neighbor: ini FOTO. Sudah dua kali tercatat di berkas
+   *   ini bahwa neighbor pada sumber rekaman/foto mengubah detail jadi bintik
+   *   acak; yang mengasarkan di sini NearestFilter di GPU, bukan encode-nya.
+   *
+   * ── Kenapa 80 px, dan kenapa TIDAK boleh lebih besar ─────────────────────
+   * Dipilih dengan MENYAMAKAN kekasarannya ke monitor AOC di sebelahnya, yang
+   * memang satu-satunya kriteria yang berlaku untuk dua layar yang tampil
+   * berdampingan dalam satu bingkai. Diukur dengan memproyeksikan sudut quad
+   * dari VIEWS.Office (scripts/measure-screen-quad.mjs):
+   *
+   *   OMon_AOC_2 (spotify, 96 px)  tampil 278 px → 0,345 teksel/px
+   *   OMon_AOC_3 (layar ini)       tampil 219 px → 80 px = 0,365 teksel/px
+   *
+   * Selisih 6% tidak terbaca; 96 px yang disalin mentah dari tetangganya akan
+   * memberi 0,44 dan layar ini jadi terlihat lebih "HD" tanpa alasan.
+   *
+   * Plafonnya 219 px, dan itu bukan soal selera: prepareScreenTexture mematikan
+   * mipmap DAN memakai NearestFilter, jadi aset yang lebih besar dari ukuran
+   * tampil tidak dirata-ratakan saat dikecilkan — tiap piksel layar mengambil
+   * satu teksel sembarang dan hasilnya BERKEDIP saat kamera bergerak. Pada 80
+   * px GPU selalu MEMBESARKAN (2,7×), jadi tidak ada yang bisa berkedip.
+   *
+   * ── eq: melebarkan RENTANG, bukan menerangkan ────────────────────────────
+   * Fotonya gelap dan puncaknya cuma 182 — tidak ada putih sama sekali untuk
+   * dipakai emissive. Dibiarkan apa adanya, satu-satunya cara membuatnya
+   * terlihat adalah emissive tinggi, dan itu mengangkat latar hitamnya
+   * BERSAMAAN sehingga layarnya jadi bidang kelabu. Mode gagal yang sama sudah
+   * tercatat tiga kali di berkas ini.
+   *
+   * Angkanya diturunkan, bukan dicoba-coba: memetakan [0, 182] → [0, 255]
+   * butuh kemiringan 255/182 = 1,40, dan eq berputar di sekitar 0,5 sehingga
+   *   keluar = (masuk − 0,5) × 1,40 + 0,5 + b,  b = 0,5 × 1,40 − 0,5 = 0,20.
+   *
+   * ── gamma 2.0: dipasang setelah dirender, bukan sebelumnya ───────────────
+   * Contrast+brightness saja MELEBARKAN rentang tapi meninggalkan latarnya di
+   * p50 = 3, dan hasil render pertamanya salah dengan cara yang tidak terlihat
+   * dari asetnya: dari VIEWS.Office, karakter yang duduk di depan menutupi
+   * layar ini dan yang tersisa cuma JALUR SEMPIT DI TEPI KIRI — kira-kira 15%
+   * bidangnya. Di foto itu, tepi kirinya kebetulan bagian yang paling hitam:
+   * laptopnya duduk di tengah-kanan. Jadi monitornya terukur p50 = 10 dan
+   * terbaca MATI, padahal asetnya sendiri baik-baik saja.
+   *
+   * Godaannya menaikkan emissive sampai jalur itu terlihat — dan itu memang
+   * "berhasil", justru karena bagian terangnya tersembunyi sehingga tidak ikut
+   * terbakar. Sengaja TIDAK ditempuh: yang begitu cuma benar selama karakter
+   * dan kameranya tidak pernah bergeser sedikit pun. gamma dipasang di ASETNYA
+   * supaya wallpaper-nya jadi foto gelap yang ter-ekspos wajar dari sudut mana
+   * pun, lalu monitornya memakai emissive BAWAAN — sama persis dengan AOC_2 di
+   * sebelahnya, karena keduanya monitor yang sama di ruangan yang sama.
+   *
+   * Sasarannya diambil dari tetangganya itu, bukan dikira-kira. spotify-home
+   * (emissive bawaan 1,0) beraset p50 = 31 / avg 60 dan terender p50 = 27:
+   *
+   *   gamma 1,0 → aset p50  3        gamma 1,7 → aset p50 20
+   *   gamma 1,5 → aset p50 14        gamma 2,0 → aset p50 27 / avg 63  ←
+   *
+   * 2,0 mendaratkan asetnya praktis di histogram yang sama dengan spotify,
+   * jadi dua monitor kembar itu kini cuma berbeda ISINYA. Pantulan cahaya di
+   * meja ikut naik ke jalur yang terlihat, dan sudut kiri-atasnya tetap hitam
+   * — masih foto ruangan gelap, bukan bidang kelabu.
+   */
+  {
+    node: "OMon_AOC_3",
+    url: "/screens/aoc-wallpaper.png",
+    flipX: true,
+  },
+  /**
    * MacBook di meja terdekat kamera Office (2,44 m), tempat CH_Person2 duduk.
    * REKAMAN LAYAR sungguhan (VS Code + terminal, 5 Agu 14.30), di-encode ala
    * basement.studio: resolusi moderat + NearestFilter, BUKAN diperkecil ke
@@ -229,6 +317,101 @@ export const SCREENS: ScreenContent[] = [
     video: true,
     room: "Office",
     emissive: 2.2,
+  },
+  /**
+   * MacBook di meja di BELAKANGNYA (0,90 m ke +Z three) — situs Desa Darmasaba
+   * yang sedang dibuka di browser.
+   *
+   * Isinya sengaja proyek yang SAMA dengan video yang diputar di TV Meeting
+   * Room ("Desa+"): satu klien yang sama muncul dua kali di dua ruangan
+   * berbeda, jadi kantor ini terbaca sedang mengerjakan sesuatu yang nyata
+   * alih-alih memajang isi layar acak. Kalau videonya suatu saat diganti,
+   * pertimbangkan mengganti yang ini juga supaya pasangannya tidak pecah.
+   *
+   * ── Resep aset ────────────────────────────────────────────────────────────
+   *   ffmpeg -i "Screenshot 2026-08-12 at 10.41.35.png" \
+   *     -vf "crop=2749:1912:95:0,scale=96:67:flags=area" \
+   *     public/screens/desa-site.png
+   *
+   * • crop 2749×1912 dari sumber 2940×1912: quad-nya beraspek 1,438 sedangkan
+   *   tangkapannya 1,538, jadi 191 px dibuang dari LEBAR (bukan tinggi — arah
+   *   potongnya kebalikan dari entri iMac, karena di sana sumbernya justru
+   *   lebih jangkung dari quad-nya). Dibagi rata 95 px kiri-kanan: yang hilang
+   *   cuma tepi tombol jendela dan ikon ekstensi, sementara memotong sebelah
+   *   saja akan menggeser halamannya keluar dari tengah layar.
+   * • flags=area — tangkapan layar, bukan pixel-art. Sama seperti iMac.
+   * • TANPA eq, dan itu diperiksa bukan diasumsikan: rentangnya sudah [0, 255]
+   *   apa adanya (avg 193, p50 217). Ini situs bertema TERANG — kebalikan dari
+   *   semua layar lain di berkas ini, yang justru butuh eq karena sumbernya
+   *   gelap. Tidak ada rentang yang perlu dilebarkan di sini.
+   *
+   * ── Kenapa 96 px ─────────────────────────────────────────────────────────
+   * Layar ini tampil 133 px dari VIEWS.Office (1080p dpr 1,5) — paling kecil
+   * di seluruh daftar, karena ia MacBook yang berdiri di baris meja kedua.
+   * 96 px mendarat di 0,72 teksel per piksel tampil, praktis sama dengan iMac
+   * cogniti-site (0,66) yang isinya juga halaman web penuh teks.
+   *
+   * Sengaja TIDAK memakai aturan lebar-tampil ÷ 3 (yang memberi 44): pada 44
+   * px halamannya tinggal bidang warna dan tidak lagi terbaca sebagai situs.
+   * Aturan ÷3 itu untuk pixel-art yang digambar di resolusi itu — untuk
+   * tangkapan layar, biarkan besar dan NearestFilter yang mengasarkan. Ini
+   * pengulangan ketiga dari pelajaran yang sama di berkas ini.
+   *
+   * Batas atasnya tetap 133 px (ukuran tampilnya): di atas itu GPU MENGECILKAN
+   * tanpa mipmap dan layarnya berkedip. 96 aman dengan margin.
+   *
+   * ── flipX diturunkan dari geometri ───────────────────────────────────────
+   * Node ini memakai MESH YANG SAMA dengan OMacbook_D7 (mesh 12 di GLB), jadi
+   * UV-nya identik sampai ke teksel. Yang berbeda cuma rotasi node-nya: D7
+   * ber-yaw 101°, yang ini 90°. Selisih 11° tidak mungkin membalik arah u —
+   * untuk itu butuh 180° — jadi flipX-nya ikut D7 tanpa perlu diukur ulang.
+   * (Pola yang sama sudah dicatat di entri iMac wallpaper: quad tegak lurus
+   * lawan quad miring 12°, UV-nya tetap sama.)
+   *
+   * ── emissive 0,45: PALING RENDAH di seluruh daftar, dan itu benar ────────
+   * Isinya situs bertema terang — avg 193 dengan 16,8% tekselnya sudah rata di
+   * 255 DI DALAM ASET. Semua layar lain di berkas ini bertema gelap dan butuh
+   * emissive tinggi justru karena piksel terangnya jarang; di sini kebalikannya
+   * persis, jadi angka tetangga mana pun akan meleset jauh kalau disalin.
+   *
+   * Ini bukan layar redup: yang menentukan terang TAMPIL adalah emissive ×
+   * kecerahan teksel, dan teksel di sini sudah mentok. Terukur pada kotak di
+   * dalam layarnya, dibandingkan dua layar yang sudah dikalibrasi:
+   *
+   *   layar ini (0,45)        p50 121  p90 145  max 159  > ambang: 0,00%
+   *   iMac cogniti (ref)      p50  30  p90 118  max 255  > ambang: 2,22%
+   *   OMacbook_D7 (ref)       p50  62  p90  96  max 230  > ambang: 0,00%
+   *
+   * Bacaannya: TENGAHNYA dua kali lipat tetangga mana pun — halamannya memang
+   * putih dan harus terbaca putih — sementara PUNCAKNYA justru yang paling
+   * rendah, nol piksel menembus ambang bloom. Itu yang dicari. Menaikkannya
+   * sampai putihnya menyentuh ambang berarti >50% bidang layar ikut mekar
+   * sekaligus, dan layarnya berubah jadi slab putih menyilaukan — mode gagal
+   * yang persis sama sudah tercatat pada TV Function di berkas ini.
+   *
+   * ── PERINGATAN: layar ini tidak terlihat dari VIEWS.Office ───────────────
+   * Diuji, bukan dikira: emissive-nya dinaikkan sementara ke 25 lalu framenya
+   * dibandingkan piksel-per-piksel dengan frame biasa — NOL dari 14.490 piksel
+   * di kotak proyeksinya berubah (delta maks 3, sekadar derau encode). Kursi
+   * dan CH_Person2 di depannya menutup rapat; parallax kursor cuma ±9 cm, jauh
+   * dari cukup untuk mengintip melewatinya.
+   *
+   * Jadi angka-angka di atas diambil dari kamera debug yang ditaruh sementara
+   * di atas sandaran kursi, BUKAN dari bingkai yang benar-benar tayang. Aman
+   * dilakukan karena emissive tidak bergantung sudut pandang — yang berubah
+   * cuma apa yang menutupinya.
+   *
+   * Entrinya tetap dipasang dan tetap dikalibrasi: tanpa itu layarnya memakai
+   * material layar-mati bawaan GLB, dan begitu kursinya digeser atau kameranya
+   * diubah sedikit saja, yang muncul adalah satu-satunya MacBook padam di
+   * ruangan yang semua layarnya menyala. Murah sekarang, mahal kalau ketahuan
+   * belakangan.
+   */
+  {
+    node: "OMacbook_D8",
+    url: "/screens/desa-site.png",
+    flipX: true,
+    emissive: 0.45,
   },
   /**
    * iMac di meja seberang MacBook — beranda cogniti.id sendiri.
