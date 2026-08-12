@@ -17,7 +17,7 @@ function hideOnError(e: SyntheticEvent<HTMLImageElement>) {
  */
 export default function IndustriesMobile({ industries }: { industries: Industry[] }) {
   return (
-    <div data-testid="industries-mobile">
+    <div data-testid="industries-mobile" className="min-w-0">
       <FadeUpList
         tag="div"
         className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2"
