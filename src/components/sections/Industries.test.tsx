@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Industries from "./Industries";
 import { INDUSTRIES } from "@/data/industries";
@@ -57,14 +57,6 @@ describe("Industries", () => {
     }
   });
 
-  it("renders every sector's description", () => {
-    mockMatchMedia({ minWidthMatches: false });
-    render(<Industries />);
-    for (const industry of INDUSTRIES) {
-      expect(screen.getByText(industry.desc)).toBeInTheDocument();
-    }
-  });
-
   it("shows the sector/core count stat", () => {
     mockMatchMedia({ minWidthMatches: true });
     render(<Industries />);
@@ -103,6 +95,29 @@ describe("Industries", () => {
       expect(target).toHaveAttribute("aria-current", "true");
     });
 
+    it("the active indicator follows the hovered column, not every core column", async () => {
+      mockMatchMedia({ minWidthMatches: true });
+      const user = userEvent.setup();
+      render(<Industries />);
+      const gallery = screen.getByTestId("industries-gallery");
+
+      // 04 is not core; 01 is. Hovering 04 should light 04 up, not 01.
+      const target = within(gallery)
+        .getByText(INDUSTRIES[3].name)
+        .closest("button") as HTMLElement;
+      const idleCore = within(gallery)
+        .getByText(INDUSTRIES[0].name)
+        .closest("button") as HTMLElement;
+
+      expect(within(gallery).queryAllByTestId("active-indicator")).toHaveLength(0);
+
+      await user.hover(target);
+
+      expect(target).toHaveAttribute("aria-current", "true");
+      expect(within(target).getByTestId("active-indicator")).toBeInTheDocument();
+      expect(within(idleCore).queryByTestId("active-indicator")).not.toBeInTheDocument();
+    });
+
     it("respects prefers-reduced-motion: content still renders, nothing crashes", () => {
       mockMatchMedia({ minWidthMatches: true, reducedMotionMatches: true });
       render(<Industries />);
@@ -111,12 +126,53 @@ describe("Industries", () => {
     });
   });
 
-  describe("mobile fallback", () => {
-    it("renders a vertical list instead of the gallery below 1024px", () => {
+  describe("mobile master-detail", () => {
+    it("renders a sector grid instead of the gallery below 1024px", () => {
       mockMatchMedia({ minWidthMatches: false });
       render(<Industries />);
       expect(screen.queryByTestId("industries-gallery")).not.toBeInTheDocument();
-      expect(screen.getAllByRole("img")).toHaveLength(INDUSTRIES.length);
+      const grid = screen.getByTestId("industries-mobile-grid");
+      expect(within(grid).getAllByRole("button")).toHaveLength(INDUSTRIES.length);
+    });
+
+    it("tapping a sector reveals its detail with a back button", async () => {
+      mockMatchMedia({ minWidthMatches: false });
+      const user = userEvent.setup();
+      render(<Industries />);
+      const grid = screen.getByTestId("industries-mobile-grid");
+      const target = within(grid)
+        .getByText(INDUSTRIES[3].name)
+        .closest("button");
+      expect(target).not.toBeNull();
+
+      await user.click(target as HTMLElement);
+
+      const detail = screen.getByTestId("industries-mobile-detail");
+      expect(within(detail).getByText(INDUSTRIES[3].name)).toBeInTheDocument();
+      expect(within(detail).getByText(INDUSTRIES[3].desc)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /back to sectors/i }),
+      ).toBeInTheDocument();
+    });
+
+    it("clicking back returns to the grid and hides the detail", async () => {
+      mockMatchMedia({ minWidthMatches: false });
+      const user = userEvent.setup();
+      render(<Industries />);
+      const grid = screen.getByTestId("industries-mobile-grid");
+      const target = within(grid)
+        .getByText(INDUSTRIES[0].name)
+        .closest("button");
+
+      await user.click(target as HTMLElement);
+      const backButton = screen.getByRole("button", { name: /back to sectors/i });
+      await user.click(backButton);
+
+      // AnimatePresence keeps the exiting panel mounted during its exit
+      // animation, so the removal lands a tick after the click.
+      await waitFor(() =>
+        expect(screen.queryByTestId("industries-mobile-detail")).not.toBeInTheDocument(),
+      );
     });
   });
 });
