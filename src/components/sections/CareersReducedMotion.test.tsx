@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import Careers from "./Careers";
 
 // jsdom lacks IntersectionObserver; motion's whileInView needs it.
@@ -25,25 +26,33 @@ vi.mock("motion/react", async (importOriginal) => {
 });
 
 describe("Careers — reduced motion", () => {
-  it("no spotlight and no idle-glow class when prefers-reduced-motion is set", () => {
+  it("drops the cursor-follow spotlight on the hero", () => {
     render(<Careers />);
-    const heading = screen.getByText("Innovation & Growth Manager");
-    const card = heading.closest("article") as HTMLElement;
-
-    expect(card.querySelector('[data-testid="spotlight"]')).not.toBeInTheDocument();
-    expect(card.className).not.toMatch(/careers-idle-glow/);
+    const hero = screen.getByTestId("career-hero");
+    expect(hero.querySelector('[data-testid="spotlight"]')).not.toBeInTheDocument();
   });
 
-  it("visual box falls back to a single static icon (no sweep overlay) when prefers-reduced-motion is set", () => {
+  it("falls back to a single static icon (no sweep overlay) in the hero field", () => {
     render(<Careers />);
-    const heading = screen.getByText("Innovation & Growth Manager");
-    const card = heading.closest("article") as HTMLElement;
-    const field = card.querySelector('[data-testid="career-field"]') as HTMLElement;
+    const hero = screen.getByTestId("career-hero");
+    const field = hero.querySelector('[data-testid="career-field"]') as HTMLElement;
 
     expect(field).toBeInTheDocument();
     expect(field.querySelectorAll("svg").length).toBe(1);
     expect(
       field.querySelector('[data-testid="career-field-sweep"]'),
     ).not.toBeInTheDocument();
+  });
+
+  it("still promotes a role (functional without the FLIP animation)", async () => {
+    const user = userEvent.setup();
+    render(<Careers />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Feature the Product Builder role" }),
+    );
+
+    const hero = screen.getByTestId("career-hero");
+    expect(within(hero).getByText("Product Builder")).toBeInTheDocument();
   });
 });

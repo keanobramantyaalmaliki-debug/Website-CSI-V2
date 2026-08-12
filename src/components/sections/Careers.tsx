@@ -2,24 +2,46 @@
 
 import { motion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
-import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
-import CareersRoleCard from "./CareersRoleCard";
+import CareersPromote, { type CareerRole } from "./CareersPromote";
+import HiringStack from "./HiringStack";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-const ROLES: { title: string; type: string; mode: string; tag: string }[] = [
-  { title: "Innovation & Growth Manager", type: "Full-time", mode: "Remote",  tag: "Growth" },
-  { title: "Technical Lead",              type: "Full-time", mode: "Hybrid",  tag: "Engineering" },
-  { title: "Product Builder",             type: "Full-time", mode: "Remote",  tag: "Product" },
-  { title: "Full Stack Engineer",         type: "Full-time", mode: "Hybrid",  tag: "Engineering" },
-];
-
-const HIRING_STAGES = [
-  "Application",
-  "Conversation",
-  "Practical Challenge",
-  "Final Interview",
-  "Welcome Aboard",
+// TODO(careers): blurbs are placeholder copy — replace with the real role
+// descriptions from the hiring team before this ships publicly.
+const ROLES: CareerRole[] = [
+  {
+    title: "Innovation & Growth Manager",
+    type: "Full-time",
+    mode: "Remote",
+    tag: "Growth",
+    blurb:
+      "Own how we find, test, and scale new bets — turning rough ideas into repeatable growth loops.",
+  },
+  {
+    title: "Technical Lead",
+    type: "Full-time",
+    mode: "Hybrid",
+    tag: "Engineering",
+    blurb:
+      "Set the technical direction, mentor the team, and keep our architecture honest as we grow.",
+  },
+  {
+    title: "Product Builder",
+    type: "Full-time",
+    mode: "Remote",
+    tag: "Product",
+    blurb:
+      "Take products from a fuzzy problem to a shipped, loved experience — end to end, hands on.",
+  },
+  {
+    title: "Full Stack Engineer",
+    type: "Full-time",
+    mode: "Hybrid",
+    tag: "Engineering",
+    blurb:
+      "Build across the stack on real features that reach users fast, with room to go deep where it counts.",
+  },
 ];
 
 export default function Careers() {
@@ -41,14 +63,8 @@ export default function Careers() {
         <LineMask>Build What Comes Next.</LineMask>
       </h2>
 
-      {/* T7 — role cards with spotlight hover / idle-glow on mobile */}
-      <FadeUpList className="mt-12 grid gap-4 sm:grid-cols-2">
-        {ROLES.map((role, i) => (
-          <FadeUpItem key={role.title} tag="div">
-            <CareersRoleCard role={role} index={i} />
-          </FadeUpItem>
-        ))}
-      </FadeUpList>
+      {/* Shared-element promote: one hero role + a strip of the rest. */}
+      <CareersPromote roles={ROLES} />
 
       {/* T2 — hiring stages stagger */}
       <div className="mt-12">
@@ -59,18 +75,9 @@ export default function Careers() {
           viewport={{ once: true }}
           transition={{ duration: 0.5, ease: EASE }}
         >
-          How We Hire
+          How We Works
         </motion.p>
-        <FadeUpList tag="ol" className="mt-6 flex flex-wrap items-center gap-3">
-          {HIRING_STAGES.map((stage, i) => (
-            <FadeUpItem key={stage} tag="li" className="flex items-center gap-3">
-              <span className="text-sm text-zinc-300">{stage}</span>
-              {i < HIRING_STAGES.length - 1 && (
-                <span className="text-orange-500">→</span>
-              )}
-            </FadeUpItem>
-          ))}
-        </FadeUpList>
+        <HiringStack />
       </div>
     </section>
   );
