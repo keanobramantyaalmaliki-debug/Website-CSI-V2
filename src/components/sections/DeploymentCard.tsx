@@ -2,6 +2,8 @@
 
 import { useReducedMotion } from "motion/react";
 import { FadeUpItem } from "@/components/motion/FadeUp";
+import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
+import DeploymentRevealImage from "@/components/sections/DeploymentRevealImage";
 
 export type DeploymentData = {
   num: string;
@@ -27,6 +29,7 @@ const DEFAULT_IMAGE = SECTOR_IMAGE["Public Services"];
 
 export default function DeploymentCard({ d }: { d: DeploymentData }) {
   const reduced = !!useReducedMotion();
+  const coarse = useCoarsePointer();
   const image = SECTOR_IMAGE[d.sector] ?? DEFAULT_IMAGE;
 
   return (
@@ -34,13 +37,19 @@ export default function DeploymentCard({ d }: { d: DeploymentData }) {
       tag="article"
       className="group relative flex aspect-[4/3] w-full max-h-[22rem] min-h-[18rem] flex-col justify-end overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] transition-colors duration-500 hover:border-white/[0.16]"
     >
-      {/* 1. Foto — selalu ter-mount, diredam saat diam */}
-      <img
-        src={image}
-        alt=""
-        loading="lazy"
-        className={`absolute inset-0 h-full w-full object-cover opacity-40 grayscale transition-[filter,opacity,transform] duration-500 group-hover:opacity-70 group-hover:grayscale-0 ${reduced ? "" : "group-hover:scale-[1.03]"}`}
-      />
+      {/* 1. Foto — selalu ter-mount, diredam saat diam.
+          Desktop (penunjuk presisi) memakai hover CSS. Layar sentuh tidak punya
+          hover, jadi reveal-nya diikat ke scroll — lihat DeploymentRevealImage. */}
+      {coarse ? (
+        <DeploymentRevealImage src={image} reduced={reduced} />
+      ) : (
+        <img
+          src={image}
+          alt=""
+          loading="lazy"
+          className={`absolute inset-0 h-full w-full object-cover opacity-40 grayscale transition-[filter,opacity,transform] duration-500 group-hover:opacity-70 group-hover:grayscale-0 ${reduced ? "" : "group-hover:scale-[1.03]"}`}
+        />
+      )}
 
       {/* 2. Wash rata — menjaga baris meta di pita atas tetap terbaca di atas foto apa pun */}
       <div
