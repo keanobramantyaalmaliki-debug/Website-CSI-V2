@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, act, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Industries from "./Industries";
 import { INDUSTRIES } from "@/data/industries";
@@ -11,6 +11,10 @@ class IntersectionObserverStub {
   disconnect() {}
 }
 vi.stubGlobal("IntersectionObserver", IntersectionObserverStub);
+
+// jsdom doesn't implement Element.scrollTo at all (only a "not implemented"
+// stub on Window) — the auto-advance carousel calls it directly.
+Element.prototype.scrollTo = vi.fn();
 
 function mockMatchMedia({
   minWidthMatches = false,
@@ -169,5 +173,45 @@ describe("Industries", () => {
       const scrollContainer = carousel.querySelector(".snap-x");
       expect(scrollContainer).toHaveClass("overscroll-x-contain");
     });
+
+    it("auto-advances to the next card while idle", () => {
+      mockMatchMedia({ minWidthMatches: false });
+      const scrollToSpy = Element.prototype.scrollTo as ReturnType<typeof vi.fn>;
+      scrollToSpy.mockClear();
+      vi.useFakeTimers();
+      render(<Industries />);
+
+      act(() => {
+        vi.advanceTimersByTime(4500);
+      });
+
+      expect(scrollToSpy).toHaveBeenCalledTimes(1);
+      vi.useRealTimers();
+    });
+
+    it("stops auto-advancing for good once the user touches the carousel", () => {
+      mockMatchMedia({ minWidthMatches: false });
+      const scrollToSpy = Element.prototype.scrollTo as ReturnType<typeof vi.fn>;
+      scrollToSpy.mockClear();
+      vi.useFakeTimers();
+      render(<Industries />);
+      const carousel = screen.getByTestId("industries-mobile");
+      const scrollContainer = carousel.querySelector(".snap-x") as HTMLElement;
+
+      fireEvent.pointerDown(scrollContainer);
+
+      act(() => {
+        vi.advanceTimersByTime(4500 * 3);
+      });
+
+      expect(scrollToSpy).not.toHaveBeenCalled();
+      vi.useRealTimers();
+    });
+
+    // prefers-reduced-motion coverage lives in IndustriesMobile.test.tsx:
+    // framer-motion's useReducedMotion() caches its result in a module-level
+    // singleton on first call, so once an earlier test in *this* file has
+    // rendered anything with reducedMotionMatches: false, no later mock in
+    // the same file can flip it back — it needs a fresh module registry.
   });
 });
