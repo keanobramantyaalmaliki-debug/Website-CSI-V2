@@ -34,7 +34,7 @@ const HIRE_STAGES: HireStage[] = [
     step: "01",
     title: "Application",
     blurb:
-      "Send us your work and a few lines on what you want to build. No cover-letter theatre — show us something real.",
+      "Send us your work and a few lines on what you want to build. No cover-letter theater, just show us something real.",
     image:
       "https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1200&q=70",
     alt: "A tidy desk with a laptop where an application takes shape.",
