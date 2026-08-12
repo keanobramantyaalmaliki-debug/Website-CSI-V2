@@ -27,7 +27,10 @@
  *           24 Hz, rumus hash sama — kalau CharacterGlitch mengubah angkanya,
  *           ubah di sini juga), tapi dengan perubahan level dua arah milik
  *           panel sendiri: irisan bolong + irisan naik setangga + brownout
- *           seluruh bidang (lihat catatan di blok konstanta glitch).
+ *           seluruh bidang (lihat catatan di blok konstanta glitch). Sejak
+ *           12 Agu irisan yang naik juga MELEWATI ambang Bloom, jadi burst-nya
+ *           ikut berpendar — satu-satunya saat bidang ini mekar (lihat
+ *           GLOW_BOOST).
  *
  * Interaksi digerbang: HANYA saat ruangan aktif Office, pointer fine, hero
  * terlihat, dan billiard tidak berjalan — mengikuti kebijakan waypoint
@@ -152,8 +155,10 @@ const COLOR = "#ffffff";
  * Sejak teks pindah ke plane sendiri, kontribusinya MENUMPUK secara aditif di
  * atas kabut panel: sel tercerah huruf = (0,75 teks + 0,25 kabut) × 0,65 =
  * 0,65 — masih di bawah ambang Bloom 0,95, jadi hurufnya tidak ikut mekar.
- * Flash glitch menyentuh tangga 1,0 → 0,65 juga aman. Kalau GAIN dinaikkan,
- * hitung ulang kedua penjumlahan ini terhadap 0,95.
+ * Kalau GAIN dinaikkan, hitung ulang penjumlahan ini terhadap 0,95.
+ *
+ * ⚠️ Satu-satunya yang BOLEH melewati 0,95 adalah irisan yang naik selama burst
+ * glitch, dan itu disengaja sejak 12 Agu — lihat GLOW_BOOST.
  */
 const GAIN = 0.65;
 
@@ -255,6 +260,36 @@ const FLICK_MAX = 0.35;
 const JITTER = 0.3;
 const SHIFT_UV = 0.16;
 const STRETCH = 0.4;
+
+/**
+ * Pendar saat glitch (12 Agu 2026): pengali kecerahan EKSTRA di atas GAIN,
+ * HANYA untuk irisan yang naik.
+ *
+ * Ini satu-satunya jalan bidang ini bisa berpendar sama sekali. Pendar di scene
+ * ini dikerjakan pass Bloom (Scene.tsx, luminanceThreshold 0,95), dan GAIN 0,65
+ * menaruh SELURUH hologram di bawah ambang itu — disengaja, supaya panel yang
+ * diam tidak ikut mekar seperti LED strip. Jadi "kasih glow" bukan menambah
+ * suku pendar di shader (satu material tidak bisa mem-blur dirinya sendiri),
+ * melainkan MELEWATI ambang selama burst dan membiarkan pass yang sudah ada
+ * yang mengerjakannya. Nol pass tambahan, nol draw call tambahan.
+ *
+ * 1,5 → gain puncak 0,65 × 2,5 = 1,625, dan angkanya dipilih dari tangga alpha,
+ * bukan dari selera:
+ *   a 1,00 (huruf yang terangkat) → 1,63 → jauh di atas 0,95, mekar tegas
+ *   a 0,75 (sel padat panel)      → 1,22 → lewat, mekar tipis
+ *   a 0,50 (sel jarang panel)     → 0,81 → TIDAK lewat
+ * Artinya yang berpendar POLA DITHER-nya sendiri — sel padat mekar, sel jarang
+ * tetap kering — bukan bidang putih rata. ⚠️ Kalau dinaikkan sampai tangga 0,50
+ * ikut lewat (butuh > 1,92), papan caturnya melebur jadi kabut dan seluruh
+ * kerja kuantisasi 4 tangga di berkas ini hilang di satu pass blur. Itu batas
+ * atasnya, bukan sekadar saran.
+ *
+ * Irisan yang AMBRUK sengaja tidak dapat apa-apa: nasib dua arah itu inti
+ * bahasanya (lihat DROP_K). Yang mati makin mati, yang hidup sampai membakar
+ * sensor — dan justru kontras itu yang bikin pendarnya terbaca sebagai sinyal
+ * rusak, bukan sebagai lampu yang dinyalakan.
+ */
+const GLOW_BOOST = 1.5;
 
 /**
  * Jendela burst glitch setelah klik, ms sejak klik. Dua burst dengan jeda
@@ -470,6 +505,7 @@ const GLITCH_PRE_GLSL = /* glsl */ `
   float gDual = 0.0;
   float gFlick = 0.0;
   float gPhase = 0.0;
+  float gGlow = 0.0;
   if ( uGlitch > 0.001 ) {
     float gSeed = floor( uGlitchTime * ${REROLL_HZ.toFixed(1)} );
     float gBand = floor( vWorld.y / ${SLICE_H.toFixed(2)} );
@@ -487,6 +523,14 @@ const GLITCH_PRE_GLSL = /* glsl */ `
     uv.x = 0.5 + ( uv.x - 0.5 ) * gStr + ( gRand - 0.5 ) * 2.0 * ${SHIFT_UV.toFixed(2)} * gGate;
     if ( uv.x < 0.0 || uv.x > 1.0 ) discard;
     gPhase = floor( gRand * 8.0 ) * ${DITHER_PX.toFixed(1)} * gGate;
+    // Pemicu pendar (lihat GLOW_BOOST). Memakai gDual dengan ambang yang PERSIS
+    // sama seperti blok level di kedua shader ( step( 0.5, gDual ) memilih
+    // ambruk ), jadi pendarnya tidak mungkin melenceng ke irisan yang justru
+    // sedang bolong. Diredam brownout global supaya ia ikut tersendat bersama
+    // bidangnya, bukan menyala rata sepanjang burst — proyektor yang mengejan,
+    // bukan lampu sorot yang dinyalakan.
+    gGlow = gGate * ( 1.0 - step( 0.5, gDual ) )
+      * ( 1.0 - ${FLICK_MAX.toFixed(2)} * gFlick ) * uGlitch;
   }
 `;
 
@@ -569,7 +613,15 @@ const PANEL_FRAG = /* glsl */ `
     // yang sudah ada di belakang. Warna ditulis tanpa dikali a lebih dulu —
     // faktor SrcAlpha yang mengalikannya, jadi kalau di sini ikut dikali
     // kontribusinya jadi a² dan seluruh bidang terlihat jauh lebih redup.
-    gl_FragColor = vec4( uColor * ${GAIN.toFixed(2)}, a );
+    //
+    // Pendar masuk di SINI, di warna, dan sengaja TIDAK menyentuh a: tangga
+    // dither tetap persis seperti tanpa glow, yang berubah cuma sel mana yang
+    // lolos ambang Bloom. Kalau pendarnya ditaruh di a, kerapatan polanya ikut
+    // bergeser dan irisannya berubah bentuk — bukan berpendar.
+    gl_FragColor = vec4(
+      uColor * ${GAIN.toFixed(2)} * ( 1.0 + ${GLOW_BOOST.toFixed(2)} * gGlow ),
+      a
+    );
   }
 `;
 
@@ -624,7 +676,13 @@ const TEXT_FRAG = /* glsl */ `
     // bidang terasa ikut sakit, bukan cuma irisan yang kena gate.
     a *= mix( 1.0, 0.85 + ${JITTER.toFixed(2)} * gRand, uGlitch );
 
-    gl_FragColor = vec4( uColor * ${GAIN.toFixed(2)}, a );
+    // Pendar identik dengan panel (lihat catatannya di PANEL_FRAG). Huruf yang
+    // terangkat mencapai a 1,0, jadi plane inilah yang mekar paling tegas —
+    // "UNDER MAINTENANCE" membakar sensor sesaat lalu kembali kering.
+    gl_FragColor = vec4(
+      uColor * ${GAIN.toFixed(2)} * ( 1.0 + ${GLOW_BOOST.toFixed(2)} * gGlow ),
+      a
+    );
   }
 `;
 
