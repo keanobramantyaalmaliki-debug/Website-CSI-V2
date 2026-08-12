@@ -1,47 +1,14 @@
 "use client";
 
-import type { SyntheticEvent } from "react";
 import { motion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
 import IndustriesGallery from "@/components/motion/IndustriesGallery";
-import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
+import IndustriesMobile from "@/components/motion/IndustriesMobile";
 import { INDUSTRIES } from "@/data/industries";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
-
-function hideOnError(e: SyntheticEvent<HTMLImageElement>) {
-  e.currentTarget.style.display = "none";
-}
-
-function MobileIndustryCard({ industry }: { industry: (typeof INDUSTRIES)[number] }) {
-  const isCore = industry.tier === "core";
-
-  return (
-    <FadeUpItem tag="article">
-      <div className="flex gap-4 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
-        <img
-          src={industry.image}
-          alt={industry.imageAlt}
-          loading="lazy"
-          onError={hideOnError}
-          className="h-20 w-20 shrink-0 rounded-xl object-cover"
-        />
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="text-xs tabular-nums text-zinc-500">{industry.num}</span>
-            {isCore && (
-              <span className="text-xs tracking-widest text-accent uppercase">Core</span>
-            )}
-          </div>
-          <h3 className="text-sm font-medium text-zinc-100">{industry.name}</h3>
-          <p className="text-sm leading-relaxed text-zinc-400">{industry.desc}</p>
-        </div>
-      </div>
-    </FadeUpItem>
-  );
-}
 
 export default function Industries() {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
@@ -93,11 +60,7 @@ export default function Industries() {
           {isDesktop ? (
             <IndustriesGallery industries={INDUSTRIES} />
           ) : (
-            <FadeUpList tag="div" className="flex flex-col gap-3">
-              {INDUSTRIES.map((industry) => (
-                <MobileIndustryCard key={industry.name} industry={industry} />
-              ))}
-            </FadeUpList>
+            <IndustriesMobile industries={INDUSTRIES} />
           )}
         </div>
       </div>

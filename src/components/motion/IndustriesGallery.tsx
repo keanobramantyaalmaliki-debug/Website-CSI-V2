@@ -58,6 +58,12 @@ function GalleryColumn({
         isActive ? "flex-[4]" : "flex-1",
       )}
     >
+      <div
+        className="absolute inset-x-0 top-0 z-10 h-0.5 bg-accent transition-opacity duration-300"
+        style={{ opacity: isActive ? 1 : 0 }}
+        aria-hidden="true"
+      />
+
       <img
         src={industry.image}
         alt={industry.imageAlt}
@@ -83,20 +89,19 @@ function GalleryColumn({
           <span
             className={cn(
               "text-xs tabular-nums transition-colors duration-300",
-              isActive ? "text-zinc-400" : isCore ? "text-accent" : "text-zinc-500",
+              isActive ? "text-accent" : "text-zinc-500",
             )}
           >
             {industry.num}
           </span>
-          {isCore && (
-            <span
-              className={cn(
-                "h-1.5 w-1.5 rounded-full bg-accent transition-opacity duration-300",
-                isActive && "opacity-0",
-              )}
-              aria-hidden="true"
-            />
-          )}
+          <span
+            data-testid={isActive ? "active-indicator" : undefined}
+            className={cn(
+              "h-1.5 w-1.5 rounded-full transition-colors duration-300",
+              isActive ? "bg-accent" : isCore ? "bg-white/25" : "bg-transparent",
+            )}
+            aria-hidden="true"
+          />
         </div>
 
         <div className="flex flex-1 items-center justify-center overflow-hidden py-4">
