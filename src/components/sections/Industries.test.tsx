@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, act, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Industries from "./Industries";
 import { INDUSTRIES } from "@/data/industries";
@@ -11,6 +11,10 @@ class IntersectionObserverStub {
   disconnect() {}
 }
 vi.stubGlobal("IntersectionObserver", IntersectionObserverStub);
+
+// jsdom doesn't implement Element.scrollTo at all (only a "not implemented"
+// stub on Window) — the auto-advance carousel calls it directly.
+Element.prototype.scrollTo = vi.fn();
 
 function mockMatchMedia({
   minWidthMatches = false,
@@ -57,14 +61,6 @@ describe("Industries", () => {
     }
   });
 
-  it("renders every sector's description", () => {
-    mockMatchMedia({ minWidthMatches: false });
-    render(<Industries />);
-    for (const industry of INDUSTRIES) {
-      expect(screen.getByText(industry.desc)).toBeInTheDocument();
-    }
-  });
-
   it("shows the sector/core count stat", () => {
     mockMatchMedia({ minWidthMatches: true });
     render(<Industries />);
@@ -103,6 +99,29 @@ describe("Industries", () => {
       expect(target).toHaveAttribute("aria-current", "true");
     });
 
+    it("the active indicator follows the hovered column, not every core column", async () => {
+      mockMatchMedia({ minWidthMatches: true });
+      const user = userEvent.setup();
+      render(<Industries />);
+      const gallery = screen.getByTestId("industries-gallery");
+
+      // 04 is not core; 01 is. Hovering 04 should light 04 up, not 01.
+      const target = within(gallery)
+        .getByText(INDUSTRIES[3].name)
+        .closest("button") as HTMLElement;
+      const idleCore = within(gallery)
+        .getByText(INDUSTRIES[0].name)
+        .closest("button") as HTMLElement;
+
+      expect(within(gallery).queryAllByTestId("active-indicator")).toHaveLength(0);
+
+      await user.hover(target);
+
+      expect(target).toHaveAttribute("aria-current", "true");
+      expect(within(target).getByTestId("active-indicator")).toBeInTheDocument();
+      expect(within(idleCore).queryByTestId("active-indicator")).not.toBeInTheDocument();
+    });
+
     it("respects prefers-reduced-motion: content still renders, nothing crashes", () => {
       mockMatchMedia({ minWidthMatches: true, reducedMotionMatches: true });
       render(<Industries />);
@@ -111,12 +130,88 @@ describe("Industries", () => {
     });
   });
 
-  describe("mobile fallback", () => {
-    it("renders a vertical list instead of the gallery below 1024px", () => {
+  describe("mobile carousel", () => {
+    it("renders a swipeable card list instead of the gallery below 1024px", () => {
       mockMatchMedia({ minWidthMatches: false });
       render(<Industries />);
       expect(screen.queryByTestId("industries-gallery")).not.toBeInTheDocument();
-      expect(screen.getAllByRole("img")).toHaveLength(INDUSTRIES.length);
+      const carousel = screen.getByTestId("industries-mobile");
+      expect(carousel.querySelectorAll("img")).toHaveLength(INDUSTRIES.length);
     });
+
+    it("uses scroll-snap so cards are swiped, not tapped, into view", () => {
+      mockMatchMedia({ minWidthMatches: false });
+      render(<Industries />);
+      const carousel = screen.getByTestId("industries-mobile");
+      const scrollContainer = carousel.querySelector(".snap-x");
+      expect(scrollContainer).toBeInTheDocument();
+      expect(scrollContainer).toHaveClass("snap-mandatory");
+    });
+
+    it("shows every sector's description directly, with no tap needed to reveal it", () => {
+      mockMatchMedia({ minWidthMatches: false });
+      render(<Industries />);
+      const carousel = screen.getByTestId("industries-mobile");
+      for (const industry of INDUSTRIES) {
+        expect(within(carousel).getByText(industry.name)).toBeInTheDocument();
+        expect(within(carousel).getByText(industry.desc)).toBeInTheDocument();
+      }
+    });
+
+    it("tags every core sector's card with a Core Focus label", () => {
+      mockMatchMedia({ minWidthMatches: false });
+      render(<Industries />);
+      const carousel = screen.getByTestId("industries-mobile");
+      const coreCount = INDUSTRIES.filter((industry) => industry.tier === "core").length;
+      expect(within(carousel).getAllByText("Core Focus")).toHaveLength(coreCount);
+    });
+
+    it("contains overscroll so the boundary bounce doesn't read as jumping back to the start", () => {
+      mockMatchMedia({ minWidthMatches: false });
+      render(<Industries />);
+      const carousel = screen.getByTestId("industries-mobile");
+      const scrollContainer = carousel.querySelector(".snap-x");
+      expect(scrollContainer).toHaveClass("overscroll-x-contain");
+    });
+
+    it("auto-advances to the next card while idle", () => {
+      mockMatchMedia({ minWidthMatches: false });
+      const scrollToSpy = Element.prototype.scrollTo as ReturnType<typeof vi.fn>;
+      scrollToSpy.mockClear();
+      vi.useFakeTimers();
+      render(<Industries />);
+
+      act(() => {
+        vi.advanceTimersByTime(4500);
+      });
+
+      expect(scrollToSpy).toHaveBeenCalledTimes(1);
+      vi.useRealTimers();
+    });
+
+    it("stops auto-advancing for good once the user touches the carousel", () => {
+      mockMatchMedia({ minWidthMatches: false });
+      const scrollToSpy = Element.prototype.scrollTo as ReturnType<typeof vi.fn>;
+      scrollToSpy.mockClear();
+      vi.useFakeTimers();
+      render(<Industries />);
+      const carousel = screen.getByTestId("industries-mobile");
+      const scrollContainer = carousel.querySelector(".snap-x") as HTMLElement;
+
+      fireEvent.pointerDown(scrollContainer);
+
+      act(() => {
+        vi.advanceTimersByTime(4500 * 3);
+      });
+
+      expect(scrollToSpy).not.toHaveBeenCalled();
+      vi.useRealTimers();
+    });
+
+    // prefers-reduced-motion coverage lives in IndustriesMobile.test.tsx:
+    // framer-motion's useReducedMotion() caches its result in a module-level
+    // singleton on first call, so once an earlier test in *this* file has
+    // rendered anything with reducedMotionMatches: false, no later mock in
+    // the same file can flip it back — it needs a fresh module registry.
   });
 });
