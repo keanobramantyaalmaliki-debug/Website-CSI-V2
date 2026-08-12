@@ -13,14 +13,15 @@ function hideOnError(e: SyntheticEvent<HTMLImageElement>) {
  * mirroring CaseGridMobileStack's pattern. Each card shows its photo full-bleed
  * with a dark gradient wash for legibility, unlike the desktop gallery's
  * hover-to-reveal: on a touch device every card is already "open", swipe is
- * the only interaction needed.
+ * the only interaction needed. overscroll-x-contain keeps the rubber-band
+ * bounce at the last card from reading as "it jumped back to the start".
  */
 export default function IndustriesMobile({ industries }: { industries: Industry[] }) {
   return (
     <div data-testid="industries-mobile" className="min-w-0">
       <FadeUpList
         tag="div"
-        className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2"
+        className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-2"
       >
         {industries.map((industry) => {
           const isCore = industry.tier === "core";

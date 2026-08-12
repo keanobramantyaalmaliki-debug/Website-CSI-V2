@@ -161,5 +161,13 @@ describe("Industries", () => {
       const coreCount = INDUSTRIES.filter((industry) => industry.tier === "core").length;
       expect(within(carousel).getAllByText("Core Focus")).toHaveLength(coreCount);
     });
+
+    it("contains overscroll so the boundary bounce doesn't read as jumping back to the start", () => {
+      mockMatchMedia({ minWidthMatches: false });
+      render(<Industries />);
+      const carousel = screen.getByTestId("industries-mobile");
+      const scrollContainer = carousel.querySelector(".snap-x");
+      expect(scrollContainer).toHaveClass("overscroll-x-contain");
+    });
   });
 });
