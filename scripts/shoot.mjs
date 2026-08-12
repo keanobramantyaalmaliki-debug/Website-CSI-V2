@@ -12,7 +12,12 @@ import { spawn } from "node:child_process";
 import { get as httpGet } from "node:http";
 import { writeFileSync } from "node:fs";
 
-const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+// Brave, bukan Chrome — semua verifikasi di proyek ini dilakukan di peramban
+// yang sama dengan yang dipakai sehari-hari. CDP-nya identik, cuma path-nya
+// yang berbeda; bisa ditimpa lewat env kalau perlu menguji di peramban lain.
+const CHROME =
+  process.env.CSI_BROWSER ??
+  "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser";
 const PORT = 9224;
 const URL = process.argv[2] ?? "http://localhost:3000/";
 const OUT = process.argv[3] ?? "shot.png";

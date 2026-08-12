@@ -1,7 +1,7 @@
 # Documentations — Cogniti Office 3D Tour
 
 Dokumentasi progres pembuatan 3D office tour ala [basement.studio](https://basement.studio) untuk **cogniti.id**.
-Terakhir diupdate: **7 Agustus 2026**.
+Terakhir diupdate: **12 Agustus 2026**.
 
 **Status ringkas:** **5 ruangan sudah ~95% jadi** dan seluruhnya sudah jalan di browser (lihat MVP 1 di bawah):
 - **Lounge/Billiard** (§2) & **Function Room** (eks Smoking, §3) — furniture & dekorasi lengkap
@@ -14,7 +14,7 @@ Terakhir diupdate: **7 Agustus 2026**.
 **Per 29 Jul** — kemajuan besar di atas MVP1:
 - **GLB sudah terintegrasi ke web** (§4h) — bukan lagi cuma viewer HTML. Hero fullscreen + navigasi antar-ruangan + hash routing + scrollspy navbar. Blocker path model sudah dibetulkan.
 - **5 karakter sudah TAMPIL & BERANIMASI di web** (§6b) — Leonard (sofa lounge), Person2 & Person3 (mengetik di office), Person4 (meeting room), Person5 (function room). Sudah di-export ke `office.glb`; **tanpa lampu khusus** — `CharacterLights.tsx` dihapus 6 Agu setelah ketahuan lampu ber-layer tidak pernah jalan (§6b).
-- **Minigame billiard dibangun** (§6d) — fisika **cannon-es** (bukan Rapier lagi, lihat §6d) + kamera top-down + bar tenaga. ⏸️ **Ditunda**, belum di-review di browser.
+- **Minigame billiard dibangun** (§6d) — fisika **cannon-es** (bukan Rapier lagi, lihat §6d) + kamera top-down + bar tenaga. ✅ **Kini FINAL** — direview di browser 12 Agu, clear tanpa revisi.
 - **Konten web V1 di-port ke V2** oleh rekan tim (§4i) — 5 section baru + animasi teks pakai `motion`.
 - **Manajer paket disatukan ke `bun`** (§7) — `pnpm-lock.yaml` dihapus, build terverifikasi lolos.
 - **Build pindah Next.js → Vite + React SPA** (§4j) — dikerjakan rekan tim di hari yang sama.
@@ -55,7 +55,19 @@ Terakhir diupdate: **7 Agustus 2026**.
 - **Merge `origin/main` bersih** (§4o) — 25 commit dari Nico (careers/crew/awards), 189 test hijau. ⚠️ `bun install` dulu sebelum percaya hasil test setelah merge.
 - **SEMUA LAYAR TERISI — tidak ada lagi layar kosong** (§6c, 7 Agu, commit `2b247d4`) — TV meeting (rekaman Desa+) & TV function (logo cogniti mantul ala screensaver DVD). TV function sekaligus **membetulkan cacat**: materialnya me-render putih polos yang mekar seperti lampu. Gerbang video jadi **per-ruangan**, karena tiga video di tiga ruangan berarti men-dekode yang tidak terlihat.
 
-**⬅️ Berikutnya:** (a) review billiard di browser (§6d) — dua bug fisika sudah dibetulkan lewat simulasi headless, tapi **posisi stik, warna bola, framing kamera** masih belum pernah dilihat mata; (b) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker (§4n); (c) selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter, §4s); (d) post-processing PS1 (§4b), pass terakhir untuk look basement.studio.
+**Per 8–11 Agu** — batch "kantornya terasa hidup", semuanya sudah di `main`:
+- **Panel "under maintenance"** (§4t) — lubang pintu buntu Office ditutup papan catur dither Bayer, lalu **jadi interaktif** 9 Agu (hover teks melayang, klik glitch sobek). Dua aturan mahal ikut tercatat: **`renderOrder` WAJIB 0** (dinaikkan jadi 2 → hologram terlihat menembus tembok, dan sebabnya bukan depth melainkan pengurutan antrean transparan), dan **keterbacaan dither berbanding TERBALIK dengan jumlah tangga kuantisasi** (16 tangga = gradien halus; 4 tangga = tekstur betulan).
+- **Glitch karakter saat idle** (§4u) — setelah 8 dtk, kelima karakter "rusak" 130–240 ms: irisan tergeser + kilasan dither putih. **Di karakter saja, bukan fullscreen** (fullscreen terbaca "website rusak"). Fade lintas-ruangan memakai jarak ke **target pandangan**, bukan posisi kamera — percobaan pakai kamera gagal karena kamera Lounge mundur jauh dan ikut mem-fade Leonard.
+- **Kantor merespons kursor & perpindahan** (§4v) — mouse parallax (dihitung di **ruang kamera**, jadi benar di keempat ruangan tanpa angka per-ruangan), HoverScan, sobekan transisi, debu melayang. **Nol pass render tambahan.** Dua gotcha R3F kelas berat: **`onPointerMove` dipanggil sekali per PERPOTONGAN** (pola "set kalau kena, clear kalau tidak" diam-diam rusak) dan **prop `uniforms` MENYALIN, bukan merujuk** (debu tidak muncul sama sekali, tanpa satu pun error).
+- **Hero mengalir tanpa pin** (§4w) — tiga laporan dari HP ternyata satu sebab (hero dipaku & disurutkan padahal di layar sempit tak perlu keduanya), lalu **desktop menyusul ikut bentuk HP**: pin & surut dibongkar, seam `HeroHandoff` dicabut seluruhnya. Satu koreografi untuk semua lebar layar.
+- **Menu layar penuh di navbar** (§4x) — adaptasi `#menu-overlay` situs tayang; burger **memorf** jadi "— Close." (garis tengah & strip kata = satu elemen yang sama). Jam tiga zona digerbangi "menu terbuka" dan bangun **per pergantian menit**, bukan `setInterval(…,1000)` selamanya — pola itu persis biang "laptop panas" 3 Agu.
+- **Kantor bernapas saat ditinggal** (§4y) — `idleClock` ref-counted untuk seluruh app, LED strip turun 16% setelah 8 dtk, layar tidur di **45 dtk (bukan 8** — TV ada untuk ditonton). Sekalian ketahuan **FIX 4 mati diam-diam**: nama material GLB berakhiran nama mesh (`M_LEDStrip__MG_Office_M_LEDStrip`), jadi `===` selalu meleset **tanpa error**.
+- **Section konten dirombak + penjaga overflow HP** (§4z, rekan tim) — Industries jadi kartu sektor, Vision jadi `MissionShowcase`, `NetworkField` dibuang (canvas rAF-nya biang jank scroll sentuh), `overflow-x: clip` global.
+
+**Per 12 Agu:**
+- **Minigame billiard resmi FINAL** (§6d) — item tertunda paling lama di dokumen ini. Keano mereviewnya di browser dan menilainya **clear, tanpa revisi**.
+
+**⬅️ Berikutnya:** (a) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker (§4n); (b) selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter, §4s); (c) optimasi GLB lanjutan — atlas per ruangan + dedup 29 image kembar (§4s); (d) post-processing PS1 (§4b), pass terakhir untuk look basement.studio. **Optimasi GPU idle ditahan sampai fase finalise** — keputusan Keano 7 Agu, jangan dimulai lebih awal.
 
 ## 🎉 MVP 1 SELESAI (27 Jul) — **50-60 FPS di browser**
 
@@ -1470,6 +1482,193 @@ Sisa yang sengaja belum: dedup 29 image kembar (hemat kecil setelah LM mengecil;
 
 ---
 
+## 4t. Panel "Under Maintenance" ✅ (8–9 Agu) — lubang pintu buntu ditutup, lalu jadi interaktif
+
+Lubang pintu di sisi **timur laut Office** tidak menuju ke mana-mana dan terbaca sebagai lubang hitam. Ditutup `src/components/canvas/MaintenanceHologram.tsx` (commit `819ae9f`): papan catur **dither Bayer 4×4 putih** dengan tulisan UNDER MAINTENANCE yang menyatu ke dalam pola yang sama. `ShaderMaterial` mentah, aditif, ikut sapuan reveal (§4m).
+
+### Empat hal yang mahal didapat
+
+- **🔥 `renderOrder` WAJIB 0, jangan dinaikkan.** Sempat dipasang 2 dengan alasan "mengunci urutan biar tidak bergantung urutan traverse GLB" — dan dari Lounge hologramnya **terlihat menembus tembok**. Sebabnya bukan depth yang salah: partisi yang menghalangi ikut antrean transparan dengan `depthWrite` mati, jadi ia tidak pernah menulis depth dan `depthTest` hologram tidak punya apa pun untuk ditolak. Yang tersisa cuma urutan gambar — dan three.js mengurutkan antrean transparan pakai **`renderOrder` sebagai kunci utama, jarak baru kunci kedua**. Pengurutan jarak bawaan sudah benar; menguncinya justru mematikannya.
+  > Kalau nanti ada material transparan lain yang "tembus", **cek `renderOrder` sebelum mencurigai depth.**
+- **Keterbacaan dither berbanding TERBALIK dengan jumlah tangga kuantisasi.** Di 16 tangga selisih antar tangga cuma 6% dan mata membacanya sebagai gradien halus. Turun ke **4 tangga** selisihnya 25% dan papan caturnya jadi tekstur betulan. Konsekuensinya tiap suku intensitas harus ditimbang supaya rentangnya **melintasi batas tangga** — yang tidak melintasi 0,25 jatuh rata di satu tangga dan berhenti nge-dither sama sekali. Basis **0,125** dan teks **0,625** dipilih karena ×4 keduanya jatuh tepat di 8/16 sel Bayer, jadi teks = papan catur yang sefase & seukuran dengan latarnya.
+- **Satu sel dither harus lebih besar dari ~1 px CSS.** Bayer 4×4 pada 1 px perangkat = 2×2 px CSS di Retina, di bawah ambang mata dan terbaca sebagai butiran, bukan pola. `DITHER_PX = 2`.
+- **GAIN wajib turun dari 1,5 saat warnanya jadi putih.** Putih linear (1,1,1) pada 1,5 masuk jauh di atas ambang Bloom 0,95 (§4s): titik dither yang bersebelahan saling menutup dan polanya berubah jadi kabut rata.
+
+**Turunan aturan tangga:** apa pun yang bobotnya sepadan dengan satu tangga kuantisasi akan **diperbesar jadi bercak**. Itu yang membunuh chevron, scanline, bar sapuan, dan kedip — semuanya sempat ada lalu dicabut, masing-masing ditinggali komentar berisi alasan + syarat kalau mau kembali. `uTime`/`useFrame`/`useReducedMotion` ikut dihapus karena jadi kode mati; **kalau geraknya dihidupkan lagi, penjaga reduced-motion-nya wajib ikut hidup lagi.**
+
+`revealSweep.ts` kini membuka `X_FROM`/`X_TO`/`BAND`/`uProgress` supaya material non-standard bisa ikut tersapu — `prepareRevealSweep()` hanya menjangkau `MeshStandardMaterial`, jadi tanpa ini hologramnya sudah tampil utuh di tengah kantor yang belum terbentuk.
+
+### Jadi interaktif (9 Agu, commit `2302cd5`)
+
+Revisi tampilan atas penilaian Keano "kok jelek". **Pendar tepi putih tebal dihapus TOTAL** — dua tahap, karena diturunkan jadi pita 4 cm pun masih terbaca "tepi putih". Batas panel sekarang **kusen pintunya sendiri**; jangan gambar bingkai lagi, apa pun di tepi dibaca sebagai cacat rendering.
+
+Teks pindah ke **plane terpisah** supaya bisa maju ~44 cm saat hover (lerp eksponensial; rest 5 mm di depan panel = tampilan diam tidak berubah). Klik memicu **glitch 2 burst** (0–200 & 300–480 ms) yang satu kisi & irama dengan `CharacterGlitch` (§4u) — irisan 0,09 m, re-roll 24 Hz, hash sama — tapi levelnya milik panel. Dua resep yang **gagal** dan kenapa:
+
+| Percobaan | Kenapa gagal | Yang dipakai |
+|---|---|---|
+| Geser-UV kecil | Panel cuma ~90 px di layar & papan caturnya **ruang-layar**, jadi geseran UV pada bidang rata = nol | `SHIFT_UV` 0,16 + **discard** di luar 0..1 (siluet ikut koyak — padanan geseran `gl_Position` karakter) + fase Bayer meloncat per irisan + stretch ±40% |
+| Flash naik-saja (resep karakter) | Di panel aditif nyaris transparan, menambah terang = bar 3–6× di atas bidang yang diam → "kaya tempelan" | Level **dua arah**: separuh irisan gate ambruk ~nol (hologram bolong), lift diredam setangga (0,20–0,45), brownout global 0–35% per re-roll, + jitter pasca-kuantisasi |
+
+**Gerbang interaksi:** Office saja + `pointer: fine` + `!billiard`. Raycast panel hidup-mati lewat prop, **tanpa `stopPropagation`**, dan klik **mengalah** kalau `hoveredWaypoint` terisi (menjaga alasan lama `NO_RAYCAST`, §4k). Plane teks `NO_RAYCAST` permanen — penangkap hover yang ikut bergerak = hover berkedip. Reduced motion: teks snap, glitch mati.
+
+**Verifikasi:** `?holo=1` (dev, memaksa) atau `scripts/drive.mjs` move+click di CSS ~(1325, 310) dari `/office`.
+
+---
+
+## 4u. Glitch Karakter saat Idle ✅ (8–9 Agu)
+
+Setelah **8 detik tanpa input**, kelima karakter sesekali "rusak" 130–240 ms (burst tiap 4–9 dtk). `src/components/canvas/CharacterGlitch.tsx`, commit `889d331`.
+
+**Di karakter saja, bukan fullscreen** — keputusan Keano setelah diskusi: glitch fullscreen saat idle terbaca "website rusak", dan menambah pass render justru **pada saat yang sedang direncanakan untuk dihemat** (§4s / rencana idle GPU).
+
+- **Vertex:** irisan horizontal (band Y **dunia** 0,09 m — bukan model-space, rig Mixamo membawa skala di matrix) digeser di ruang NDC ±0,018.
+- **Fragment:** posterize **4 tangga** + Bayer sel **2 px** — angka **disamakan** dengan `MaintenanceHologram` supaya satu bahasa visual. Kalau hologram berubah, ikutkan.
+- **Flash putih** (revisi "kurang noticeable"): irisan yang tergeser diangkat ke putih 0,35–0,70 **sebelum** kuantisasi — baju karakter gelap, geseran tanpa flash tenggelam. Putih, bukan merah/cyan: merah sudah jadi bahasa galat fatal di `revealSweep`, dan hue bikin dither melebur (pelajaran §4t). Puncak ≈**0,86**, sengaja di bawah ambang Bloom 0,95 supaya irisan tidak ikut mekar.
+
+**Kontrak urutan (penting):** patch `onBeforeCompile` harus terpasang **sebelum** `prepareRevealSweep` — sweep menyimpan lalu memulihkannya saat dispose. Itu dijamin karena `CharacterGlitch` adalah **anak `Office`** (layout effect anak jalan duluan). **Jangan pindahkan ke `Scene.tsx` sebagai saudara `Office`.** Pola anti-StrictMode-nya sama dengan §4m: patch + uniform module-level, originals di `WeakMap` module-level (scene di-cache `useGLTF`, bisa lintas mount).
+
+### 🐛 Glitch menembus kaca — dibetulkan 9 Agu (`f208268`)
+
+Dari Lounge, burst karakter Function & Meeting tampil jelas di balik kaca: kedipan putih di sudut mata yang menarik perhatian ke ruangan yang **bukan** sedang ditonton. Kaca transparan `depthWrite` mati, jadi tidak ada cara "menyembunyikan di baliknya" — yang diandalkan **tata letak**: fade per-vertex berdasar jarak ke `VIEWS[currentRoom].tgt` (uniform `uGlitchCenter`, di-copy tiap frame via `getState`), penuh ≤5 m, nol ≥8 m.
+
+> ⚠️ **Acuannya TARGET pandangan, bukan posisi kamera.** Percobaan pertama pakai `cameraPosition` gagal: kamera Lounge mundur jauh, Leonard ~8–9 m jatuh se-rentang dengan karakter lintas-ruangan (~10 m) dan ikut ter-fade bersih. Jarak ke `tgt` memisah tegas — se-ruangan 2–4 m vs lintas 11–18 m.
+
+**Gating:** `useReducedMotion` → mati; ikut mati bersama `FrameloopGate` (semua logika di `useFrame`; listener input cuma menulis timestamp — pelajaran §4r-3). **Verifikasi:** dev-only `?glitch=1` memaksa efek nyala terus → `shoot.mjs`; pixel-diff **0,47%**, seluruhnya di karakter yang terlihat, scene lain nol. Fade lintas-ruangan diverifikasi screenshot paksa di keempat ruangan.
+
+---
+
+## 4v. Kantor Merespons Kursor & Perpindahan ✅ (10 Agu)
+
+Empat efek yang sama-sama menjawab **"ruangannya terasa seperti foto, bukan ruangan"**. Semuanya menumpang jalur yang sudah ada: **nol pass render tambahan, nol draw call baru** di jalur postprocessing.
+
+### 4v-1. Kamera mengekor kursor (`8a6d7cf`)
+
+Gerakan kursor menggeser kamera sedikit ke arah berlawanan, lerp eksponensial supaya berhentinya lembut dan tidak menyentak mengikuti pointer mentah. `mouseParallax.ts` + `CameraController.tsx`.
+
+**Pergeserannya dihitung di RUANG KAMERA, bukan ruang dunia** — offsetnya disusun dari sumbu kanan & atas kamera saat itu, jadi ia benar di keempat ruangan **tanpa satu pun angka yang perlu disetel per ruangan**. Sudut pandangnya tidak ikut berputar; hanya titik matanya yang bergeser, sehingga bidikan yang sudah diukur per-ruangan (§4k) tetap utuh. Mati di `pointer: coarse` (tidak ada kursor untuk diikuti) dan saat reduced motion.
+
+`mouseParallax.ts` murni fungsi tanpa React/three supaya bisa diuji tanpa merender apa pun — 7 test menjaga arah, batas amplitudo, dan peluruhannya.
+
+> ⚠️ **Gotcha test:** `PerspectiveCamera.lookAt()` cuma menyetel quaternion — `matrixWorld` masih identitas sampai render pertama. Tanpa `updateMatrixWorld(true)`, test membaca sumbu kanan yang salah dan **lulus karena alasan yang keliru**.
+
+### 4v-2. HoverScan — selubung dither + label pengekor kursor (`70374c3`)
+
+Benda interaktif (meja billiard) mendapat selubung dither saat di-hover, plus label yang mengekor kursor lewat jalur `hoveredLabel` yang sama dengan waypoint (`hoveredWaypoint` di store **diganti nama** jadi `hoveredLabel` — pemakainya bukan cuma waypoint lagi). Penjaga "jangan hapus kursor yang baru dipasang pihak lain" ikut diperluas ke `MaintenanceHologram`.
+
+> 🔥 **R3F memanggil `onPointerMove` SEKALI PER PERPOTONGAN, bukan sekali per gerakan mouse.** Satu gerakan di atas meja billiard menghasilkan rentetan panggilan dengan `e.object` berbeda-beda (`…M_PoolTable_Body` → `…M_Alu_Trim` → `Rug_Lounge009` → `MG_Office_M_Floor`). Akibatnya pola "set kalau kena, clear kalau tidak" **diam-diam rusak**: panggilan pertama menyalakan hover, panggilan berikutnya langsung memadamkannya. Gejalanya efeknya **tidak pernah terlihat sama sekali** padahal raycast-nya benar.
+>
+> Obatnya: ambil keputusan dari **seluruh sinar** — `for (const hit of e.intersections)`, bukan dari `e.object` panggilan ini. Bonus: gerbangnya jadi identik dengan `onClick`. `over`/`out` tidak bisa dipakai karena bagi R3F **seluruh kantor adalah satu event object**. ⚠️ `<Bvh firstHitOnly>` TIDAK menolong — ia membatasi hit per-mesh, bukan lintas-scene.
+
+### 4v-3. Sobekan transisi (`transitionTear.tsx`)
+
+Irisan layar tergeser saat kamera terbang antar ruangan, pulih sendiri saat tiba.
+
+- **Amplitudo digerakkan LAJU kamera, dihitung dari `basePos` — bukan `camera.position`.** Kalau dari `camera.position`, parallax kursor (§4v-1) akan terbaca sebagai laju dan efeknya menyala saat diam.
+- **Wajib efek PERTAMA di rantai postprocessing.** Kalau belakangan, pita yang tergeser mengambil piksel yang **belum di-grade**.
+
+### 4v-4. Debu melayang (`Dust.tsx`)
+
+Bintik melayang di Lounge & Office. Kotak partikelnya **mengekor kamera**, bukan didefinisikan per-ruangan — kerapatan jadi seragam tanpa angka baru tiap denah berubah.
+
+> 🔥 **`<shaderMaterial uniforms={obj} />` di R3F TIDAK menyimpan objek uniform yang kita beri.** `applyProps` punya cabang khusus untuk `uniforms`: ia `Object.assign` isi tiap uniform ke pembungkus `{ value }` milik material sendiri, dan **semua rujukan bersama putus**. Gejalanya debu tidak muncul sama sekali, **tanpa satu pun error di console** — `uRevealProgress` cuma dapat salinan nilai saat mount (0) sementara revealSweep menulis ke objek asli → semua fragmen di-discard; `uTime` beku; `uCam` beku di (0,0,0) sehingga kotak wrap mengelilingi titik asal dunia.
+>
+> **Obatnya:** kalau material perlu **berbagi** objek uniform atau ditulis tiap frame dari `useFrame`, bangun `new ShaderMaterial({ uniforms })` di `useMemo` lalu pasang lewat `<primitive object={mat} attach="material" />` (+ dispose di cleanup). Itu pola yang sudah dipakai `MaintenanceHologram` — dan sebabnya hologram tidak pernah kena bug ini. Butuh ~1 jam bisect shader untuk sampai ke sini karena kodenya sendiri terlihat benar; tekniknya: override output shader jadi konstanta, lalu ganti satu per satu dengan tiap faktor peredup untuk menemukan yang nol.
+
+**INVARIANTS.md** ikut diperbarui: patch `onBeforeCompile` sekarang **tiga** yang berbagi material sama, dan kontrak urutan (glitch & hover-scan **wajib anak `Office`**, bukan saudara di `Scene`) ditulis eksplisit.
+
+---
+
+## 4w. Hero Mengalir Tanpa Pin ✅ (10 Agu) — HP dulu, lalu desktop menyusul
+
+### 4w-1. HP: tiga laporan, satu sebab (`10b0126`)
+
+Hero dipaku (sticky) dan disurutkan (opacity + scale) persis seperti di desktop, padahal **di layar sempit tidak ada yang perlu dipaku maupun disurutkan**:
+
+| Laporan | Sebab |
+|---|---|
+| "40% layar kosong" | Hero 70dvh dipaku di dalam track 126dvh → 30dvh badan track tak berisi apa pun sebelum konten mulai |
+| "3D kepotong kiri-kanan" | `scale: 0.96` mengecilkan canvas **di tempat**, menyisakan lajur gelap di kedua tepi |
+| "scroll tersendat" | Menganimasikan opacity+scale sebuah layer **WebGL seukuran layar** tiap frame scroll = pekerjaan compositing termahal di halaman ini |
+
+Di HP hero kini **mengalir**: tanpa sticky, dan pembungkus canvas tidak menerima style transform apa pun. `useNarrowViewport` (767,98px — **sama dengan `md:`**) yang memisahnya: satu sumber kebenaran, karena kalau JS dan CSS berbeda ambang, ada jendela lebar di mana keduanya tak sepakat koreografi mana yang sedang jalan.
+
+`HeroHandoff` jadi `hidden md:block`. Seam itu menutupi canvas yang sedang surut; **tanpa surut ia cuma strip 40px yang menimpa bagian bawah kantor** — itu sebabnya "3D dapat 70%" tidak tercapai dengan menaikkan tinggi hero saja. Riwayat percobaan `-mt-10 h-10` ditulis di berkasnya supaya tidak diulang: **sumbangan nol ke ALIRAN halaman bukan berarti nol ongkos ke YANG TERLIHAT.**
+
+Menyusul dari situ, aturan **padding tipis untuk section pertama tiap ruangan** — section itulah yang kini bersebelahan langsung dengan kantor 3D, dan `pt-24`/`pt-32` bawaannya terbaca sebagai celah menganga. `CsiHero`, `MeetingLead`, `Office`, `PeopleIntro` semua `pt-6` di HP dan kembali ke nilai lamanya di `md:`.
+
+Judul `CsiHero` turun ke `text-4xl` di layar **pendek** (`max-height: 700px`) — patokan **tinggi, bukan lebar**: hero mengambil 70dvh, jadi judul cuma kebagian 30dvh; di 640px tinggi, 4 baris `text-5xl` persis sepanjang jatahnya dan "Intelligence." terpotong separuh.
+
+### 4w-2. Desktop ikut bentuk HP (`31a032d`)
+
+Dilaporkan dari desktop: *"3D masih mengecil dan tersendat saat scroll ke konten, dan masih ada radius antara 3D dan halaman konten"*. Ketiganya satu akar — **landasan pin 80dvh** (track 180dvh + viewport sticky 100dvh):
+
+- **mengecil** — `scale: 0.96` + `y: -20` di pembungkus canvas menyisakan lajur gelap di tepi kiri, kanan, atas.
+- **tersendat** — scale itu membuat `react-use-measure` mengukur ulang, jadi `<Canvas>` **re-render tiap frame scroll**.
+- **radius** — seam `HeroHandoff` (`md:rounded-t-3xl`, ditarik `-mt-32`) hanya masuk akal sebagai panel terangkat **di atas canvas yang surut**.
+
+Sekarang **satu koreografi untuk semua lebar layar**: hero mengalir bersama halaman, yang beda cuma tingginya (70dvh di HP, setinggi layar di ≥768px). **Seam dicabut seluruhnya** — `HeroHandoff.tsx` dihapus. Ikut kena: `useScroll`/`useTransform`/`useNarrowViewport` di `Hero` jadi tak terpakai, `motion.div` pembungkus canvas turun jadi `div` biasa, dan ref sticky terpisah untuk `heroInView` dilebur (track = viewport sekarang — **kalau pin dihidupkan lagi, pemisahan ref-nya wajib ikut kembali**).
+
+> **INVARIANTS §7 TIDAK ikut gugur** meski pemicu spesifiknya (surut scroll) hilang: aturan "frameloop lewat prop, bukan imperatif" tetap berlaku karena re-render `<Canvas>` masih bisa datang dari resize, ganti route, atau StrictMode (§4r).
+
+**Terverifikasi lewat CDP dengan GLB benar-benar dimuat** — desktop 1440×900: gap 0px, border-radius 0px, seam tidak ada, style pembungkus `null`, lebar konten == lebar hero, tanpa overflow horizontal. HP 393×852: tidak berubah (hero 596px = 70% layar, gap 0).
+
+Test yang dulu menjaga "surut tetap terpasang di layar lebar" **dibalik jadi penjaga keadaan baru, bukan dihapus** — kode yang dicabut itu BENAR di desktop, ia tidak akan pernah terlihat salah saat dibaca, dan mengembalikannya lolos typecheck maupun lint.
+
+---
+
+## 4x. Menu Layar Penuh di Navbar ✅ (10 Agu)
+
+Adaptasi `#menu-overlay` dari **situs cogniti yang sudah tayang**, menggantikan kartu dropdown kaca kecil: panel gelap satu layar penuh berisi daftar ruangan besar, "Talk to us", tautan sosial, dan jam tiga zona waktu Indonesia. Commit `a408c35`.
+
+**Tiga hal beda dari aslinya**, semua ada alasannya: daftarnya **RUANGAN**, bukan bagian halaman (INVARIANTS §6 — di perangkat sentuh, tautan ruangan di navbar satu-satunya jalan pindah ruangan); **tanpa efek scramble huruf** (menunya `md:hidden`, tidak ada hover di sana); dan tanpa baris logo + tombol tutup sendiri (pill navbar mengambang di atas overlay, di posisi yang sama).
+
+**Tombolnya morf, bukan crossfade.** Ikon burger tertutup → "— Close." terbuka: garis tengah burger dan strip di depan kata itu **satu elemen yang sama** dan tidak pernah menghilang; garis atas & bawah meluncur menyatu lalu memudar. Urutannya dibalik menurut arah — membuka: garis melipat dulu lalu kata menyingkap; menutup: kata pergi dulu lalu garis mekar. Lebar katanya `0 ⇄ auto`, bukan angka piksel yang akan basi kalau fontnya berganti. `min-w-11` karena tombolnya terukur cuma 26px lebar; kelebihannya tumbuh ke kiri jadi ikonnya tidak bergeser.
+
+### 🐛 Menutupnya ngeflick — empat sebab terpisah
+
+| Sebab | Perbaikan |
+|---|---|
+| Opasitas memakai `easeOutExpo` — separuh hilang dalam ~30 ms | Kurva **FADE** (`easeInOutCubic`) khusus opasitas; `EASE` tetap untuk yang **bergerak**. Terukur: opacity turun rata, 0,5 tepat di paruh durasi |
+| Isi menu ikut terbang 28px saat panelnya memudar | Label keluar `out` yang **sengaja tidak dimiliki varian anak mana pun** → panel memudar sebagai satu keping, isinya diam (terverifikasi: `top` item pertama tidak bergerak sepiksel pun selama 450 ms) |
+| Chrome pill & jam berganti **di frame tombolnya ditekan**, di atas panel yang masih terlihat | Keduanya ikut `overlayUp` yang dimatikan `onExitComplete`, bukan timer yang ditebak |
+| Kelas `border` disulap on/off → isi pill bergeser 1px | Border **selalu** terpasang; yang berubah warnanya |
+
+**Jam tiga zonanya digerbangi "menu terbuka" dan bangun di pergantian menit**, bukan `setInterval(…, 1000)` selamanya seperti aslinya — pola **mesin-berdetak-walau-tak-terlihat** itu persis yang jadi biang "laptop panas" 3 Agu (§4r-3). 5 test menjaga **KAPAN ia berdetak**, bukan jam berapa yang tampil (`useZoneClocks.ts`).
+
+Tautan sosial pindah ke `src/data/socials.ts`. `sections/Contact.tsx` **sengaja belum ikut**: ia masih punya daftarnya sendiri dengan `TODO(content)` yang belum ditutup, dan mengubahnya = mengubah isi halaman yang tampil.
+
+---
+
+## 4y. Kantor Bernapas saat Ditinggal ✅ (11 Agu) — idle / ambient life
+
+Commit `c77fd3b`. Yang lain menambah gerakan; batch ini sebagian besar justru **menguranginya**, karena bacaan yang dikejar adalah *"kantornya ditinggal"*.
+
+- **`idleClock.ts`** — satu set listener DOM untuk seluruh app, **ref-counted**, tiap pemakai memilih ambangnya sendiri. Pemasang **kedua tidak boleh me-reset** jam yang sudah berjalan. `CharacterGlitch` (§4u) ikut ke sini, tracker sendirinya dicabut.
+- **`LedBreath.tsx`** — LED strip lantai turun **16%** setelah idle 8 dtk; dua gelombang yang **tidak sekelipatan** supaya tidak terbaca metronomik. Base **DIBACA DARI MATERIAL**, bukan dioper sebagai konstanta. Halusnya disengaja: tumpahan cahayanya di lantai sudah **di-bake** dan tidak ikut bergerak, jadi napas yang dalam terbaca "render rusak", bukan "lampu berdenyut".
+- **`ScreensSleep.tsx`** — layar meredup ke 5% + video pause setelah **45 detik, bukan 8**. TV ada untuk ditonton, dan menonton berarti diam; tidur 8 detik mematikan video tepat pada orang yang paling menghargainya.
+  > ⚠️ **Pause layar WAJIB lewat `wanted` di `ScreenVideoGate`** (§6c). Kalau peredup memanggil `pauseScreenVideos()` sendiri, efek gerbangnya tidak dijalankan ulang saat bangun dan **videonya mati permanen**.
+
+**Nol patch `onBeforeCompile` baru** — INVARIANTS §5 tidak bertambah panjang.
+
+### 🐛 FIX 4 di `Office.tsx` ternyata mati sejak lama
+
+Nama material di GLB **berakhiran nama mesh**: `M_LEDStrip__MG_Office_M_LEDStrip`. Jadi `=== "M_LEDStrip"` **selalu meleset tanpa error**, dan strip berjalan pada **8** material dari GLB, bukan 3 yang tertulis di kode. Matcher dibetulkan lewat `ledStrip.ts` (+ test yang menjaga akhiran exporter kena dan `MR_MicPod_LED` tidak ikut terseret); konstantanya **disetel ke 8 supaya pembetulan itu nol perubahan tampilan**. Menurunkannya ke 3 sekarang jadi keputusan look yang terpisah — kenopnya baru pertama kali benar-benar hidup.
+
+> Berlaku umum: **nama material glTF bisa dapat akhiran nama mesh.** Cocokkan dengan prefix/akhiran, jangan `===`.
+
+**Terverifikasi di Brave** (dpr 2, 2880×1800): crop strip berayun 0 → **−3,2%** saat idle dan tidak pernah naik, kontrol jauh datar ±0,02%, kembali ke −0,01% pada gerakan pertama; layar **−12,8%** di 50 dtk dan masih utuh di 15 dtk.
+
+> 🚫 Opsi **"frame texture: vignette + grain" DITOLAK Keano** — jangan ditawarkan atau dibangun lagi.
+
+---
+
+## 4z. Section Konten Dirombak + Penjaga Overflow HP ✅ (9 Agu — rekan tim)
+
+- **`Industries`** (`31eb599`) — strip marquee diganti sticky heading + grid kartu sektor *core/also*, mengikuti pola `LivingArchitecture`. **`Vision`** — daftar misi datar diganti `MissionShowcase` (kartu gambar), dan latar scatter `NetworkField` **dibuang: canvas rAF-nya biang utama jank scroll di perangkat sentuh** (pelajaran yang sama dengan §4r-3). `Marquee.tsx` dihapus, sudah tidak dipakai section mana pun.
+- **Penjaga overflow horizontal** (`f30614f`) — `html`/`body` tidak punya penjaga sumbu-x, jadi satu keturunan yang kelebaran membuat **seluruh dokumen bisa digeser ke samping** di HP (~360px). Ditambah `max-width: 100%` + **`overflow-x: clip`** (bukan `hidden`, supaya `position: sticky` di Hero/Industries/LivingArchitecture tetap hidup) sebagai penjaga global, plus `overflow-x-clip` lokal di lima section. Dua sumber lebar yang bikin konten **terpotong**, bukan cuma bisa digeser, ikut dibetulkan: judul terbesar `CsiHero` & heading hover-swap `TrustedByGrid` kini membungkus, dan `DeploymentCard`/`DeploymentCta` dapat `w-full` eksplisit supaya `aspect-[4/3]` tidak lagi menurunkan lebar dari `min-height` (sempat merender kartu 384px di lajur grid 312px).
+
+---
+
 ## 5. Foto Referensi
 
 | Folder | Isi |
@@ -1512,11 +1711,19 @@ Sisa yang sengaja belum: dedup 29 image kembar (hemat kecil setelah LM mengecil;
 11n. **Tiga keluhan visual dari web + denoise** ✅ **SELESAI 6 Agu** (§4s, commit `514e8a7`) — hotspot oranye rak cubby A & B, cincin plafon meeting; denoise OIDN (noise −5,5×); `scripts/swap-lightmaps.mjs` bikin siklus re-bake jadi hitungan menit
 11o. **Empat layar iMac terisi** ✅ **SELESAI 6–7 Agu** (§6c) — situs cogniti, easter egg, wallpaper, dasbor PM; mesh gabungan dipecah runtime, emissive diukur bukan dihitung
 11p. **Dua TV terakhir terisi + gerbang video per-ruangan** ✅ **SELESAI 7 Agu** (§6c, commit `2b247d4`) — TV meeting (Desa+) & TV function (logo mantul DVD, disintesis `scripts/make-dvd-video.mjs`); TV function sekaligus membetulkan slab putih yang mekar
+11q. **Panel "under maintenance"** ✅ **SELESAI 8–9 Agu** (§4t) — lubang pintu buntu Office ditutup panel dither Bayer, lalu **jadi interaktif** (hover teks melayang, klik glitch sobek). Dua aturan mahal ikut tercatat: `renderOrder` vs antrean transparan, dan keterbacaan dither yang berbanding terbalik dengan jumlah tangga kuantisasi
+11r. **Glitch karakter saat idle** ✅ **SELESAI 8–9 Agu** (§4u) — irisan tergeser + kilasan dither putih di karakter saja (bukan fullscreen); fade lintas-ruangan memakai jarak ke **target pandangan**, bukan posisi kamera
+11s. **Section konten dirombak + penjaga overflow HP** ✅ **SELESAI 9 Agu** (§4z, rekan tim) — Industries jadi kartu sektor, Vision jadi `MissionShowcase`, `NetworkField` dibuang (biang jank scroll sentuh), `overflow-x: clip` global
+11t. **Kantor merespons kursor & perpindahan** ✅ **SELESAI 10 Agu** (§4v) — mouse parallax di ruang kamera, HoverScan, sobekan transisi, debu melayang. Dua gotcha R3F kelas berat ikut tercatat: **`onPointerMove` dipanggil per-perpotongan** dan **prop `uniforms` menyalin, bukan merujuk**
+11u. **Hero mengalir tanpa pin** ✅ **SELESAI 10 Agu** (§4w) — HP dulu (tutup 40% layar kosong, 3D tak lagi kepotong), lalu **desktop menyusul ikut bentuk HP**: pin & surut dibongkar, seam `HeroHandoff` dicabut seluruhnya
+11v. **Menu layar penuh di navbar** ✅ **SELESAI 10 Agu** (§4x) — adaptasi `#menu-overlay` situs tayang; burger **memorf** jadi "— Close."; empat sebab flick saat menutup dibetulkan; jam tiga zona digerbangi menu & bangun per menit (bukan `setInterval` selamanya)
+11w. **Kantor bernapas saat ditinggal** ✅ **SELESAI 11 Agu** (§4y) — `idleClock` bersama, LED strip berdenyut, layar tidur di 45 dtk. Sekalian menemukan **FIX 4 yang mati diam-diam** karena nama material GLB berakhiran nama mesh
+11x. **Review billiard di browser** ✅ **SELESAI 12 Agu** (§6d) — item tertunda paling lama di dokumen ini; Keano menilainya **clear, tanpa revisi**. Minigame billiard resmi **FINAL**
 12. **⬅️ BERIKUTNYA, urut prioritas:**
     - ~~**Bug billiard**: bola yang masuk lubang harus dibekukan jadi `fixed`~~ ✅ **4 Agu** (§6d)
     - ~~**Rombak `CharacterLights.tsx`**~~ ❌ **DIBATALKAN 6 Agu** (§4s) — lampu ber-`layers` tidak pernah jalan di three; Keano memilih karakter tanpa lampu
     - ~~**Jalankan ulang `shrink-lightmaps.mjs`**~~ ✅ **sudah** — diverifikasi dari GLB: 188/188 lightmap 256px
-    - **a. Review billiard di browser** (§6d): posisi stik, apakah bola terlihat resin (bukan besi), framing kamera, timing fade lampu. Fisikanya sudah dibetulkan lewat simulasi headless, tapi **belum pernah dilihat mata**. Sekalian ukur FPS saat fisika jalan
+    - ~~**a. Review billiard di browser** (§6d)~~ ✅ **SELESAI 12 Agu** — dinilai **clear tanpa revisi**; §6d ditutup sebagai FINAL
     - **b. Uji anti-beku loader di browser sungguhan** (§4n) — DevTools Performance saat kompilasi 233 shader; inti keputusan Web Worker, baru bisa dibuktikan mata
     - ~~**c. Sisa layar** (§6c) — TV meeting & TV smoking~~ ✅ **SELESAI 7 Agu** — keduanya terisi; blocker "SMK_TV belum punya UV" ternyata tidak pernah ada
     - **c. Selidiki p95 33 ms** di `/office` & `/meeting` (§4s) — dugaan skinning karakter, bukan tekstur
@@ -1815,11 +2022,11 @@ Diverifikasi lewat `scripts/drive.mjs` + handle DEV `__screenVideos()`: di Funct
 
 Sumbernya tangkapan layar akun Spotify pribadi — nama akun, playlist, riwayat dengar — dan repo ini publik. `.gitignore` memblokir `/Screenshot *.png`; yang di-commit **hanya hasil pixelasinya** di `public/screens/` (96×54, sudah tidak terbaca). Verifikasi log dev: `[office] layar terisi=1/1` — kalau kurang, nama node di `screens.ts` tidak cocok dengan yang ada di GLB, dan layarnya akan **diam hitam tanpa error apa pun**.
 
-## 6d. Minigame Billiard ✅ DIBANGUN (28 Jul) — ⏸️ ditunda, belum di-review di browser
+## 6d. Minigame Billiard ✅ **FINAL** (dibangun 28 Jul; direview & ditutup 12 Agu)
 
 Sandbox: aim + power + tembak, bola masuk lubang hilang, auto re-rack, tombol reset. **Tanpa skor/giliran/aturan 8-ball.** Fisika **cannon-es 0.20** — dipakai LANGSUNG tanpa wrapper R3F (lihat di bawah kenapa pindah dari Rapier).
 
-**Status:** logika & fisika sudah diverifikasi (simulasi headless + typecheck/lint/build bersih). **Yang belum: penilaian visual** — posisi stik, apakah bola terlihat resin (bukan besi), framing kamera, timing fade lampu. Karakter function room (syarat terakhir office 3D) sudah masuk, jadi **review browser ini masih jadi pekerjaan yang tertunda** (per 30 Jul belum dilakukan).
+**Status: ✅ SELESAI & FINAL.** Logika, fisika, dan dua bug "bola keluar meja" sudah diverifikasi lewat simulasi headless (4 Agu, di bawah). **Penilaian visual di browser — yang sempat jadi item tertunda paling lama di dokumen ini — sudah dilakukan Keano dan hasilnya CLEAR.** Tidak ada revisi yang diminta: posisi stik, warna bola, framing kamera, dan timing fade lampu semuanya diterima apa adanya. Minigame ini **tidak lagi ada di daftar pekerjaan** (§6 item 12); perlakukan sebagai fitur yang sudah jadi.
 
 ### 🐛 Bola & stik tergeletak di (0,0,0) sepanjang tur — dibetulkan 30 Jul
 
@@ -1975,8 +2182,12 @@ Kode billiard cuma bergantung 3 hal dari `office.glb`: (a) nama node mengandung 
   - Cycles: **GPU Metal** (`prefs.compute_device_type='METAL'` + `cycles.device='GPU'`) — cek tiap sesi, default-nya CPU
 - **Polycam** untuk scanning (GLB)
 - **Vite + bun** (project web ini) — **GLB sudah terintegrasi (§4h)**. Stack: **Vite 6** (dulu Next 16.2, dimigrasikan 29 Jul — §4j), React 19, three 0.185, @react-three/fiber 9 + drei 10 + postprocessing 3, zustand 5, Tailwind 4, **react-router-dom 7** (routing per-ruangan, §4q), **cannon-es 0.20** (billiard, §6d), **motion 12** (animasi teks, §4i), **matter-js 0.20** (`PhysicsHeading`, §4r-3). Jalankan: `bun dev` → `http://localhost:3000`
-- **Vitest 4** — `bun run test`. **189 test di 34 berkas**, semuanya hijau per 7 Agu. Empat di antaranya invariant lintas-wilayah (`INVARIANTS.md` §1, §3, §6, §7). Norma repo: **buktikan test-nya MERAH di kondisi rusak dulu** sebelum dipakai memverifikasi perbaikan
-- **Pengukuran performa: CDP langsung, tanpa dependency** (§4r) — `scripts/measure-frames.mjs` (frame time) + `scripts/shoot.mjs` (screenshot) + `scripts/drive.mjs` (klik/eval/tembak berurutan). Pakai Chrome yang sudah terpasang. ⚠️ **Wajib jalankan di dpr 2**; dpr 1 mentok vsync dan semua setelan terlihat sama
+- **Vitest 4** — `bun run test`. **251 test di 46 berkas**, semuanya hijau per 12 Agu (naik dari 189/34 pada 7 Agu). Empat di antaranya invariant lintas-wilayah (`INVARIANTS.md` §1, §3, §6, §7). Norma repo: **buktikan test-nya MERAH di kondisi rusak dulu** sebelum dipakai memverifikasi perbaikan
+- **Pengukuran performa: CDP langsung, tanpa dependency** (§4r) — `scripts/measure-frames.mjs` (frame time) + `scripts/shoot.mjs` (screenshot) + `scripts/drive.mjs` (klik/eval/tembak berurutan). ⚠️ **Wajib jalankan di dpr 2**; dpr 1 mentok vsync dan semua setelan terlihat sama
+  - **Browser verifikasi = Brave**, bukan Chrome. CDP-nya identik, cukup tukar path binary-nya. ⚠️ Kelima skrip di `scripts/` masih **hardcode path Chrome** — ganti manual saat dipakai
+  - **`drive.mjs` dapat tiga langkah baru** (10 Agu): `emulate` memasang device metrics **sekaligus** `setTouchEmulationEnabled` — tanpa itu halaman terbaca sebagai desktop sempit, `(pointer: coarse)` tidak cocok, dan gerbang INVARIANTS §6 **tidak ikut teruji padahal itu justru yang sedang diperiksa** saat mengemulasi HP; `scroll` memindahkan halaman ke posisi tertentu sebelum memotret; `media` memaksa `prefers-reduced-motion` (cabang itu dipilih saat komponen **dipasang**, jadi tidak bisa dipalsukan dari `eval`)
+  - ⚠️ `captureScreenshot` kini `fromSurface: false` dan melempar kalau datanya kosong — dengan device metrics override aktif, potret dari surface kadang balik kosong dan `Buffer.from(undefined)` gagal jauh dari sebabnya
+- **`scripts/measure-scroll.mjs`** (10 Agu) — mengukur **kehalusan scroll**, bukan fps diam seperti `measure-frames.mjs`. ⚠️ Batas alatnya ditulis di kepala berkas: **ia mencekik CPU**, sementara yang mahal di HP adalah compositing layer WebGL di **GPU** — untuk keputusan yang menyentuh compositing, ia bukan wasitnya
 - **Generator aset layar** (§6c) — `scripts/make-dvd-video.mjs` (logo mantul TV function; deterministik, jalankan ulang → berkas identik byte demi byte) & `scripts/make-vscode-video.mjs` (sintetis, tidak dipakai). Aset lain hasil `ffmpeg` langsung; resepnya di komentar `screens.ts`
 - **Playwright 1.61.0** untuk verifikasi visual headless — **versi itu spesifik**, lihat §4m. Flag WebGL: `--use-gl=angle --use-angle=metal --enable-unsafe-swiftshader`. (Tidak ada di `package.json`; dipasang terpisah saat dibutuhkan. Untuk mengukur **frame time** pakai skrip CDP di atas, bukan ini.)
 
