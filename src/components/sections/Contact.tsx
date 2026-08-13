@@ -134,13 +134,17 @@ export default function Contact() {
    * ~2× dalam satu frame, di posisi yang berbeda pula. Zoom yang mulus setelah
    * lompatan sebesar itu tetap terbaca sebagai sentakan.
    */
-  const [dock, setDock] = useState({ h: 0, dy: 0 });
+  const [dock, setDock] = useState({ h: 0, dx: 0, dy: 0 });
 
   const openForm = useCallback(() => {
     const box = boxRef.current;
     if (box) {
       const r = box.getBoundingClientRect();
-      setDock({ h: r.height, dy: r.top + r.height / 2 - window.innerHeight / 2 });
+      setDock({
+        h: r.height,
+        dx: r.left + r.width / 2 - window.innerWidth / 2,
+        dy: r.top + r.height / 2 - window.innerHeight / 2,
+      });
     }
     setOpen(true);
   }, []);
@@ -286,6 +290,7 @@ export default function Contact() {
             progress={progress}
             zoom={zoom}
             dockHeight={promoted ? dock.h : 0}
+            dockOffsetX={promoted ? dock.dx : 0}
             dockOffsetY={promoted ? dock.dy : 0}
             floating={overlay && FLOAT_WHEN_OPEN && !reduced}
             className="h-full w-full"

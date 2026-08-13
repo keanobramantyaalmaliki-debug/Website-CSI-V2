@@ -20,7 +20,14 @@ import type { RootStore } from "@react-three/fiber";
 import { Html, useGLTF } from "@react-three/drei";
 import { useInView } from "motion/react";
 import type { MotionValue } from "motion/react";
-import { MathUtils, Mesh, Object3D, Quaternion, Vector3 } from "three";
+import {
+  MathUtils,
+  Mesh,
+  Object3D,
+  PerspectiveCamera,
+  Quaternion,
+  Vector3,
+} from "three";
 import SceneEnvironment from "@/components/canvas/SceneEnvironment";
 import { useNarrowViewport } from "@/lib/hooks/useNarrowViewport";
 
@@ -211,7 +218,6 @@ function matchBaseDepthToLid(root: Object3D) {
 
 /** Sekali pakai bersama, dibuat sekali. `useFrame` jalan 60×/dtk; membuat
  *  Vector3 baru di dalamnya berarti memberi makan GC tanpa perlu. */
-const SCRATCH_UP = new Vector3();
 const SCRATCH_NORMAL = new Vector3();
 const SCRATCH_TO_CAM = new Vector3();
 const SCRATCH_CENTER = new Vector3();
@@ -235,9 +241,10 @@ const SCRATCH_Q = new Quaternion();
  */
 const SCREEN_FACE_FADE = 0.4;
 
-/** Geometri kotak laptop saat MENYATU di halaman. `h = 0` berarti sedang
- *  menyatu, jadi tidak ada yang perlu dikoreksi. */
-export type DockGeometry = { h: number; dy: number };
+/** Geometri kotak laptop saat MENYATU di halaman: tingginya, dan jarak pusatnya
+ *  dari pusat viewport. `h = 0` berarti sedang menyatu, jadi tidak ada yang
+ *  perlu dikoreksi. */
+export type DockGeometry = { h: number; dx: number; dy: number };
 
 /**
  * Menyerahkan store R3F ke luar canvas.
@@ -248,6 +255,28 @@ export type DockGeometry = { h: number; dy: number };
  * sekarang — itu yang dipakai `syncCanvasSize` untuk tahu perlu-tidaknya
  * menyetel ulang.
  */
+/**
+ * Geseran posisi kotak→viewport, sebagai transform CSS. Ditulis ke pembungkus
+ * yang memuat canvas DAN elemen `<Html>`, supaya keduanya mustahil berselisih —
+ * alasan lengkapnya di `useFrame` milik `Laptop`.
+ *
+ * Dipakai dari DUA tempat (tiap frame dari `useFrame`, dan sekali dari efek
+ * layout saat tata letaknya berganti), jadi rumusnya tinggal di sini saja
+ * supaya tidak ada dua salinan yang bisa berselisih.
+ */
+function applyDockShift(
+  el: HTMLElement | null,
+  dockGeom: DockGeometry,
+  t: number,
+) {
+  if (!el) return;
+  const away = dockGeom.h > 0 && t < 1 ? 1 - t : 0;
+  el.style.transform =
+    away > 0
+      ? `translate3d(${dockGeom.dx * away}px, ${dockGeom.dy * away}px, 0)`
+      : "";
+}
+
 function PublishStore({ into }: { into: RefObject<RootStore | null> }) {
   const store = useStore();
   useLayoutEffect(() => {
@@ -263,6 +292,7 @@ function Laptop({
   progress,
   zoom,
   dock,
+  host,
   floating,
   rig,
   screen,
@@ -274,6 +304,9 @@ function Laptop({
    *  ke sini setelah pohon R3F ikut me-render, dan satu frame di antaranya sudah
    *  cukup untuk terlihat sebagai kedipan. */
   dock: RefObject<DockGeometry>;
+  /** Pembungkus yang memuat canvas DAN elemen `<Html>`. Geseran posisi ditulis
+   *  ke sini sebagai transform CSS — lihat catatan di `useFrame`. */
+  host: RefObject<HTMLDivElement | null>;
   floating: boolean;
   rig: CameraRig;
   /** Isi layar. Dipasang hanya kalau ada — `<Html>` menggambar DOM DI ATAS
@@ -332,84 +365,134 @@ function Laptop({
    * terpasang di ruang dunia, jadi memutar laptop akan menggeser kilau
    * aluminiumnya dan pose terbukanya jadi terlihat lain dari yang sudah disetel.
    *
-   * ── Kenapa ada koreksi `k` dan geseran `pan` ──────────────────────────────
+   * ── Kenapa lompatan tata letaknya dibatalkan lewat PROYEKSI ───────────────
    *
    * Saat form dibuka, pembungkusnya naik jadi `fixed inset-0`, jadi canvas ini
-   * berubah dari kotak ~468px jadi setinggi layar DALAM SATU FRAME. `fov`
+   * berubah dari kotak ~397px jadi setinggi layar DALAM SATU FRAME. `fov`
    * three.js vertikal, jadi tinggi piksel yang berubah = laptopnya seketika
    * ~2× lebih besar, dan pindah dari tengah kotak ke tengah viewport. Dolly
    * semulus apa pun setelah lompatan itu tetap terbaca sebagai sentakan.
    *
-   * Keduanya dibatalkan di sini, bukan dengan menganimasikan tata letak DOM —
-   * mengubah ukuran canvas tiap frame berarti `setSize` + realokasi buffer 60×
-   * per detik, ongkos yang jauh lebih besar daripada dua baris aritmetika:
+   * ⚠️ Versi sebelumnya membatalkannya dengan MEMINDAHKAN KAMERA: jarak dikali
+   * `k = tinggi layar / tinggi kotak`, lalu digeser sejauh `pan` untuk
+   * mengembalikan posisi di layar. Itu SALAH, dan salahnya tidak kelihatan di
+   * angka ukuran canvas — cuma di piksel. Terukur 13 Agu
+   * (`scripts/probe-contact-settle.mjs`): sepanjang menutup laptopnya konvergen
+   * ke kotak 313×133 padahal pose istirahatnya 310×120, lalu MENYENTAK ke pose
+   * benar tepat saat `settling` mati (t≈2,4 dtk, Δ 9 px). Itu "posisinya beda
+   * lalu tiba-tiba balik" yang dilaporkan.
    *
-   *   k   = tinggi layar / tinggi kotak → jarak awal kamera dikali k, jadi
-   *         ukuran PIKSEL laptop persis sama sebelum dan sesudah promote.
-   *         (Saat menyatu, `dockHeight` = 0 → k = 1; koreksinya mati sendiri.)
-   *   pan = kamera + bidikan digeser ke arah "atas layar" sejauh w, yang
-   *         menurunkan bayangan sebanyak `dockOffsetY` piksel — mengembalikan
-   *         laptop ke tempatnya semula di layar.
+   * Sebabnya: memundurkan kamera 1,92× sambil membesarkan gambar 1,92× hanya
+   * mempertahankan ukuran benda yang tepat di bidang bidikan. Segala yang di
+   * depan/belakang bidang itu ikut berubah — perspektifnya memipih, seperti
+   * berganti ke lensa tele. Karena itu lebarnya cuma meleset 1% sementara
+   * TINGGINYA 9%: yang berubah sudut pandang, bukan skala. Geseran `pan` punya
+   * penyakit yang sama, ia translasi di ruang dunia, bukan geseran bingkai.
    *
-   * Keduanya dikalikan (1−t), jadi lenyap tepat saat kamera sampai.
+   * Yang benar: kameranya JANGAN disentuh sama sekali, geser BINGKAINYA. Itu
+   * persis `camera.setViewOffset(fw, fh, ox, oy, w, h)` — proyeksi off-axis
+   * (frustum miring), tanpa memindahkan titik pandang, jadi perspektifnya
+   * identik sampai piksel terakhir.
+   *
+   *   fh = tinggi "gambar penuh" yang direntang fov. Saat t=0 ia setinggi KOTAK
+   *        (jadi skala pikselnya sama persis seperti sebelum naik), saat t=1 ia
+   *        setinggi canvas (proyeksi normal). Di antaranya di-lerp.
+   *
+   * Hasilnya pada t=0 render-nya identik dengan keadaan menyatu, jadi saat
+   * `settling` mati dan lapisannya turun tidak ada apa pun yang berubah.
+   *
+   * ── Kenapa BINGKAINYA TETAP TERPUSAT, dan posisinya diurus CSS ────────────
+   *
+   * Godaannya: pakai `ox`/`oy` sekalian untuk menaruh sumbu kamera di pusat
+   * KOTAK, bukan pusat viewport — satu panggilan, beres. Itu benar untuk WebGL
+   * tapi MERUSAK form-nya, dan begitulah keluhan "layar form delay tidak
+   * sinkron dengan layar MacBook" muncul.
+   *
+   * Sebabnya `<Html transform>` drei tidak menggambar lewat WebGL — ia meniru
+   * kamera dengan CSS 3D: `perspective` + matriks-balik kamera + `translate(
+   * lebar/2, tinggi/2)`. Perhatikan bagian terakhir itu: titik hilangnya
+   * DIPATOK di pusat canvas, dan `perspective-origin` CSS juga default 50% 50%.
+   * Skalanya sendiri ikut benar (`projectionMatrix.elements[5] × tinggi/2`
+   * kebetulan tepat = fh/(2·tan(fov/2))), tapi titik pusatnya tidak bisa
+   * digeser. Frustum miring menggeser titik pusat proyeksi, dan untuk kamera
+   * lubang-jarum itu **persis sama dengan menggeser seluruh gambar** — sebesar
+   * (dx, dy)·(1−t) piksel, sama untuk segala kedalaman. Jadi form-nya melenceng
+   * dari lid sejauh itu, lalu "menyusul" saat t→1. Terlihat seperti delay,
+   * padahal murni salah tempat.
+   *
+   * Maka tugasnya dibelah:
+   *   SKALA  → `setViewOffset` yang TETAP terpusat (ox = 0, oy = (fh−h)/2).
+   *            Asumsi drei jadi benar lagi, bukan kebetulan benar.
+   *   POSISI → transform CSS di pembungkus yang memuat canvas DAN elemen
+   *            `<Html>`. Keduanya bergerak bersama, jadi mustahil berselisih.
    *
    * ⚠️ `size` dan `dock` dibaca LANGSUNG dari keadaan hidup, bukan dari hasil
-   * render. Keduanya harus sepakat pada frame yang sama persis: `k` itu rasio di
-   * antara mereka, jadi satu frame dengan `size` baru tapi `dock` lama (atau
-   * sebaliknya) menggambar laptopnya di ukuran yang salah — persis kedipan yang
-   * dilaporkan. `state` yang dioper useFrame adalah isi store SAAT ITU, jadi
+   * render. Keduanya harus sepakat pada frame yang sama persis — satu frame
+   * dengan `size` baru tapi `dock` lama menggambar laptopnya di ukuran yang
+   * salah. `state` yang dioper useFrame adalah isi store SAAT ITU, jadi
    * membacanya dari sana kebal terhadap tertinggalnya render.
    */
   useFrame((state) => {
     if (!openPose) return;
     const { camera, size } = state;
-    const { h: dockHeight, dy: dockOffsetY } = dock.current;
+    /* Rig ini selalu perspektif (lihat `camera` di <Canvas> bawah); R3F yang
+       menyatukan tipenya dengan ortografis. Dipersempit sekali di sini. */
+    if (!(camera instanceof PerspectiveCamera)) return;
+    const { h: dockHeight } = dock.current;
     const t = zoom.get();
-    const aspect = size.height > 0 ? size.width / size.height : 1;
-    const halfTan = Math.tan((rig.fov * Math.PI) / 180 / 2);
-    const distance = overlayDistance(rig.fov, aspect);
 
-    const k =
-      dockHeight > 0 && size.height > 0 ? size.height / dockHeight : 1;
+    /* Jendela virtual yang menyusut dari kotak halaman ke canvas penuh. Di luar
+       masa overlay `dockHeight` = 0 dan semuanya kembali ke proyeksi biasa. */
+    const framed = dockHeight > 0 && size.height > 0 && t < 1;
+    const fh = framed
+      ? MathUtils.lerp(dockHeight, size.height, t)
+      : size.height;
+    if (framed) {
+      /* Canvas duduk PERSIS di tengah gambar penuh — sumbu kamera tetap di
+         pusat canvas, satu-satunya tempat yang bisa ditiru drei. */
+      camera.setViewOffset(
+        size.width,
+        fh,
+        0,
+        (fh - size.height) / 2,
+        size.width,
+        size.height,
+      );
+    } else if (camera.view?.enabled) {
+      /* ⚠️ `clearViewOffset` TIDAK memulihkan `aspect` — `setViewOffset`
+         menimpanya dengan fw/fh dan tidak pernah mengembalikannya. */
+      camera.clearViewOffset();
+      camera.aspect = size.height > 0 ? size.width / size.height : 1;
+      camera.updateProjectionMatrix();
+    }
 
-    /* Diskalakan dari titik BIDIKAN, bukan dari titik asal: yang harus tetap di
-       tempatnya adalah apa yang dilihat kamera, bukan pusat dunia. */
-    const fromX = rig.lookAt[0] + (rig.position[0] - rig.lookAt[0]) * k;
-    const fromY = rig.lookAt[1] + (rig.position[1] - rig.lookAt[1]) * k;
-    const fromZ = rig.lookAt[2] + (rig.position[2] - rig.lookAt[2]) * k;
+    /* Bagian POSISI. Digeser di ruang layar, bukan di proyeksi, supaya form-nya
+       ikut terbawa persis sama. `translate3d` = murni komposit, tidak ada tata
+       letak yang dihitung ulang. */
+    applyDockShift(host.current, dock.current, t);
+
+    /* Tujuan dolly dihitung dari aspek canvas SEBENARNYA, bukan `fh` yang
+       sedang di-lerp: yang dibingkai pas adalah pose AKHIR, dan di t=1 bingkai
+       off-axis-nya sudah identitas. */
+    const distance = overlayDistance(
+      rig.fov,
+      size.height > 0 ? size.width / size.height : 1,
+    );
 
     const toX = openPose.center.x + openPose.normal.x * distance;
     const toY = openPose.center.y + openPose.normal.y * distance;
     const toZ = openPose.center.z + openPose.normal.z * distance;
 
-    const px = MathUtils.lerp(fromX, toX, t);
-    const py = MathUtils.lerp(fromY, toY, t);
-    const pz = MathUtils.lerp(fromZ, toZ, t);
-    const tx = MathUtils.lerp(rig.lookAt[0], openPose.center.x, t);
-    const ty = MathUtils.lerp(rig.lookAt[1], openPose.center.y, t);
-    const tz = MathUtils.lerp(rig.lookAt[2], openPose.center.z, t);
-
-    camera.position.set(px, py, pz);
-    camera.lookAt(tx, ty, tz);
-
-    if (dockOffsetY !== 0 && t < 1 && size.height > 0) {
-      /* Menggeser kamera ke atas sejauh w menurunkan bayangan sebanyak
-         w·H/(2·tan(fov/2)·d) piksel. Dibalik untuk mendapat w dari piksel yang
-         diinginkan. `d` dihitung dari pose SAAT INI, bukan pose awal, supaya
-         geserannya tetap benar sepanjang perjalanan. */
-      const d = Math.hypot(px - tx, py - ty, pz - tz);
-      const w = ((dockOffsetY * 2 * halfTan * d) / size.height) * (1 - t);
-      /* Arah "atas layar" = sumbu +Y kamera setelah dibidikkan. */
-      SCRATCH_UP.set(0, 1, 0).applyQuaternion(camera.quaternion);
-      camera.position.addScaledVector(SCRATCH_UP, w);
-      /* Bidikan digeser dengan vektor yang SAMA — kalau tidak, ini jadi memutar
-         kamera (orbit), bukan menggeser bingkai, dan laptopnya ikut miring. */
-      camera.lookAt(
-        tx + SCRATCH_UP.x * w,
-        ty + SCRATCH_UP.y * w,
-        tz + SCRATCH_UP.z * w,
-      );
-    }
+    camera.position.set(
+      MathUtils.lerp(rig.position[0], toX, t),
+      MathUtils.lerp(rig.position[1], toY, t),
+      MathUtils.lerp(rig.position[2], toZ, t),
+    );
+    camera.lookAt(
+      MathUtils.lerp(rig.lookAt[0], openPose.center.x, t),
+      MathUtils.lerp(rig.lookAt[1], openPose.center.y, t),
+      MathUtils.lerp(rig.lookAt[2], openPose.center.z, t),
+    );
 
     /* Form muncul mengikuti berpalingnya layar, bukan mengikuti engselnya —
        alasannya di SCREEN_FACE_FADE. Dihitung SETELAH kamera dipindah supaya
@@ -583,6 +666,7 @@ export default function InquiryLaptop({
   progress,
   zoom,
   dockHeight = 0,
+  dockOffsetX = 0,
   dockOffsetY = 0,
   floating = false,
   className,
@@ -597,6 +681,8 @@ export default function InquiryLaptop({
   /** Tinggi kotak laptop saat MENYATU di halaman (px), diukur pemanggil tepat
    *  sebelum lapisannya naik jadi `fixed`. 0 = sedang menyatu, koreksi mati. */
   dockHeight?: number;
+  /** Jarak pusat kotak itu dari pusat viewport (px, ke kanan positif). */
+  dockOffsetX?: number;
   /** Jarak pusat kotak itu dari pusat viewport (px, ke bawah positif). */
   dockOffsetY?: number;
   /** Nyalakan gerak melayang. Pemanggil yang memutuskan (mis. matikan saat
@@ -655,14 +741,22 @@ export default function InquiryLaptop({
    * `setSize`-nya sendiri baru dipanggil kalau angkanya memang beda, supaya
    * tidak ada frame yang dipesan percuma.
    *
-   * `dock` ikut ditulis di sini, bukan dioper sebagai prop, supaya rasio `k` di
-   * `Laptop` tidak pernah melihat ukuran baru berpasangan dengan dock lama.
+   * `dock` ikut ditulis di sini, bukan dioper sebagai prop, supaya bingkai
+   * off-axis di `Laptop` tidak pernah melihat ukuran baru berpasangan dengan
+   * dock lama.
    */
   const storeRef = useRef<RootStore | null>(null);
-  const dock = useRef<DockGeometry>({ h: 0, dy: 0 });
+  const dock = useRef<DockGeometry>({ h: 0, dx: 0, dy: 0 });
 
   useLayoutEffect(() => {
-    dock.current = { h: dockHeight, dy: dockOffsetY };
+    dock.current = { h: dockHeight, dx: dockOffsetX, dy: dockOffsetY };
+
+    /* Geseran posisi ditulis di sini JUGA, bukan cuma tiap frame. Saat menutup,
+       `dockHeight` kembali 0 di commit yang sama dengan turunnya frameloop ke
+       "demand" — menunggu `useFrame` berikutnya berarti geseran lama (sampai
+       ~120 px) tertinggal terpaku di layar entah sampai kapan. Ditulis SEBELUM
+       host diukur, supaya `setSize` di bawah mendapat rect yang sudah final. */
+    applyDockShift(wrapRef.current, dock.current, zoom.get());
 
     const store = storeRef.current;
     if (!store) return;
@@ -722,6 +816,7 @@ export default function InquiryLaptop({
             progress={progress}
             zoom={zoom}
             dock={dock}
+            host={wrapRef}
             floating={active}
             rig={rig}
             screen={screen}
