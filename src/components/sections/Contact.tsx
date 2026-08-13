@@ -214,8 +214,12 @@ export default function Contact() {
      benar-benar tenggelam sebelum kamera sampai. */
   const scrimOpacity = useTransform(zoom, [0, 0.6], [0, 1]);
 
+  /* Padding BAWAH sengaja tidak ada (`pt-*`, bukan `py-*`): ini section
+     terakhir di halaman, jadi sisa 128 px di bawah footer cuma pita kosong di
+     ujung dokumen. Footer di bawah menambal sendiri gutter kiri-kanannya
+     dengan margin negatif. */
   return (
-    <section id="contact" className="overflow-x-clip px-6 py-24 sm:px-10 sm:py-32">
+    <section id="contact" className="overflow-x-clip px-6 pt-24 sm:px-10 sm:pt-32">
       {/* ⚠️ Kepala section — eyebrow "CONTACT", judul besar "Let's Start A
           Conversation.", subjudul "We typically respond within one business
           day.", dan sepasang pil CTA — DIHAPUS 13 Agu atas permintaan Keano.
@@ -371,7 +375,12 @@ export default function Contact() {
         </div>
       )}
 
-      <footer className="mt-32 border-t border-white/[0.08] pt-6 text-xs text-zinc-400">
+      {/* Menempel pojok: margin negatif membatalkan `px-6 sm:px-10` milik
+          section supaya barisnya membentang tepi ke tepi. Sisa `p-3` (12 px)
+          bukan jarak tata letak, cuma supaya huruf tidak benar-benar menyentuh
+          tepi layar. Garis pemisah `border-t` dilepas 13 Agu — di posisi mepet
+          begini ia jadi sekat yang tidak memisahkan apa-apa. */}
+      <footer className="-mx-6 mt-32 px-3 pb-3 text-xs text-zinc-400 sm:-mx-10">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <span>
             © {new Date().getFullYear()} Cognitiva Solusi Indonesia. All rights reserved.
