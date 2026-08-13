@@ -26,7 +26,7 @@ export default function LivingArchitecture() {
           </motion.p>
 
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
-            <LineMask>A Living Architecture For Decisions.</LineMask>
+            <LineMask>A Living Architecture for Decisions.</LineMask>
           </h2>
 
           <motion.p

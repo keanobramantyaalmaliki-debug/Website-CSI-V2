@@ -91,7 +91,9 @@ export default function ContactForm({ className = "" }: { className?: string }) 
         className="flex h-full flex-col bg-[#0a0b0d] px-6 py-7 text-zinc-200 @3xl:px-14 @3xl:py-12"
       >
         <h2 className="text-2xl leading-[1.05] font-semibold tracking-tight text-white @3xl:text-[3.4rem]">
-          Let&apos;s Start A Conversation.
+          {/* "a" kecil — koreksi title-case dari origin/main (055d268), menyusul
+              ke sini karena judulnya pindah dari kepala section Contact. */}
+          Let&apos;s Start a Conversation.
         </h2>
 
         {/* Isian yang menyatu jadi kalimat. `field-sizing-content` membuat kotaknya

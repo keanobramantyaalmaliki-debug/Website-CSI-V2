@@ -222,7 +222,11 @@ export default function Contact() {
 
           Kedua tautannya tidak ikut hilang, cuma turun ke footer di bawah:
           `hello@cogniti.id` sebagai jalur cadangan kalau form-nya gagal, dan
-          "↑ Back to the office" karena itu navigasi, bukan isi yang berulang. */}
+          "↑ Back to the office" karena itu navigasi, bukan isi yang berulang.
+
+          Catatan merge 13 Agu: origin/main sempat mengoreksi title-case judul
+          ini ("A" → "a") tepat saat sisi sini memindahkannya ke layar MacBook;
+          koreksinya dibawa ke rumah barunya di ContactForm.tsx. */}
 
       {/* MacBook yang membuka saat diklik. Untuk sekarang lid-nya masih kosong —
           form-nya menyusul (rencana §4: ContactForm.tsx + submitInquiry.ts).

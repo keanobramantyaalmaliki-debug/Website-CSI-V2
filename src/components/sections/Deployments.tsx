@@ -13,31 +13,31 @@ const DEPLOYMENTS: DeploymentData[] = [
     num: "01",
     sector: "Public Services",
     region: "Indonesia",
-    desc: "Digital transformation for citizen engagement, operational visibility, and inter-agency coordination.",
+    desc: "Citizens reach government services online, and every agency works from the same information at the same time.",
   },
   {
     num: "02",
     sector: "Infrastructure",
     region: "Indonesia",
-    desc: "Integrated monitoring linking physical assets, field operations, and real-time situational awareness.",
+    desc: "Physical assets and field crews report in as they work, so issues show up while there's still time to act.",
   },
   {
     num: "03",
     sector: "Logistics",
     region: "International",
-    desc: "Operational intelligence for supply-chain visibility, workflow automation, and field decision support.",
+    desc: "Every shipment stays visible from origin to delivery. Routine handoffs run on their own, and crews in the field decide with data that is actually current.",
   },
   {
     num: "04",
     sector: "Hospitality",
     region: "Southeast Asia",
-    desc: "Operational platforms linking property management, guest-service workflows, and revenue analytics.",
+    desc: "Property operations and guest service share one system, with revenue reporting built into the same view.",
   },
   {
     num: "05",
     sector: "Communities",
     region: "Indonesia",
-    desc: "Civic platforms connecting residents, administrators, and local services across digital and physical channels.",
+    desc: "A single platform ties residents to their local administrators and services, working the same way online and in person.",
   },
 ];
 
