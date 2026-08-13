@@ -5,6 +5,10 @@ import { useReducedMotion } from "motion/react";
 import { useSceneStore } from "@/lib/store/sceneStore";
 import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import ChunkBoundary from "@/components/ChunkBoundary";
+import {
+  startOfficeModelDownload,
+  resetOfficeModelDownload,
+} from "@/lib/officeModel";
 
 const Scene = lazy(() => import("@/components/canvas/Scene"));
 const BilliardHUD = lazy(() => import("@/components/ui/BilliardHUD"));
@@ -40,9 +44,10 @@ function StaticHero() {
 }
 
 /**
- * Ditampilkan kalau chunk `Scene` GAGAL diunduh (bukan gagal render).
+ * Ditampilkan kalau chunk `Scene` GAGAL diunduh — atau, sejak officeModel.ts,
+ * kalau unduhan office.glb gagal total setelah semua sambung-ulangnya.
  *
- * Dua tugas, dan yang kedua lebih penting dari yang terlihat:
+ * Tiga tugas; yang kedua lebih penting dari yang terlihat:
  *
  *   1. Menampilkan hero statis, supaya hero tidak jadi kotak hitam kosong.
  *      Dipakai ulang dari jalur reduced-motion — keadaannya memang sama:
@@ -52,13 +57,53 @@ function StaticHero() {
  *      pernah datang dan loader menutupi layar SELAMANYA. Jaring pengaman
  *      1500 ms di LoadingScreen tidak menolong — ia baru dipasang setelah
  *      `sceneReady` true.
+ *   3. Menawarkan jalan kembali. Di origin lambat (terukur ~50 KB/s) kegagalan
+ *      yang paling umum adalah unduhan GLB putus — sementara, bukan permanen.
+ *      Dulu fallback ini titik buntu; kini ada tombol retry: klik pertama
+ *      mencoba di tempat (reset officeModel + render ulang boundary), klik
+ *      berikutnya memuat ulang halaman.
  */
-function SceneFailed() {
+/**
+ * Hitungan klik retry, MODULE-LEVEL dengan sengaja: tiap kali retry gagal,
+ * boundary me-render SceneFailed BARU, jadi state/ref komponen mulai dari nol
+ * dan tidak bisa dipakai menghitung. Yang dihitung di sini "sudah berapa kali
+ * pengunjung mencoba", dan itu milik halaman, bukan milik satu mount.
+ */
+let sceneRetryClicks = 0;
+
+function SceneFailed({ onRetry }: { onRetry: () => void }) {
   const setSceneReady = useSceneStore((s) => s.setSceneReady);
   useEffect(() => {
     setSceneReady(true);
   }, [setSceneReady]);
-  return <StaticHero />;
+  return (
+    <div className="relative h-full w-full">
+      <StaticHero />
+      <button
+        type="button"
+        onClick={() => {
+          sceneRetryClicks += 1;
+          // Klik kedua = percobaan di tempat sudah gagal sekali. Kemungkinan
+          // besar penyebabnya bukan unduhan GLB (yang bisa direset di bawah)
+          // tapi promise lazy() chunk Scene yang rejected — dan itu di-cache
+          // React selamanya. Muat ulang halaman adalah satu-satunya jalan yang
+          // pasti; JS-nya ter-cache edge Cloudflare, jadi ongkosnya kecil.
+          if (sceneRetryClicks > 1) {
+            window.location.reload();
+            return;
+          }
+          // Urutan penting (lihat kontrak fallbackWithRetry): bersihkan dulu
+          // keadaan gagal unduhan office.glb, baru minta boundary me-render
+          // ulang — kalau dibalik, render ulangnya melempar error lama lagi.
+          resetOfficeModelDownload();
+          onRetry();
+        }}
+        className="absolute bottom-[22%] left-1/2 z-10 -translate-x-1/2 border border-zinc-600 px-5 py-2 text-xs tracking-widest text-zinc-300 uppercase transition-colors hover:border-zinc-400 hover:text-white"
+      >
+        reload 3d tour
+      </button>
+    </div>
+  );
 }
 
 export default function Hero() {
@@ -121,6 +166,23 @@ export default function Hero() {
     if (!reduced) return;
     setSceneReady(true);
   }, [reduced, setSceneReady]);
+
+  /**
+   * Mulai unduh office.glb SEKARANG, paralel dengan unduhan chunk Scene.
+   *
+   * Dulu unduhan GLB baru mulai setelah chunk Scene tiba dan dievaluasi
+   * (useGLTF.preload di Office.tsx) — antre di belakang JS. Di origin yang
+   * terukur ~50 KB/s (csi2.wibudev.com, 13 Agu) antrean itu nyata dalam
+   * hitungan detik. officeModel.ts bebas import three, jadi memanggilnya dari
+   * bundle utama tidak menyeret apa pun yang berat.
+   *
+   * Digerbangi reduced: jalur reduced-motion tidak pernah me-mount Scene,
+   * jangan bebani mereka 13MB untuk model yang tak akan tampil.
+   */
+  useEffect(() => {
+    if (reduced) return;
+    startOfficeModelDownload();
+  }, [reduced]);
 
   /**
    * ⚠️ RIWAYAT — "canvas surut", dihapus 10 Agu. Jangan dihidupkan lagi tanpa
@@ -246,7 +308,10 @@ export default function Hero() {
               pengunjung menatap layar loader SELAMANYA — jaring pengaman
               1500 ms di sana pun tidak menolong, karena ia baru dipasang
               SETELAH sceneReady true. */}
-          <ChunkBoundary name="Scene" fallback={<SceneFailed />}>
+          <ChunkBoundary
+            name="Scene"
+            fallbackWithRetry={(retry) => <SceneFailed onRetry={retry} />}
+          >
             <Suspense fallback={null}>
               <Scene />
             </Suspense>

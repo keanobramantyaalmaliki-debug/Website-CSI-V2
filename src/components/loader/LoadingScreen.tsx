@@ -47,6 +47,44 @@ const BG_FADE_MS = 600;
  */
 type Tagged = HTMLCanvasElement & { __offscreenTaken?: boolean };
 
+/**
+ * Teks progres unduhan office.glb — satu baris kecil di bawah lingkaran.
+ *
+ * Lahir dari pengukuran deploy publik 13 Agu: origin ~50 KB/s berarti 13MB =
+ * 4+ menit, dan selama itu animasi loader TANPA angka terbaca sebagai "stuck".
+ * Angkanya byte sungguhan dari officeModel.ts (bukan useProgress drei yang
+ * per-item — untuk satu file raksasa ia diam bermenit-menit).
+ *
+ * Elemen DOM, bukan gambar di kanvas: kanvasnya milik worker, dan mengirim
+ * progres ke sana berarti menambah protokol pesan + font rendering di worker
+ * demi satu baris teks. Compositor menangani DOM ini tanpa peduli main thread
+ * sibuk — alasan yang sama dengan latar putih di atas.
+ */
+function ModelProgress() {
+  const modelLoad = useSceneStore((s) => s.modelLoad);
+  if (!modelLoad) return null;
+
+  const { loaded, total } = modelLoad;
+  let label: string;
+  if (total > 0 && loaded < total) {
+    label = `loading 3d office — ${Math.floor((loaded / total) * 100)}%`;
+  } else if (total === 0) {
+    // Content-Length tak diketahui (proxy yang membuang header) — tunjukkan
+    // byte berjalan supaya tetap kelihatan hidup.
+    label = `loading 3d office — ${(loaded / 1048576).toFixed(1)} mb`;
+  } else {
+    // Unduhan tuntas tapi sceneReady belum: three sedang parse + kompilasi
+    // shader (~2,3 dtk, lihat sceneStore.ts). Jangan diam di "100%".
+    label = "preparing…";
+  }
+
+  return (
+    <div className="absolute inset-x-0 bottom-10 text-center text-[11px] tracking-[0.35em] text-zinc-500 uppercase tabular-nums">
+      {label}
+    </div>
+  );
+}
+
 export default function LoadingScreen() {
   const sceneReady = useSceneStore((s) => s.sceneReady);
   const setLoaderDone = useSceneStore((s) => s.setLoaderDone);
@@ -340,6 +378,17 @@ export default function LoadingScreen() {
         }}
       />
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
+      {/* Ikut memudar bersama latar putih — teks abu di atas kantor gelap akan
+          tampak nyangkut kalau ditinggal. */}
+      <div
+        className="absolute inset-0 transition-opacity ease-out"
+        style={{
+          opacity: fading ? 0 : 1,
+          transitionDuration: `${BG_FADE_MS}ms`,
+        }}
+      >
+        <ModelProgress />
+      </div>
     </div>
   );
 }

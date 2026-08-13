@@ -33,6 +33,18 @@ interface Props {
   children: ReactNode;
   /** Ditampilkan kalau chunk gagal dimuat. WAJIB null/undefined di dalam Canvas. */
   fallback?: ReactNode;
+  /**
+   * Seperti `fallback`, tapi menerima fungsi `retry` yang me-render ulang
+   * children — kesempatan kedua setelah kegagalan sementara (mis. unduhan
+   * office.glb putus di koneksi lambat; lihat officeModel.ts).
+   *
+   * ⚠️ retry hanya me-render ulang; ia TIDAK membersihkan penyebab gagalnya.
+   * Sumber data yang meng-cache kegagalannya (promise lazy() yang sudah
+   * rejected, keadaan error officeModel) harus direset DULU oleh pemanggil,
+   * atau render ulangnya cuma melempar error yang sama lagi. Menang atas
+   * `fallback` kalau keduanya diisi.
+   */
+  fallbackWithRetry?: (retry: () => void) => ReactNode;
   /** Nama untuk log — memudahkan tahu bagian mana yang gagal. */
   name: string;
 }
@@ -48,6 +60,10 @@ export default class ChunkBoundary extends Component<Props, State> {
     return { failed: true };
   }
 
+  retry = () => {
+    this.setState({ failed: false });
+  };
+
   componentDidCatch(error: Error, info: ErrorInfo) {
     // Sengaja console.error, bukan dilempar ulang: yang ingin dicapai justru
     // MENAHAN error supaya tidak menjatuhkan halaman. Tanpa log, kegagalannya
@@ -62,7 +78,11 @@ export default class ChunkBoundary extends Component<Props, State> {
   }
 
   render() {
-    if (this.state.failed) return this.props.fallback ?? null;
+    if (this.state.failed) {
+      if (this.props.fallbackWithRetry)
+        return this.props.fallbackWithRetry(this.retry);
+      return this.props.fallback ?? null;
+    }
     return this.props.children;
   }
 }

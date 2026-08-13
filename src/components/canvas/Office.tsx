@@ -24,10 +24,16 @@ import {
   playScreenVideos,
 } from "./screenVideo";
 
-// GLB baked ada di public/ dan ter-track git (9 MB). Jangan kembalikan ke
+// GLB baked ada di public/ dan ter-track git. Jangan kembalikan ke
 // /export-test/… — path itu mengandalkan symlink dev-only yang tidak pernah ada
 // di repo, jadi hasilnya 404 dan scene mentok di loader selamanya.
-const MODEL_URL = "/3d/models/office.glb";
+//
+// URL-nya kini milik officeModel.ts: unduhannya dikerjakan di sana (progres
+// byte + sambung-ulang Range), dan komponen ini menerima blob URL hasilnya.
+import {
+  readOfficeModelUrl,
+  startOfficeModelDownload,
+} from "@/lib/officeModel";
 
 /**
  * Kuat pencahayaan baked. 4 = sesuai hasil bake di Blender.
@@ -209,7 +215,13 @@ function ScreensIdle({ scene }: { scene: THREE.Object3D }) {
  * meleset visualnya rusak dengan cara yang tidak kelihatan jelas.
  */
 export default function Office() {
-  const { scene, animations } = useGLTF(MODEL_URL);
+  // Suspend di unduhan officeModel.ts dulu (di sinilah menit-menit koneksi
+  // lambat dihabiskan, dengan progres tampil di loader), baru useGLTF mem-parse
+  // blob-nya — parsing draco/webp tidak berubah. Gagal total (setelah semua
+  // sambung-ulang) dilempar dari readOfficeModelUrl dan mendarat di
+  // ChunkBoundary "Scene" (Hero.tsx), sama seperti kegagalan useGLTF dulu.
+  const modelUrl = readOfficeModelUrl();
+  const { scene, animations } = useGLTF(modelUrl);
   const sceneEnv = useThree((s) => s.scene.environment);
 
   // Gambar untuk layar monitor/laptop — lihat screens.ts. useTexture ikut
@@ -801,5 +813,9 @@ export default function Office() {
   );
 }
 
-useGLTF.preload(MODEL_URL);
+// Pengganti useGLTF.preload(MODEL_URL) yang dulu di baris ini: mulai unduhan
+// saat chunk Scene dievaluasi. Hero memulainya lebih awal lagi (saat mount,
+// paralel dengan unduhan chunk ini) — panggilan ini tinggal jaring pengaman
+// untuk jalur yang me-render Office tanpa lewat Hero; idempoten, jadi aman.
+startOfficeModelDownload();
 

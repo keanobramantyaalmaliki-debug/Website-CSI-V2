@@ -16,7 +16,7 @@
  * peluangnya keburu ada deploy.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import ChunkBoundary from "./ChunkBoundary";
 
 /** Komponen yang meniru chunk gagal dimuat: melempar saat render. */
@@ -86,6 +86,63 @@ describe("ChunkBoundary", () => {
       </ChunkBoundary>,
     );
     expect(screen.getByTestId("fb")).toBeInTheDocument();
+  });
+
+  it("fallbackWithRetry: retry me-render ulang children setelah penyebabnya direset", () => {
+    // Meniru unduhan office.glb yang putus lalu pulih: lemparan pertama
+    // permanen sampai "sumbernya" direset — persis kontrak resetOfficeModel +
+    // retry di Hero (urutan reset dulu, baru retry).
+    let shouldExplode = true;
+    function Flaky(): React.ReactNode {
+      if (shouldExplode) throw new Error("terputus di 7/13 MB");
+      return <div data-testid="pulih">kantor tampil</div>;
+    }
+
+    render(
+      <ChunkBoundary
+        name="uji"
+        fallbackWithRetry={(retry) => (
+          <button data-testid="retry" onClick={retry}>
+            coba lagi
+          </button>
+        )}
+      >
+        <Flaky />
+      </ChunkBoundary>,
+    );
+    expect(screen.getByTestId("retry")).toBeInTheDocument();
+
+    // Reset "sumber datanya" dulu — kalau retry diklik TANPA ini, boundary
+    // menangkap error yang sama lagi dan fallback-nya balik (juga diuji di
+    // bawah, sebagai jaminan retry yang gagal tidak menjatuhkan halaman).
+    shouldExplode = false;
+    fireEvent.click(screen.getByTestId("retry"));
+    expect(screen.getByTestId("pulih")).toBeInTheDocument();
+  });
+
+  it("fallbackWithRetry: retry yang masih gagal kembali ke fallback, bukan melempar", () => {
+    function AlwaysExploding(): React.ReactNode {
+      throw new Error("Failed to fetch dynamically imported module");
+    }
+    render(
+      <ChunkBoundary
+        name="uji"
+        fallbackWithRetry={(retry) => (
+          <button data-testid="retry" onClick={retry}>
+            coba lagi
+          </button>
+        )}
+      >
+        <AlwaysExploding />
+      </ChunkBoundary>,
+    );
+
+    expect(() => fireEvent.click(screen.getByTestId("retry"))).not.toThrow();
+    expect(
+      screen.getByTestId("retry"),
+      "Setelah retry yang gagal, fallback-nya harus tampil lagi — kalau tidak, " +
+        "pengunjung kehilangan tombolnya dan kembali ke titik buntu.\n",
+    ).toBeInTheDocument();
   });
 
   it("mencatat nama chunk-nya ke console — kegagalan tidak boleh senyap", () => {

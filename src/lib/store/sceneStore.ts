@@ -95,6 +95,23 @@ interface SceneStore {
   loaderDone: boolean;
   setLoaderDone: (done: boolean) => void;
 
+  /**
+   * Progres unduhan office.glb dalam BYTE, ditulis officeModel.ts dan dibaca
+   * LoadingScreen untuk teks progres.
+   *
+   * Kenapa bukan useProgress drei: (1) angkanya per-item, bukan per-byte —
+   * untuk satu GLB 13MB ia diam di angka yang sama bermenit-menit di koneksi
+   * lambat, persis keadaan yang membuat teks ini dibutuhkan; (2) mengimpornya
+   * di LoadingScreen menyeret three ke bundle utama, sementara store ini
+   * sengaja bebas three (lihat catatan Vec3).
+   *
+   * `total` 0 = Content-Length tidak diketahui; tampilkan byte terunduh saja.
+   * null = unduhan belum dimulai (mis. jalur reduced-motion yang tidak pernah
+   * memuat scene) — jangan tampilkan apa-apa.
+   */
+  modelLoad: { loaded: number; total: number } | null;
+  setModelLoad: (p: { loaded: number; total: number }) => void;
+
   currentRoom: RoomKey;
   setCurrentRoom: (room: RoomKey) => void;
   heroInView: boolean;
@@ -130,6 +147,21 @@ interface SceneStore {
   registerGoToView: (
     fn: (pos: Vec3, tgt: Vec3, up?: Vec3, fov?: number) => void,
   ) => void;
+
+  /**
+   * true = form inquiry (MacBook di section Contact) sedang terbuka sebagai
+   * modal.
+   *
+   * Dibaca SiteLayout untuk melepas `z-10` dari `<main>` selagi modalnya hidup.
+   * Kenapa lewat store dan bukan state lokal Contact: `relative z-10` di `<main>`
+   * membikin STACKING CONTEXT, jadi z-index setinggi apa pun di dalamnya tetap
+   * terkurung di bawah Navbar (z-50) — tirai gelapnya kalah, dan navbar terbaca
+   * mengambang di atas form (terpotret 13 Agu). `position: relative` tanpa
+   * z-index tidak membuat stacking context, jadi cukup melepas angkanya selama
+   * modal terbuka; lapisan 54/55/56 lalu bersaing di akar dan menang.
+   */
+  inquiryOpen: boolean;
+  setInquiryOpen: (open: boolean) => void;
 
   // ── Minigame billiard ────────────────────────────────────────────────────
   /** true = pemain sedang di meja. Dipakai Waypoints untuk MENYEMBUNYIKAN
@@ -177,6 +209,9 @@ export const useSceneStore = create<SceneStore>((set) => ({
   loaderDone: false,
   setLoaderDone: (loaderDone) => set({ loaderDone }),
 
+  modelLoad: null,
+  setModelLoad: (modelLoad) => set({ modelLoad }),
+
   currentRoom: START_ROOM,
   setCurrentRoom: (room) => set({ currentRoom: room }),
   heroInView: true,
@@ -191,6 +226,9 @@ export const useSceneStore = create<SceneStore>((set) => ({
 
   goToView: null,
   registerGoToView: (fn) => set({ goToView: fn }),
+
+  inquiryOpen: false,
+  setInquiryOpen: (inquiryOpen) => set({ inquiryOpen }),
 
   billiardActive: false,
   billiardPhase: "off",
