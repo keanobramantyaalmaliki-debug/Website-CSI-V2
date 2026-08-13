@@ -1,7 +1,7 @@
 # Documentations — Cogniti Office 3D Tour
 
 Dokumentasi progres pembuatan 3D office tour ala [basement.studio](https://basement.studio) untuk **cogniti.id**.
-Terakhir diupdate: **12 Agustus 2026**.
+Terakhir diupdate: **13 Agustus 2026**.
 
 **Status ringkas:** **5 ruangan sudah ~95% jadi** dan seluruhnya sudah jalan di browser (lihat MVP 1 di bawah):
 - **Lounge/Billiard** (§2) & **Function Room** (eks Smoking, §3) — furniture & dekorasi lengkap
@@ -66,8 +66,15 @@ Terakhir diupdate: **12 Agustus 2026**.
 
 **Per 12 Agu:**
 - **Minigame billiard resmi FINAL** (§6d) — item tertunda paling lama di dokumen ini. Keano mereviewnya di browser dan menilainya **clear, tanpa revisi**.
+- **Industries & Deployments dibetulkan untuk layar sentuh** (§4aa, rekan tim) — Industries jadi korsel scroll-snap yang maju sendiri tiap 4,5 dtk dan berhenti permanen pada sentuhan pertama; foto kartu Deployments yang dulu hanya terbuka **saat hover** (dan karenanya redup selamanya di HP) kini terikat scroll. Satu gotcha layout: **anak grid/flex yang memuat scroller wajib `min-w-0`**, kalau tidak scroll-nya diam tanpa gejala overflow apa pun.
+- **Copy dibersihkan** (§4aa) — typo, pecahan kalimat, dan pola *rule-of-three* yang terbaca hasil mesin. ⚠️ beberapa assertion test mengutip kalimatnya utuh.
 
-**⬅️ Berikutnya:** (a) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker (§4n); (b) selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter, §4s); (c) optimasi GLB lanjutan — atlas per ruangan + dedup 29 image kembar (§4s); (d) post-processing PS1 (§4b), pass terakhir untuk look basement.studio. **Optimasi GPU idle ditahan sampai fase finalise** — keputusan Keano 7 Agu, jangan dimulai lebih awal.
+**Per 13 Agu:**
+- **Loading di deploy publik tidak lagi buntu** (§4ab) — origin melayani ~50 KB/s, jadi `office.glb` 13 MB berarti **4+ menit di balik loader tanpa tanda kemajuan**, dan putus di tengah = **hero statis permanen**. Sekarang GLB diunduh sendiri (progres byte + sambung ulang lewat header `Range`), dan `SceneFailed` punya tombol retry yang pulih **tanpa reload**. 🔥 `useGLTF.preload` **DIHAPUS** — mengembalikannya = unduhan dobel. Sisa: cache edge Cloudflare `/3d/*`, yang ada di panel Keano, bukan di repo.
+- **Form inquiry pindah ke layar MacBook 3D** (§4ac) — MacBook tertutup yang membuka saat diklik, layarnya jadi form. Engsel & kamera dapat **pegas terpisah** (satu nilai untuk keduanya terbaca sentakan), melayang dimatikan selama terbuka supaya teksnya tidak melunak, dan di layar sentuh/jendela sempit form-nya lewat lembar datar — bukan lewat laptop. 🚧 **`submitInquiry()` masih STUB**, Web3Forms belum dipasang: **blocker rilis.**
+- **🐛 "Ngeflick" ternyata TIGA bug bertumpuk** (§4ac) — canvas R3F tertinggal ~58 ms dari tata letak DOM; lalu membatalkan lompatan lewat **kamera** ternyata mengubah sudut pandang, bukan skala (ketahuan karena lebarnya meleset 1% tapi tingginya 9%); lalu `setViewOffset` yang membetulkannya **merusak `<Html transform>` drei**, yang meniru kamera lewat CSS 3D dan memaku titik hilangnya di pusat canvas. 🔥 Pelajarannya: **probe geometri canvas yang bersih tidak membuktikan render yang bersih** — sentakannya cuma tertangkap oleh probe yang membaca piksel.
+
+**⬅️ Berikutnya:** (a) **pasang backend Web3Forms untuk form inquiry** (§4ac) — satu-satunya blocker rilis yang tersisa, dan sengaja sudah dikurung dalam satu fungsi; (b) cache edge Cloudflare `/3d/*` (§4ab, di panel Keano); (c) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker (§4n); (d) selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter, §4s); (e) optimasi GLB lanjutan — atlas per ruangan + dedup 29 image kembar (§4s); (f) post-processing PS1 (§4b), pass terakhir untuk look basement.studio. **Optimasi GPU idle ditahan sampai fase finalise** — keputusan Keano 7 Agu, jangan dimulai lebih awal.
 
 ## 🎉 MVP 1 SELESAI (27 Jul) — **50-60 FPS di browser**
 
@@ -1666,6 +1673,101 @@ Nama material di GLB **berakhiran nama mesh**: `M_LEDStrip__MG_Office_M_LEDStrip
 
 - **`Industries`** (`31eb599`) — strip marquee diganti sticky heading + grid kartu sektor *core/also*, mengikuti pola `LivingArchitecture`. **`Vision`** — daftar misi datar diganti `MissionShowcase` (kartu gambar), dan latar scatter `NetworkField` **dibuang: canvas rAF-nya biang utama jank scroll di perangkat sentuh** (pelajaran yang sama dengan §4r-3). `Marquee.tsx` dihapus, sudah tidak dipakai section mana pun.
 - **Penjaga overflow horizontal** (`f30614f`) — `html`/`body` tidak punya penjaga sumbu-x, jadi satu keturunan yang kelebaran membuat **seluruh dokumen bisa digeser ke samping** di HP (~360px). Ditambah `max-width: 100%` + **`overflow-x: clip`** (bukan `hidden`, supaya `position: sticky` di Hero/Industries/LivingArchitecture tetap hidup) sebagai penjaga global, plus `overflow-x-clip` lokal di lima section. Dua sumber lebar yang bikin konten **terpotong**, bukan cuma bisa digeser, ikut dibetulkan: judul terbesar `CsiHero` & heading hover-swap `TrustedByGrid` kini membungkus, dan `DeploymentCard`/`DeploymentCta` dapat `w-full` eksplisit supaya `aspect-[4/3]` tidak lagi menurunkan lebar dari `min-height` (sempat merender kartu 384px di lajur grid 312px).
+
+---
+
+## 4aa. Industries & Deployments untuk Layar Sentuh + Bersih-bersih Copy ✅ (12 Agu — rekan tim)
+
+Lanjutan §4z, masih di wilayah `sections/` + `motion/` milik Nico.
+
+### Industries: dari master-detail ke korsel
+
+Lima commit berturut-turut, dan urutannya menarik karena **percobaan pertamanya dibuang sendiri**:
+
+- **`805ee1e`** — desktop: oranye tidak lagi menandai *semua* kolom core saat diam, cuma kolom yang **aktif**; core ditandai titik netral redup, plus garis aksen tipis di atas saat hover/fokus. Mobile: daftar 13 deskripsi yang selalu terbuka diganti grid + overlay detail saat di-tap.
+- **`b3798c9`** — **master-detail itu dicabut lagi**, diganti korsel scroll-snap yang meniru `CaseGridMobileStack`. Alasannya: tap-untuk-membuka menambah satu langkah sebelum kontennya terlihat. Sekarang tiap sektor tampil utuh di kartunya sendiri (foto + gradien gelap + deskripsi), tinggal geser.
+- **`0cb1eb7`** — 🐛 geserannya terasa **macet**. `Industries.tsx` membungkus kontennya dalam CSS grid **di mobile juga, bukan cuma `lg:`**, dan grid item bawaannya `min-width: auto` — akar korselnya tidak menyusut ke lebar kolom, jadi track scroll-snap-nya tidak punya ruang bergerak. `min-w-0` di akar korsel.
+  > Berlaku umum: **anak flex/grid yang di dalamnya ada scroller WAJIB `min-w-0`.** Gejalanya bukan overflow yang kelihatan, tapi **scroll yang diam** — jadi mudah salah dicurigai ke listener atau ke scroll-snap-nya.
+- **`c94526f`** — di kartu terakhir, pantulan overscroll terbaca sebagai "melompat balik ke kartu pertama". `overscroll-x-contain` menahan pantulannya supaya tidak merambat lewat batas scroll korsel.
+- **`6e98962`** — sektor selain kartu pertama tak pernah terlihat kalau pengunjung tidak menggeser sendiri. Maju otomatis tiap **4,5 dtk**, **berhenti untuk selamanya pada sentuhan pertama** (supaya tidak pernah melawan gerakan tangan), dan dilewati total saat `prefers-reduced-motion`.
+
+### Deployments: foto kartu tak pernah terbuka di layar sentuh (`14de44f`)
+
+Foto kartu terang dari redup **saat hover** — dan layar sentuh tidak punya hover, jadi fotonya redup selamanya. Di `pointer: coarse` dipasang `DeploymentRevealImage`: kecerahan & grayscale-nya terikat scroll, puncaknya saat kartu mencapai **tengah viewport**. Desktop tidak disentuh sama sekali — jalur hover CSS-nya utuh, **nol listener tambahan**. Reduced motion tetap dapat crossfade opacity/grayscale, cuma zoom-nya yang dibuang — cermin dari perilaku hover yang sudah ada.
+
+### Copy
+
+- **`055d268`** — typo & pecahan kalimat: `Asistant` → `Assistant`, dua caption misi Vision yang tidak gramatikal, title-case (`for`, `a`), `theatre` → `theater`.
+- **`6c95f24`** — kelima blurb Deployments memakai triad mekanis yang sama (*"X for/linking A, B, and C"*) — pola **rule-of-three** yang terbaca hasil mesin. Ditulis ulang jadi kalimat yang bervariasi dan konkret.
+- **`8188ee8`** — buzzword Vision & Manifesto (*empowers / sustainable value / worldwide*, template *"belongs not to X, but to Y"*) dibuang, pecahan kalimat *"Yet struggling to act"* dibetulkan.
+
+> ⚠️ Ketiganya menyentuh **teks yang diuji test**. Kalau mengubah copy di section, cek `*.test.tsx` sebelahnya dulu — beberapa assertion mengutip kalimatnya utuh, dan `6c95f24` memang harus memperbarui test bersamaan dengan copy-nya.
+
+---
+
+## 4ab. Loading Deploy Publik ✅ (13 Agu) — progres byte, sambung-ulang, retry
+
+Commit `ccefec8`. Seluruh masalah di section ini **cuma muncul di deploy publik**, tidak pernah di `localhost` — itu sebabnya ia lolos sekian lama.
+
+Diukur di `csi2.wibudev.com` 13 Agu: origin melayani ~**50 KB/s**, jadi `office.glb` 13 MB = **4+ menit** di balik loader **tanpa satu pun tanda kemajuan**. Dan kalau unduhannya putus di tengah, hasilnya **hero statis permanen** — tidak ada jalan pulih selain reload manual.
+
+- **`src/lib/officeModel.ts`** (baru) — GLB diunduh sendiri lewat `ReadableStream` → blob URL, bukan diserahkan ke `useGLTF`. Progres byte-nya masuk ke `sceneStore`; koneksi yang putus **disambung ulang lewat header `Range`**, maksimal 4×.
+  > 🔥 **`useGLTF.preload` DIHAPUS. Jangan dikembalikan** — mengembalikannya berarti GLB-nya terunduh **dua kali**.
+- **`Hero.tsx`** — unduhan dimulai saat mount, **paralel dengan chunk Scene**; dulu ia mengantre di belakangnya. Digerbangi reduced-motion.
+- **`LoadingScreen.tsx`** — baris progres DOM `loading 3d office — N%`, lalu berganti jadi `preparing…` saat kompilasi shader (fase yang memang tidak punya persen). Ikut memudar bersama latar putih.
+- **`ChunkBoundary.tsx`** — `fallbackWithRetry(retry)`; `SceneFailed` dapat tombol **"reload 3d tour"**: klik pertama reset + retry di tempat, klik kedua baru reload halaman.
+
+**Teruji** lewat `scripts/probe-public-loading.mjs` (reproduksi via CDP throttle + blokir GLB): pada 2 Mbps persennya berjalan 0→100 lalu loader lepas (**61 dtk**); GLB diblokir → tombol muncul, unblock + klik → **pulih tanpa reload** (22 dtk).
+
+> **Sisa pekerjaannya BUKAN di kode:** cache edge Cloudflare untuk `/3d/*`, yang ada di panel milik Keano. Sisi klien sudah selesai.
+
+---
+
+## 4ac. Form Inquiry di Layar MacBook ✅ (13 Agu)
+
+Commit `5eb6a81` (rig + form), `3b9a32b` (sentakan), `7531248` (footer). Section Contact tidak lagi punya form datar: yang ada **MacBook 3D tertutup** yang, saat diklik, membuka dan **layarnya berubah jadi form**-nya. Kepala section (eyebrow, judul besar, subjudul, sepasang CTA) **dihapus** atas permintaan Keano — begitu form-nya pindah ke layar MacBook, judul dan subjudulnya ada dua kali di layar yang sama.
+
+### Rig-nya
+
+- **Aset** `public/3d/models/macbook-inquiry.glb` (312 KB), disiapkan dua skrip: `strip-macbook-logo.mjs` & `blacken-macbook-screen.mjs`.
+- **Engsel dan kamera punya pegas SENDIRI-SENDIRI.** Dulu satu nilai, dan itu keliru: 170/26 pas untuk engsel yang memutar 110° di tempat, tapi kamera menempuh 0,4 m ke muka pengunjung — sejauh itu dengan pegas secepat itu terbaca **sentakan**, bukan dolly ("terlalu cepet ngezoomnya menjadi ngeflick"). Kamera dapat `55/23/1` → rasio redam 1,55 (**overdamped**, jadi tidak memantul melewati pose akhir), 95% pada ~1,1 dtk. Efek sampingnya bagus: engsel selesai lebih dulu (~0,5 dtk), jadi urutannya jadi *"lid membuka, baru kamera mendekat"* — bukan dua gerakan yang saling menumpuk.
+- **Form-nya `<Html transform>` drei**, dipatok desain **1200×780** dan diperkecil oleh transform CSS, bukan media query — jadi tata letaknya selalu versi lebar. `HTML_SCALE` **dihitung dari ukuran layar aset** (`FACE_W` − 2 × bezel 6 mm), bukan angka coba-coba yang akan salah begitu ukuran desainnya diubah.
+- **Jarak kamera dihitung, tidak ditaksir**: `overlayDistance()` mengambil yang paling menuntut dari dua kendala — layar mengisi **75% tinggi** viewport, dengan pagar **lebar 86%** supaya jendela yang kurus tidak memotong kiri-kanan.
+- **Melayang DIMATIKAN selama terbuka** (`FLOAT_WHEN_OPEN = false`, sengaja satu baris supaya bisa dibalik). Waktu ayunan itu diminta layarnya masih kosong dan laptopnya benda hias; sekarang isinya form yang harus dibaca, diklik, dan diketik. Dua akibat yang tidak bisa ditawar: sasaran klik yang bergerak sulit dikenai, dan `<Html transform>` meraster DOM sekali lalu memiringkannya lewat CSS 3D — **miring sedikit saja teksnya melunak**, padahal seluruh rig ini justru dibangun supaya layarnya tegak lurus dan teksnya tajam. Bonusnya: tanpa animasi tanpa ujung, frameloop tetap `"demand"` selama form dipakai — **nol draw call sambil pengunjung mengetik**.
+- **Di layar sentuh & jendela sempit form-nya BUKAN lewat laptop** — laptop tetap tertutup sebagai pemandangan, yang muncul lembar datar biasa. Dua gerbang terpisah dan **keduanya perlu**: `coarse` soal tidak adanya hover, `narrow` soal ruang. Jendela sempit berpenunjuk presisi (desktop yang dikecilkan, atau tablet ber-mouse) lolos dari `coarse` tapi tetap tidak punya tempat — rig overlay-nya terkendala **lebar**, jadi kamera mundur jauh dan layarnya cuma mengisi seperempat tinggi. Terpotret 13 Agu di 390 px: form-nya utuh tapi terlalu kecil untuk dibaca.
+- **INVARIANTS bertambah tiga lapis z-index** (54 tirai / 55 lapisan laptop / 56 tombol tutup) yang sengaja **mengapit Navbar (50)**: form ini modal, jadi Navbar tidak boleh bisa diklik menembus tirainya — tapi ketiganya tetap harus tenggelam di bawah `LoadingScreen` (60). Kalau Navbar dinaikkan, ketiganya ikut naik bersama.
+
+> 🚧 **`submitInquiry()` MASIH STUB.** Ia menunggu 900 ms lalu selalu mengembalikan `ok: true`; belum ada apa pun yang terkirim ke mana pun. Backend-nya direncanakan **Web3Forms** (seperti situs cogniti yang sudah tayang), dan seluruh jalan keluarnya sengaja dilewatkan satu fungsi supaya nanti yang berubah **cuma isi fungsi itu**. Jedanya juga sengaja ada supaya keadaan "sending" di UI benar-benar terlihat dan bisa diuji sekarang, bukan baru ketahuan rusak setelah backend dipasang. **Ini blocker rilis, bukan detail.**
+
+### 🐛 "Ngeflick": tiga lapisan, tiga sebab berbeda
+
+Keluhan Keano terdengar seperti satu bug. Ternyata **tiga**, dan masing-masing baru kelihatan setelah yang di atasnya dibereskan.
+
+| # | Gejala | Sebab | Obat |
+|---|---|---|---|
+| 1 | Gambar melar/pepat beberapa frame saat lapisan berpindah ke `fixed inset-0` | Canvas R3F **tertinggal ~58 ms (3–4 frame)** dari tata letak DOM. Rantainya `react-use-measure` (ResizeObserver) → state React → `setSize`, dan ResizeObserver memang menyusul **setelah** paint | Ukur host sendiri lalu dorong ke store R3F di `useLayoutEffect`, **TANPA dep array** |
+| 2 | Sesudah ditutup, laptop berhenti di pose yang **bukan** pose awal lalu **menyentak** balik | Lompatan tata letak dibatalkan dengan **memundurkan kamera** (`k = tinggi canvas / tinggi kotak`) lalu menggesernya. Itu mengubah **sudut pandang**, bukan skala | `camera.setViewOffset` — frustum miring, titik pandang tak bergerak, perspektif identik sampai piksel terakhir |
+| 3 | "Layar form delay, tidak sinkron dengan layar MacBook" | Frustum miring itu **tak terlihat oleh `<Html transform>` drei**: ia tidak memakai WebGL, ia meniru kamera lewat CSS 3D dan **memaku titik hilangnya di pusat canvas** | Belah tugasnya: **SKALA** lewat view offset yang tetap terpusat, **POSISI** lewat `translate3d` di pembungkus bersama |
+
+Yang membuat lapisan 2 ketahuan: **angkanya asimetris.** Sepanjang 2,4 dtk menutup, kotak laptopnya konvergen ke **313×133** padahal pose istirahatnya **310×120** — lebarnya meleset 1% tapi **tingginya 9%**, lalu menyentak 9 px tepat saat `settling` mati. Skala yang salah meleset merata; yang meleset **tidak** merata itu sudut pandang. Memundurkan kamera sambil membesarkan gambar hanya mempertahankan ukuran benda di bidang bidikan — sisanya memipih seperti ganti ke lensa tele.
+
+Kenapa lapisan 3 muncul: menggeser titik pusat kamera lubang-jarum itu **persis sama dengan menggeser seluruh gambar**, sama untuk segala kedalaman — dan drei tidak bisa menirunya. Jadi lid melenceng dari form sejauh (dx, dy)·(1−t) lalu "menyusul" saat t→1. Skalanya sendiri ikut benar otomatis (`projectionMatrix.elements[5] × tinggi/2`); yang tidak bisa digeser cuma titik pusat proyeksinya.
+
+⚠️ **`clearViewOffset()` TIDAK memulihkan `camera.aspect`** — `setViewOffset` menimpanya dengan `fw/fh` dan tidak pernah mengembalikannya. Setel ulang + `updateProjectionMatrix()` sendiri.
+
+⚠️ Elemen `<Html>` drei **bukan saudara canvas**: ia ditempel ke `events.connected`, yang di R3F v9 = container **luar** `<Canvas>`; canvas sendiri satu div lebih dalam. Leluhur bersamanya = pembungkus kita sendiri — itulah yang digeser, supaya canvas dan form mustahil berselisih.
+
+⚠️ Geseran CSS itu **wajib ditulis di efek layout juga**, bukan cuma di `useFrame`. Saat menutup, `dockHeight` kembali 0 di commit yang **sama** dengan turunnya frameloop ke `"demand"` — menunggu `useFrame` berikutnya berarti geseran lama (~120 px) tertinggal **terpaku di layar entah sampai kapan**.
+
+> 🔥 **Pelajaran ukur yang paling mahal di batch ini:** probe geometri canvas yang bersih **TIDAK** membuktikan render yang bersih. Sentakan lapisan 2 tidak terlihat sama sekali di `probe-contact-transition.mjs` — semua barisnya `ok`. Yang menangkapnya `probe-contact-settle.mjs`, yang merekam **piksel** via `Page.startScreencast` lalu mencari kotak batas piksel terang per frame.
+
+**Gotcha tetangga:** `<Html transform>` menggambar DOM **tanpa uji kedalaman**, jadi form-nya sempat tergambar menembus **punggung** lid yang masih tertutup — punggung aluminium putih berkedip jadi hitam berisi teks tercermin, tepat di frame pertama membuka. Digerbangi dengan memudarkan opacity menurut **hasil kali titik normal-layar · arah-ke-kamera**, bukan ambang pada `progress`: tanda dot itu persis "punggung atau muka", jadi ikut benar sendiri kalau rig kamera atau asetnya berubah.
+
+### Footer menempel pojok (`7531248`)
+
+`#contact` adalah section **paling bawah** di halaman tapi masih memakai `py-*`, jadi padding bawahnya menyisakan pita kosong 128 px tepat di ujung dokumen — terukur `footerBottom` 8412 vs `docHeight` 8540, tanpa apa pun di antaranya. Diganti `pt-*`. Footer-nya sendiri membentang tepi ke tepi lewat margin negatif yang membatalkan gutter `px-6 sm:px-10` milik section, dengan sisa 12 px supaya hurufnya tidak benar-benar menyentuh tepi layar. `border-t` dihapus: di posisi mepet begitu ia jadi sekat yang tidak memisahkan apa-apa.
+
+**Verifikasi:** `probe-contact-settle.mjs` (piksel per frame saat menutup), `probe-contact-transition.mjs` (geometri per rAF — bandingkan kotak canvas vs kotak **host**-nya, bukan vs drawing buffer), `shoot-contact-sequence.mjs` (deret potret buka/tutup, sengaja digulir 120 px dari tengah supaya bug `dockOffsetY` tidak tersembunyi), `probe-contact-form.mjs`, `measure-contact-idle.mjs`.
 
 ---
 
