@@ -29,3 +29,36 @@ export function scrollToSection(id: string) {
   }
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 }
+
+/**
+ * Kunci gulir halaman selama ada lapisan overlay di atasnya.
+ *
+ * Perlu DUA rem, bukan satu. `lenis.stop()` menghentikan gulir halus yang
+ * dikemudikan Lenis, tapi Lenis tidak menangkap semua jalan masuk — panah
+ * keyboard, PageDown, dan gulir asli di peramban yang Lenis-nya tidak aktif
+ * (reduced-motion) tetap lolos. `overflow: hidden` di <html> yang menutup sisa
+ * jalan itu. Tanpa Lenis, cabang keduanya saja sudah benar.
+ *
+ * Nilai `overflow` sebelumnya disimpan dan dikembalikan apa adanya — bukan
+ * dipaksa jadi "" — supaya tidak menghapus setelan orang lain kalau kelak ada
+ * yang juga menyentuhnya.
+ */
+let previousOverflow: string | null = null;
+
+export function setScrollLocked(locked: boolean) {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+
+  if (locked) {
+    if (previousOverflow === null) previousOverflow = root.style.overflow;
+    root.style.overflow = "hidden";
+    instance?.stop();
+    return;
+  }
+
+  if (previousOverflow !== null) {
+    root.style.overflow = previousOverflow;
+    previousOverflow = null;
+  }
+  instance?.start();
+}

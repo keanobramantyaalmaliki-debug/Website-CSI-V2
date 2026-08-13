@@ -14,6 +14,15 @@ class IntersectionObserverStub {
 }
 vi.stubGlobal("IntersectionObserver", IntersectionObserverStub);
 
+// jsdom lacks ResizeObserver; @react-three/fiber's Canvas needs it to mount —
+// Contact menampung <InquiryLaptop/>. Sama dengan CsiParticleField.test.tsx.
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+vi.stubGlobal("ResizeObserver", ResizeObserverStub);
+
 vi.mock("@/lib/smoothScroll", () => ({
   scrollToSection: vi.fn(),
 }));

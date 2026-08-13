@@ -18,6 +18,11 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
  * environment cuma pengisi refleksi. Kalau dinaikkan, scene jadi flat karena
  * cahaya baked-nya tertimpa.
  *
+ * ⚠️ 0.18 itu angka untuk KANTOR yang sudah di-bake. Canvas lain yang memuat
+ * aset tanpa lightmap (mis. InquiryLaptop) tidak punya cahaya baked sama
+ * sekali, jadi pada 0.18 hasilnya nyaris hitam — di sana `intensity` dinaikkan
+ * lewat prop. Defaultnya sengaja tetap 0.18 supaya Scene tidak berubah.
+ *
  * ⚠️ useLayoutEffect, BUKAN useEffect. Material yang shader-nya sudah
  * dikompilasi tidak otomatis memakai scene.environment yang dipasang belakangan
  * — hasilnya lantai glossy kehilangan refleksi (terukur 0.60× lebih gelap dari
@@ -25,7 +30,7 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
  * needsUpdate di bawah memaksa rekompilasi untuk material yang sudah terlanjur
  * jadi (mis. GLB selesai dimuat setelah komponen ini mount).
  */
-export default function SceneEnvironment() {
+export default function SceneEnvironment({ intensity = 0.18 }: { intensity?: number } = {}) {
   const gl = useThree((s) => s.gl);
   const scene = useThree((s) => s.scene);
 
@@ -36,7 +41,7 @@ export default function SceneEnvironment() {
 
     // eslint-disable-next-line react-hooks/immutability -- Three.js scene mutation required for PMREMGenerator workflow; see component docstring
     scene.environment = target.texture;
-    scene.environmentIntensity = 0.18;
+    scene.environmentIntensity = intensity;
 
     // Paksa material yang sudah ada memakai environment baru.
     scene.traverse((o: THREE.Object3D) => {
@@ -53,7 +58,7 @@ export default function SceneEnvironment() {
       pmrem.dispose();
       env.dispose?.();
     };
-  }, [gl, scene]);
+  }, [gl, scene, intensity]);
 
   return null;
 }

@@ -65,7 +65,16 @@ menengok tetangganya di tabel ini.
 | 10 | konten `<main>`, petunjuk scroll Hero | Nico |
 | 30 | `BilliardHUD` | Keano |
 | 50 | `Navbar` | Nico |
+| 54 | tirai gelap form inquiry (`Contact`) | Keano |
+| 55 | lapisan laptop/form inquiry, dan lembar sentuhnya | Keano |
+| 56 | tombol tutup form inquiry | Keano |
 | 60 | `LoadingScreen` | Keano |
+
+**Tiga lapisan 54–56 itu sengaja mengapit Navbar.** Form inquiry bersifat modal:
+selama terbuka, gulir dikunci dan Navbar TIDAK boleh bisa diklik menembus
+tirainya — makanya di atas 50. Tapi ia tetap harus tenggelam di bawah
+`LoadingScreen` (60), yang menutupi seluruh situs tanpa kecuali. Kalau kelak
+Navbar dinaikkan, ketiganya ikut naik bersama, tetap di bawah 60.
 
 **Kenapa rawan.** Ini seam paling langsung antara kita: Navbar milik Nico,
 loader & HUD milik Keano, dan keduanya harus tetap berurutan. Menaikkan navbar
@@ -179,6 +188,15 @@ waypoint.
 Patokannya `pointer: coarse`, **bukan lebar layar**: yang menentukan adalah ada
 atau tidaknya hover, bukan sempitnya layar. `max-width` akan meloloskan tablet
 landscape yang masalahnya sama persis.
+
+> **Catatan (13 Agu) — form inquiry memakai DUA patokan, dan itu bukan
+> pelanggaran aturan di atas.** `sections/Contact.tsx` menggugurkan overlay
+> laptop 3D-nya saat `coarse` **atau** `narrow` (<768px). Yang kedua menjawab
+> soal yang berbeda: bukan hover, tapi RUANG. Rig overlay-nya terkendala lebar,
+> jadi di jendela sempit kamera mundur jauh dan layar laptopnya cuma mengisi
+> seperempat tinggi — form-nya utuh tapi terlalu kecil untuk dibaca (terpotret
+> di 390px). Aturan §6 tetap berlaku apa adanya untuk INTERAKSI scene; ini
+> tambahan soal keterbacaan, bukan penggantinya.
 
 **Kenapa lintas-wilayah.** Ini seam paling tajam sekarang, dan bentuknya beda
 dari §1–§5 — saat ditulis ia tidak menunggu merge untuk rusak, ia **sudah**
