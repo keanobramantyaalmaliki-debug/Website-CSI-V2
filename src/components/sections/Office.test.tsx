@@ -12,6 +12,13 @@ class IntersectionObserverStub {
 }
 vi.stubGlobal("IntersectionObserver", IntersectionObserverStub);
 
+// Sama pola dengan Deployments.test.tsx: Lenis tidak hidup di jsdom, jadi yang
+// diperiksa NIAT-nya — CTA memanggil registry smoothScroll, bukan scroll DOM.
+const scrollToSectionSpy = vi.fn();
+vi.mock("@/lib/smoothScroll", () => ({
+  scrollToSection: (id: string) => scrollToSectionSpy(id),
+}));
+
 describe("Office", () => {
   it("renders without crashing", () => {
     render(
@@ -57,14 +64,19 @@ describe("Office", () => {
     expect(screen.getByText("Maintenance & Technical Support")).toBeInTheDocument();
   });
 
-  it("links the CTA back to Contact in the Lounge", () => {
+  // Contact sekarang berdiri di ruangan Office juga, jadi CTA-nya menggulir di
+  // tempat lewat smoothScroll — bukan lagi <Link to="/#contact"> ke Lounge.
+  it("scrolls in place to #contact through smoothScroll instead of navigating", async () => {
+    const user = userEvent.setup();
     render(
       <MemoryRouter>
         <Office />
       </MemoryRouter>,
     );
-    const cta = screen.getByRole("link", { name: /talk to us/i });
-    expect(cta).toHaveAttribute("href", "/#contact");
+    await user.click(screen.getByRole("button", { name: /talk to us/i }));
+    expect(scrollToSectionSpy).toHaveBeenCalledWith("contact");
+    // Anchor jump bawaan peramban berebut posisi dengan rAF Lenis.
+    expect(document.querySelector('a[href="/#contact"]')).toBeNull();
   });
 
   it("renders a dummy testimonial quote with a named client", () => {

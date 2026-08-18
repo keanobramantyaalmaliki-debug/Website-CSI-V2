@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import { motion, useScroll, useMotionValueEvent, useReducedMotion } from "motion/react";
 import { UserRound } from "lucide-react";
 import AwardsShowcase from "@/components/sections/AwardsShowcase";
@@ -10,6 +9,7 @@ import Disclosure from "@/components/motion/Disclosure";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import PinnedServiceStack from "@/components/motion/PinnedServiceStack";
+import { scrollToSection } from "@/lib/smoothScroll";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -308,7 +308,19 @@ export default function Office() {
           TODO(content): replace with real award/recognition list, if any. */}
       <AwardsShowcase />
 
-      {/* CTA — links back to Contact in Lounge (only room where #contact exists) */}
+      {/*
+        CTA — GULIR DI TEMPAT ke <Contact /> yang sekarang berdiri di ruangan
+        ini juga (roomContent.tsx, 17 Agu). Dulu ini `<Link to="/#contact">`
+        karena Office satu-satunya ruangan tanpa Contact, jadi satu-satunya
+        tujuan yang ada memang di Lounge. Begitu Office punya sendiri, melempar
+        pengunjung ke ruangan lain jadi salah dua kali: ia kehilangan tempatnya
+        tanpa meminta, dan tujuannya ada beberapa layar di bawah kakinya.
+
+        `scrollToSection`, bukan `<a href="#contact">` — sama seperti
+        DeploymentCta: anchor jump bawaan peramban berjalan di luar rAF Lenis
+        dan berebut posisi dengannya di frame yang sama (lihat
+        smoothScrollCallsites.invariant.test.ts, berkas ini ikut dijaga).
+      */}
       <motion.div
         className="mt-16 flex flex-wrap items-center gap-4"
         initial={{ opacity: 0, y: 8 }}
@@ -316,15 +328,16 @@ export default function Office() {
         viewport={{ once: true }}
         transition={{ duration: 0.5, ease: EASE, delay: 0.25 }}
       >
-        <Link
-          to="/#contact"
+        <button
+          type="button"
+          onClick={() => scrollToSection("contact")}
           className="group relative inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium text-black transition-colors hover:bg-zinc-200"
         >
           Talk to us
           <span className="grid h-5 w-5 place-items-center rounded-full bg-zinc-900/10 text-zinc-900 transition-transform duration-200 group-hover:translate-x-0.5">
             →
           </span>
-        </Link>
+        </button>
       </motion.div>
     </section>
   );

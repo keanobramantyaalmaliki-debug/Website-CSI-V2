@@ -30,6 +30,7 @@ const GUARDED_FILES = [
   "components/Navbar.tsx",
   "routes/RoomRouteSync.tsx",
   "components/sections/DeploymentCta.tsx",
+  "components/sections/Office.tsx",
 ] as const;
 
 function stripComments(src: string): string {

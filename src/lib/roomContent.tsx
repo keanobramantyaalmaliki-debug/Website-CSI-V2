@@ -51,7 +51,12 @@ export const ROOM_CONTENT: Record<RoomKey, ReactNode> = {
       <Contact />
     </>
   ),
-  Office: <Office />,
+  Office: (
+    <>
+      <Office />
+      <Contact />
+    </>
+  ),
   Meeting: (
     <>
       <MeetingLead />
@@ -91,8 +96,12 @@ export const ROOM_KEYS_WITH_CONTENT = (
  *
  * Dipakai Navbar untuk memutuskan "Talk to us" cukup menggulir di tempat, atau
  * harus pindah ke Lounge dulu. DITURUNKAN dari ROOM_CONTENT di atas, bukan
- * ditulis ulang sebagai daftar nama: begitu Office diberi <Contact />,
- * tombolnya ikut benar sendiri tanpa ada yang perlu ingat menyunting Navbar.
+ * ditulis ulang sebagai daftar nama — dan 17 Agu itu terbukti berguna: Office
+ * diberi <Contact />, dan tombol Navbar ikut benar sendiri tanpa ada yang perlu
+ * ingat menyuntingnya. Sekarang KEEMPAT ruangan berisi punya Contact, jadi
+ * cabang "pindah ke Lounge dulu" praktis tak terpakai lagi — tapi jangan
+ * dihapus: ia yang menjaga tombolnya tetap benar kalau kelak ada ruangan baru
+ * (atau Pantry dihidupkan) tanpa Contact di dalamnya.
  *
  * Cara memeriksanya menelusuri pohon React element — `<Contact />` bisa berdiri
  * langsung di bawah fragment ruangan (seperti sekarang) maupun terbungkus
