@@ -64,11 +64,21 @@ menengok tetangganya di tabel ini.
 | 0 | `.ambient-grid` | Nico |
 | 10 | konten `<main>`, petunjuk scroll Hero | Nico |
 | 30 | `BilliardHUD` | Keano |
+| 40 | tirai sorot `TheCrew` (hover nama/foto) | Keano |
+| 45 | baris + kotak foto yang disorot `TheCrew` | Keano |
 | 50 | `Navbar` | Nico |
 | 54 | tirai gelap form inquiry (`Contact`) | Keano |
 | 55 | lapisan laptop/form inquiry, dan lembar sentuhnya | Keano |
 | 56 | tombol tutup form inquiry | Keano |
 | 60 | `LoadingScreen` | Keano |
+
+**Pasangan 40/45 sengaja di BAWAH Navbar.** Hover satu nama di `TheCrew`
+menggelapkan seisi halaman kecuali navbar — jadi tirainya justru HARUS kalah
+dari 50. Keduanya hidup di dalam `<main>` (yang `relative z-10` = stacking
+context), jadi praktis angkanya lokal: 45 cuma perlu menang atas 40, dan 40 cuma
+perlu menang atas isi seksi. Ditulis 40/45 dan bukan 11/12 supaya kalau `<main>`
+kelak melepas `z-10`-nya (itu terjadi selagi form inquiry terbuka), urutannya
+tetap benar di akar: masih di atas HUD 30, masih di bawah Navbar 50.
 
 **Tiga lapisan 54–56 itu sengaja mengapit Navbar.** Form inquiry bersifat modal:
 selama terbuka, gulir dikunci dan Navbar TIDAK boleh bisa diklik menembus
