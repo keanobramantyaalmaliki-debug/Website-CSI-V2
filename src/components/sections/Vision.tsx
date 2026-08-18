@@ -59,7 +59,7 @@ const VISION =
 
 export default function Vision() {
   return (
-    <section id="vision" className="relative overflow-hidden px-6 py-24 sm:px-10 sm:py-32">
+    <section id="vision" className="relative overflow-hidden px-3 py-24 sm:py-32">
       <div className="relative z-10">
       {/* T6 — eyebrow */}
       <motion.p

@@ -3,9 +3,7 @@ import type { RoomKey } from "@/lib/store/sceneStore";
 
 // ── Section imports ──────────────────────────────────────────────────────────
 import CsiHero from "@/components/sections/CsiHero";
-import Manifesto from "@/components/sections/Manifesto";
 import Deployments from "@/components/sections/Deployments";
-import LivingArchitecture from "@/components/sections/LivingArchitecture";
 import Process from "@/components/sections/Process";
 import Industries from "@/components/sections/Industries";
 import Careers from "@/components/sections/Careers";
@@ -31,20 +29,22 @@ import TheCrew from "@/components/sections/TheCrew";
  * CaseGrid in Meeting), Services dropped from Lounge and merged into
  * Office as the single services deep-dive, see diskusi/bedah-content-lounge;
  * updated 2026-08-11: TrustedBy dropped — placeholder client logos carried
- * no real endorsement, and its hover-swap mechanic now lives in
- * LivingArchitecture's glyph grid; Industries is now an expanding
- * horizontal gallery (spine columns reveal image + desc on hover/focus)
- * instead of the old Core/Also card grid):
- * Hero → CsiHero → Manifesto → Deployments
- *      → LivingArchitecture → Process → Industries → Vision → Contact
+ * no real endorsement; Industries is now an expanding horizontal gallery
+ * (spine columns reveal image + desc on hover/focus) instead of the old
+ * Core/Also card grid; updated 2026-08-18: Manifesto dropped — CsiHero
+ * sekarang membawa pernyataan pembuka Lounge sendiri, dan dua blok manifesto
+ * berturut-turut di bawah hero membuat pembaca menunggu terlalu lama sebelum
+ * bertemu bukti di Deployments. LivingArchitecture ikut dicabut hari yang
+ * sama; berkasnya DIHAPUS beserta motion/ArchitectureGrid.tsx,
+ * motion/NodeGlyphs.tsx, dan data/architectureNodes.ts — tidak ada pemakai
+ * lain yang tersisa:
+ * Hero → CsiHero → Deployments → Process → Industries → Vision → Contact
  */
 export const ROOM_CONTENT: Record<RoomKey, ReactNode> = {
   Lounge: (
     <>
       <CsiHero />
-      <Manifesto />
       <Deployments />
-      <LivingArchitecture />
       <Process />
       <Industries />
       <Vision />

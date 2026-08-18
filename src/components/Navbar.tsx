@@ -7,7 +7,7 @@ import { useSceneStore, pathFor, type RoomKey } from "@/lib/store/sceneStore";
 import { roomHasContact } from "@/lib/roomContent";
 import { ACTIVE_KEYS } from "@/components/canvas/CameraController";
 import MagneticButton from "@/components/motion/MagneticButton";
-import { scrollToSection } from "@/lib/smoothScroll";
+import { scrollToSection, setScrollLocked } from "@/lib/smoothScroll";
 import { SOCIALS } from "@/data/socials";
 import { ID_ZONES, useZoneClocks } from "@/lib/hooks/useZoneClocks";
 import { useNarrowViewport } from "@/lib/hooks/useNarrowViewport";
@@ -77,9 +77,10 @@ const ITEM_V_REDUCED: Variants = {
 };
 
 /**
- * Geometri ikon burger — angkanya disalin dari situs cogniti yang tayang
- * (`.nav-menu::after` di media query 768px): lebar 26px, tebal 1,5px, jarak
- * antar garis 7px. Tebal 1,5px memang bukan bilangan bulat; di layar dpr 2–3
+ * Geometri ikon burger — semula disalin apa adanya dari situs cogniti yang
+ * tayang (`.nav-menu::after` di media query 768px: lebar 26px, jarak antar
+ * garis 7px), lalu diciutkan 18 Agu bersama seluruh bilah: 22px lebar, jarak
+ * 6px. Tebal tetap 1,5px — memang bukan bilangan bulat, tapi di layar dpr 2–3
  * (satu-satunya tempat tombol ini terlihat, `md:hidden`) itu 3–4,5 piksel
  * perangkat, dan hasilnya lebih tegas daripada 1px yang terlihat tipis di HP.
  *
@@ -88,10 +89,16 @@ const ITEM_V_REDUCED: Variants = {
  * peralihannya: garis atas & bawah meluncur menyatu ke tengah lalu memudar,
  * yang tersisa satu strip, dan katanya menyingkap di sebelahnya.
  */
-const BURGER_OFFSETS = [-7, 0, 7] as const;
+const BURGER_OFFSETS = [-6, 0, 6] as const;
 
-/** Tinggi kotak ikon 16px; (16 − 1,5) / 2 = 7,25px agar garisnya pas di tengah. */
-const LINE_TOP = "7.25px";
+/**
+ * Tinggi kotak ikon 14px (`h-3.5`); (14 − 1,5) / 2 = 6,25px agar garisnya pas
+ * di tengah. Angka ini TERIKAT pada tinggi kotak dan pada `BURGER_OFFSETS`:
+ * 6,25 − 6 = 0,25px di atas dan 6,25 + 6 + 1,5 = 13,75px di bawah, jadi garis
+ * terluar masih di dalam kotak. Menaikkan offset ke 7 tanpa menaikkan kotaknya
+ * bikin garis atas & bawah terpotong.
+ */
+const LINE_TOP = "6.25px";
 
 export default function Navbar() {
   const heroInView  = useSceneStore((s) => s.heroInView);
@@ -163,21 +170,39 @@ export default function Navbar() {
    * menggeser halaman di baliknya, dan saat menu ditutup pengunjung mendarat di
    * tempat yang bukan tempat ia meninggalkannya.
    *
+   * ⚠️ Lewat `setScrollLocked` (yang mengunci <html>), BUKAN
+   * `body.style.overflow = "hidden"` seperti dulu. Bukan soal rapi-rapian —
+   * versi body itu tidak pernah mengunci apa pun, dan efek sampingnya justru
+   * bug yang dilaporkan: "buka burger di tengah halaman, halaman lompat balik
+   * ke 3D".
+   *
+   * Rantainya (terukur lewat CDP 18 Agu, 393x852):
+   *
+   *   1. `html, body { height: 100% }` di index.css bikin <body> setinggi
+   *      PERSIS satu layar sementara isinya 11.419px. Selama overflow-nya
+   *      `visible`, luapan itu diserahkan ke viewport dan halaman menggulir
+   *      normal.
+   *   2. `overflow: hidden` di body memotong luapan yang sama di 852px:
+   *      scrollHeight dokumen RUNTUH 11.419 → 852 dan browser menjepit posisi
+   *      gulir ke 0. Itu lompatannya.
+   *   3. Menguncinya sendiri tidak pernah terjadi: <html> punya
+   *      `overflow-x: clip`, jadi yang diwariskan ke viewport adalah nilai
+   *      <html>, bukan <body>. Terukur: menyapu layar selagi menu terbuka tetap
+   *      menggeser halaman 2200 → 2803.
+   *
+   * `setScrollLocked` mengunci <html> — elemen yang benar-benar menggulir —
+   * plus `lenis.stop()`. Terukur: posisi gulir bertahan di 2200 dan sapuan jari
+   * tidak menggesernya sedikit pun. Helper yang sama sudah dipakai modal
+   * inquiry di Contact.tsx; ini cuma berhenti punya versi sendiri.
+   *
    * ⚠️ Patokannya `open`, BUKAN `overlayUp` seperti urusan tampilan lainnya.
-   * Kuncinya harus lepas di frame yang sama dengan tekanannya, karena
-   * `goToContact()` menggulir ke `#contact` tepat setelah menutup menu — dan
-   * `scrollToSection()` tidak ke mana-mana selama body masih terkunci, lewat
-   * Lenis maupun lewat `scrollIntoView` bawaannya. Yang hilang karena ini cuma
-   * satu hal kecil: kalau jari menyapu layar di tengah 450 ms pudarnya, latar
-   * di baliknya ikut bergeser.
+   * Yang hilang karena ini cuma satu hal kecil: kalau jari menyapu layar di
+   * tengah 450 ms pudarnya, latar di baliknya ikut bergeser.
    */
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    setScrollLocked(true);
+    return () => setScrollLocked(false);
   }, [open]);
 
   function goRoom(room: RoomKey) {
@@ -211,6 +236,12 @@ export default function Navbar() {
    */
   function goToContact() {
     setOpen(false);
+    /* ⚠️ Buka kuncinya DI SINI, jangan menunggu cleanup effect di atas.
+       `setOpen(false)` cuma menjadwalkan render; baris berikutnya jalan selagi
+       kuncinya MASIH terpasang, dan `lenis.scrollTo()` diabaikan mentah-mentah
+       selama Lenis berstatus stop — tombolnya akan terlihat mati. Memanggilnya
+       dua kali aman: cleanup effect-nya idempoten. */
+    setScrollLocked(false);
     if (roomHasContact(currentRoom)) {
       scrollToSection("contact");
       return;
@@ -240,28 +271,47 @@ export default function Navbar() {
    * sebagai margin, latarnya ikut mundur dan hasilnya kotak mengambang, bukan
    * bilah.
    *
-   * Ongkos ruangnya turun, bukan naik, walau paddingnya jadi 12px di atas dan
-   * bawah: dulu 12px jarak luar + pill 58px = 70px; sekarang 0 + 52px = 52px.
+   * Ongkos ruangnya turun, bukan naik, walau paddingnya jadi padding dalam:
+   * dulu 12px jarak luar + pill 58px = 70px.
    *
-   * 52px itu TERUKUR, bukan dihitung: logo 27,83px + 12px atas + 12px bawah.
+   * ── Diciutkan lagi 18 Agu ────────────────────────────────────────────────
    *
-   * ⚠️ 27,83 — BUKAN 30 seperti atribut `height` di `<img>`-nya, dan bukan juga
+   * Tiga angka turun bersama, dan ketiganya memang harus bergerak bersama —
+   * mengecilkan salah satu saja tidak menurunkan tinggi bilah sama sekali,
+   * karena yang menentukan selalu benda TERTINGGI di dalamnya:
+   *
+   *   padding-Y `<nav>` 12px → 10px  (`p-3` → `p-2.5`)
+   *   lebar logo        76px → 64px  (tinggi ikut 27,83 → 23,43px)
+   *   burger            tetap 44px, tapi `-my-2.5` mencabutnya dari perhitungan
+   *
+   * Hasil TERUKUR: ≥md 43,43px (23,43 + 10 + 10), <md 44px. Sebelumnya 52px
+   * dan 68px. Seluler yang paling banyak berkurang — 68 → 44px, dan memang di
+   * sanalah bilahnya terasa paling tebal.
+   *
+   * ⚠️ Yang turun ke 10px cuma sumbu Y. Beberapa jam kemudian seluruh section
+   * situs disamakan ke gutter 12px (`px-3`), jadi X-nya dikembalikan ke 12 dan
+   * `p-2.5` dipecah jadi `px-3 py-2.5`. Bukan tidak konsisten — keduanya memang
+   * mengukur hal yang berbeda: Y menentukan TINGGI BILAH (satu-satunya alasan
+   * ia diciutkan), X menentukan apakah logo rata kiri dengan judul section di
+   * bawahnya. Menyamakan keduanya lagi berarti memilih salah satu untuk
+   * dirusak. Tinggi bilah TIDAK berubah oleh pemecahan ini — tetap 43,43px.
+   *
+   * ⚠️ 23,43 — BUKAN 30 seperti atribut `height` di `<img>`-nya, dan bukan juga
    * karena `object-contain`. `object-contain` mengatur bagaimana piksel gambar
    * mengisi kotaknya, ia tidak pernah mengubah UKURAN kotak itu. Yang mengubah:
    * Tailwind preflight memasang `img { height: auto }`, yang menimpa atribut
-   * `height`, jadi tingginya diturunkan dari `width={76}` × rasio asli berkasnya
-   * (2914×1067 = 2,731) = 27,83px. Atribut `width`/`height` di sana tinggal
+   * `height`, jadi tingginya diturunkan dari `width={64}` × rasio asli berkasnya
+   * (2914×1067 = 2,731) = 23,43px. Atribut `width`/`height` di sana tinggal
    * berguna sebagai rasio pencadang ruang saat memuat, bukan ukuran tampil —
-   * jangan pakai angka 30 itu untuk menghitung tinggi bilah.
+   * jangan pakai angka di atribut `height` untuk menghitung tinggi bilah. Kalau
+   * lebarnya diubah lagi, tinggi bilahnya ikut: bagi lebar baru dengan 2,731.
    *
    * Logo adalah benda TERTINGGI di bilah ini sejak CTA "Talk to us" kehilangan
-   * pill-nya — pill itu 36px dan dialah yang dulu menahan bilah di 60px.
-   * Artinya `p-3` sekarang benar-benar yang menentukan tingginya: mau lebih
-   * pendek lagi, satu-satunya jalan adalah mengecilkan logonya, bukan
-   * paddingnya.
-   *
-   * Di <md tingginya masih 68px dan itu disengaja: tombol burger `h-11` (44px)
-   * adalah ambang minimum sentuh, lihat catatan panjang di tombolnya.
+   * pill-nya (pill itu 36px dan dialah yang dulu menahan bilah di 60px) — dan
+   * sejak burger dicabut dari perhitungan lewat `-my-2.5`. Artinya mau lebih
+   * pendek lagi, jalannya mengecilkan logonya, bukan paddingnya: pada `py-2.5`
+   * isinya sudah cuma 10px dari tepi atas & bawah, dan di bawah itu bilahnya
+   * berhenti terbaca sebagai bilah — logo & burger mulai menyentuh tepi layar.
    */
   return (
     <header className="fixed inset-x-0 top-0 z-50">
@@ -285,7 +335,7 @@ export default function Navbar() {
         onGone={() => setOverlayUp(false)}
       />
 
-      <nav className="relative z-10 flex w-full items-center justify-between gap-6 p-3">
+      <nav className="relative z-10 flex w-full items-center justify-between gap-6 px-3 py-2.5">
         {/* Latar + garis pemisah, sebagai LAPISAN sendiri di belakang isinya.
             Dulu keduanya kelas di `<nav>` yang disulap bolak-balik, dan itu
             menyeret dua masalah yang lapisan ini menghapus sekaligus:
@@ -319,25 +369,42 @@ export default function Navbar() {
           <img
             src="/brand/Logo-Final.png"
             alt="CSI Logo"
-            width={76}
-            height={30}
+            width={64}
+            height={23}
             className="object-contain"
             fetchPriority="high"
           />
         </Link>
 
-        {/* Desktop room links */}
-        <ul className="hidden items-center gap-6 md:flex">
+        {/* Desktop room links — `gap-6` (24px) turun ke `gap-5` (20px) bersama
+            fontnya 18 Agu. Jaraknya memang harus ikut mengecil: 24px di antara
+            teks 14px terbaca lapang, di antara teks 13px yang sama terbaca
+            renggang — mata membaca jarak relatif terhadap tinggi hurufnya, dan
+            bilah yang lebih tipis bikin ketimpangan itu makin kentara. */}
+        <ul className="hidden items-center gap-5 md:flex">
+          {/* ⚠️ `flex` di `<li>`-nya BUKAN hiasan — tanpa itu daftar ini diam-diam
+              yang menentukan tinggi bilah di ≥md, bukan logonya.
+              Sebabnya strut: `<li>` blok yang isinya inline-block (tombol memang
+              inline-block bawaan) tetap membuat kotak baris setinggi
+              line-height-nya SENDIRI, dan li tidak mewarisi `text-[13px]` milik
+              tombol — ia masih 16px dengan leading 24px. Jadi li terukur 24px
+              padahal tombol di dalamnya cuma 19,5px, dan 24 > logo 23,43.
+              Akibatnya jebakan: mengecilkan logo tidak menurunkan bilah
+              sedikit pun di bawah 44px, dan tidak ada apa pun di kelas-kelasnya
+              yang menunjukkan kenapa. `flex` membuat tombolnya jadi flex item —
+              strut-nya hilang, li ikut tinggi isinya (19,5px), dan logo kembali
+              jadi benda tertinggi seperti yang tertulis di komentar besar
+              di atas. */}
           {ACTIVE_KEYS.map((room) => {
             const active = currentRoom === room;
             return (
-              <li key={room}>
+              <li key={room} className="flex">
                 <button
                   type="button"
                   onClick={() => goRoom(room)}
                   aria-current={active ? "page" : undefined}
                   className={[
-                    "text-sm transition-colors hover:text-accent",
+                    "text-[13px] transition-colors hover:text-accent",
                     active ? "text-accent" : "text-zinc-300",
                   ].join(" ")}
                 >
@@ -377,7 +444,7 @@ export default function Navbar() {
             <button
               type="button"
               onClick={goToContact}
-              className="hidden shrink-0 text-sm font-medium text-zinc-100 transition-colors hover:text-accent md:block"
+              className="hidden shrink-0 text-[13px] font-medium text-zinc-100 transition-colors hover:text-accent md:block"
             >
               Talk to us
             </button>
@@ -408,20 +475,37 @@ export default function Navbar() {
               berubah cuma tepi kiri tombol — logo di seberangnya diam.
 
               `h-11 min-w-11` = kotak sentuh 44×44 walau ikonnya cuma selebar
-              26px — ukuran yang sama dengan yang dipakai situs cogniti untuk
-              burgernya, dan ambang minimum sentuh. Tanpa `min-w-11` tombolnya
-              persis selebar ikon (terukur 26px), terlalu sempit untuk jempol.
+              22px — 44 itu ambang minimum sentuh, dan ukuran yang sama dengan
+              yang dipakai situs cogniti untuk burgernya. Tanpa `min-w-11`
+              tombolnya persis selebar ikon, terlalu sempit untuk jempol.
               Kelebihan lebarnya tumbuh ke KIRI karena isinya rata kanan, jadi
               ikonnya tidak bergeser sepiksel pun.
 
-              ⚠️ `h-11` MEMANG melebarkan bilah, dan itu penyumbang tinggi
-              terbesar di seluruh navbar seluler: bilah terukur 68px di 390px
-              (44 + p-3 dua sisi) lawan 52px di ≥md di mana tombol ini
-              `md:hidden`. Komentar lama di sini mengklaim "logo + py-2.5 sudah
-              50px" jadi tingginya tidak berpengaruh — itu salah (logo cuma
-              27,83px). Jangan pangkas untuk menghemat ruang: 44×44 itu ambang
-              minimum sentuh, dan 8px yang didapat tidak sebanding dengan target
-              yang jadi sulit dikenai jempol.
+              ⚠️ `-my-2.5` — inilah yang menipiskan bilah seluler 68px → 44px
+              (18 Agu), dan ia TIDAK mengecilkan kotak sentuhnya sedikit pun.
+
+              Sebelumnya `h-11` yang menentukan tinggi bilah: 44 + p-3 dua sisi
+              = 68px, sementara ≥md cuma 52px karena di sana tombol ini
+              `md:hidden`. Menyusutkan tombolnya jelas bukan jawabannya — 44×44
+              itu ambang minimum sentuh. Yang dilakukan margin negatif ini
+              justru memisahkan keduanya: yang masuk hitungan tata letak adalah
+              kotak MARGIN, jadi tombolnya menyumbang 44 − 10 − 10 = 24px, tapi
+              kotak BORDER-nya tetap 44px dan tetap menadah sentuhan sepenuhnya.
+
+              Angkanya dipilih supaya keduanya bertemu persis, bukan kira-kira:
+              24px itu sedikit di atas logo (23,43px) jadi dialah yang menentukan
+              tinggi bilah = 24 + 10 + 10 = 44px — dan 44 itu sama dengan tinggi
+              tombolnya, yang setelah dipusatkan terbentang dari y=0 sampai y=44.
+              Kotak sentuhnya mengisi bilah pas, tanpa tumpah ke luar tepi bawah
+              (yang akan mencegat sentuhan pada halaman di baliknya) maupun ke
+              atas tepi layar (yang akan terpotong dan hilang percuma).
+
+              ⚠️ Karena itu `-my-2.5` TERIKAT pada `py-2.5` di `<nav>` — pada
+              padding-Y-nya saja, BUKAN pada `px-3`. Keduanya 10px, dan mengubah
+              salah satu tanpa yang lain memutus kerapiannya: padding-Y naik jadi
+              12px lagi → tombolnya tumpah 2px ke bawah bilah. Padding-X boleh
+              bergerak sendiri (dan memang sudah, ke 12px demi rata kiri dengan
+              gutter section) tanpa menyentuh angka ini sama sekali.
 
               `-mr-1` yang dulu ada di sini SUDAH DILEPAS. Fungsinya menarik ikon
               4px keluar supaya terlihat pas di dalam lengkung `rounded-full`;
@@ -439,9 +523,9 @@ export default function Navbar() {
             aria-expanded={open}
             aria-controls="mobile-menu"
             aria-label={open ? "Close menu" : "Open menu"}
-            className="group flex h-11 min-w-11 items-center justify-end text-[11px] tracking-[0.11em] text-zinc-400 uppercase transition-colors hover:text-zinc-100 md:hidden"
+            className="group -my-2.5 flex h-11 min-w-11 items-center justify-end text-[10px] tracking-[0.11em] text-zinc-400 uppercase transition-colors hover:text-zinc-100 md:hidden"
           >
-            <span aria-hidden className="relative block h-4 w-[26px] shrink-0">
+            <span aria-hidden className="relative block h-3.5 w-[22px] shrink-0">
               {BURGER_OFFSETS.map((offset) => (
                 <motion.span
                   key={offset}
@@ -552,19 +636,26 @@ function MobileMenu({
           initial="hidden"
           animate="shown"
           exit="out"
-          /* px-3 = 12px, angka yang SAMA dengan padding `<nav>`: daftar besarnya
-             rata kiri persis dengan logo di atasnya. Dulu px-9 (36px) karena
-             logonya memang di 36px — 16px jarak luar header + 20px padding pill.
-             Begitu pill jadi bilah penuh, logonya pindah ke 12px dan angka ini
-             HARUS ikut; kalau tidak, daftar ruangan menggantung 24px lebih masuk
-             daripada logo tepat di atasnya. Keduanya selalu bergerak bersama.
+          /* px-3 = 12px, angka yang SAMA dengan padding-X `<nav>` (dan dengan
+             gutter section di seluruh situs): daftar besarnya rata kiri persis
+             dengan logo di atasnya. Dulu px-9 (36px) karena logonya memang di
+             36px — 16px jarak luar header + 20px padding pill; lalu px-3 saat
+             pill jadi bilah penuh; sempat px-2.5 saat bilahnya diciutkan 18 Agu,
+             lalu kembali px-3 begitu nav-nya dipecah jadi `px-3 py-2.5`. Angka
+             ini HARUS ikut tiap kali padding-X nav berubah — padding-Y tidak
+             ada urusannya di sini. Kalau tidak ikut, daftar ruangan
+             menggantung beberapa piksel dari logo tepat di atasnya, dan
+             ketidaksejajaran sekecil itu justru yang paling kelihatan karena
+             keduanya bertumpuk vertikal. Keduanya selalu bergerak bersama.
 
              bg-background (bukan hitam pekat seperti situs lama) supaya senada
              dengan sisa situs ini.
 
-             pt-24 = 96px tetap: bilah seluler berakhir di 68px, jadi masih ada
-             28px sebelum baris pertama. */
-          className="fixed inset-0 flex flex-col overflow-y-auto bg-background px-3 pt-24 pb-10 md:hidden"
+             pt-18 = 72px, turun dari 96px: bilah seluler sekarang berakhir di
+             44px (dulu 68px), jadi jarak 28px sebelum baris pertama tetap sama.
+             Diturunkan supaya menunya tidak mendadak menggantung lebih rendah
+             justru setelah bilahnya dipertipis. */
+          className="fixed inset-0 flex flex-col overflow-y-auto bg-background px-3 pt-18 pb-10 md:hidden"
         >
           <motion.ul variants={listV} className="flex flex-col">
             {ACTIVE_KEYS.map((room) => {

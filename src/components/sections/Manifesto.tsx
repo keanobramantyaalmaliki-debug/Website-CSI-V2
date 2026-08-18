@@ -63,6 +63,16 @@ function ManifestoLine({ config, index }: { config: LineConfig; index: number })
   );
 }
 
+/**
+ * ⚠️ TIDAK DIRENDER DI MANA PUN per 18 Agu 2026 — section ini dicabut dari
+ * Lounge (lihat lib/roomContent.tsx untuk alasannya) dan tidak dipasang di
+ * ruangan lain. Berkasnya sengaja DITAHAN, bukan dihapus, karena saat itu ia
+ * masih memuat perubahan yang belum di-commit. Kalau memang tidak akan
+ * dipakai lagi: hapus berkas ini BESERTA motion/ManifestoField.tsx (satu-
+ * satunya pemakainya), lalu pindahkan catatan "aturan padding-tipis" di bawah
+ * ke CsiHero.tsx — tiga berkas menunjuk ke sini untuk aturan itu
+ * (PeopleIntro, MeetingLead, Office).
+ */
 export default function Manifesto() {
   const sectionRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
@@ -88,11 +98,12 @@ export default function Manifesto() {
 
          ⚠️ Aturan padding-tipis ini berlaku untuk SECTION PERTAMA TIAP RUANGAN,
          bukan khusus berkas ini — di Lounge yang menempel ke hero sekarang
-         CsiHero (`pt-6` di HP; ia yang benar-benar bersebelahan dengan kantor
-         3D), dan Manifesto menyusul di bawahnya (lihat lib/roomContent). Berkas
-         ini tidak lagi menyentuh hero, jadi 64px-nya aman.
+         CsiHero (`pt-3` = 12px di semua lebar; ia yang benar-benar
+         bersebelahan dengan kantor 3D), dan Manifesto menyusul di bawahnya
+         (lihat lib/roomContent). Berkas ini tidak lagi menyentuh hero, jadi
+         64px-nya aman.
          Pasangannya: tinggi hero di Hero.tsx. */
-      className="relative overflow-hidden bg-background px-6 pb-24 pt-16 sm:px-10 sm:pb-32 sm:pt-20"
+      className="relative overflow-hidden bg-background px-3 pb-24 pt-16 sm:pb-32 sm:pt-20"
     >
       {/* Particle field — absolute behind text */}
       <ManifestoField progress={scrollYProgress} />

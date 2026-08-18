@@ -20,7 +20,7 @@ export default function Industries() {
       id="industries"
       className="relative z-10 overflow-x-clip border-y border-white/[0.08] bg-white/[0.02]"
     >
-      <div className="px-6 py-24 sm:px-10 sm:py-32">
+      <div className="px-3 py-24 sm:py-32">
         <div className={cn("grid gap-10", isDesktop && "lg:grid-cols-[20rem_1fr]")}>
           <div className="lg:sticky lg:top-32 lg:self-start">
             <motion.p

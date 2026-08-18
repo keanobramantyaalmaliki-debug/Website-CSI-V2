@@ -1,12 +1,9 @@
 "use client";
 
-import { motion } from "motion/react";
 import DeploymentCard, { type DeploymentData } from "@/components/sections/DeploymentCard";
 import DeploymentCta from "@/components/sections/DeploymentCta";
 import PhysicsHeading from "@/components/motion/PhysicsHeading";
 import { FadeUpList } from "@/components/motion/FadeUp";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 const DEPLOYMENTS: DeploymentData[] = [
   {
@@ -45,27 +42,22 @@ export default function Deployments() {
   return (
     <section
       id="deployments"
-      className="relative overflow-x-clip px-6 py-24 sm:px-10 sm:py-32"
-      style={{
-        background:
-          "linear-gradient(to bottom, rgba(9,9,11,0.4) 0%, transparent 100%)",
-      }}
+      /* ⚠️ TANPA latar sendiri, dan itu disengaja (18 Agu). Di sini dulu ada
+         `linear-gradient(to bottom, rgba(9,9,11,0.4), transparent)` — wash
+         gelap setinggi section yang pekat di puncaknya. Selama CsiHero masih
+         memakai `bg-background` yang opak, wash itu tersamar; begitu latar
+         CsiHero dicabut, ia terbaca sebagai BALOK gelap dengan garis potong
+         tegas persis di perbatasan dua section. Latar halaman (body +
+         `.ambient-grid`) sudah cukup — jangan pasang wash di sini lagi. */
+      className="relative overflow-x-clip px-3 py-24 sm:py-32"
     >
-      {/* T6: eyebrow */}
-      <motion.p
-        className="relative text-xs tracking-widest text-zinc-400 uppercase"
-        initial={{ opacity: 0, x: -8 }}
-        whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, ease: EASE }}
-      >
-        Deployments
-      </motion.p>
+      {/* T1: physics heading — click to fall, leave/release to spring back.
 
-      {/* T1: physics heading — click to fall, leave/release to spring back */}
+          Eyebrow "DEPLOYMENTS" DIHAPUS 18 Agu — judulnya sudah menyebut isinya
+          sendiri, dan labelnya cuma mengulang nama section. */}
       <PhysicsHeading
         text="Built for real-world environments where decisions matter."
-        className="relative mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl"
+        className="relative max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl"
       />
 
       {/* Deployment cards with stagger entrance */}

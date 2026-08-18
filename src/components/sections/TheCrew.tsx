@@ -139,7 +139,7 @@ export default function TheCrew() {
   const spotlightOn = activeName !== null;
 
   return (
-    <section id="crew" className="px-6 py-24 sm:px-10">
+    <section id="crew" className="px-3 py-24">
       {/* Tirai sorot — MENUTUPI SELURUH VIEWPORT, bukan cuma seksi ini, jadi
           hover satu nama menggelapkan seisi halaman.
 

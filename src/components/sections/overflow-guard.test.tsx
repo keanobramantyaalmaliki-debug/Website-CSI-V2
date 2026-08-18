@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
 import Industries from "./Industries";
-import LivingArchitecture from "./LivingArchitecture";
 import Deployments from "./Deployments";
 import Process from "./Process";
 import Contact from "./Contact";
@@ -15,7 +14,7 @@ class IntersectionObserverStub {
 vi.stubGlobal("IntersectionObserver", IntersectionObserverStub);
 
 // jsdom lacks ResizeObserver; @react-three/fiber's Canvas needs it to mount —
-// Contact menampung <InquiryLaptop/>. Sama dengan CsiParticleField.test.tsx.
+// Contact menampung <InquiryLaptop/>.
 class ResizeObserverStub {
   observe() {}
   unobserve() {}
@@ -28,7 +27,7 @@ vi.mock("@/lib/smoothScroll", () => ({
 }));
 
 /**
- * Regression guard for the mobile horizontal-overflow fix: these five
+ * Regression guard for the mobile horizontal-overflow fix: these four
  * sections host elements wide enough to overflow a 360px viewport (sticky
  * columns, the physics heading). Each section root must clip the x-axis
  * locally so any residual overflow never escapes to the document —
@@ -37,7 +36,6 @@ vi.mock("@/lib/smoothScroll", () => ({
  */
 const SECTIONS: { name: string; id: string; Component: () => React.JSX.Element }[] = [
   { name: "Industries", id: "industries", Component: Industries },
-  { name: "LivingArchitecture", id: "living-architecture", Component: LivingArchitecture },
   { name: "Deployments", id: "deployments", Component: Deployments },
   { name: "Process", id: "process", Component: Process },
   { name: "Contact", id: "contact", Component: Contact },

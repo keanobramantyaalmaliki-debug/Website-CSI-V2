@@ -118,7 +118,7 @@ function GalleryColumn({
 
       {/* Desc + core tag stay mounted (never conditionally rendered) so AT
           and reduced-motion users always get the payload — only opacity and
-          offset animate, matching ArchitectureGrid's reveal pattern. */}
+          offset animate — never conditionally rendered. */}
       <div
         className="absolute inset-x-0 bottom-0 p-4 sm:p-6"
         style={{
@@ -144,7 +144,7 @@ function GalleryColumn({
  * (vertical name), the hovered/focused one squeezes the rest open and fades
  * in an image + description overlay. Every description stays mounted at all
  * times (opacity/offset only) so it never reflows and stays readable by AT
- * and reduced-motion users, mirroring ArchitectureGrid's NodeCell.
+ * and reduced-motion users.
  */
 export default function IndustriesGallery({ industries }: { industries: Industry[] }) {
   const [active, setActive] = useState<number | null>(null);

@@ -158,7 +158,7 @@ export default function CaseStudySpotlight() {
   return (
     <section
       id="case-spotlight"
-      className="relative z-10 border-t border-white/[0.06] px-6 py-20 sm:px-10 sm:py-28"
+      className="relative z-10 border-t border-white/[0.06] px-3 py-20 sm:py-28"
     >
       {/* Section header */}
       <div className="mb-12">

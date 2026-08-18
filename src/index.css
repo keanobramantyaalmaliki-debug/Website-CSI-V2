@@ -8,6 +8,16 @@
 
   --font-geist-sans: "Geist Sans", sans-serif;
   --font-geist-mono: "Geist Mono", monospace;
+  /* Display — hanya untuk wordmark "COGNITI.ID". Bukan font judul umum;
+     heading biasa tetap memakai --font-sans. */
+  --font-archivo: "Archivo Variable", sans-serif;
+
+  /* Tinggi navbar (fixed) — dipakai oleh <Contact/> untuk memarkir wordmark
+     tepat di bawah bilah saat halaman mentok bawah. Navbar sendiri TIDAK
+     menyetel tingginya dari sini (tingginya lahir dari isi: py-2.5 + logo),
+     jadi angka ini adalah cerminan, bukan sumber. Kalau padding/ukuran logo
+     di Navbar.tsx berubah, angka ini ikut diperbarui. */
+  --nav-h: 44px;
 
   /* Surface elevation scale — depth via lifted neutrals, not new hues. */
   --surface-0: #14161b;
@@ -62,18 +72,44 @@
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-archivo);
 
   --ease-out: var(--ease-out);
 }
 
 html,
 body {
-  height: 100%;
   max-width: 100%;
   /* clip, NOT hidden — hidden would create a new scroll container on every
-     sticky ancestor and break position: sticky (Hero, Industries,
-     LivingArchitecture). clip stops sideways drag without that side effect. */
+     sticky ancestor and break position: sticky (Hero, Industries, Process).
+     clip stops sideways drag without that side effect. */
   overflow-x: clip;
+}
+
+/* ⚠️ JANGAN kembalikan `height: 100%` ke <html> atau <body> (juga lewat class
+   `h-full`/`min-h-full` di index.html — dua-duanya pernah ada di sana).
+
+   Alasannya bukan tata letak, melainkan SCROLL. Lenis menyimpan tinggi konten
+   di cache dan memperbaruinya lewat `ResizeObserver` yang mengamati
+   <html>. ResizeObserver melaporkan KOTAK elemennya, bukan `scrollHeight`-nya
+   — dan `height: 100%` memaku kotak itu setinggi viewport apa pun isinya.
+   Jadi observer-nya menyala sekali saat mount lalu DIAM SELAMANYA, dan cache
+   Lenis membeku di tinggi halaman yang kebetulan terukur pertama kali.
+
+   Akibatnya (terlacak 18 Agu 2026): gulir di Office sampai ~2000px lalu pindah
+   ke Lounge → Lounge berhenti mentok di 3005px padahal isinya 5833px. Bisa
+   digulir ke ATAS, tidak bisa ke BAWAH — karena Lenis meng-clamp targetScroll
+   ke `limit` milik halaman SEBELUMNYA. Tidak ada error apa pun; yang terlihat
+   cuma halaman yang seolah habis di tengah.
+
+   Dengan tinggi `auto`, kotak <html> ikut tumbuh bersama konten, observer-nya
+   menyala tiap ganti ruangan, dan `limit` selalu benar tanpa kode tambahan.
+
+   `min-height: 100dvh` di <body> menggantikan yang hilang: latar tetap
+   menutupi layar saat konten pendek, tapi `min-height` MEMBIARKAN kotaknya
+   tumbuh — beda dengan `height` yang memakukannya. */
+body {
+  min-height: 100dvh;
 }
 
 html:not(.lenis) {

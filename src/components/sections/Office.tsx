@@ -107,11 +107,13 @@ export default function Office() {
   return (
     <section
       id="office-services"
-      /* Section pertama ruangan Office = yang menempel ke hero 3D. Di HP
-         `pt-6` menutup celah antara kantor dan judul (aturan padding-tipis
-         untuk section pertama tiap ruangan, lihat Manifesto.tsx); ≥768px
-         kembali ke 128px seperti `sm:py-32` semula. */
-      className="relative z-10 px-6 pt-6 pb-24 sm:px-10 sm:pb-32 md:pt-32"
+      /* Section pertama ruangan Office = yang menempel ke hero 3D, jadi
+         padding-atasnya 12px (`pt-3`) di semua lebar — sama dengan gutter
+         `px-3` dan sama dengan tiga ruangan lain (aturan padding-tipis untuk
+         section pertama tiap ruangan, lihat CsiHero.tsx). Dulu `pt-6` di HP
+         dan `md:pt-32` (128px) di desktop; 128px itu terbaca mengambang jauh
+         dari kantor, dicabut 18 Agu. */
+      className="relative z-10 px-3 pt-3 pb-24 sm:pb-32"
     >
       <div className="grid gap-12 lg:grid-cols-[1fr_auto] lg:items-end lg:gap-8">
         <div>

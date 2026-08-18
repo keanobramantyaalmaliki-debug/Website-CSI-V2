@@ -4,6 +4,13 @@
  *   node scripts/shoot-contact-sequence.mjs [url]
  *   → /tmp/csi-contact-seq/open-000.png … close-1600.png
  *
+ * Viewport-nya bisa ditukar lewat env — jalur HP (lembar datar + dorongan
+ * kamera) hanya hidup di bawah 768px, jadi bawaan desktop tidak akan pernah
+ * memotretnya:
+ *
+ *   CSI_W=390 CSI_H=844 CSI_OUT=/tmp/csi-contact-seq-mobile \
+ *     node scripts/shoot-contact-sequence.mjs
+ *
  * Pendamping probe-contact-transition.mjs: probe itu mengukur geometri, ini
  * memperlihatkan akibatnya. Dipakai untuk memeriksa hal yang tidak muncul di
  * angka — misalnya form <Html> yang tergambar menembus punggung lid selama
@@ -18,7 +25,12 @@ const BROWSER =
   "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser";
 const PORT = 9244;
 const URL = process.argv[2] ?? "http://localhost:3000/";
-const OUT = "/tmp/csi-contact-seq";
+const OUT = process.env.CSI_OUT ?? "/tmp/csi-contact-seq";
+const W = Number(process.env.CSI_W ?? 1440);
+const H = Number(process.env.CSI_H ?? 900);
+/* dpr 2 kecuali diminta lain: di dpr 1 GPU-nya mentok vsync dan kesimpulan
+   performanya salah — lihat catatan di measure-frames.mjs. */
+const DPR = Number(process.env.CSI_DPR ?? 2);
 
 mkdirSync(OUT, { recursive: true });
 
@@ -31,7 +43,7 @@ const browser = spawn(
     "--enable-gpu",
     "--no-first-run",
     "--user-data-dir=/tmp/csi-seq-profile",
-    "--window-size=1440,900",
+    `--window-size=${W},${H}`,
     URL,
   ],
   { stdio: "ignore" },
@@ -83,6 +95,15 @@ async function main() {
 
   await send("Page.enable");
   await send("Runtime.enable");
+  /* `--window-size` saja tidak cukup: `innerWidth` ikut chrome jendela, dan
+     gerbang `narrow` (<768px) di Contact.tsx membacanya lewat matchMedia. Override
+     ini yang membuat halaman benar-benar percaya ia di layar sebesar itu. */
+  await send("Emulation.setDeviceMetricsOverride", {
+    width: W,
+    height: H,
+    deviceScaleFactor: DPR,
+    mobile: W < 768,
+  });
   await sleep(12000);
 
   const evaluate = async (expression) => {
@@ -108,8 +129,14 @@ async function main() {
   );
   await sleep(2000);
 
-  const shoot = async (name) => {
+  /* ⚠️ Namanya dicap SETELAH potretnya kembali, bukan sebelum. `captureScreenshot`
+     bisa tertahan 400–500 ms saat GPU-nya sibuk, dan kalau capnya diambil di
+     awal, berkas `open-0137.png` berisi frame ~0,6 dtk — pernah membuat
+     kesimpulan "lid-nya menutup dalam 137 ms" yang sepenuhnya salah 18 Agu.
+     Cap sesudah = batas ATAS, dan itu arah kesalahan yang aman. */
+  const shoot = async (label) => {
     const { data } = await send("Page.captureScreenshot", { format: "png" });
+    const name = typeof label === "function" ? label() : label;
     writeFileSync(`${OUT}/${name}.png`, Buffer.from(data, "base64"));
   };
 
@@ -117,7 +144,7 @@ async function main() {
   await evaluate(`document.querySelector('[data-inquiry-toggle]').click(), true`);
   const t0 = Date.now();
   for (let i = 0; i < 14; i++) {
-    await shoot(`open-${String(Date.now() - t0).padStart(4, "0")}`);
+    await shoot(() => `open-${String(Date.now() - t0).padStart(4, "0")}`);
   }
   await sleep(2000);
   await shoot("open-settled");
@@ -125,7 +152,7 @@ async function main() {
   await evaluate(`document.querySelector('[data-inquiry-close]').click(), true`);
   const t1 = Date.now();
   for (let i = 0; i < 16; i++) {
-    await shoot(`close-${String(Date.now() - t1).padStart(4, "0")}`);
+    await shoot(() => `close-${String(Date.now() - t1).padStart(4, "0")}`);
   }
   await sleep(2000);
   await shoot("close-settled");

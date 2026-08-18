@@ -1,16 +1,9 @@
 /**
  * Original line-art glyphs, one per Process step. Abstract rather than
- * photographic — same visual language reused in NodeGlyphs so Process and
- * LivingArchitecture read as one system, deliberately distinct from
- * Deployments (which keeps photos as real-world proof).
- *
- * Because the two sections share this glyph language AND sit back-to-back
- * in roomContent.tsx, LivingArchitecture deliberately does NOT reuse
- * Process's layout (full-width heading above, glyph panel sticky on the
- * right). It flips to a sticky heading column on the left with dense,
- * single-line rows on the right instead — otherwise two adjacent sections
- * with near-identical glyphs and near-identical layout would read as a
- * repeat, not a system. Do not "normalize" this back to Process's pattern.
+ * photographic, deliberately distinct from Deployments (which keeps photos
+ * as real-world proof). Sampai 18 Agu 2026 bahasa visual ini dipakai berdua
+ * dengan NodeGlyphs di LivingArchitecture; section itu sudah dicabut, jadi
+ * Process kini satu-satunya pemakainya (glyphMotion.ts tetap dibagi).
  *
  * Each glyph is a controlled entry-reveal: the parent decides `play` (scroll
  * into view once on mobile, active sticky-panel step on desktop) and the

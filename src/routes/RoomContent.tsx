@@ -16,7 +16,10 @@ import { ROOM_CONTENT } from "@/lib/roomContent";
  * DeploymentsField). Diperiksa ulang 3 Agu 2026: `DeploymentsField` sudah tidak
  * diimpor siapa pun, dan dua sisanya cuma ada di section LOUNGE — jadi
  * remount-nya terjadi saat masuk/keluar Lounge, bukan di setiap perpindahan.
- * Angka "tiga" itu ikut membesarkan ongkos yang dikira ada di sini.
+ * Angka "tiga" itu ikut membesarkan ongkos yang dikira ada di sini. Per 18 Agu
+ * 2026 ongkosnya NOL: CsiParticleField dihapus dan section Manifesto dicabut
+ * dari Lounge, jadi tidak ada lagi konteks WebGL kecil yang ikut remount saat
+ * berganti ruangan.
  *
  * Asumsi itu gugur beberapa jam kemudian, ketika Office/Meeting/Function diisi
  * konten penuh. Dua akibatnya nyata dan keduanya terlaporkan:

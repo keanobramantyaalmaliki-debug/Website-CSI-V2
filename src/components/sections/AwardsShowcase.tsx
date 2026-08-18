@@ -245,7 +245,16 @@ export default function AwardsShowcase() {
           while insetting the first/last card back to the content column.
           `scroll-px-8` is what makes that inset survive: the snapport otherwise
           starts at the scrollport edge, so mandatory snap scrolls the left
-          padding straight out of view and card #1 sits flush on the border. */}
+          padding straight out of view and card #1 sits flush on the border.
+
+          ⚠️ The three 8s are ONE number, and it is the `p-8` on the panel
+          wrapper right above — NOT the section gutter. Tried lowering them to 3
+          on 18 Aug alongside the site-wide `px-3` gutter change and measured the
+          result: the track started 33px in (12 gutter + 32 panel padding − 12
+          margin) and the panel's `overflow-hidden` clipped the bleed, so cards
+          no longer scrolled to the panel edge. If the panel padding changes
+          (`p-8 sm:p-10`), these move with it; the section gutter never touches
+          them. */}
       <FadeUpList
         ref={trackRef}
         tag="div"

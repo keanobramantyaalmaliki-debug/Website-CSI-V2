@@ -130,6 +130,36 @@ function overlayDistance(fovDeg: number, aspect: number) {
 }
 
 /**
+ * Pembingkaian DORONGAN — jalur layar sempit, tempat form TIDAK menempel di
+ * layar 3D melainkan mendarat sebagai lembar DOM datar.
+ *
+ * Bedanya dengan `overlayDistance` cuma satu, tapi itu yang menentukan: **pagar
+ * lebarnya dibuang.** Pagar itu ada supaya seluruh muka lid tetap muat
+ * kiri-kanan — wajib kalau form-nya harus TERBACA di layar itu, sia-sia kalau
+ * layarnya cuma dilewati.
+ *
+ * Dan justru pagar itu yang mengikat di sini. Di kotak laptop HP (~366×520,
+ * aspect 0,70) `overlayDistance` memilih kendala lebar dan memberi ~0,85,
+ * sementara rig halamannya sudah berdiri di ~0,95 — dorongannya cuma ~10%, tidak
+ * terbaca sebagai gerakan sama sekali. Dikunci ke TINGGI saja, targetnya jatuh
+ * ke ~0,40: 2,4× lebih dekat, di atas ~1,6× yang sudah didapat gratis dari
+ * kotak-ke-layar-penuh (lihat `framed` di useFrame).
+ *
+ * Konsekuensinya lid terpotong kiri-kanan, dan itu memang tujuannya: layar
+ * laptop LANSKAP (1,5:1) di viewport POTRET (~0,43:1) tidak bisa didekati tanpa
+ * memotong — tepi yang keluar bingkai justru yang membuat "masuk" terbaca.
+ *
+ * ⚠️ Ini bukan pose diam yang harus tahan dipandangi. Lembar form sudah legap
+ * penuh jauh sebelum t=1 (lihat SHEET_FADE di Contact.tsx), jadi yang perlu
+ * benar cuma bagian AWAL lintasannya.
+ */
+const PUSH_FILL_H = 0.85;
+
+function pushDistance(fovDeg: number) {
+  return FACE_H / PUSH_FILL_H / (2 * Math.tan((fovDeg * Math.PI) / 180 / 2));
+}
+
+/**
  * Angka melayang, diturunkan dari pmndrs lalu diskalakan.
  *
  * Di sana laptopnya ~8 satuan dan kameranya 30 satuan jauhnya — ayunan ±14°
@@ -224,6 +254,23 @@ const SCRATCH_CENTER = new Vector3();
 const SCRATCH_Q = new Quaternion();
 
 /**
+ * Kotak laptop di LAYAR, sebagai pecahan kotak canvas (0–1, kiri-atas).
+ *
+ * Dipakai <Contact/> untuk menciutkan tombol "buka form" dari seluruh kotak
+ * jadi seukuran laptopnya sendiri. Pecahan, bukan piksel, supaya nilainya tetap
+ * benar dipasang sebagai `left/top/width/height` persen — dan supaya tidak ada
+ * yang perlu ikut memikirkan dpr.
+ */
+export type HitRect = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+const SCRATCH_VERTEX = new Vector3();
+
+/**
  * Ambang munculnya form, dinyatakan sebagai seberapa jauh layar sudah BERPALING
  * ke kamera — `cos` sudut antara normal layar dan arah ke kamera.
  *
@@ -296,6 +343,7 @@ function Laptop({
   floating,
   rig,
   screen,
+  onHitbox,
 }: {
   progress: MotionValue<number>;
   zoom: MotionValue<number>;
@@ -313,6 +361,8 @@ function Laptop({
    *  canvas tanpa uji kedalaman, jadi kalau dibiarkan terpasang saat laptop
    *  tertutup, form-nya melayang menembus punggung lid. */
   screen?: ReactNode;
+  /** Dipanggil setiap kali kotak laptop di layar berubah. Lihat HitRect. */
+  onHitbox?: (rect: HitRect) => void;
 }) {
   const { scene } = useGLTF(MODEL_URL);
   const invalidate = useThree((s) => s.invalidate);
@@ -473,11 +523,17 @@ function Laptop({
 
     /* Tujuan dolly dihitung dari aspek canvas SEBENARNYA, bukan `fh` yang
        sedang di-lerp: yang dibingkai pas adalah pose AKHIR, dan di t=1 bingkai
-       off-axis-nya sudah identitas. */
-    const distance = overlayDistance(
-      rig.fov,
-      size.height > 0 ? size.width / size.height : 1,
-    );
+       off-axis-nya sudah identitas.
+
+       `push` tidak memakai aspect sama sekali — ia dikunci ke tinggi dan memang
+       BOLEH memotong kiri-kanan. Lihat pushDistance. */
+    const distance =
+      rig.fill === "push"
+        ? pushDistance(rig.fov)
+        : overlayDistance(
+            rig.fov,
+            size.height > 0 ? size.width / size.height : 1,
+          );
 
     const toX = openPose.center.x + openPose.normal.x * distance;
     const toY = openPose.center.y + openPose.normal.y * distance;
@@ -528,6 +584,95 @@ function Laptop({
     apply(progress.get());
     return progress.on("change", apply);
   }, [lid, progress, invalidate]);
+
+  /**
+   * Kotak laptop TERTUTUP di layar — untuk menciutkan tombol "buka form" di
+   * <Contact/> jadi seukuran laptopnya, bukan sekotak canvas.
+   *
+   * Dihitung, bukan ditulis tangan, karena angkanya beda per konfigurasi: rig
+   * sempit dan rig lebar memandang dari tempat yang berbeda, dan `fov` three.js
+   * VERTIKAL sehingga lebar terproyeksinya ikut berubah tiap kali aspect kotak
+   * berubah. Satu pasang angka tetap akan meleset di hampir semua ukuran layar.
+   *
+   * ⚠️ Kameranya kamera SEMENTARA, bukan `state.camera`. Kamera hidup baru
+   * dibidikkan (`lookAt`) di dalam `useFrame`, jadi pada frame pertama
+   * orientasinya masih bawaan — mengukur dari sana memberi kotak yang salah
+   * sekali, tepat pada saat satu-satunya pengukuran terjadi. Membangun kamera
+   * sendiri dari `rig` membuat hasilnya tidak bergantung pada urutan itu.
+   *
+   * Yang diukur pose TERTUTUP & TEGAK: engsel dipaksa ke LID_CLOSED dan
+   * transform melayang `root` dinolkan sepanjang pengukuran, lalu keduanya
+   * dikembalikan. Tanpa itu hasilnya ikut bergoyang mengikuti animasi — padahal
+   * tombolnya justru cuma ada saat laptop diam & tertutup. Semuanya sinkron di
+   * dalam satu efek, jadi tidak ada frame yang sempat melihat pose sementara
+   * ini.
+   */
+  const size = useThree((s) => s.size);
+  useEffect(() => {
+    if (!onHitbox || !lid || size.width <= 0 || size.height <= 0) return;
+
+    const lidX = lid.rotation.x;
+    const rot = root.rotation.clone();
+    const pos = root.position.clone();
+    lid.rotation.x = LID_CLOSED;
+    root.rotation.set(0, 0, 0);
+    root.position.set(0, 0, 0);
+    root.updateMatrixWorld(true);
+
+    const cam = new PerspectiveCamera(
+      rig.fov,
+      size.width / size.height,
+      0.1,
+      100,
+    );
+    cam.position.set(...rig.position);
+    cam.lookAt(...rig.lookAt);
+    cam.updateMatrixWorld();
+
+    /* Titik demi titik, bukan delapan sudut sebuah Box3. Dicoba dulu dengan
+       Box3 dan hasilnya KEBESARAN: AABB dunia laptop tertutup itu balok, dan
+       sudut-sudut balok yang lebih DEKAT ke kamera terproyeksi lebih melebar
+       daripada siluet aslinya — kotaknya melewati tepi laptop sekitar 100px di
+       1440px, persis di bawah dan di atasnya. Menyusuri simpulnya memberi
+       siluet yang sebenarnya. Ongkosnya sekali, dan modelnya cuma 680 tris. */
+    let x0 = Infinity;
+    let y0 = Infinity;
+    let x1 = -Infinity;
+    let y1 = -Infinity;
+    root.traverse((o) => {
+      if (!(o instanceof Mesh) || !o.visible) return;
+      const attr = o.geometry?.attributes?.position;
+      if (!attr) return;
+      for (let i = 0; i < attr.count; i++) {
+        SCRATCH_VERTEX.fromBufferAttribute(attr, i)
+          .applyMatrix4(o.matrixWorld)
+          .project(cam);
+        /* NDC → pecahan kotak: x −1…1 (kiri→kanan), y 1…−1 (atas→bawah). */
+        const fx = (SCRATCH_VERTEX.x + 1) / 2;
+        const fy = (1 - SCRATCH_VERTEX.y) / 2;
+        if (fx < x0) x0 = fx;
+        if (fx > x1) x1 = fx;
+        if (fy < y0) y0 = fy;
+        if (fy > y1) y1 = fy;
+      }
+    });
+
+    lid.rotation.x = lidX;
+    root.rotation.copy(rot);
+    root.position.copy(pos);
+    root.updateMatrixWorld(true);
+
+    if (!(x1 > x0 && y1 > y0)) return;
+
+    /* Dijepit ke kotaknya: di layar sangat sempit sudut laptop bisa keluar
+       sedikit, dan tombol yang menonjol keluar canvas akan menangkap klik di
+       tempat yang tidak ada laptopnya. */
+    x0 = MathUtils.clamp(x0, 0, 1);
+    y0 = MathUtils.clamp(y0, 0, 1);
+    x1 = MathUtils.clamp(x1, 0, 1);
+    y1 = MathUtils.clamp(y1, 0, 1);
+    onHitbox({ left: x0, top: y0, width: x1 - x0, height: y1 - y0 });
+  }, [onHitbox, root, lid, rig, size.width, size.height]);
 
   /**
    * ⚠️ WAJIB, dan gampang terlupa: frameloop-nya "demand", jadi useFrame di atas
@@ -643,9 +788,21 @@ function Laptop({
  * ⚠️ Rig sempit dihitung untuk SELURUH rentang aspect kotaknya sekaligus, bukan
  * satu angka. Versi pertamanya disetel pada 0,95 dan muat di situ, tapi kotak
  * 342×439 (iPhone 390px, px-6) beraspect 0,78 — di sana laptopnya keluar tepi
- * kiri dan kanan (x sampai ±1,05). Rentang nyatanya 0,78 (390×844) sampai 1,38
- * (767×1024), diturunkan dari `h-[52vh] max-h-[520px] min-h-[280px]` + `px-6`;
- * kalau kelas itu berubah, hitung ulang rentangnya dulu.
+ * kiri dan kanan (x sampai ±1,05). Rentangnya diturunkan dari
+ * `h-full max-h-[520px] min-h-[280px]` (di dalam pelahap `flex-1` ekor
+ * halaman) + padding kiri-kanan section; kalau kelas itu berubah, hitung ulang
+ * rentangnya dulu. Batas 520px itu yang menahan ujung ATAS rentangnya — tanpa
+ * itu kotaknya ikut setinggi viewport dan laptopnya membengkak.
+ *
+ * Padding section turun `px-6 sm:px-10` → `px-3` (18 Agu), jadi kotaknya
+ * MELEBAR 24–56px dan rentang aspect naik: 0,83 (390×844 → 366×439) sampai
+ * 1,43 (767×1024 → 743×520). Rig-nya SENGAJA tidak diutak-atik, dan itu aman
+ * dengan alasan yang bisa diperiksa, bukan karena kelihatan baik-baik saja:
+ * `fov` three.js vertikal, jadi aspect cuma muncul sebagai PEMBAGI di NDC-x
+ * dan tidak menyentuh NDC-y sama sekali. Aspect naik ⇒ |x| mengecil ⇒ menjauh
+ * dari tepi. Batas yang dulu mengikat (x ±0,88 di aspect terendah) sekarang
+ * lebih longgar. Yang harus diperiksa ulang kalau paddingnya justru DINAIKKAN
+ * lagi adalah ujung BAWAH rentang itu — itu sisi yang memotong.
  *
  * Di rentang itu X yang mengikat (±0,88) dan Y longgar, jadi lookAt.y dipilih
  * untuk MENENGAHKAN — 0,08 memberi y[−0,61 … 0,61], pusat tepat 0.
@@ -654,12 +811,32 @@ type CameraRig = {
   position: [number, number, number];
   fov: number;
   lookAt: [number, number, number];
+  /**
+   * Pembingkaian TUJUAN dolly — `fit` memuat seluruh muka lid, `push` melewatinya.
+   *
+   * Dibawa di rig, bukan disimpulkan dari ada-tidaknya `screen`, dan itu bukan
+   * gaya penulisan: `screen` GUGUR di awal penutupan (`overlay` jadi false
+   * seketika), jadi menyimpulkannya dari situ akan menukar target di tengah
+   * animasi selagi t masih ~1 — kameranya melompat. `narrow` tidak berubah
+   * selama animasi berjalan.
+   */
+  fill: "fit" | "push";
 };
 
 function cameraFor(narrow: boolean): CameraRig {
   return narrow
-    ? { position: [0.243, 0.304, 0.882], fov: 34, lookAt: [0, 0.08, -0.01] }
-    : { position: [0.369, 0.298, 0.625], fov: 34, lookAt: [0, 0.07, -0.01] };
+    ? {
+        position: [0.243, 0.304, 0.882],
+        fov: 34,
+        lookAt: [0, 0.08, -0.01],
+        fill: "push",
+      }
+    : {
+        position: [0.369, 0.298, 0.625],
+        fov: 34,
+        lookAt: [0, 0.07, -0.01],
+        fill: "fit",
+      };
 }
 
 export default function InquiryLaptop({
@@ -671,6 +848,7 @@ export default function InquiryLaptop({
   floating = false,
   className,
   screen,
+  onHitbox,
 }: {
   /** Engsel. 0 = tertutup, 1 = terbuka. Sumbernya bebas — sekarang pegas yang
    *  dipicu klik; dulu scrollYProgress. Rig ini tidak peduli. */
@@ -691,6 +869,10 @@ export default function InquiryLaptop({
   className?: string;
   /** DOM yang ditempel di layar (form inquiry). Kosongkan saat laptop tertutup. */
   screen?: ReactNode;
+  /** Kotak laptop di layar, sebagai pecahan kotak canvas — lihat HitRect.
+   *  ⚠️ Harus REFERENSI STABIL (useCallback): ia jadi dependensi efek pengukur,
+   *  jadi fungsi baru tiap render = mengukur ulang tiap render. */
+  onHitbox?: (rect: HitRect) => void;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const narrow = useNarrowViewport();
@@ -705,7 +887,7 @@ export default function InquiryLaptop({
    * berada di ukuran dan tempat yang bukan tempatnya:
    *
    *   membuka  → pembungkus sudah `fixed inset-0`, canvas masih sebesar kotak
-   *              52vh dan ikut ditengahkan flex → laptop melompat ke atas dan
+   *              kotak seukuran dok dan ikut ditengahkan flex → laptop melompat ke atas dan
    *              mengecil, lalu balik lagi;
    *   menutup  → pembungkus sudah kembali ke kotak, canvas masih setinggi layar
    *              → laptop tergambar ~2× terlalu besar dan ~180 px terlalu rendah,
@@ -798,12 +980,20 @@ export default function InquiryLaptop({
     /* `aria-hidden` hanya selama laptopnya benda hias. Begitu form-nya menempel
        di layar, isinya DOM sungguhan yang harus terbaca pembaca layar — menutupi
        seluruh pohon ini akan membuat form-nya lenyap dari accessibility tree. */
-    <div ref={wrapRef} className={className} aria-hidden={screen ? undefined : "true"}>
+    <div
+      ref={wrapRef}
+      className={className}
+      aria-hidden={screen ? undefined : "true"}
+    >
       <Canvas
         frameloop={active ? "always" : "demand"}
         dpr={[1, 1.5]}
         camera={camera}
-        gl={{ antialias: false, powerPreference: "high-performance", alpha: true }}
+        gl={{
+          antialias: false,
+          powerPreference: "high-performance",
+          alpha: true,
+        }}
         style={{ width: "100%", height: "100%" }}
       >
         <PublishStore into={storeRef} />
@@ -820,6 +1010,7 @@ export default function InquiryLaptop({
             floating={active}
             rig={rig}
             screen={screen}
+            onHitbox={onHitbox}
           />
         </Suspense>
       </Canvas>

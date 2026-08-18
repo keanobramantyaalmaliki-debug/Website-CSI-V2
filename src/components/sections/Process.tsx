@@ -80,7 +80,7 @@ export default function Process() {
   const reduced = !!useReducedMotion();
 
   return (
-    <section id="process" className="overflow-x-clip px-6 py-24 sm:px-10 sm:py-32">
+    <section id="process" className="overflow-x-clip px-3 py-24 sm:py-32">
       {/* T6 — eyebrow */}
       <motion.p
         className="text-xs tracking-widest text-zinc-400 uppercase"

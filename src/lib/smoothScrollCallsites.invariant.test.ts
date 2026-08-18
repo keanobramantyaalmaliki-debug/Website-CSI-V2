@@ -20,8 +20,8 @@
  * yang butuh browser nyata untuk dibuktikan.
  */
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SRC = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -35,6 +35,16 @@ const GUARDED_FILES = [
 
 function stripComments(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+}
+
+/** Semua sumber di src/, tanpa berkas test — dipakai penjaga terakhir di bawah. */
+function sourceFiles(dir = SRC): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) return sourceFiles(full);
+    if (!/\.tsx?$/.test(entry.name) || /\.test\.tsx?$/.test(entry.name)) return [];
+    return [relative(SRC, full)];
+  });
 }
 
 describe("pemanggil scroll programatik lewat smoothScroll.ts", () => {
@@ -51,6 +61,41 @@ describe("pemanggil scroll programatik lewat smoothScroll.ts", () => {
         offenders.map((f) => `  • ${f}`).join("\n") +
         "\n\nScroll mentah berjalan di luar rAF Lenis dan berebut posisi " +
         "dengannya di frame yang sama.\n",
+    ).toEqual([]);
+  });
+
+  /**
+   * Kunci gulir lewat setScrollLocked(), JANGAN `body.style.overflow`.
+   *
+   * Navbar sempat punya versi sendiri: `document.body.style.overflow =
+   * "hidden"` selama menu seluler terbuka. Kelihatan setara, dua-duanya salah:
+   *
+   *   • TIDAK mengunci apa pun. <html> punya `overflow-x: clip` (index.css),
+   *     jadi yang diwariskan ke viewport adalah nilai <html>, bukan <body>.
+   *     Terukur 18 Agu: sapuan jari selagi menu terbuka tetap menggeser
+   *     halaman 2200 → 2803.
+   *   • MELOMPATKAN halaman ke atas. `html, body { height: 100% }` bikin <body>
+   *     setinggi satu layar sementara isinya 11.419px; `overflow: hidden`
+   *     memotong luapannya, scrollHeight dokumen runtuh ke 852px, dan browser
+   *     menjepit posisi gulir ke 0. Itulah bug "buka burger di tengah halaman,
+   *     halaman balik ke 3D".
+   *
+   * `setScrollLocked` mengunci <html> — elemen yang benar-benar menggulir —
+   * plus `lenis.stop()`, dan posisi gulirnya bertahan.
+   */
+  it("tidak ada berkas src yang mengunci gulir lewat body.style.overflow", () => {
+    const offenders = sourceFiles().filter((path) => {
+      const code = stripComments(readFileSync(join(SRC, path), "utf8"));
+      return /document\.body\.style\.overflow/.test(code);
+    });
+
+    expect(
+      offenders,
+      "Berkas berikut mengunci gulir lewat <body>, bukan setScrollLocked() " +
+        "di src/lib/smoothScroll.ts:\n\n" +
+        offenders.map((f) => `  • ${f}`).join("\n") +
+        "\n\n<body> bukan elemen yang menggulir di situs ini: kuncinya tidak " +
+        "berlaku, dan efek sampingnya melompatkan halaman ke paling atas.\n",
     ).toEqual([]);
   });
 

@@ -46,7 +46,7 @@ const ROLES: CareerRole[] = [
 
 export default function Careers() {
   return (
-    <section id="careers" className="px-6 py-24 sm:px-10 sm:py-32">
+    <section id="careers" className="px-3 py-24 sm:py-32">
       {/* T6 — eyebrow */}
       <motion.p
         className="text-xs tracking-widest text-zinc-400 uppercase"

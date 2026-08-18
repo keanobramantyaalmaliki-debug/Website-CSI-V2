@@ -67,11 +67,13 @@ const START_POS = VIEWS[START_ROOM].pos.toArray() as [number, number, number];
  * dengan menyebut berkas yang belum patuh. Selama sapuan reveal & minigame
  * billiard masih ada, hemat GPU-nya kecil dan risikonya besar.
  *
- * Catatan: Canvas kecil di motion/ (CsiParticleField, ManifestoField) TETAP
- * memakai `demand` dan itu benar — keduanya menggerakkan animasinya sendiri
- * lewat invalidate() dan tidak berbagi kontrak dengan scene ini.
- * (DeploymentsField juga begitu, tapi per 3 Agu 2026 ia sudah tidak diimpor
- * siapa pun — jangan cari jejaknya di halaman.)
+ * Catatan: Canvas kecil di motion/ memakai `demand` dan itu benar — masing-
+ * masing menggerakkan animasinya sendiri lewat invalidate() dan tidak berbagi
+ * kontrak dengan scene ini. Per 18 Agu 2026 tidak ada satu pun yang benar-benar
+ * terpasang di halaman: CsiParticleField dihapus, ManifestoField ikut menganggur
+ * setelah section Manifesto dicabut dari Lounge, dan DeploymentsField sudah tidak
+ * diimpor siapa pun sejak 3 Agu. Kalau kelak ada Canvas kecil baru, `demand`
+ * tetap pilihan yang benar untuknya.
  */
 export default function Scene() {
   // "always" saat hero terlihat ATAU scene belum siap; "never" selebihnya.

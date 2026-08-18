@@ -208,6 +208,17 @@ landscape yang masalahnya sama persis.
 > di 390px). Aturan §6 tetap berlaku apa adanya untuk INTERAKSI scene; ini
 > tambahan soal keterbacaan, bukan penggantinya.
 
+> **Susulan (18 Agu) — jalur `narrow` sekarang DAPAT gerakan kamera, dan itu
+> juga bukan pelanggaran.** Yang digugurkan 13 Agu adalah `<Html>` form di atas
+> layar 3D-nya, bukan kameranya. Sejak 18 Agu `open` menggerakkan kamera di
+> KEDUA jalur: lid membuka → kamera mendorong masuk ke layar → lembar form
+> memudar masuk menutupinya (lihat `SHEET_FADE_FROM/TO` di `Contact.tsx` dan
+> `pushDistance` di `InquiryLaptop.tsx`). Soal keterbacaan 13 Agu tidak terbuka
+> lagi karena form-nya tetap HTML datar seukuran viewport — layar laptopnya
+> cuma dilewati, tidak pernah jadi tempat teks dibaca. Yang tetap mati di
+> `coarse` adalah interaksi scene-nya (waypoint, biliar); mendorong kamera
+> bukan interaksi, ia akibat dari tombol HTML biasa.
+
 **Kenapa lintas-wilayah.** Ini seam paling tajam sekarang, dan bentuknya beda
 dari §1–§5 — saat ditulis ia tidak menunggu merge untuk rusak, ia **sudah**
 bergantung pada pekerjaan yang belum ada:
@@ -301,6 +312,42 @@ Ikatan turunannya: `BilliardHUD` keluar otomatis saat `!heroInView` — HUD-nya
 
 ---
 
+## §8 🔒 Akar dokumen tumbuh bersama konten
+
+**Aturan.** `<html>` dan `<body>` tidak boleh diberi `height` setinggi viewport
+— tidak lewat `src/index.css`, tidak lewat class `h-full`/`min-h-full` di
+`index.html`. Kalau butuh latar penuh layar saat konten pendek, pakai
+`min-height: 100dvh`.
+
+**Kenapa.** Lenis menyimpan tinggi konten di cache dan memperbaruinya lewat
+`ResizeObserver` yang mengamati `<html>`. ResizeObserver melaporkan **kotak**
+elemennya, bukan `scrollHeight`-nya — dan `height: 100%` memaku kotak itu
+setinggi viewport apa pun isinya. Observer-nya menyala sekali saat mount lalu
+diam selamanya, jadi `limit` Lenis membeku di tinggi halaman yang kebetulan
+terukur pertama kali.
+
+**Kejadian nyata (18 Agu 2026).** Dilaporkan: "gulir dulu di Office, pindah ke
+Lounge, lalu gulir ke bawah — berhenti di tengah halaman, bisa naik tapi tidak
+bisa turun." Terukur: Lounge mentok di y=3005 — persis `limit` milik Office
+(3905 − 900) — padahal dasarnya 5833. Tidak ada error, tidak ada test merah;
+yang terlihat cuma halaman yang seolah habis di tengah, dan tidak satu pun
+petunjuknya menunjuk balik ke CSS.
+
+**Kenapa masuk berkas ini.** Aturannya melintasi batas kerja yang paling tidak
+terduga: yang rusak ada di `lib/hooks/useSmoothScroll.ts` + `routes/`, tapi
+penyebabnya dua baris di `index.html` dan `src/index.css` — boilerplate refleks
+yang nyaris semua orang tulis tanpa berpikir, dan di sini datang dari **dua
+tempat sekaligus**. Tidak ada yang bisa melihat hubungannya dari satu sisi saja.
+
+⚠️ `min-h-full` BUKAN pengganti `h-full` di `<body>`: itu `min-height: 100%`,
+yang menggantung pada tinggi `<html>`. Begitu `<html>` tingginya `auto`,
+persentasenya tak punya acuan dan diam-diam jadi nol. Pakai satuan viewport.
+
+**Penjaga.** `src/lib/scrollRootHeight.invariant.test.ts` — dua test, dibuktikan
+merah lebih dulu dengan mengembalikan `height: 100%` dan `h-full`.
+
+---
+
 ## Kebiasaan yang menangkap sisanya
 
 Tiga hal ini menangkap lebih banyak daripada tooling mana pun di atas, karena
@@ -319,7 +366,7 @@ kegagalan seperti §1 dan §3 **lolos dari typecheck, lint, dan build**:
 3. **Cabang pendek.** Makin lama sebuah cabang hidup, makin besar peluang ada
    invariant yang berubah di belakangnya tanpa ia tahu.
 
-`bun run test` menjalankan §1, §3, dan §6. Ketiganya sudah dibuktikan **merah**
+`bun run test` menjalankan §1, §3, §6, §7, dan §8. Semuanya sudah dibuktikan **merah**
 di kondisi rusak sebelum dipakai — test yang tak pernah terlihat gagal tidak
 bisa dipercaya.
 

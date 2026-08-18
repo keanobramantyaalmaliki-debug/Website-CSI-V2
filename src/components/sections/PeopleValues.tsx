@@ -1,157 +1,158 @@
 "use client";
 
-import { useRef } from "react";
-import {
-  motion,
-  useScroll,
-  useTransform,
-  useReducedMotion,
-  type MotionValue,
-} from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { VALUES } from "@/data/people";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 /**
- * One value on the scroll-linked timeline. Kept as its own component so the
- * per-step `useTransform` hooks stay at the top level — calling them inside the
- * parent's `.map()` would break the rules of hooks the moment VALUES changes.
+ * Panel berhenti di bawah navbar (4rem) DAN di bawah label yang ikut menempel.
+ * Tinggi label dikunci lewat `h-[38px] sm:h-[42px]` di headernya — kalau angka
+ * itu diubah, ubah juga di sini, kalau tidak panel akan menutupi labelnya
+ * sendiri.
  */
-function ValueStep({
+const STICKY_TOP = "sticky top-[calc(4rem+38px)] sm:top-[calc(4rem+42px)]";
+
+/**
+ * Satu nilai = satu panel selebar layar. Dipisah jadi komponennya sendiri
+ * supaya `whileInView` per panel tidak dirakit ulang setiap `VALUES` berubah.
+ *
+ * Panel dibungkus `<li>` sticky; latarnya WAJIB opaque (`bg-background`) —
+ * itu yang membuat panel berikutnya benar-benar menutupi panel di atasnya
+ * saat discroll, bukan sekadar lewat di depannya secara transparan.
+ */
+function ValuePanel({
   value,
-  index,
-  count,
-  progress,
   reduced,
 }: {
   value: (typeof VALUES)[number];
-  index: number;
-  count: number;
-  progress: MotionValue<number>;
   reduced: boolean;
 }) {
-  const num = String(index + 1).padStart(2, "0");
-  const isLast = index === count - 1;
-
-  // Reveal this value as the timeline reaches it, and grow the connector to the
-  // next one across its own slice of the scroll — sequential, not all-at-once.
-  const revealBand: [number, number] = [index / count, (index + 0.55) / count];
-  const opacity = useTransform(progress, revealBand, [0.15, 1]);
-  const y = useTransform(progress, revealBand, [28, 0]);
-  const connectorFill = useTransform(
-    progress,
-    [(index + 0.2) / count, (index + 1) / count],
-    [0, 1],
-  );
-
-  return (
-    <motion.li
-      style={reduced ? undefined : { opacity, y }}
-      className="relative grid grid-cols-[1.5rem_1fr] gap-x-5"
-    >
-      {/* Ghost index — decorative depth behind the copy (desktop only, keeps
-          mobile clean and avoids any horizontal overflow). */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute -top-4 left-8 hidden select-none text-[8rem] font-bold leading-none text-white/[0.035] sm:block"
-      >
-        {num}
-      </span>
-
-      {/* Rail gutter: marker disc + connector to the next value. Rendering the
-          connector per-item (omitted on the last) makes the rail terminate
-          exactly on the final marker regardless of copy length. */}
-      <div className="relative flex flex-col items-center">
-        <span
-          aria-hidden
-          className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-accent bg-background text-[10px] font-medium tabular-nums text-accent"
-        >
-          {num}
-        </span>
-        {!isLast && (
-          <div className="relative mt-1 w-px flex-1">
-            <span aria-hidden className="absolute inset-0 bg-white/[0.1]" />
-            {reduced ? (
-              <span aria-hidden className="absolute inset-0 bg-accent" />
-            ) : (
-              <motion.span
-                aria-hidden
-                style={{ scaleY: connectorFill }}
-                className="absolute inset-0 origin-top bg-accent"
-              />
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Content — generous gap between values gives the scroll enough runway
-          for each reveal to read as its own beat (a tight gap makes 1→2 lit up
-          almost together). */}
-      <div className={isLast ? "pb-0" : "pb-24 sm:pb-32"}>
-        <div className="sm:grid sm:grid-cols-[220px_1fr] sm:gap-x-6">
-          <div>
-            <h2 className="text-xl font-semibold text-zinc-100">
-              {value.title}
-            </h2>
-            <p className="mt-2 text-xs tracking-widest text-zinc-500 uppercase">
-              {value.tagline}
-            </p>
-            {value.photo && (
-              <img
-                src={value.photo}
-                alt=""
-                className="mt-8 aspect-square w-full max-w-[200px] object-cover grayscale"
-                loading="lazy"
-              />
-            )}
-          </div>
-          <p className="mt-4 leading-relaxed text-zinc-400 sm:mt-1 sm:self-start sm:pt-1">
-            {value.description}
+  // Tinggi panel = tinggi kontennya, dengan sela 10px ke garis batas atas dan
+  // bawah. Tanpa `min-h` viewport: panel setinggi layar menyisakan ruang kosong
+  // besar di bawah foto.
+  //
+  // Di layar sempit ketiga blok TIDAK boleh jatuh bertumpuk vertikal: panelnya
+  // jadi lebih tinggi dari viewport dan tumpukan sticky-nya terasa macet. Jadi
+  // di mobile judul membentang penuh, lalu foto dan uraian berdampingan dua
+  // kolom — panelnya tetap muat di bawah navbar + label. Dari `sm` sampai
+  // sebelum `md` (ponsel landscape) kolom fotonya DIKUNCI 200px: dibiarkan
+  // setengah lebar, foto persegi itu tumbuh ikut lebar layar dan panelnya
+  // kembali lebih tinggi dari viewport yang pendek.
+  const content = (
+    <div className="border-t border-white/[0.09] bg-background px-3 py-[10px]">
+      <div className="grid grid-cols-2 items-start gap-x-4 gap-y-5 sm:grid-cols-[200px_minmax(0,1fr)] sm:gap-x-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,1fr)] md:gap-8 lg:gap-12">
+        {/* Kiri — judul besar */}
+        <div className="col-span-2 md:col-span-1">
+          <h2 className="text-3xl leading-[0.95] font-semibold tracking-tight text-zinc-300 sm:text-4xl lg:text-5xl xl:text-6xl">
+            {value.title}
+          </h2>
+          <p className="mt-3 text-[10px] tracking-widest text-zinc-500 uppercase sm:mt-4 sm:text-xs">
+            {value.tagline}
           </p>
         </div>
+
+        {/* Tengah — ruang foto. `value.photo` masih kosong di data, jadi yang
+            tampil bingkainya: begitu fotonya ada, tinggal isi field-nya. */}
+        <div className="relative aspect-square w-full overflow-hidden border border-white/[0.09] bg-white/[0.02]">
+          {value.photo ? (
+            <img
+              src={value.photo}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="h-full w-full object-cover grayscale"
+            />
+          ) : (
+            <span
+              aria-hidden
+              className="absolute inset-0 grid place-items-center text-[10px] tracking-[0.25em] text-zinc-700 uppercase"
+            >
+              Photo
+            </span>
+          )}
+        </div>
+
+        {/* Kanan — uraian */}
+        <p className="text-sm leading-relaxed font-medium text-zinc-300 md:text-base lg:text-lg">
+          {value.description}
+        </p>
       </div>
-    </motion.li>
+    </div>
+  );
+
+  // Reduced motion: tanpa pin, tanpa tumpukan — daftar vertikal biasa.
+  if (reduced) return <li>{content}</li>;
+
+  return (
+    <li className={STICKY_TOP}>
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.25 }}
+        transition={{ duration: 0.6, ease: EASE }}
+      >
+        {content}
+      </motion.div>
+    </li>
   );
 }
 
 /**
- * "What We Stand For" — the values rendered as a light, scroll-linked timeline:
- * an accent rail fills and each value lights up in sequence as the section
- * travels through the viewport. No full-screen pin, so the copy stays calm and
- * readable; under `prefers-reduced-motion` every value shows fully, rail filled.
+ * "What We Stand For" — tiap nilai jadi satu panel selebar layar: judul di
+ * kiri, foto di tengah, uraian di kanan. Panel-panelnya `position: sticky`
+ * dengan offset yang sama, jadi saat discroll panel berikutnya naik menutupi
+ * panel sebelumnya sampai berhenti di nilai terakhir (Long-Term Thinking).
+ *
+ * Tumpukan aktif di semua lebar, termasuk mobile. Syaratnya panel harus tetap
+ * lebih pendek dari viewport — sticky pada elemen yang lebih tinggi dari
+ * viewport terasa macet — makanya layout mobilenya dipadatkan jadi judul
+ * membentang + foto/uraian berdampingan, bukan tiga blok bertumpuk.
  */
 export default function PeopleValues() {
   const reduced = !!useReducedMotion();
-  const sectionRef = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start 90%", "end 45%"],
-  });
 
   return (
-    <section ref={sectionRef} id="people-values" className="px-6 py-24 sm:px-10">
-      <motion.p
-        className="text-xs tracking-widest text-zinc-400 uppercase"
-        initial={{ opacity: 0, x: -8 }}
-        whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, ease: EASE }}
-      >
-        What We Stand For
-      </motion.p>
+    <section
+      id="people-values"
+      className="overflow-x-clip py-24"
+      aria-label="What We Stand For"
+    >
+      {/* Pembungkus label + daftar = containing block sticky-nya label, jadi
+          labelnya lepas tepat saat item terakhir habis — bukan ikut terbawa
+          sampai ujung padding bawah section. */}
+      <div className="relative">
+        {/* Label ikut menempel di bawah navbar selama panel-panelnya lewat.
+            SENGAJA tanpa z-index: panel datang belakangan di DOM, jadi panel
+            menang. Selama sebuah panel menempel keduanya tidak bersinggungan
+            (label 64–106px, panel mulai di 106px); yang menang barulah terasa
+            di item TERAKHIR — sticky-nya habis di ujung daftar, ia menggulir
+            naik dan menimbun labelnya, alih-alih saling menabrak. `bg-background`
+            supaya panel yang lewat di baliknya tidak menembus. Tinggi dikunci
+            karena dipakai menghitung STICKY_TOP; `pb-[18px]` = jarak label ke
+            garis batas item. Menempel di semua lebar — sejalan dengan panelnya,
+            yang juga menempel sampai ke mobile. */}
+        <div className="sticky top-16 flex h-[38px] items-end bg-background px-3 pb-[18px] sm:h-[42px]">
+          <motion.p
+            className="text-xl leading-none font-semibold tracking-tight text-zinc-500 sm:text-2xl"
+            initial={{ opacity: 0, x: -8 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, ease: EASE }}
+          >
+            What We Stand For
+          </motion.p>
+        </div>
 
-      <ol className="mt-12 list-none">
-        {VALUES.map((value, i) => (
-          <ValueStep
-            key={value.title}
-            value={value}
-            index={i}
-            count={VALUES.length}
-            progress={scrollYProgress}
-            reduced={reduced}
-          />
-        ))}
-      </ol>
+        {/* Runway pendek di ujung daftar: tanpa ini item terakhir tidak pernah
+            benar-benar berhenti — ia anak terakhir, jadi sticky-nya habis
+            persis saat tercapai — dan langsung menggulir menimbun labelnya. */}
+        <ol className="list-none pb-[12vh]">
+          {VALUES.map((value) => (
+            <ValuePanel key={value.title} value={value} reduced={reduced} />
+          ))}
+        </ol>
+      </div>
     </section>
   );
 }

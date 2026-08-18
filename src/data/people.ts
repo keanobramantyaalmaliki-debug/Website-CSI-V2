@@ -105,7 +105,7 @@ export const VALUES: Value[] = [
     title: "Craft First",
     tagline: "Precision over speed",
     description:
-      "We believe the details are the work. Every margin, transition, and copy decision is deliberate — because what looks effortless took effort to get right.",
+      "We believe the details are the work. Every margin, transition, and copy decision is deliberate, because what looks effortless took effort to get right.",
   },
   {
     title: "Partnership",
@@ -117,6 +117,6 @@ export const VALUES: Value[] = [
     title: "Long-Term Thinking",
     tagline: "Built to outlast the brief",
     description:
-      "We design systems, not artifacts. The work we ship should still make sense two years from now — even after the team changes.",
+      "We design systems, not artifacts. The work we ship should still make sense two years from now, even after the team changes.",
   },
 ];
