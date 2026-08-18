@@ -120,6 +120,66 @@ body {
   }
 }
 
+/* ─────────────────────────── Panel dither ──────────────────────────────────
+ * Latar bilah navigasi — pengganti `.glass` (17 Agu). Tembus pandangnya lewat
+ * PIKSEL HIDUP/MATI, bukan `backdrop-filter: blur()`.
+ *
+ * ── Kenapa dither, bukan blur ──────────────────────────────────────────────
+ * Blur itu bahasa visual yang salah untuk situs ini. Seluruh lapisan 3D-nya
+ * bicara lewat matriks Bayer 4×4 pada sel 2 px perangkat — MaintenanceHologram,
+ * HoverScan, dan CharacterGlitch semuanya memakai konstanta yang sama
+ * (`DITHER_PX = 2`). Kaca berkabut di atasnya jadi satu-satunya permukaan di
+ * layar yang datang dari era berbeda.
+ *
+ * ── Angkanya bukan selera ──────────────────────────────────────────────────
+ * `background-size: 4px` dengan blok 1 px CSS = 2 px perangkat di layar dpr 2,
+ * jadi kerapatannya SAMA PERSIS dengan dither di dalam scene. Kalau dinaikkan
+ * jadi blok 2 px, panelnya jadi lebih kasar daripada dither yang di baliknya —
+ * dua kisi berbeda ukuran di satu layar, dan matanya langsung menangkap itu.
+ *
+ * Polanya ambang Bayer pada kerapatan 12/16. Bukan 8/16, walau itu angka
+ * "setengah" yang wajar: pada 8/16 delapan titiknya semua jatuh di posisi
+ * x%2 == y%2, jadi hasilnya papan catur 1 px biasa — struktur 4×4-nya hilang
+ * sepenuhnya dan yang terbaca cuma grain. Pada 12/16 baris 0 & 2 penuh
+ * sedangkan baris 1 & 3 cuma berisi di x=1 dan x=3: garis padat berselang garis
+ * putus, yang terbaca sebagai dither DAN senada dengan scanline situs ini.
+ *
+ * ── Titiknya TERANG, bukan warna latar ─────────────────────────────────────
+ * Percobaan pertama memakai titik sewarna latar (`rgb(20,22,27)`) di atas
+ * cucian 0,55 alfa: idenya transparansi terkuantisasi ala PS1 — 75% permukaan
+ * menutup penuh, 25% meloloskan pemandangan. Diukur dengan klip diperbesar 12×,
+ * hasilnya petak RATA SEPENUHNYA. Sebabnya jelas begitu dilihat: bagian situs
+ * yang lewat di belakang bilah hampir selalu `--background` (#14161b), yaitu
+ * warna titiknya sendiri. Pola yang cuma muncul di atas dinding terang atau LED
+ * berarti tak terlihat di hampir sepanjang halaman.
+ *
+ * Jadi kontrasnya dibawa sendiri: cucian dasar dinaikkan ke 0,82 (teks `text-sm`
+ * di atasnya aman, dan pemandangan masih sedikit menembus), dan titiknya putih
+ * 6% — selisih ~13 per kanal di atas latar gelap, cukup untuk terbaca sebagai
+ * piksel tanpa jadi kisi yang berisik. Karena kontrasnya tidak lagi bergantung
+ * pada apa yang sedang lewat di belakang, polanya konsisten di seluruh halaman.
+ *
+ * `shape-rendering='crispEdges'` wajib — tanpa itu peramban meng-antialias tepi
+ * rect 1 px dan polanya luruh jadi kabut kelabu, yaitu blur yang barusan
+ * dibuang, cuma dengan cara yang lebih mahal.
+ */
+.dither-panel {
+  background-color: rgba(20, 22, 27, 0.82);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Cpath fill='white' fill-opacity='0.06' d='M0 0h4v1H0zM1 1h1v1H1zM3 1h1v1H3zM0 2h4v1H0zM1 3h1v1H1zM3 3h1v1H3z'/%3E%3C/svg%3E");
+  background-size: 4px 4px;
+  box-shadow: var(--elevation-1);
+}
+
+/* Sama alasannya dengan `.glass`: yang minta transparansi dikurangi dapat
+   permukaan pekat. Polanya ikut dilepas — dither itu transparansi terkuantisasi,
+   jadi menahannya di atas latar solid cuma menyisakan tekstur tanpa gunanya. */
+@media (prefers-reduced-transparency: reduce) {
+  .dither-panel {
+    background-color: #1a1d23;
+    background-image: none;
+  }
+}
+
 /* Honor reduced-motion globally for CSS-driven smooth scroll */
 @media (prefers-reduced-motion: reduce) {
   html {

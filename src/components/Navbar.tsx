@@ -134,8 +134,8 @@ export default function Navbar() {
    *
    * Overlay & tombolnya dua-duanya `md:hidden`, jadi di layar lebar keadaan
    * "terbuka" tidak punya wujud sama sekali — tapi konsekuensinya tetap jalan:
-   * gulir halaman terkunci, pill navbar dibuat bening, dan tidak ada satu pun
-   * tombol yang tersisa untuk membatalkannya. Memutar tablet dari potret ke
+   * gulir halaman terkunci, latar bilah navbar dibuat bening, dan tidak ada satu
+   * pun tombol yang tersisa untuk membatalkannya. Memutar tablet dari potret ke
    * lanskap cukup untuk sampai ke sana.
    *
    * Patokannya `useNarrowViewport` yang memang dipatok ke 767.98px, angka yang
@@ -188,23 +188,26 @@ export default function Navbar() {
   /**
    * "Talk to us" — SCROLL DI TEMPAT, jangan memindahkan ruangan.
    *
-   * `<Contact />` sekarang ada di Lounge, Meeting, DAN Function (lihat
-   * roomContent.tsx), jadi dari ketiganya tombol ini cukup menggulir ke bawah.
-   * Memindahkan pengunjung ke ruangan lain hanya karena ia menekan tombol
-   * kontak itu mengagetkan — ia kehilangan tempatnya tanpa meminta.
+   * `<Contact />` sekarang ada di KEEMPAT ruangan berisi — Lounge, Office,
+   * Meeting, Function (lihat roomContent.tsx) — jadi tombol ini selalu cukup
+   * menggulir ke bawah. Memindahkan pengunjung ke ruangan lain hanya karena ia
+   * menekan tombol kontak itu mengagetkan: ia kehilangan tempatnya tanpa
+   * meminta.
    *
    * Versi sebelumnya SELALU melempar ke Lounge dari ruangan mana pun, dengan
    * alasan yang sempat benar: "#contact cuma ada di Lounge". Alasan itu gugur
-   * begitu Meeting & Function ikut memuat Contact — perilakunya jadi basi
-   * tanpa ada yang berubah di berkas ini.
+   * dua kali — pertama saat Meeting & Function memuat Contact, lalu saat Office
+   * menyusul (17 Agu) — dan kedua kalinya perilakunya tetap benar tanpa satu
+   * baris pun berubah di berkas ini. Itu buah dari menurunkannya, lihat ⚠️.
    *
-   * Office satu-satunya yang memang tidak punya Contact, dan hanya di situ
-   * berpindah ke Lounge itu benar — tidak ada tujuan lain untuk dituju.
-   * `RoomRouteSync` (Arah 3) yang menggulirkannya setelah Lounge ter-mount.
+   * Cabang `navigate` di bawah kini tak terjangkau dari ruangan mana pun yang
+   * bisa dibuka, tapi TETAP ADA: ia yang menanggung ruangan baru (atau Pantry
+   * yang dihidupkan) yang belum diberi Contact. `RoomRouteSync` (Arah 3) yang
+   * menggulirkannya setelah Lounge ter-mount.
    *
    * ⚠️ Diturunkan dari ROOM_CONTENT, bukan daftar nama ruangan yang ditulis
-   * ulang di sini: begitu Office diberi <Contact />, tombolnya ikut benar
-   * dengan sendirinya tanpa ada yang perlu ingat memperbarui tempat ini.
+   * ulang di sini — itu sebabnya penambahan Contact di Office tidak menuntut
+   * suntingan di tempat ini.
    */
   function goToContact() {
     setOpen(false);
@@ -215,8 +218,53 @@ export default function Navbar() {
     navigate("/#contact");
   }
 
+  /**
+   * "Chrome-nya sedang tidak tampil" — bilahnya bening di atas hero, dan juga
+   * selama overlay menu terlihat (alasannya di komentar `overlayUp`).
+   */
+  const bare = heroInView || overlayUp;
+
+  /*
+   * BILAH PENUH, bukan pill mengambang (17 Agu).
+   *
+   * Versi sebelumnya `max-w-5xl` + `justify-center`: di 1440px pill-nya berhenti
+   * di 1024px, jadi logonya terukur 233px dari tepi kiri. Merapatkan padding
+   * header dari 16px ke 12px tidak mengubah apa pun di sana — yang menahan bukan
+   * paddingnya, tapi lebar maksimumnya. Jadi keduanya dilepas: `max-w-5xl`,
+   * `rounded-full`, dan jarak luar header.
+   *
+   * Sekarang header menempel di `top-0 inset-x-0` tanpa padding, dan 12px-nya
+   * jadi padding DALAM `<nav>`. Bedanya penting: latarnya sampai ke tepi layar
+   * (persegi yang benar-benar menempel di sudut), sementara isinya — logo, dan
+   * tombol paling kanan — persis 12px dari sudut. Kalau 12px-nya ditaruh di luar
+   * sebagai margin, latarnya ikut mundur dan hasilnya kotak mengambang, bukan
+   * bilah.
+   *
+   * Ongkos ruangnya turun, bukan naik, walau paddingnya jadi 12px di atas dan
+   * bawah: dulu 12px jarak luar + pill 58px = 70px; sekarang 0 + 52px = 52px.
+   *
+   * 52px itu TERUKUR, bukan dihitung: logo 27,83px + 12px atas + 12px bawah.
+   *
+   * ⚠️ 27,83 — BUKAN 30 seperti atribut `height` di `<img>`-nya, dan bukan juga
+   * karena `object-contain`. `object-contain` mengatur bagaimana piksel gambar
+   * mengisi kotaknya, ia tidak pernah mengubah UKURAN kotak itu. Yang mengubah:
+   * Tailwind preflight memasang `img { height: auto }`, yang menimpa atribut
+   * `height`, jadi tingginya diturunkan dari `width={76}` × rasio asli berkasnya
+   * (2914×1067 = 2,731) = 27,83px. Atribut `width`/`height` di sana tinggal
+   * berguna sebagai rasio pencadang ruang saat memuat, bukan ukuran tampil —
+   * jangan pakai angka 30 itu untuk menghitung tinggi bilah.
+   *
+   * Logo adalah benda TERTINGGI di bilah ini sejak CTA "Talk to us" kehilangan
+   * pill-nya — pill itu 36px dan dialah yang dulu menahan bilah di 60px.
+   * Artinya `p-3` sekarang benar-benar yang menentukan tingginya: mau lebih
+   * pendek lagi, satu-satunya jalan adalah mengecilkan logonya, bukan
+   * paddingnya.
+   *
+   * Di <md tingginya masih 68px dan itu disengaja: tombol burger `h-11` (44px)
+   * adalah ambang minimum sentuh, lihat catatan panjang di tombolnya.
+   */
   return (
-    <header className="fixed inset-x-0 top-4 z-50 flex justify-center px-4">
+    <header className="fixed inset-x-0 top-0 z-50">
       {/* ⚠️ Overlay dirender SEBELUM <nav> dan nav-nya diberi `relative z-10`.
           Elemen berposisi selalu dilukis di atas elemen statis apa pun urutan
           DOM-nya, jadi tanpa z-10 itu overlay akan menelan logo & tombolnya
@@ -237,21 +285,35 @@ export default function Navbar() {
         onGone={() => setOverlayUp(false)}
       />
 
-      <nav
-        className={[
-          // `border` selalu terpasang, yang berubah cuma WARNANYA. Dulu kelas
-          // `border` ikut disulap on/off, jadi lebar tepinya melompat 0↔1px dan
-          // seluruh isi pill bergeser sepiksel tepat saat menu ditutup.
-          "relative z-10 flex w-full max-w-5xl items-center justify-between gap-6 rounded-full border px-5 py-2.5 transition-all duration-300 sm:px-6",
-          // Chrome pill-nya hilang selama overlay terlihat: di atas layar gelap
-          // ia harus terbaca sebagai bilah datar seperti di situs cogniti, bukan
-          // kapsul kaca yang mengambang. Patokannya `overlayUp`, bukan `open` —
-          // lihat komentarnya di atas.
-          heroInView || overlayUp
-            ? "border-transparent bg-transparent"
-            : "glass border-white/10",
-        ].join(" ")}
-      >
+      <nav className="relative z-10 flex w-full items-center justify-between gap-6 p-3">
+        {/* Latar + garis pemisah, sebagai LAPISAN sendiri di belakang isinya.
+            Dulu keduanya kelas di `<nav>` yang disulap bolak-balik, dan itu
+            menyeret dua masalah yang lapisan ini menghapus sekaligus:
+
+            1. Tepi 1px dulu harus SELALU terpasang dengan cuma warnanya yang
+               berganti, karena menyulap kelas `border` bikin lebarnya melompat
+               0↔1px dan seluruh isi bilah bergeser sepiksel tepat saat menu
+               ditutup. Di lapisan `absolute` tepinya tidak punya andil pada tata
+               letak sama sekali, jadi persoalannya tidak bisa kembali.
+            2. `background-image` tidak bisa di-transisi — dither-nya akan
+               muncul mendadak. Yang dianimasikan sekarang OPASITAS lapisan, dan
+               pola pikselnya tetap tajam sepanjang pudarnya.
+
+            `-z-10` menaruhnya di bawah logo/tautan/tombol yang statis; tanpa itu
+            lapisan berposisi ini melukis DI ATAS mereka. Cakupannya aman di
+            dalam `<nav>` karena nav sendiri `relative z-10` = konteks penumpukan
+            sendiri, jadi ia tidak bisa jatuh ke belakang overlay menu.
+
+            Hilang di atas hero: di atas layar gelap bilahnya harus terbaca datar
+            seperti di situs cogniti. Patokannya `overlayUp`, bukan `open`. */}
+        <span
+          aria-hidden
+          className={[
+            "dither-panel absolute inset-0 -z-10 border-b border-white/10 transition-opacity duration-300",
+            bare ? "opacity-0" : "opacity-100",
+          ].join(" ")}
+        />
+
         {/* Logo */}
         <Link to="/" className="shrink-0" aria-label="Cogniti — home">
           <img
@@ -292,16 +354,32 @@ export default function Navbar() {
               sehingga tombol desktop & mobile berperilaku berbeda: yang mobile
               tahu harus pindah dulu kalau ruangannya tak punya Contact, yang
               ini tidak — dari Office ia diam saja tanpa umpan balik. */}
-          <MagneticButton>
+          {/* TEKS TELANJANG, bukan pill putih + panah (17 Agu). Pill-nya dulu
+              satu-satunya benda 36px di bilah ini, jadi ia sendiri yang menahan
+              tingginya di 60px; tanpa dia yang tertinggi adalah logo (27,83px
+              terukur) dan bilahnya turun ke 52px — 12px di atas dan di bawah,
+              persis padding `<nav>`. Jadi "hilangkan pill" dan "persempit ke
+              12px" itu satu perubahan yang sama, bukan dua.
+
+              `md:block`, bukan `md:flex`: gap & items-center itu untuk mengatur
+              teks-plus-panah, dan panahnya sudah tidak ada.
+
+              Warnanya zinc-100 (bukan zinc-300 seperti tautan ruangan di
+              sebelahnya) supaya masih terbaca sebagai CTA setelah kehilangan
+              latar putihnya, dengan hover ke accent yang sama dengan tautan
+              lain — satu perilaku hover untuk seluruh bilah.
+
+              ⚠️ `maxDistance` DITURUNKAN 14 → 4px. Tarikan magnet 14px dulu
+              tertelan `px-4 py-2` milik pill; pada teks telanjang di bilah 52px
+              tarikan sejauh itu melempar tulisannya keluar dari bilah. 4px masih
+              terasa hidup tapi tidak pernah menembus tepi. */}
+          <MagneticButton maxDistance={4}>
             <button
               type="button"
               onClick={goToContact}
-              className="group hidden shrink-0 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-200 md:flex"
+              className="hidden shrink-0 text-sm font-medium text-zinc-100 transition-colors hover:text-accent md:block"
             >
               Talk to us
-              <span className="grid h-5 w-5 place-items-center rounded-full bg-zinc-900/10 text-zinc-900 transition-transform duration-200 group-hover:translate-x-0.5">
-                →
-              </span>
             </button>
           </MagneticButton>
 
@@ -326,7 +404,7 @@ export default function Navbar() {
               Lebar katanya dianimasikan `0 ⇄ "auto"` di dalam wadah
               `overflow-hidden`, jadi tidak ada angka lebar yang ditulis tangan
               yang akan basi begitu fontnya berganti. Tombolnya rata KANAN, dan
-              pill navbar `justify-between`, jadi yang bergerak saat lebarnya
+              bilahnya `justify-between`, jadi yang bergerak saat lebarnya
               berubah cuma tepi kiri tombol — logo di seberangnya diam.
 
               `h-11 min-w-11` = kotak sentuh 44×44 walau ikonnya cuma selebar
@@ -334,10 +412,24 @@ export default function Navbar() {
               burgernya, dan ambang minimum sentuh. Tanpa `min-w-11` tombolnya
               persis selebar ikon (terukur 26px), terlalu sempit untuk jempol.
               Kelebihan lebarnya tumbuh ke KIRI karena isinya rata kanan, jadi
-              ikonnya tidak bergeser sepiksel pun. Tingginya tidak melebarkan
-              pill karena logo + py-2.5 sudah 50px.
+              ikonnya tidak bergeser sepiksel pun.
 
-              Patokannya `open`, bukan `overlayUp` seperti chrome pill di atas:
+              ⚠️ `h-11` MEMANG melebarkan bilah, dan itu penyumbang tinggi
+              terbesar di seluruh navbar seluler: bilah terukur 68px di 390px
+              (44 + p-3 dua sisi) lawan 52px di ≥md di mana tombol ini
+              `md:hidden`. Komentar lama di sini mengklaim "logo + py-2.5 sudah
+              50px" jadi tingginya tidak berpengaruh — itu salah (logo cuma
+              27,83px). Jangan pangkas untuk menghemat ruang: 44×44 itu ambang
+              minimum sentuh, dan 8px yang didapat tidak sebanding dengan target
+              yang jadi sulit dikenai jempol.
+
+              `-mr-1` yang dulu ada di sini SUDAH DILEPAS. Fungsinya menarik ikon
+              4px keluar supaya terlihat pas di dalam lengkung `rounded-full`;
+              pada persegi tanpa lengkung ia justru bikin ikonnya 8px dari tepi
+              sementara logo di seberangnya 12px — timpang, dan pada bilah lurus
+              ketimpangan itu langsung kelihatan.
+
+              Patokannya `open`, bukan `overlayUp` seperti latar bilah di atas:
               ini benda yang barusan disentuh, jadi ia harus menjawab di frame
               itu juga. Yang menutupi jeda 450 ms sampai panelnya benar-benar
               hilang adalah animasinya sendiri. */}
@@ -347,7 +439,7 @@ export default function Navbar() {
             aria-expanded={open}
             aria-controls="mobile-menu"
             aria-label={open ? "Close menu" : "Open menu"}
-            className="group -mr-1 flex h-11 min-w-11 items-center justify-end text-[11px] tracking-[0.11em] text-zinc-400 uppercase transition-colors hover:text-zinc-100 md:hidden"
+            className="group flex h-11 min-w-11 items-center justify-end text-[11px] tracking-[0.11em] text-zinc-400 uppercase transition-colors hover:text-zinc-100 md:hidden"
           >
             <span aria-hidden className="relative block h-4 w-[26px] shrink-0">
               {BURGER_OFFSETS.map((offset) => (
@@ -423,8 +515,8 @@ export default function Navbar() {
  * 2. **Tanpa efek scramble huruf saat hover.** Menu ini `md:hidden`; di layar
  *    yang menampilkannya tidak ada hover sama sekali, jadi efeknya cuma kode
  *    yang tidak pernah jalan.
- * 3. **Tanpa baris logo + tombol tutup sendiri.** Keduanya sudah ada di pill
- *    navbar yang mengambang di atas overlay ini, di posisi yang sama.
+ * 3. **Tanpa baris logo + tombol tutup sendiri.** Keduanya sudah ada di bilah
+ *    navbar yang melayang di atas overlay ini, di posisi yang sama.
  */
 function MobileMenu({
   open,
@@ -460,10 +552,19 @@ function MobileMenu({
           initial="hidden"
           animate="shown"
           exit="out"
-          /* px-9 = 36px = px-4 header + px-5 pill: daftar besarnya rata kiri
-             persis dengan logo di atasnya. bg-background (bukan hitam pekat
-             seperti situs lama) supaya senada dengan sisa situs ini. */
-          className="fixed inset-0 flex flex-col overflow-y-auto bg-background px-9 pt-24 pb-10 md:hidden"
+          /* px-3 = 12px, angka yang SAMA dengan padding `<nav>`: daftar besarnya
+             rata kiri persis dengan logo di atasnya. Dulu px-9 (36px) karena
+             logonya memang di 36px — 16px jarak luar header + 20px padding pill.
+             Begitu pill jadi bilah penuh, logonya pindah ke 12px dan angka ini
+             HARUS ikut; kalau tidak, daftar ruangan menggantung 24px lebih masuk
+             daripada logo tepat di atasnya. Keduanya selalu bergerak bersama.
+
+             bg-background (bukan hitam pekat seperti situs lama) supaya senada
+             dengan sisa situs ini.
+
+             pt-24 = 96px tetap: bilah seluler berakhir di 68px, jadi masih ada
+             28px sebelum baris pertama. */
+          className="fixed inset-0 flex flex-col overflow-y-auto bg-background px-3 pt-24 pb-10 md:hidden"
         >
           <motion.ul variants={listV} className="flex flex-col">
             {ACTIVE_KEYS.map((room) => {
