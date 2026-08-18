@@ -39,6 +39,23 @@ const CAMERA_SPRING = { stiffness: 55, damping: 23, mass: 1 };
  *  bisa menggantung satu-dua frame lebih lama dari yang terlihat. */
 const CAMERA_HOME = 0.002;
 
+/** Padanan CAMERA_HOME untuk pegas ENGSEL, dipakai jalur lembar datar (sentuh /
+ *  jendela sempit) yang tidak menggerakkan kamera sama sekali — di sana yang
+ *  menandai "animasi sudah selesai" cuma engselnya. Alasan tidak `=== 0`
+ *  sama persis: pegas mendekat secara asimtotis. */
+const HINGE_HOME = 0.002;
+
+/** Sepertiga awal bukaan lid dibiarkan TELANJANG sebelum lembar form mulai naik
+ *  menutupinya. Tanpa jeda ini keduanya berangkat bersama dan lembarnya sudah
+ *  menutup layar sebelum lid terbaca membuka — animasinya ada tapi tak pernah
+ *  terlihat. 0,45 diukur dari pegas engsel: pada nilai itu lid sudah melewati
+ *  separuh sudutnya, jadi arah gerakannya sudah jelas terbaca. */
+const SHEET_RISE_AT = 0.45;
+
+/** Ease masuk/keluarnya lembar TIDAK dipakai — lembarnya ikut pegas engsel
+ *  (lihat sheetY). Konstanta ease-nya sengaja tidak ada supaya tidak ada orang
+ *  yang menambahkan durasi kedua yang berlomba dengan pegasnya. */
+
 /**
  * Gerak MELAYANG ala pmndrs dimatikan selama laptop terbuka. **Sengaja, dan
  * bisa dibalik dengan mengubah baris ini saja.**
@@ -81,18 +98,41 @@ export default function Contact() {
   const overlay = open && !coarse && !narrow;
   const sheet = open && (coarse || narrow);
 
+  /**
+   * ENGSEL ikut `open`, KAMERA ikut `overlay` — DUA patokan, dan itu inti
+   * perbaikan 17 Agu.
+   *
+   * Dulu keduanya ikut `overlay`. Akibatnya jalur sentuh & jendela sempit
+   * kehilangan animasinya SAMA SEKALI: di sana `overlay` selamanya false, jadi
+   * laptopnya diam tertutup dan yang terjadi hanya form muncul begitu saja —
+   * "nggaada animasi laptop terbuka saat aku klik".
+   *
+   * Yang memang harus digugurkan di jalur itu cuma KAMERANYA, dan alasannya
+   * soal keterbacaan form (INVARIANTS §6, catatan 13 Agu): rig overlay
+   * terkendala LEBAR, jadi di layar sempit kamera mundur jauh dan layar
+   * laptopnya cuma mengisi seperempat tinggi. Engselnya tidak punya urusan
+   * dengan itu — ia memutar 110° di tempat, di dalam kotak 52vh yang memang
+   * sudah ada di halaman, dan terbaca di lebar berapa pun. Menggerbangi
+   * keduanya dengan satu bendera menyeret engsel ikut mati tanpa alasan.
+   *
+   * Aman terhadap `frameloop="demand"`: pendengar `progress` di InquiryLaptop
+   * memesan sendiri framenya lewat `invalidate()` tiap kali nilainya berubah,
+   * jadi engselnya tetap teranimasi walau `floating` — satu-satunya yang
+   * menyalakan frameloop "always" — false sepanjang jalur ini.
+   */
   useEffect(() => {
-    const target = overlay ? 1 : 0;
+    const hinge = open ? 1 : 0;
+    const camera = overlay ? 1 : 0;
     /* prefers-reduced-motion: tetap bisa dibuka, tapi LANGSUNG. `jump` menyetel
        nilai tanpa menjalankan pegasnya (`set` akan menganimasikan). */
     if (reduced) {
-      progress.jump(target);
-      zoom.jump(target);
+      progress.jump(hinge);
+      zoom.jump(camera);
     } else {
-      progress.set(target);
-      zoom.set(target);
+      progress.set(hinge);
+      zoom.set(camera);
     }
-  }, [overlay, reduced, progress, zoom]);
+  }, [open, overlay, reduced, progress, zoom]);
 
   /**
    * Lapisan overlay bertahan MENGAMBANG sampai kameranya benar-benar pulang.
@@ -121,6 +161,52 @@ export default function Contact() {
     check(zoom.get()); // reduced-motion `jump` bisa sudah mendarat sebelum ini
     return zoom.on("change", check);
   }, [overlay, zoom]);
+
+  /**
+   * KEMBARAN `settling` untuk jalur lembar datar, dan ia ada karena alasan yang
+   * sama persis: lembarnya harus bertahan mengambang sampai animasinya benar-
+   * benar selesai, bukan lenyap seketika saat tombol tutup ditekan.
+   *
+   * Bedanya cuma pegas yang ditunggu. Jalur overlay menunggu KAMERA pulang;
+   * jalur ini tidak menggerakkan kamera sama sekali, jadi yang ditunggu
+   * ENGSELnya — lembarnya turun mengikuti `progress` (lihat `sheetY`), jadi
+   * selama `progress` masih di atas HINGE_HOME lembarnya masih di jalan.
+   *
+   * Pola "menyesuaikan state saat render" yang sama, dan sama-sama disengaja:
+   * useEffect jalan setelah paint, jadi akan ada satu frame yang keadaannya
+   * sudah salah — persis kedipan yang sedang dihilangkan.
+   */
+  const [sheetSettling, setSheetSettling] = useState(false);
+  if (sheet && !sheetSettling) setSheetSettling(true);
+
+  useEffect(() => {
+    if (sheet) return;
+    const check = (v: number) => {
+      if (v <= HINGE_HOME) setSheetSettling(false);
+    };
+    check(progress.get());
+    return progress.on("change", check);
+  }, [sheet, progress]);
+
+  /**
+   * "Form-nya modal SEKARANG" — lewat jalur mana pun.
+   *
+   * Dipakai untuk urusan yang tidak peduli laptop 3D atau lembar datar: kunci
+   * gulir, pelepasan kurungan z-index, Esc, dan perpindahan fokus. Sebelum ini
+   * keempatnya digerbangi `promoted` — yang HANYA benar untuk jalur overlay —
+   * dan jalur lembar datar tidak mendapatkan satu pun dari keempatnya. Itu yang
+   * membuat tombol tutup di HP tidak bisa ditekan: tanpa `setInquiryOpen`,
+   * `<main>` tetap `z-10` dan mengurung lembar z-55 di dalamnya sebagai satu
+   * lapisan, jadi Navbar z-50 menang dan menutupi tombolnya (dilaporkan 17 Agu,
+   * terpotret). Persis kelas bug yang sudah dibahas di komentar di bawah, cuma
+   * jalur yang belum tersambung.
+   *
+   * Tiga sisanya ikut terbayar dan ketiganya nyata di HP: halaman di belakang
+   * lembar tidak lagi ikut tergulir, Esc bekerja di jendela sempit yang
+   * berpapan-tik (jendela desktop yang dikecilkan juga masuk jalur ini), dan
+   * fokus berpindah ke tombol tutup lalu pulang ke pemicunya.
+   */
+  const modal = promoted || sheet || sheetSettling;
 
   const close = useCallback(() => setOpen(false), []);
 
@@ -155,8 +241,8 @@ export default function Contact() {
      dalam <Html> milik drei yang dipasang belakangan, sedangkan tombol tutup ada
      di pohon ini dan pasti sudah ter-render saat efek ini jalan.
 
-     Digerbangi `promoted`, bukan `open` — keempatnya harus bertahan sampai
-     kameranya pulang, bukan sampai tombol tutup ditekan:
+     Digerbangi `modal`, bukan `open` — keempatnya harus bertahan sampai
+     animasinya pulang, bukan sampai tombol tutup ditekan:
 
      • `setInquiryOpen` melepas kurungan stacking context <main> (z-10). Kalau ia
        mati saat tombol ditekan, lapisan `z-[55]` yang MASIH close-up terperangkap
@@ -167,16 +253,18 @@ export default function Contact() {
        digulir selagi laptop terbang pulang, kotaknya sudah pindah dan laptopnya
        mendarat meleset sejauh itu, lalu menyentak saat lapisannya turun.
 
-     Di perangkat sentuh tidak ada bedanya: `overlay` selalu false di sana, jadi
-     `settling` tak pernah menyala dan `promoted === open`.
+     Di perangkat sentuh & jendela sempit yang menanggungnya `sheetSettling`,
+     dengan pegas yang berbeda — lihat catatannya di atas.
 
      Fokus dipindah ke tombol tutup, bukan ke isian pertama — isian itu hidup di
      dalam <Html> milik drei yang dipasang belakangan, sedangkan tombol tutup ada
-     di pohon ini dan pasti sudah ter-render saat efek ini jalan. */
+     di pohon ini dan pasti sudah ter-render saat efek ini jalan. `closeRef`
+     dipakai bergiliran oleh tombol tutup kedua jalur; keduanya tidak pernah
+     terpasang bersamaan (`overlay` dan `sheet` saling meniadakan). */
   const restoreFocus = useRef(false);
 
   useEffect(() => {
-    if (!promoted) return;
+    if (!modal) return;
     const { setInquiryOpen } = useSceneStore.getState();
     setScrollLocked(true);
     setInquiryOpen(true);
@@ -197,13 +285,13 @@ export default function Contact() {
          Yang ditinggalkan cuma niatnya; efek di bawah yang menagihnya. */
       restoreFocus.current = true;
     };
-  }, [promoted, close]);
+  }, [modal, close]);
 
   useEffect(() => {
-    if (promoted || !restoreFocus.current) return;
+    if (modal || !restoreFocus.current) return;
     restoreFocus.current = false;
     triggerRef.current?.focus();
-  }, [promoted]);
+  }, [modal]);
 
   /* Padanan <web.h1> pmndrs yang memudar saat laptop membuka. */
   const hintOpacity = useTransform(progress, [0, 0.3], [1, 0]);
@@ -213,6 +301,29 @@ export default function Contact() {
      transisinya terasa dua kejadian terpisah. Penuh di 0,6 supaya halaman sudah
      benar-benar tenggelam sebelum kamera sampai. */
   const scrimOpacity = useTransform(zoom, [0, 0.6], [0, 1]);
+
+  /**
+   * Lembar datar naik dari bawah MENGIKUTI PEGAS ENGSEL — bukan animasi
+   * bertenaga durasi sendiri.
+   *
+   * Sengaja meniru cara tirai mengikuti pegas kamera di atas, dan alasannya
+   * sama: dua animasi dengan sumber waktu berbeda untuk satu kejadian yang sama
+   * akan selalu terbaca sebagai dua kejadian. Diikat ke `progress`, lembarnya
+   * tidak bisa mendahului atau tertinggal dari lid-nya — apa pun yang terjadi
+   * pada pegas itu (termasuk `jump` saat reduced-motion, yang membuat lembarnya
+   * ikut langsung terpasang tanpa tambahan cabang) ia ikut.
+   *
+   * Rentangnya mulai di SHEET_RISE_AT, bukan 0, supaya lid-nya terlihat membuka
+   * dulu sebelum tertutupi. Efek sampingnya pas untuk arah sebaliknya juga: saat
+   * menutup, `progress` turun 1 → 0,45 lebih dulu, jadi lembarnya TURUN
+   * menyingkap laptopnya, baru lid-nya menyelesaikan penutupan. Urutan yang
+   * benar di kedua arah, dari satu pegas.
+   *
+   * Selama masih di "100%" lembarnya berada di luar layar sepenuhnya, jadi ia
+   * tidak bisa menelan sentuhan yang seharusnya mengenai laptop di baliknya —
+   * itu sebabnya menggeser, bukan memudarkan opacity.
+   */
+  const sheetY = useTransform(progress, [SHEET_RISE_AT, 1], ["100%", "0%"]);
 
   /* Padding BAWAH sengaja tidak ada (`pt-*`, bukan `py-*`): ini section
      terakhir di halaman, jadi sisa 128 px di bawah footer cuma pita kosong di
@@ -327,11 +438,16 @@ export default function Contact() {
               berisi form, susunan itu jadi <button><input></button> — HTML tak
               sah, dan setiap klik di dalam form ikut menutup laptopnya.
 
-              Digerbangi `!promoted`, bukan `!open`: selagi menutup lapisan ini
+              Digerbangi `!modal`, bukan `!open`: selagi menutup lapisan ini
               masih `fixed inset-0`, jadi pemicu `absolute inset-0`-nya akan
               melebar seukuran layar dan hint "click to open"-nya nongol di
-              puncak viewport di tengah animasi. */}
-          {!promoted && (
+              puncak viewport di tengah animasi.
+
+              `modal`, bukan `promoted`, karena jalur lembar datar butuh hal yang
+              sama: tanpa itu pemicunya tetap terpasang di balik lembar — sasaran
+              tekan seukuran laptop yang tak terlihat, dan satu perhentian tab
+              liar di dalam dialog. */}
+          {!modal && (
             <button
               ref={triggerRef}
               type="button"
@@ -355,9 +471,24 @@ export default function Contact() {
         </div>
       </div>
 
-      {/* Jalur sentuh & jendela sempit: form yang sama, lembar datar penuh layar. */}
-      {sheet && (
-        <div className="fixed inset-0 z-[55] overflow-y-auto bg-black/80 backdrop-blur-md">
+      {/* Jalur sentuh & jendela sempit: form yang sama, lembar datar penuh layar.
+          Digerbangi `sheet || sheetSettling`, bukan `sheet` — kembar dari
+          `promoted` di jalur overlay. Kalau ia turun tepat saat tombol tutup
+          ditekan, lembarnya lenyap seketika dan lid yang menutup di baliknya
+          jadi gerakan yang tak berasal dari mana pun.
+
+          ⚠️ Tombol tutup TIDAK diberi z-index sendiri. Ia menang atas Navbar
+          karena LEMBARNYA yang z-55 sudah dilepas dari kurungan `<main>` z-10
+          oleh `setInquiryOpen` (lihat `modal` di atas) — dan begitu lembarnya
+          menang, latarnya yang pekat menutupi Navbar sepenuhnya. Menambah
+          z-index di sini akan menyembunyikan sebabnya, bukan memperkuatnya. */}
+      {(sheet || sheetSettling) && (
+        <motion.div
+          style={{ y: sheetY }}
+          className={`fixed inset-0 z-[55] overflow-y-auto overscroll-contain bg-black/80 backdrop-blur-md${
+            sheet ? "" : " pointer-events-none"
+          }`}
+        >
           <div className="min-h-full bg-[#0a0b0d]">
             <div className="flex justify-end p-4">
               <button
@@ -372,7 +503,7 @@ export default function Contact() {
             </div>
             <ContactForm />
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Menempel pojok: margin negatif membatalkan `px-6 sm:px-10` milik
