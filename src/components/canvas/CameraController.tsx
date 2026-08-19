@@ -14,6 +14,7 @@ import {
   type GoToOptions,
 } from "@/lib/store/sceneStore";
 import { markFrame } from "./frameTick";
+import { markSceneActivity } from "./renderPace";
 import {
   applyParallax,
   dampTowards,
@@ -431,6 +432,13 @@ export default function CameraController() {
     // menjaga perilaku lama untuk pengunjung yang menyalakan reduced-motion:
     // pointer-nya tak pernah bergerak, jadi blok di bawah tak pernah jalan.
     if (!tweening && nx === prevX && ny === prevY) return;
+
+    // Sampai di sini = kamera benar-benar MENULIS frame ini (tween atau
+    // parallax). Itu definisi "ada gerakan" untuk cap 30 fps idle: selama
+    // baris ini tersentuh tiap tick, renderPace menggambar penuh 60 fps.
+    // Letaknya SETELAH early-out di atas — kamera yang diam tidak boleh
+    // terhitung aktivitas, atau cap-nya tidak pernah aktif.
+    markSceneActivity();
 
     applyParallax(
       camera,

@@ -11,6 +11,7 @@ import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import { billiardView } from "./CameraController";
 import { prepareLampFade } from "./billiard/lamps";
 import { prepareRevealSweep } from "./revealSweep";
+import { markSceneActivity } from "./renderPace";
 import CharacterGlitch from "./CharacterGlitch";
 import HoverScan, { hoverScanTargetOf, setHoverScanTarget } from "./HoverScan";
 import LedBreath from "./LedBreath";
@@ -555,6 +556,12 @@ export default function Office() {
     if (!sweep || revealDone.current) return;
 
     const now = performance.now();
+
+    // Sapuan reveal awal (dan penantian loader sebelum ia mulai) wajib 60 fps
+    // — ini babak pembuka kantor, cap 30 fps idle jangan memotongnya jadi
+    // bertangga. Berhenti sendiri: begitu sweep.dispose() jalan, early-return
+    // di atas membuat baris ini tak pernah tersentuh lagi.
+    markSceneActivity(now);
 
     // Jeda sejak tick terakhir diukur dengan jam dinding SENDIRI, bukan `dt`
     // dari R3F. `dt` bersumber dari clock internal R3F, dan clock itu DI-RESET

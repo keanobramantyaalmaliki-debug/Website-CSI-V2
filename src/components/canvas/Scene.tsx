@@ -15,6 +15,7 @@ import BilliardLazy from "./billiard/BilliardLazy";
 import Waypoints from "./Waypoints";
 import ContactShadowsRig from "./ContactShadowsRig";
 import { useGatedFrameloop } from "./FrameloopGate";
+import IdleFrameCap from "./IdleFrameCap";
 
 // Posisi awal kamera. DIAMBIL dari VIEWS[START_ROOM], bukan angka yang ditulis
 // ulang: sebelumnya di sini ada tuple hardcode [-6.0, 1.6, 4.0] yang bahkan
@@ -22,6 +23,28 @@ import { useGatedFrameloop } from "./FrameloopGate";
 // selalu dari tempat yang salah sampai CameraController men-snap-nya. Dengan
 // diturunkan begini, memindahkan START_ROOM cukup di satu tempat.
 const START_POS = VIEWS[START_ROOM].pos.toArray() as [number, number, number];
+
+/**
+ * Resolusi render internal (19 Agu, bagian dari perbaikan "Safari drop fps").
+ *
+ * Dulu `[1, 1.5]`; sekarang 1: buffer 2,25× lebih kecil, dan SEMUA ongkos
+ * per-piksel (scene + N8AO + Bloom + grade) ikut turun sebesar itu. Di layar
+ * Retina hasilnya di-upscale 2× oleh browser; `image-rendering: pixelated`
+ * di onCreated membuat upscale-nya kotak tegas ala PS1, bukan blur bilinear —
+ * persis resep basement.studio (render internal rendah + Nearest) dan sejalan
+ * dengan preferensi tepi bergigi yang sudah diputuskan (lihat komentar
+ * multisampling di bawah).
+ *
+ * `?dpr=0.75` (0,25–2) = override untuk membandingkan look berdampingan.
+ * Seberapa jauh turunnya adalah KEPUTUSAN TAMPILAN Keano; 1 adalah default
+ * aman yang sudah disetujui, angka lebih rendah dicoba lewat query ini dulu.
+ * Pola module-level sama dengan ?tear / ?glitch / ?dust.
+ */
+const DPR = (() => {
+  if (typeof window === "undefined") return 1;
+  const v = Number(new URLSearchParams(window.location.search).get("dpr"));
+  return v >= 0.25 && v <= 2 ? v : 1;
+})();
 
 /**
  * ⚠️ TIDAK ADA fallback loading di sini lagi, dan itu disengaja.
@@ -87,7 +110,7 @@ export default function Scene() {
     <Canvas
       frameloop={frameloop}
       camera={{ position: START_POS, fov: 60, near: 0.05, far: 120 }}
-      dpr={[1, 1.5]}
+      dpr={DPR}
       // antialias: false — dan ini BUKAN bagian dari uji MSAA di bawah.
       // Terukur terpisah: dengan multisampling 8 tetap menyala, mengubah flag
       // ini true→false TIDAK mengubah frame time sama sekali (33,3 ms
@@ -102,6 +125,10 @@ export default function Scene() {
       onCreated={({ gl }) => {
         gl.toneMapping = ACESFilmicToneMapping;
         gl.toneMappingExposure = 1.6;
+        // Pasangan wajib DPR di atas: buffer internal lebih kecil dari layar,
+        // dan tanpa ini browser meng-upscale-nya bilinear (lembek berkabut).
+        // pixelated = tetangga terdekat → piksel kotak tegas, look PS1.
+        gl.domElement.style.imageRendering = "pixelated";
       }}
     >
       <color attach="background" args={["#0a0a0c"]} />
@@ -218,6 +245,12 @@ export default function Scene() {
           kembali ke `multisampling={4}` — terukur sama mahalnya dengan 8,
           membayar penuh tanpa dapat apa-apa. */}
       <EffectComposer multisampling={0}>
+        {/* Cap 30 fps saat idle — membungkus composer.render dan melewati
+            tick genap saat tidak ada gerakan/interaksi (definisi lengkap di
+            renderPace.ts). Anak EffectComposer, BUKAN efek: ia me-render null
+            dan cuma butuh instance composer dari context. Ini separuh dari
+            perbaikan "Safari drop fps" 19 Agu; separuh lainnya DPR di atas. */}
+        <IdleFrameCap />
         {/* ── AO runtime: pojok & celah jadi gelap ────────────────────────────
             Ini yang mengisi lubang terbesar lightmap. Bake cuma mencakup
             objek ≥8 m² (Documentations.md §4g) = 39 dari 233 material; 189
