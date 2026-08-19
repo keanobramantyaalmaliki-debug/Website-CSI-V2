@@ -1,6 +1,6 @@
 "use client";
 
-import { lazy, Suspense, useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef, type ReactNode } from "react";
 import { useReducedMotion } from "motion/react";
 import { useSceneStore } from "@/lib/store/sceneStore";
 import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
@@ -9,6 +9,7 @@ import {
   startOfficeModelDownload,
   resetOfficeModelDownload,
 } from "@/lib/officeModel";
+import { CLIP_ID } from "@/lib/gridReveal";
 
 const Scene = lazy(() => import("@/components/canvas/Scene"));
 const BilliardHUD = lazy(() => import("@/components/ui/BilliardHUD"));
@@ -102,6 +103,57 @@ function SceneFailed({ onRetry }: { onRetry: () => void }) {
       >
         reload 3d tour
       </button>
+    </div>
+  );
+}
+
+/**
+ * Pembungkus canvas — mengalir bersama hero, ATAU dipaku ke viewport selama
+ * sapuan GridReveal.
+ *
+ * ── Kenapa komponen terpisah, bukan satu baris di dalam Hero ────────────────
+ * Ia berlangganan `pendingRoom`, jadi ia me-render ulang dua kali tiap
+ * transisi. Kalau langganan itu diletakkan di Hero, yang ikut ter-render ulang
+ * adalah `<Scene/>` — seluruh pohon R3F, 233 material — tepat di frame paling
+ * sibuk sepanjang sesi.
+ *
+ * Di sini `children` datang sebagai prop dari Hero yang TIDAK ikut render
+ * ulang, jadi elemennya identik secara referensi dan React melewati seluruh
+ * subtree-nya. Yang berubah cuma className + style milik div ini.
+ *
+ * ── Kenapa dipaku ke ukuran ALAMINYA, bukan `inset-0` ───────────────────────
+ * Sapuannya menyingkap 3D di atas konten, jadi canvas harus lepas dari aliran
+ * halaman (yang sedang tergulir jauh di bawah) dan menempel ke viewport. Tapi
+ * `inset-0` akan MEMBESARKAN canvas di HP — dari 70dvh jadi selayar penuh —
+ * dan canvas R3F menyusul perubahan tata letak ~58 ms di belakang DOM
+ * (r3f-canvas-resize-lag, dibayar mahal di InquiryLaptop). Tinggi yang sama
+ * persis dengan tinggi seksinya = tidak ada resize = kedipan itu mustahil.
+ *
+ * Tinggi `h-[70dvh] md:h-dvh` di bawah SENGAJA menggandakan angka di `<section>`
+ * beberapa baris di bawahnya. Keduanya wajib bergerak bersama; kalau salah satu
+ * diubah sendirian, canvas melompat saat dipaku. Diletakkan berdekatan supaya
+ * pasangannya terlihat tanpa mencari.
+ *
+ * z-20: di atas `<main>` (10, yang membentuk stacking context sehingga seluruh
+ * isinya — termasuk tirai TheCrew z-40 — tetap kalah), di bawah Navbar (50)
+ * yang memang harus tetap terlihat & bisa diklik selama sapuan. INVARIANTS §2.
+ */
+function CanvasStage({ children }: { children: ReactNode }) {
+  const pinned = useSceneStore((s) => s.pendingRoom) !== null;
+  return (
+    <div
+      className={
+        pinned
+          ? "fixed inset-x-0 top-0 z-20 h-[70dvh] md:h-dvh"
+          : "absolute inset-0"
+      }
+      /* Kotak-kotak `<clipPath>`-nya dipasang GridReveal; di sini cuma
+         ditunjuk. Selagi belum ada satu pun kotak yang membesar, gabungan
+         geometrinya kosong dan canvas TIDAK TERLIHAT sama sekali — itulah yang
+         menyembunyikan teleport kamera & resize canvas sebelum sapuan mulai. */
+      style={pinned ? { clipPath: `url(#${CLIP_ID})` } : undefined}
+    >
+      {children}
     </div>
   );
 }
@@ -294,8 +346,10 @@ export default function Hero() {
     >
       {/* Viewport 3D — mengalir bersama halaman di semua lebar layar. */}
       <div className="relative h-full w-full">
-        {/* Pembungkus canvas. Sengaja TANPA style: lihat blok RIWAYAT di atas. */}
-        <div className="absolute inset-0">
+        {/* Pembungkus canvas. Tanpa style apa pun selagi mengalir (lihat blok
+            RIWAYAT di atas); yang mengaturnya saat transisi ada di
+            CanvasStage. */}
+        <CanvasStage>
           {/* fallback null: overlay LoadingScreen (di SiteLayout) yang menutupi
               layar selama chunk ini diunduh, jadi fallback di sini cuma akan
               berkedip di belakangnya tanpa pernah terlihat.
@@ -316,7 +370,7 @@ export default function Hero() {
               <Scene />
             </Suspense>
           </ChunkBoundary>
-        </div>
+        </CanvasStage>
 
         {/* Dua overlay di bawah ini melayani interaksi yang TIDAK ADA di
             perangkat sentuh (INVARIANTS.md §6), jadi chunk-nya pun tak perlu

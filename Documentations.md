@@ -1,7 +1,7 @@
 # Documentations — Cogniti Office 3D Tour
 
 Dokumentasi progres pembuatan 3D office tour ala [basement.studio](https://basement.studio) untuk **cogniti.id**.
-Terakhir diupdate: **13 Agustus 2026**.
+Terakhir diupdate: **19 Agustus 2026**.
 
 **Status ringkas:** **5 ruangan sudah ~95% jadi** dan seluruhnya sudah jalan di browser (lihat MVP 1 di bawah):
 - **Lounge/Billiard** (§2) & **Function Room** (eks Smoking, §3) — furniture & dekorasi lengkap
@@ -74,7 +74,21 @@ Terakhir diupdate: **13 Agustus 2026**.
 - **Form inquiry pindah ke layar MacBook 3D** (§4ac) — MacBook tertutup yang membuka saat diklik, layarnya jadi form. Engsel & kamera dapat **pegas terpisah** (satu nilai untuk keduanya terbaca sentakan), melayang dimatikan selama terbuka supaya teksnya tidak melunak, dan di layar sentuh/jendela sempit form-nya lewat lembar datar — bukan lewat laptop. 🚧 **`submitInquiry()` masih STUB**, Web3Forms belum dipasang: **blocker rilis.**
 - **🐛 "Ngeflick" ternyata TIGA bug bertumpuk** (§4ac) — canvas R3F tertinggal ~58 ms dari tata letak DOM; lalu membatalkan lompatan lewat **kamera** ternyata mengubah sudut pandang, bukan skala (ketahuan karena lebarnya meleset 1% tapi tingginya 9%); lalu `setViewOffset` yang membetulkannya **merusak `<Html transform>` drei**, yang meniru kamera lewat CSS 3D dan memaku titik hilangnya di pusat canvas. 🔥 Pelajarannya: **probe geometri canvas yang bersih tidak membuktikan render yang bersih** — sentakannya cuma tertangkap oleh probe yang membaca piksel.
 
-**⬅️ Berikutnya:** (a) **pasang backend Web3Forms untuk form inquiry** (§4ac) — satu-satunya blocker rilis yang tersisa, dan sengaja sudah dikurung dalam satu fungsi; (b) cache edge Cloudflare `/3d/*` (§4ab, di panel Keano); (c) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker (§4n); (d) selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter, §4s); (e) optimasi GLB lanjutan — atlas per ruangan + dedup 29 image kembar (§4s); (f) post-processing PS1 (§4b), pass terakhir untuk look basement.studio. **Optimasi GPU idle ditahan sampai fase finalise** — keputusan Keano 7 Agu, jangan dimulai lebih awal.
+**Per 18 Agu:**
+- **🐛 Gulir lintas-ruangan berhenti di tengah halaman** (§4ag) — biangnya `height: 100%` / `h-full` di `<html>` & `<body>`. ResizeObserver yang dipakai Lenis melaporkan **kotak** elemen, bukan `scrollHeight`, jadi `limit`-nya beku di tinggi halaman yang **kebetulan terukur pertama kali** (Lounge mentok di y=3005 — `limit` milik Office — padahal dasarnya 5833). Tidak ada error, tidak ada test merah. Naik jadi **INVARIANTS §8** + `scrollRootHeight.invariant.test.ts`.
+- **Lounge dirampingkan** (§4ag) — Manifesto & LivingArchitecture dicabut dari alur, berkasnya dihapus bersama `ArchitectureGrid`/`NodeGlyphs`/`CsiParticleField` (−1808 baris). Efek sampingnya lebih besar dari copy: **tidak ada lagi Canvas kecil yang ikut remount saat berganti ruangan.**
+- **Contact berdiri sendiri di Office** (§4ad) — CTA "let's talk" tidak lagi melempar ke Lounge; **keempat ruangan berisi** kini punya `<Contact />`, dan tombol Navbar-nya diturunkan dari `ROOM_CONTENT` sehingga benar sendiri tanpa daftar yang ditulis ulang. Gulirnya lewat `scrollToSection()`, bukan anchor — lompatan anchor bawaan peramban berebut posisi dengan rAF Lenis.
+- **Laptop inquiry hidup di layar sentuh** (§4ad) — dua bug satu sebab: jalur "sheet" tidak pernah menyalakan gerbang yang sama dengan jalur desktop, jadi engselnya diam (`overlay` selalu false) dan tombol tutupnya tertimbun navbar (`promoted` juga mati).
+- **Navbar: pill → bilah penuh** (§4ae) — merapatkan padding tidak akan pernah membawa logo ke 12 px; yang menahan `max-w-5xl` + `justify-center` (logo berhenti 233 px dari tepi di 1440). Latarnya `.dither-panel` menggantikan `.glass` — blur itu satu-satunya permukaan di layar yang datang dari era berbeda.
+- **Crew: daftar berkelompok + tirai sorot hover** (§4af) — filter kategori & nama-aktif-ikut-gulir dilepas, tinggal hover. Pasangan z-40/45 masuk tabel INVARIANTS §2.
+
+**Per 19 Agu:**
+- **Pindah ruangan dari konten = potong + tirai kotak, bukan camera fly** (§4ah) — camera fly itu afordans **spasial**; dari dalam konten titik berangkatnya tak pernah terlihat, jadi yang tersisa cuma **1,4 detik menunggu** (plus kedipan ruangan lama saat halaman dijepret ke atas). `GridReveal` menutup layar dengan kisi 64 px yang dikocok Fisher-Yates, menukar ruangannya di puncak, lalu **menunggu FRAME — bukan waktu** — sebelum mengangkat tirai (`frameloop` mati di konten, INVARIANTS §7). Waypoint 3D & jalur hero **tetap** camera fly. 🐛 Empat jebakan tercatat, dua di antaranya gagal **senyap**: `scrollToTop()` ditelan scroll-lock sendiri, dan commit **ANTARA** store ↔ router yang memicu tween 1400 ms di balik tirai.
+- **Navbar & URL bicara bahasa konten** (§4ah) — **Home / Services / Work / People**, bukan nama ruangan; `RoomKey` tidak berubah di mana pun dan label waypoint 3D tetap nama ruangan. Slug lama (`/office`, …) tetap hidup dan dinormalkan dengan **`replace`** — dengan push, Back mendarat di URL yang detik itu juga ditulis ulang dan tombolnya terasa mati.
+
+**⬅️ Berikutnya:** (a) **commit batch GridReveal + slug konten** (§4ah) — masih di working tree per 19 Agu; (b) **pasang backend Web3Forms untuk form inquiry** (§4ac) — satu-satunya blocker rilis yang tersisa, dan sengaja sudah dikurung dalam satu fungsi; (c) cache edge Cloudflare `/3d/*` (§4ab, di panel Keano); (d) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker (§4n); (e) selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter, §4s); (f) optimasi GLB lanjutan — atlas per ruangan + dedup 29 image kembar (§4s); (g) post-processing PS1 (§4b), pass terakhir untuk look basement.studio. **Optimasi GPU idle ditahan sampai fase finalise** — keputusan Keano 7 Agu, jangan dimulai lebih awal.
+
+> ⚠️ **Test suite: 292 test / 50 berkas, hijau** (19 Agu). Satu test *pernah* merah pada satu putaran penuh — `TheCrewMobileCarousel.test.tsx` ("auto-advances 30s after going idle") — lalu hijau saat dijalankan sendiri **dan** pada putaran penuh berikutnya. **Flake fake-timer di bawah beban, bukan regresi**; kalau ia muncul lagi, curigai `advanceTimersByTimeAsync` di suite yang berbagi sesi timer, bukan komponennya.
 
 ## 🎉 MVP 1 SELESAI (27 Jul) — **50-60 FPS di browser**
 
@@ -731,7 +745,7 @@ OrbitControls **diganti** dengan navigasi tur: kamera pindah antar 5 titik panda
 - Konversi sumbu Blender→three lewat helper `bl(x,y,z) → (x, z, −y)`.
 - Tween **1400 ms cubic in-out**, dengan guard `animating` supaya input beruntun tidak melompati ruangan. `up` & FOV ikut di-tween (perlu untuk masuk/keluar pandangan billiard).
 - ~~Input: wheel di canvas, panah keyboard, swipe touch ≥30 px~~ — **SEMUA DIHAPUS 30 Jul.** Lihat §4k: berpindah ruangan hanya lewat waypoint 3D + room links Navbar.
-- ~~**Hash routing**: `#lounge`, `#meeting`, dst via `history.pushState` + `popstate`~~ — **DIGANTI routing berbasis PATH 3 Agu** (`/`, `/office`, `/meeting`, `/function`) lewat React Router + `routes/RoomRouteSync.tsx`; lihat §4q. `hash` sekarang khusus untuk scroll ke section (`#contact`), bukan penanda ruangan. Ruangan awal tetap `START_ROOM` = **Lounge**, kini lewat `pathFor()`/`roomFromPath()` di store.
+- ~~**Hash routing**: `#lounge`, `#meeting`, dst via `history.pushState` + `popstate`~~ — **DIGANTI routing berbasis PATH 3 Agu** (`/`, `/office`, `/meeting`, `/function`) lewat React Router + `routes/RoomRouteSync.tsx`; lihat §4q. `hash` sekarang khusus untuk scroll ke section (`#contact`), bukan penanda ruangan. Ruangan awal tetap `START_ROOM` = **Lounge**, kini lewat `pathFor()`/`roomFromPath()` di store. ⚠️ **Slug-nya berubah lagi 19 Agu** jadi slug KONTEN (`/services`, `/work`, `/people`) — slug nama ruangan tetap dikenali dan dinormalkan; lihat §4ah.
 - `goTo` didaftarkan ke `sceneStore` supaya `Waypoints` & `Navbar` (yang satu di dalam Canvas, satu di luar) bisa memanggilnya.
 
 ### UI yang mengikuti scroll
@@ -1768,6 +1782,149 @@ Kenapa lapisan 3 muncul: menggeser titik pusat kamera lubang-jarum itu **persis 
 `#contact` adalah section **paling bawah** di halaman tapi masih memakai `py-*`, jadi padding bawahnya menyisakan pita kosong 128 px tepat di ujung dokumen — terukur `footerBottom` 8412 vs `docHeight` 8540, tanpa apa pun di antaranya. Diganti `pt-*`. Footer-nya sendiri membentang tepi ke tepi lewat margin negatif yang membatalkan gutter `px-6 sm:px-10` milik section, dengan sisa 12 px supaya hurufnya tidak benar-benar menyentuh tepi layar. `border-t` dihapus: di posisi mepet begitu ia jadi sekat yang tidak memisahkan apa-apa.
 
 **Verifikasi:** `probe-contact-settle.mjs` (piksel per frame saat menutup), `probe-contact-transition.mjs` (geometri per rAF — bandingkan kotak canvas vs kotak **host**-nya, bukan vs drawing buffer), `shoot-contact-sequence.mjs` (deret potret buka/tutup, sengaja digulir 120 px dari tengah supaya bug `dockOffsetY` tidak tersembunyi), `probe-contact-form.mjs`, `measure-contact-idle.mjs`.
+
+---
+
+## 4ad. Contact Berdiri di Ruangan Office + Laptop di Layar Sentuh ✅ (18 Agu)
+
+Commit `bb517eb` (CTA Office), `00080d3` (jalur sentuh).
+
+**CTA "let's talk" di Office tidak lagi melempar ke Lounge.** Dulu ia `<Link to="/#contact">`, dan alasannya sempat benar: Office satu-satunya ruangan berisi yang **tidak punya** `<Contact />` sendiri. Begitu ia punya, melempar pengunjung ke ruangan lain salah dua kali — ia kehilangan tempatnya tanpa meminta, padahal tujuannya beberapa layar di bawah kakinya. Sekarang **keempat ruangan berisi** punya Contact.
+
+- Perpindahannya lewat **`scrollToSection()`**, bukan anchor `href="#contact"`: lompatan anchor bawaan peramban berjalan **di luar rAF Lenis** dan berebut posisi dengannya di frame yang sama. `Office.tsx` karena itu ikut didaftarkan ke `GUARDED_FILES` di `smoothScrollCallsites.invariant.test.ts`.
+- `goToContact()` di Navbar diturunkan dari **`ROOM_CONTENT`** (menelusuri pohon React element mencari `<Contact />`), bukan dari daftar nama ruangan yang ditulis ulang — jadi penambahan ini tidak menuntut satu baris pun di Navbar, dan mustahil ada ruangan yang punya tombolnya tapi tidak punya section-nya.
+
+### 🐛 Dua bug sentuh, satu sebab
+
+Di perangkat sentuh jalur "sheet" tidak pernah menyalakan gerbang yang sama dengan jalur desktop:
+
+| Gejala | Sebab | Obat |
+|---|---|---|
+| Engselnya diam — yang bergerak cuma form-nya | Pegas `progress` digerbangi `overlay`, yang **selalu false** di layar sentuh | Engsel ikut `open`, kamera yang ikut `overlay` — keduanya memang dua benda berbeda |
+| Tombol tutup tertutup navbar | Kelas modal digerbangi `promoted`, yang juga mati di sentuh, jadi form naik **tanpa membawa lapisan z-nya** | Gerbang diperbaiki + `sheetSettling` (kembaran `settling` untuk jalur sheet) yang menahan keadaan modal sampai engselnya benar-benar pulang (`progress <= 0,002`), bukan sampai tombolnya ditekan |
+
+---
+
+## 4ae. Navbar: Pill Jadi Bilah Penuh ✅ (18 Agu)
+
+Commit `c57d6a1`. Permintaannya sederhana — logo 12 px dari tepi — dan **merapatkan padding tidak akan pernah bisa menyampaikannya**: yang menahan itu `max-w-5xl` + `justify-center`, yang di 1440 menghentikan pill di 1024 dan meninggalkan logo **233 px** dari tepi. Jadi pill-nya dilepas seluruhnya.
+
+- **12 px-nya sekarang padding DALAM `<nav>`**, bukan jarak luar `<header>`. Bedanya: latar sampai ke tepi layar (persegi yang benar-benar menempel di sudut) sementara isinya persis 12 px dari sudut. Terukur 12/12 di 390, 1440, dan 1920.
+- **CTA "Talk to us" kehilangan pill putih + panahnya.** Pill itu satu-satunya benda 36 px di bilah, jadi dia sendiri yang menahan tinggi di 60 px; tanpa dia yang tertinggi tinggal logo dan bilahnya turun ke **52 px = 12 + 27,83 + 12**. ⚠️ **27,83**, bukan 30 seperti atribut `height`-nya — preflight Tailwind memasang `img { height: auto }` yang menimpanya.
+- `maxDistance` MagneticButton ikut turun **14 → 4 px**: tarikan 14 px dulu tertelan `px-4 py-2` milik pill; pada teks telanjang di bilah 52 px ia melempar tulisannya menembus tepi.
+- **Latarnya `.dither-panel`, bukan `.glass`.** Ambang Bayer 4×4 pada blok 1 px CSS = **2 px perangkat di dpr 2**, angka yang sama dengan `DITHER_PX` di HoverScan / MaintenanceHologram / CharacterGlitch. Blur itu satu-satunya permukaan di layar yang datang dari era berbeda. Kerapatannya **12/16**, bukan 8/16 yang luruh jadi papan catur 1 px biasa; titiknya **putih 6%**, bukan sewarna latar seperti percobaan pertama — yang lewat di belakang bilah hampir selalu `--background`, jadi polanya terukur rata sepenuhnya.
+- **Dipasang sebagai LAPISAN `absolute`, bukan kelas di `<nav>`:** `background-image` tidak bisa di-transisi (yang dianimasikan opasitas lapisan, polanya tetap tajam), dan tepi 1 px-nya jadi tanpa andil pada tata letak — bug geser sepiksel saat menu ditutup tidak bisa kembali.
+- **Di `<md` bilahnya tetap 68 px:** burger `h-11` = ambang minimum sentuh 44×44. Overlay menu ikut `px-9` → `px-3` supaya daftar ruangan rata persis dengan logo.
+
+---
+
+## 4af. Crew: Daftar Berkelompok + Tirai Sorot ✅ (18 Agu)
+
+Commit `1858c36`. Filter kategori dan "nama aktif yang mengikuti gulir" dilepas; yang menyorot sekarang **cuma hover, satu state**. Anggotanya dikelompokkan per kategori dan diurutkan namanya **di module scope**, jadi tidak dihitung ulang tiap render. Dinding foto & korsel HP memakai urutan yang sama dengan daftar kiri (`ORDERED`), supaya hover di satu sisi menunjuk kotak yang sejajar di sisi lain.
+
+> **Tirainya menggelapkan seisi halaman KECUALI navbar** — makanya pasangan **z-40 (tirai) / z-45 (yang disorot)** memang harus kalah dari Navbar 50, dan bukan 11/12. Didaftarkan ke tabel z-index **INVARIANTS §2** berikut alasannya: kalau `<main>` kelak melepas `z-10`-nya, urutannya tetap benar di akar. (Dan `<main>` memang melepasnya, di §4ac.)
+
+---
+
+## 4ag. Gulir Lintas-Ruangan Sembuh, Lounge Dirampingkan, Contact Dorong Kamera ✅ (18 Agu)
+
+Commit `8fd0ea2`.
+
+### 🐛 "Gulirnya berhenti di tengah halaman" — dua baris CSS refleks
+
+Dilaporkan: *"gulir dulu di Office, pindah ke Lounge, lalu gulir ke bawah — berhenti di tengah halaman, bisa naik tapi tidak bisa turun."* Terukur: **Lounge mentok di y = 3005** — persis `limit` milik Office (3905 − 900) — padahal dasarnya **5833**.
+
+Biangnya `height: 100%` / `h-full` di `<html>` & `<body>`. Lenis menyimpan tinggi konten di cache dan memperbaruinya lewat `ResizeObserver` yang mengamati `<html>` — dan **ResizeObserver melaporkan KOTAK elemennya, bukan `scrollHeight`-nya**. Tinggi yang terpaku setinggi viewport membuat observer-nya menyala sekali saat mount lalu diam selamanya, jadi `limit` beku di tinggi halaman yang **kebetulan terukur pertama kali**.
+
+Tidak ada error, tidak ada test merah; yang terlihat cuma halaman yang seolah habis di tengah — dan tidak satu pun petunjuknya menunjuk balik ke CSS. Yang rusak ada di `useSmoothScroll.ts` + `routes/`, penyebabnya dua baris di `index.html` dan `src/index.css`, datang dari **dua tempat sekaligus**. Karena itu ia naik jadi **INVARIANTS §8** + `src/lib/scrollRootHeight.invariant.test.ts` (dua test, dibuktikan merah lebih dulu dengan mengembalikan `height: 100%`).
+
+⚠️ **`min-h-full` BUKAN pengganti `h-full`** di `<body>`: itu `min-height: 100%`, yang menggantung pada tinggi `<html>`. Begitu `<html>` tingginya `auto`, persentasenya tak punya acuan dan diam-diam jadi nol. Pakai satuan viewport (`min-height: 100dvh`).
+
+### Lounge dirampingkan
+
+Manifesto & LivingArchitecture dicabut dari alur; berkasnya dihapus bersama `ArchitectureGrid`, `NodeGlyphs`, `CsiParticleField`, dan `data/architectureNodes` (−1808 baris). Alurnya jadi **Hero → CsiHero → Deployments → Process → Industries → Vision → Contact**.
+
+> Efek samping yang lebih besar dari sekadar copy: **tidak ada lagi Canvas kecil yang ikut remount saat berganti ruangan.**
+
+### Sisanya di commit yang sama
+
+- **Contact: `open` menggerakkan kamera di KEDUA jalur** — lid membuka, kamera mendorong masuk ke layar, lembar form memudar menutupinya (menyusul §4ad, yang membetulkan gerbangnya di sentuh).
+- **Archivo Variable** (sumbu `wdth` asli) **khusus wordmark COGNITI.ID** di kepala Contact, lewat token `--font-archivo`. Geist tetap font halaman.
+- Navbar (bilah & menu seluler) dirapatkan mengikuti ukuran font baru.
+
+---
+
+## 4ah. Pindah Ruangan dari Konten: Tirai `GridReveal` + Slug Konten ✅ (19 Agu)
+
+> 🚧 **Belum di-commit** per 19 Agu — ada di working tree. Berkas barunya: `src/components/GridReveal.tsx`, `src/lib/gridReveal.ts`, `src/components/canvas/frameTick.ts`, dua test, dan `scripts/probe-grid-reveal.mjs`.
+
+### Masalahnya: camera fly di tempat yang salah
+
+Klik ruangan di navbar selagi berada jauh di bawah konten dulu memicu **dua gerakan yang tidak diminta sekaligus**: halaman dijepret balik ke atas (jadi 3D ruangan **LAMA** sempat terlihat sekejap), lalu kamera terbang **1400 ms** ke ruangan baru.
+
+Camera fly itu afordans **spasial** — benar saat mengklik waypoint di dalam ruangan, karena perjalanannya terlihat dan menceritakan letak ruangan satu terhadap yang lain. **Dari dalam konten titik berangkatnya tidak pernah terlihat**, jadi yang tersisa dari perjalanan itu cuma 1,4 detik menunggu.
+
+Gantinya: **potong langsung, ditutupi tirai kotak-kotak.** Jadi tirai ini bukan hiasan di atas perpindahan — ia **yang membuat potongannya bisa diterima**.
+
+> ⚠️ Hanya jalur konten yang lewat sini. Dari hero (`heroInView`) dan dari waypoint 3D, **camera fly SENGAJA dipertahankan**. Gerbangnya di `Navbar.goRoom`, bukan di dalam GridReveal. Cadangan kalau `goTo` masih null (chunk `<Scene>` belum termuat) juga jatuh ke jalur lama dengan sengaja: tanpa `goTo`, tirai tidak punya cara menjepret kamera dan akan terangkat memperlihatkan **ruangan yang salah**.
+
+### Angkanya, dan kenapa segitu
+
+| Konstanta | Nilai | Alasan |
+|---|---|---|
+| `TILE_PX` | 64 | **`background-size` milik `.ambient-grid`.** Menyamakannya membuat tirai terbaca sebagai kisi situs ini yang merapat, bukan grid asing yang ditempelkan |
+| `MAX_TILES` | 640 | Tiap kotak satu `<div>` ber-transisi sendiri. 1440×900 → 345 kotak (nyaman); 2560×1440 → 920 (mulai terasa untuk sesuatu yang hidup 900 ms). Yang dikorbankan saat batasnya kena **bukan kualitas, melainkan kerapatan** — dan di layar besar itu tidak terlihat |
+| `COVER_MS` / `UNCOVER_MS` | 380 / 450 | Menutup itu **jawaban atas klik** (makin cepat makin responsif); membuka itu **penyajian ruangan baru** — disamakan 380 ms ia terbaca direnggut, bukan diangkat |
+| `TILE_MS` | 80 | Pop keras. Kotak yang memudar 300 ms saling tumpang tindih sampai belasan kotak setengah-transparan sekaligus, dan yang terbaca **kabut, bukan kisi** |
+| `FRAMES_NEEDED` | 2 | Frame pertama setelah R3F resume bisa jadi frame yang sudah **antre sejak sebelum kamera dijepret** |
+| `FRAME_WAIT_MS` | 300 | Jaring pengaman, **bukan jadwal** — lihat di bawah |
+
+**Urutan kotaknya dikocok (Fisher-Yates), bukan delay acak per kotak.** `delay = rng() × durasi` memang acak, tapi bukan yang dimaksud orang saat bilang "muncul acak": lajunya **bergerombol**, dan **ekornya menggantung** (dengan N kotak, delay terbesar rata-rata jatuh di N/(N+1) × durasi — jadi hampir selalu ada 2-3 kotak yang baru menutup setelah sisanya penuh, dan itu terbaca sebagai **cacat**, bukan sebagai acak). Mengocok posisi dalam antrean memberi **acak di RUANG, teratur di WAKTU**. Membuka pakai **kocokan BARU**, bukan kebalikan kocokan menutup — urutan sama yang dijalankan mundur terbaca sebagai *rewind*, dan rasanya berubah dari "pindah tempat" jadi "batal".
+
+### 🔑 Yang ditunggu FRAME, bukan WAKTU (`frameTick.ts`)
+
+Tirai tidak boleh diangkat sebelum ruangan **baru** betul-betul digambar, dan **jeda tetap tidak bisa menjawab itu** — karena `frameloop = "never"` selama pengunjung berada di konten (INVARIANTS §7). Render loop-nya **berhenti**. Rantainya setelah tirai menutup:
+
+```
+jumpToTop() → IntersectionObserver Hero menyala (async) → heroInView true
+            → prop frameloop kembali "always" → R3F resume → frame pertama
+```
+
+Jarak antara langkah pertama dan terakhir **tidak dijamin oleh apa pun**. `frameTick.ts` menghitung frame yang benar-benar tergambar (`markFrame()` dipanggil paling atas di `useFrame` CameraController, **sebelum early-out apa pun**), dan GridReveal menyedotnya lewat rAF. Pola yang sama dengan `sceneReady`.
+
+- **Module-level, bukan state React** — penulisnya di dalam `useFrame` (60×/detik), pembacanya di DOM. Sama seperti uniform di `revealSweep.ts` & `transitionTear.tsx`.
+- ⚠️ **`frameTick.ts` wajib bebas import three.** Ia diimpor `GridReveal.tsx` yang hidup di bundle utama; satu import three menyeret seluruh mesin 3D ke sana (alasan yang sama dengan catatan `Vec3` di `sceneStore.ts`).
+- **`FRAME_WAIT_MS` 300 itu jaring pengaman**, menanggung keadaan di mana penghitung tidak akan pernah maju: chunk `<Scene>` gagal dimuat, tab disembunyikan (rAF berhenti), WebGL context hilang. Tanpanya semua keadaan itu berakhir sama — **tirai gelap menutupi layar selamanya**. Alasan yang sama dengan jaring pengaman 3 detik di `revealSweep`.
+
+### 🐛 Empat jebakan yang semuanya kena
+
+1. **`scrollToTop()` gagal SENYAP saat gulir dikunci.** Terukur 19 Agu: tirai menutup, `scrollToTop()` dipanggil, halaman tetap duduk di **y = 2868**. Dua rem milik `setScrollLocked` bekerja persis seperti seharusnya; keduanya cuma tidak bisa membedakan gulir pengunjung dari gulir naskah transisi — `lenis.stop()` mengabaikan `scrollTo` biasa (`force: true` yang mengesampingkannya), dan `overflow: hidden` di `<html>` memakukannya di **tingkat peramban**, yang tidak bisa ditembus opsi Lenis apa pun. Obatnya `jumpToTop()`: kunci diangkat sebentar lalu dipasang lagi di baris yang sama, dan `finally` menjamin ia kembali walau Lenis melempar. Gejala tanpa ini: mendarat di ruangan yang **benar** tapi pada **posisi gulir yang lama**, dan karena hero tak pernah masuk pandangan, penantian frame ikut mentok ke jaring pengamannya **tiap kali**.
+2. **`setScrollLocked` harus BERHITUNG, bukan boolean.** Di HP, memilih ruangan dari menu burger memicu **dua pengunci sekaligus** (overlay Navbar + tirai). Menu menutup di tengah transisi, cleanup effect-nya memanggil `setScrollLocked(false)`, dan **kunci milik tirai yang masih terbentang ikut lepas** — sapuan jari lalu menggeser halaman di balik layar yang tidak menampilkannya. Hitungannya dijepit di nol dengan sengaja: `goToContact` memang memanggil unlock lebih dulu lalu membiarkan cleanup memanggilnya lagi.
+3. **Commit ANTARA store dan router.** Tirai menukar dua hal di puncaknya: `currentRoom` (lewat `goTo` instan) dan `pathname` (lewat `navigate`). Menaruhnya dalam satu callback **tidak menjamin keduanya mendarat di satu commit** — zustand masuk lewat `useSyncExternalStore` yang dipaksa sync-lane, `navigate` lewat state biasa milik router. Di commit antara itu, RoomRouteSync Arah 1 membaca "pengunjung membuka /office" lalu memanggil `goTo("Office")` — **tween 1400 ms yang menyeret kamera balik ke ruangan asal**, tepat di balik tirai yang sebentar lagi terangkat. Membalik urutan tukarnya tidak menolong (commit antaranya cuma berpindah sisi); yang benar **mengakui kepemilikan**: selama `pendingRoom` terisi, RoomRouteSync Arah 1 diam.
+4. **Dua rAF bersarang, bukan satu.** rAF pertama menunggu commit React yang memasang kotak-kotaknya; rAF kedua memberi peramban satu frame untuk menghitung gaya **awal**-nya (`opacity 0`). Tanpa frame kedua, 0 dan 1 mendarat di perhitungan gaya yang sama dan **transisinya dilewati** — tirai muncul seketika, tanpa kisi. Bug ini tampak seperti "CSS-nya salah".
+
+Dua gotcha kecil yang ikut tercatat di kode: `goTo({ instant })` **mendahului** guard `animating` (tween yang sedang berjalan harus **dibatalkan**, kalau tidak ia lanjut menyeret kamera setelah tirai naik), dan jalur instan itu **wajib memulihkan `camera.up` & FOV** — ia bisa dipanggil sesaat setelah pemain keluar dari pandangan atas meja billiard, yang meninggalkan `up` miring dan FOV menyempit.
+
+### Navbar & URL bicara bahasa konten
+
+`ROOM_SLUGS` + `ROOM_LABELS` di `sceneStore.ts` — **satu-satunya tempat** penerjemahan itu; `RoomKey` tidak berubah di mana pun, dan label waypoint 3D tetap nama ruangan (di dalam kantor, metafora ruangannya justru yang benar).
+
+| RoomKey | Label & URL | Isinya |
+|---|---|---|
+| Lounge | **Home** — `/` | hero + Deployments + Process + Industries + Vision |
+| Office | **Services** — `/services` | bedah layanan |
+| Meeting | **Work** — `/work` | studi kasus |
+| Function | **People** — `/people` | crew + values + Careers |
+
+- **Slug lama tetap hidup** (`/office`, `/meeting`, `/function`) — tautan yang terlanjur beredar tidak boleh mati. `roomFromPath` mengenali keduanya, dan **route legacy-nya ada di `App.tsx`**: tanpa itu catch-all `*` melempar pengunjung ke `/` jauh sebelum store sempat membaca path-nya. ⚠️ Elemennya `RoomContent` **sungguhan, bukan `<Navigate>`** — pada deep-link, RoomRouteSync sengaja menahan URL apa adanya sampai chunk `<Scene>` tiba, dan `<Navigate>` akan balapan dengan penahan itu.
+- **Normalisasinya `replace`, bukan push.** Path yang menunjuk ruangan yang sama tapi ejaannya bukan kanonis itu **bukan perpindahan**. Dengan push, menekan Back dari `/services` mendarat di `/office` yang detik itu juga ditulis ulang jadi `/services` lagi — **tombol Back terasa mati** dan riwayatnya terisi entri kembar tanpa batas.
+
+### Penjaganya
+
+- **`src/lib/gridReveal.test.ts`** — matematika kisi & delay. Termasuk satu test khusus untuk jebakan pembulatan `tileGrid`: rumus luas mengabaikan `ceil`, dan di 2560×1440 ia memberi 646 kotak (lewat dari 640) karena **dua pembulatan yang masing-masing menambah kurang dari satu lajur bisa bersama-sama menambah satu baris penuh**.
+- **`src/components/GridReveal.test.tsx`** — urutan, bukan tampilan. `goTo({instant:true})` sebelum `navigate` **dibuktikan dengan memasang `RoomRouteSync` sungguhan** (kalau terbalik, `goTo` terpanggil dua kali dan yang kedua tanpa `instant`); tirai tidak terangkat sebelum penghitung frame maju; jaring pengaman tetap mengangkatnya kalau penghitung itu tak pernah maju.
+- **`scripts/probe-grid-reveal.mjs`** — filmstrip lewat Brave. Yang dibuktikan bukan "ada kotak-kotaknya", melainkan tiga hal yang cuma kelihatan dari rentetan frame: tirai betul-betul menutup **sebelum** ruangannya ditukar, frame pertama setelah terangkat sudah memperlihatkan ruangan tujuan **dari sudut akhirnya** (bukan dari perjalanan), dan urutannya acak — bukan menyapu satu arah. Mode `hero` menjaga jalur camera fly yang memang **harus tetap ada**.
+- **INVARIANTS §2** bertambah `z-58`: di atas Navbar (50), di bawah LoadingScreen (60). Tirai yang menutupi seluruh layar **kecuali satu bilah melayang** bukan tirai — yang terbaca "tirainya bocor", persis yang terpotret 13 Agu pada form inquiry.
 
 ---
 

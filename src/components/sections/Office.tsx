@@ -106,8 +106,9 @@ export default function Office() {
 
   return (
     <section
-      id="office-services"
-      /* Section pertama ruangan Office = yang menempel ke hero 3D, jadi
+      id="services"
+      /* Section pertama ruangannya (Function sejak tukar konten 19 Agu;
+         sebelumnya Office) = yang menempel ke hero 3D, jadi
          padding-atasnya 12px (`pt-3`) di semua lebar — sama dengan gutter
          `px-3` dan sama dengan tiga ruangan lain (aturan padding-tipis untuk
          section pertama tiap ruangan, lihat CsiHero.tsx). Dulu `pt-6` di HP
@@ -125,7 +126,7 @@ export default function Office() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, ease: EASE }}
           >
-            Office
+            Services
           </motion.p>
 
           {/* T1 — line-mask heading */}

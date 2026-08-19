@@ -63,6 +63,7 @@ menengok tetangganya di tabel ini.
 |---:|---|---|
 | 0 | `.ambient-grid` | Nico |
 | 10 | konten `<main>`, petunjuk scroll Hero | Nico |
+| 20 | pembungkus canvas yang dipaku + pita `GridReveal` (pindah ruangan dari konten) | Keano |
 | 30 | `BilliardHUD` | Keano |
 | 40 | tirai sorot `TheCrew` (hover nama/foto) | Keano |
 | 45 | baris + kotak foto yang disorot `TheCrew` | Keano |
@@ -85,6 +86,32 @@ selama terbuka, gulir dikunci dan Navbar TIDAK boleh bisa diklik menembus
 tirainya — makanya di atas 50. Tapi ia tetap harus tenggelam di bawah
 `LoadingScreen` (60), yang menutupi seluruh situs tanpa kecuali. Kalau kelak
 Navbar dinaikkan, ketiganya ikut naik bersama, tetap di bawah 60.
+
+**20 sengaja MENANG atas `<main>` dan sengaja KALAH dari Navbar — bukan
+kompromi, itu dua syarat terpisah yang kebetulan muat di satu angka.**
+`GridReveal` bukan tirai penutup; ia menyingkap. Yang naik ke z-20 adalah
+pembungkus canvas 3D yang dipaku (`CanvasStage` di `Hero.tsx`), lalu dipotong
+`clip-path` kotak demi kotak sampai penuh. Karena itu:
+
+· **Menang atas `<main>` (10)** — kalau kalah, sapuannya terjadi di belakang
+  konten dan pengunjung tidak melihat apa pun. Angka 20 sudah cukup untuk
+  SELURUH isi `<main>`, termasuk tirai `TheCrew` yang 40/45: `<main>` `relative
+  z-10` membentuk stacking context, jadi 45 di dalamnya tidak pernah naik
+  melewati 10 di akar. Satu-satunya saat `<main>` melepas `z-10`-nya adalah
+  selagi form inquiry terbuka — dan di keadaan itu navbar tidak terjangkau, jadi
+  transisi ruangan tidak mungkin dimulai.
+
+· **Kalah dari Navbar (50)** — dan justru ini yang membedakannya dari 54–56.
+  Form inquiry modal: navbar harus tenggelam. Transisi ruangan berangkat DARI
+  navbar dan berlangsung <1 detik; menutupi navbar di tengahnya membuat menu
+  berkedip hilang-muncul tepat di elemen yang barusan disentuh. Navbar tetap
+  terlihat dan tetap bisa diklik sepanjang sapuan; permintaan kedua ditolak di
+  `sceneStore.requestRoomTransition`, bukan dengan menghalangi klik.
+
+⚠️ Angka ini dulunya 58, dari rancangan dua arah (tutup layar → tukar ruangan →
+buka layar) yang memang butuh menang atas segalanya. Rancangan itu diganti 19
+Agu. Kalau kelak ada yang menaikkannya kembali "supaya aman", yang didapat
+bukan keamanan melainkan navbar yang berkedip.
 
 **Kenapa rawan.** Ini seam paling langsung antara kita: Navbar milik Nico,
 loader & HUD milik Keano, dan keduanya harus tetap berurutan. Menaikkan navbar
@@ -292,6 +319,13 @@ Dua konsekuensi, satu ke tiap arah:
    loader menutupi situs **selamanya** (kegagalan yang sama dengan §3).
    `heroInView` default `true` tidak cukup: reload di posisi scroll tengah
    halaman membuat observer menyetelnya `false` sebelum GLB selesai dimuat.
+3. **Syarat ketiga, `|| pendingRoom !== null`** (ditambahkan 19 Agu bersama
+   `GridReveal`): transisi ruangan dari konten berjalan justru saat hero
+   off-screen — persis keadaan yang mematikan loop. Tanpa syarat ini, ruangan
+   tujuan tidak pernah digambar, `frameTick` tidak pernah maju, dan sapuannya
+   selalu jatuh ke jaring pengaman 300 ms lalu menyingkap frame ruangan LAMA.
+   Bentuk kegagalannya halus: transisinya tetap "jalan", cuma menampilkan
+   ruangan yang salah.
 
 **Penjaga.** `src/components/canvas/frameloopGate.invariant.test.ts`
 

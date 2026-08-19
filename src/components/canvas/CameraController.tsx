@@ -11,7 +11,9 @@ import {
   roomFromPath,
   type RoomKey,
   type Vec3,
+  type GoToOptions,
 } from "@/lib/store/sceneStore";
+import { markFrame } from "./frameTick";
 import {
   applyParallax,
   dampTowards,
@@ -213,11 +215,59 @@ export default function CameraController() {
     camera.lookAt(v.tgt);
   }, [camera]);
 
-  const goTo = useCallback(
+  /**
+   * Jepret kamera ke sebuah ruangan TANPA tween — dipakai jalur `instant` di
+   * goTo. Cetakan geraknya sama dengan blok deep-link di bawah.
+   *
+   * ⚠️ `up` & FOV WAJIB ikut dikembalikan ke normal di sini. Jalur tween
+   * melakukannya lewat toUp/toFov, dan blok deep-link tidak perlu karena ia
+   * hanya jalan saat mount (kamera masih perawan). Jalur ini bisa dipanggil
+   * KAPAN SAJA — termasuk sesaat setelah pemain keluar dari pandangan atas
+   * meja billiard, yang meninggalkan camera.up miring dan FOV menyempit.
+   * Tanpa dua baris itu, tirai terangkat memperlihatkan ruangan yang terjungkal.
+   */
+  const snapTo = useCallback(
     (name: RoomKey) => {
+      basePos.current.copy(VIEWS[name].pos);
+      camera.position.copy(VIEWS[name].pos);
+      lookTarget.current.copy(VIEWS[name].tgt);
+      aimTarget.current.copy(VIEWS[name].tgt);
+      camera.up.set(0, 1, 0);
+      setFov(camera, DEFAULT_FOV);
+      camera.lookAt(VIEWS[name].tgt);
+    },
+    [camera],
+  );
+
+  const goTo = useCallback(
+    (name: RoomKey, opts?: GoToOptions) => {
       if (VIEWS[name]?.disabled) return;
-      if (animating.current) return;
       if (name === currentRoomRef.current) return;
+
+      /**
+       * Jalur INSTAN — tirai GridReveal sedang menutupi layar, jadi tidak ada
+       * yang bisa dilihat dari sebuah tween; yang tersisa cuma menunggunya.
+       *
+       * ⚠️ Sengaja MENDAHULUI guard `animating`, bukan tunduk padanya. Tween
+       * yang mungkin sedang berjalan justru harus DIBATALKAN — kalau tidak, ia
+       * lanjut menggerakkan kamera setelah tirai naik dan menyeretnya keluar
+       * dari ruangan yang barusan dijepret.
+       *
+       * ⚠️ JANGAN menambah penanganan khusus untuk transitionTear di sini.
+       * Sobekan digerakkan LAJU kamera dan sudah dijaga: driveTear melaporkan 0
+       * saat `!tweening`, dan baris di bawah meninggalkan `animating` false —
+       * jadi teleport sejauh apa pun tidak merobek layar. Ini pernah terlihat
+       * seperti lubang yang perlu ditambal; bukan.
+       */
+      if (opts?.instant) {
+        animating.current = false;
+        snapTo(name);
+        currentRoomRef.current = name;
+        setCurrentRoom(name);
+        return;
+      }
+
+      if (animating.current) return;
 
       // Dari basePos, BUKAN camera.position — lihat catatan di basePos.
       fromPos.current.copy(basePos.current);
@@ -238,7 +288,7 @@ export default function CameraController() {
       setCurrentRoom(name);
       // URL diperbarui oleh RoomRouteSync di DOM (punya router context).
     },
-    [camera, setCurrentRoom],
+    [camera, setCurrentRoom, snapTo],
   );
 
   // register goTo in store so RoomNav (outside Canvas) can call it
@@ -306,15 +356,17 @@ export default function CameraController() {
     if (key && !VIEWS[key].disabled && key !== START_ROOM) {
       currentRoomRef.current = key;
       setCurrentRoom(key);
-      basePos.current.copy(VIEWS[key].pos);
-      camera.position.copy(VIEWS[key].pos);
-      lookTarget.current.copy(VIEWS[key].tgt);
-      aimTarget.current.copy(VIEWS[key].tgt);
-      camera.lookAt(VIEWS[key].tgt);
+      snapTo(key);
     }
-  }, [camera, setCurrentRoom]);
+  }, [setCurrentRoom, snapTo]);
 
   useFrame((_, delta) => {
+    // Paling atas, SEBELUM early-out apa pun di bawah: yang dihitung di sini
+    // "frame ini akan digambar", dan itu benar tanpa peduli ada yang berubah
+    // atau tidak. GridReveal menunggu angka ini maju sebelum mengangkat tirai
+    // — lihat frameTick.ts.
+    markFrame();
+
     const tweening = animating.current;
 
     if (tweening) {

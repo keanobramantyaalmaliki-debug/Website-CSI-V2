@@ -2,8 +2,9 @@
  * PENJAGA REGRESI — deep-link ke sebuah ruangan tidak boleh dilempar ke Lounge
  *
  * ── Bug yang dijaga (3 Agu) ────────────────────────────────────────────────
- * Membuka `/office` langsung (tautan yang dibagikan, refresh, atau bookmark)
- * mendarat di Lounge, dan address bar diam-diam berubah jadi "/".
+ * Membuka path ruangan langsung (tautan yang dibagikan, refresh, atau
+ * bookmark — waktu itu "/office", kini "/services") mendarat di Lounge, dan
+ * address bar diam-diam berubah jadi "/".
  *
  * Sebabnya dua arah di RoomRouteSync yang BALAPAN saat mount pertama:
  *
@@ -45,14 +46,14 @@ function LocationProbe({ onChange }: { onChange: (url: string) => void }) {
 }
 
 describe("deep-link ke ruangan bertahan saat mount pertama", () => {
-  it("membuka /office sebelum <Scene> mount tidak melempar ke /", async () => {
+  it("membuka /services sebelum <Scene> mount tidak melempar ke /", async () => {
     // Keadaan sungguhan pada muat pertama: chunk Scene belum tiba, jadi
     // CameraController belum memanggil registerGoTo → goTo masih null.
     useSceneStore.setState({ currentRoom: "Lounge", goTo: null });
 
     let url = "";
     render(
-      <MemoryRouter initialEntries={["/office"]}>
+      <MemoryRouter initialEntries={["/services"]}>
         <RoomRouteSync />
         <LocationProbe onChange={(u) => (url = u)} />
       </MemoryRouter>,
@@ -71,10 +72,10 @@ describe("deep-link ke ruangan bertahan saat mount pertama", () => {
         "Perbaikan: Arah 2 tidak boleh menulis URL selama pathname saat ini " +
         "masih menunjuk ruangan yang sah dan berbeda — biarkan Arah 1 yang " +
         "menyelesaikannya begitu goTo terdaftar.\n",
-    ).toBe("/office");
+    ).toBe("/services");
   });
 
-  it("setelah goTo terdaftar, /office menggerakkan currentRoom ke Office", async () => {
+  it("setelah goTo terdaftar, /services menggerakkan currentRoom ke Function", async () => {
     const seen: string[] = [];
     // ⚠️ Mock ini WAJIB meniru `if (animating.current) return` milik
     // CameraController. Tanpa penahan itu, Arah 1 dan Arah 2 saling
@@ -94,6 +95,38 @@ describe("deep-link ke ruangan bertahan saat mount pertama", () => {
 
     let url = "";
     render(
+      <MemoryRouter initialEntries={["/services"]}>
+        <RoomRouteSync />
+        <LocationProbe onChange={(u) => (url = u)} />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() =>
+      expect(useSceneStore.getState().currentRoom).toBe("Function"),
+    );
+    expect(seen).toContain("Function");
+    expect(url).toBe("/services");
+  });
+
+  // ── Slug lama (19 Agu) ─────────────────────────────────────────────────────
+  // "/office" beredar di tautan yang dibagikan sebelum slug konten. Kontraknya
+  // dua tahap: SELAMA goTo belum terdaftar URL dibiarkan apa adanya (persis
+  // penjaga di atas — menulis ulang lebih awal balapan dengan Arah 1); begitu
+  // Arah 1 selesai, Arah 2 menormalkannya ke slug konten ruangan itu
+  // ("/people" sejak konten Office ↔ Function ditukar 19 Agu).
+  it("slug lama /office: mendarat di Office, URL dinormalkan ke /people", async () => {
+    let animating = false;
+    useSceneStore.setState({
+      currentRoom: "Lounge",
+      goTo: (room) => {
+        if (animating) return;
+        animating = true;
+        useSceneStore.setState({ currentRoom: room });
+      },
+    });
+
+    let url = "";
+    render(
       <MemoryRouter initialEntries={["/office"]}>
         <RoomRouteSync />
         <LocationProbe onChange={(u) => (url = u)} />
@@ -103,7 +136,6 @@ describe("deep-link ke ruangan bertahan saat mount pertama", () => {
     await waitFor(() =>
       expect(useSceneStore.getState().currentRoom).toBe("Office"),
     );
-    expect(seen).toContain("Office");
-    expect(url).toBe("/office");
+    await waitFor(() => expect(url).toBe("/people"));
   });
 });

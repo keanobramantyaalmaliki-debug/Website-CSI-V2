@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import Hero from "@/components/sections/Hero";
 import useSmoothScroll from "@/lib/hooks/useSmoothScroll";
 import { useSceneStore } from "@/lib/store/sceneStore";
+import GridReveal from "@/components/GridReveal";
 import RoomRouteSync from "./RoomRouteSync";
 
 /**
@@ -48,6 +49,12 @@ export default function SiteLayout() {
         <Outlet />
       </main>
       <RoomRouteSync />
+      {/* Tirai pindah-ruangan. Bersebelahan dengan RoomRouteSync karena
+          keduanya sama-sama jembatan router ↔ store yang tak menggambar apa pun
+          di alur layout — dan GridReveal butuh `useNavigate`, jadi ia WAJIB di
+          dalam Router. Ditaruh paling akhir supaya urutan cat-nya di atas
+          <main>; z-58-nya sudah menjamin itu, ini cuma tidak melawannya. */}
+      <GridReveal />
     </>
   );
 }

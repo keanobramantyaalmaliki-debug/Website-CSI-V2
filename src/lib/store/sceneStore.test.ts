@@ -15,16 +15,18 @@ describe("pathFor", () => {
     expect(pathFor(START_ROOM)).toBe("/");
   });
 
-  it("Office maps to '/office'", () => {
-    expect(pathFor("Office")).toBe("/office");
+  // Office ↔ Function tukar konten 19 Agu: crew (People) pindah ke scene
+  // Office, bedah layanan (Services) ke Function — lihat roomContent.tsx.
+  it("Office maps to '/people' (slug konten, bukan nama ruangan)", () => {
+    expect(pathFor("Office")).toBe("/people");
   });
 
-  it("Meeting maps to '/meeting'", () => {
-    expect(pathFor("Meeting")).toBe("/meeting");
+  it("Meeting maps to '/work'", () => {
+    expect(pathFor("Meeting")).toBe("/work");
   });
 
-  it("Function maps to '/function'", () => {
-    expect(pathFor("Function")).toBe("/function");
+  it("Function maps to '/services'", () => {
+    expect(pathFor("Function")).toBe("/services");
   });
 });
 
@@ -33,21 +35,32 @@ describe("roomFromPath", () => {
     expect(roomFromPath("/")).toBe("Lounge");
   });
 
-  it("'/office' resolves to Office", () => {
+  it("'/services' resolves to Function", () => {
+    expect(roomFromPath("/services")).toBe("Function");
+  });
+
+  it("'/work' resolves to Meeting", () => {
+    expect(roomFromPath("/work")).toBe("Meeting");
+  });
+
+  it("'/people' resolves to Office", () => {
+    expect(roomFromPath("/people")).toBe("Office");
+  });
+
+  // Slug lama = nama ruangan. Tautan yang dibagikan sebelum slug konten
+  // (19 Agu) harus tetap mendarat di ruangan yang benar; normalisasi URL-nya
+  // urusan RoomRouteSync Arah 2, bukan fungsi ini.
+  it("slug lama (nama ruangan) tetap dikenali", () => {
     expect(roomFromPath("/office")).toBe("Office");
-  });
-
-  it("'/meeting' resolves to Meeting", () => {
     expect(roomFromPath("/meeting")).toBe("Meeting");
-  });
-
-  it("'/function' resolves to Function", () => {
     expect(roomFromPath("/function")).toBe("Function");
+    expect(roomFromPath("/lounge")).toBe("Lounge");
   });
 
   it("is case-insensitive", () => {
+    expect(roomFromPath("/SERVICES")).toBe("Function");
+    expect(roomFromPath("/Work")).toBe("Meeting");
     expect(roomFromPath("/OFFICE")).toBe("Office");
-    expect(roomFromPath("/Meeting")).toBe("Meeting");
   });
 
   it("'/pantry' returns null (disabled room)", () => {

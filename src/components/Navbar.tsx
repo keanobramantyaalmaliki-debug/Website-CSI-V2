@@ -3,14 +3,32 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion, type Variants } from "motion/react";
-import { useSceneStore, pathFor, type RoomKey } from "@/lib/store/sceneStore";
+import { useSceneStore, pathFor, ROOM_LABELS, type RoomKey } from "@/lib/store/sceneStore";
 import { roomHasContact } from "@/lib/roomContent";
 import { ACTIVE_KEYS } from "@/components/canvas/CameraController";
 import MagneticButton from "@/components/motion/MagneticButton";
-import { scrollToSection, setScrollLocked } from "@/lib/smoothScroll";
+import { scrollToSection, scrollToTop, setScrollLocked } from "@/lib/smoothScroll";
 import { SOCIALS } from "@/data/socials";
 import { ID_ZONES, useZoneClocks } from "@/lib/hooks/useZoneClocks";
 import { useNarrowViewport } from "@/lib/hooks/useNarrowViewport";
+
+/**
+ * Urutan tautan ruangan di navbar: bahasa KONTEN — Home → Services → Work →
+ * People — BUKAN urutan ruangan di ACTIVE_KEYS. Dua urutan itu sempat
+ * kebetulan sama, lalu berpisah 19 Agu saat konten Office ↔ Function ditukar
+ * (lihat roomContent.tsx): memakai ACTIVE_KEYS mentah kini menampilkan
+ * Home / People / Work / Services.
+ *
+ * Diturunkan dari ACTIVE_KEYS lewat filter, bukan ditulis sebagai daftar
+ * berdiri sendiri, supaya dua penjaganya tetap jalan: ruangan disabled tetap
+ * tersaring, dan ruangan aktif yang lupa diberi urutan tidak hilang diam-diam
+ * melainkan menempel di ekor.
+ */
+const NAV_CONTENT_ORDER: readonly RoomKey[] = ["Lounge", "Function", "Meeting", "Office"];
+const NAV_KEYS: RoomKey[] = [
+  ...NAV_CONTENT_ORDER.filter((k) => ACTIVE_KEYS.includes(k)),
+  ...ACTIVE_KEYS.filter((k) => !NAV_CONTENT_ORDER.includes(k)),
+];
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -103,6 +121,8 @@ const LINE_TOP = "6.25px";
 export default function Navbar() {
   const heroInView  = useSceneStore((s) => s.heroInView);
   const currentRoom = useSceneStore((s) => s.currentRoom);
+  const goTo        = useSceneStore((s) => s.goTo);
+  const requestRoomTransition = useSceneStore((s) => s.requestRoomTransition);
   const reduced     = useReducedMotion();
   const navigate    = useNavigate();
   const narrow      = useNarrowViewport();
@@ -205,8 +225,41 @@ export default function Navbar() {
     return () => setScrollLocked(false);
   }, [open]);
 
+  /**
+   * Pindah ruangan dari bilah nav — DUA jalur, dipisah oleh `heroInView`.
+   *
+   * Hero masih terlihat → `navigate` biasa, dan rantai lama jalan seperti dulu:
+   * RoomRouteSync Arah 1 memanggil goTo() dengan tween 1400 ms. Itu SENGAJA
+   * dipertahankan. Kameranya berangkat dari ruangan yang sedang dipandang, jadi
+   * perjalanannya terlihat dan menceritakan letak ruangan satu sama lain.
+   *
+   * Hero sudah lewat (pengunjung di dalam konten) → tirai GridReveal. Dari
+   * sini titik berangkat kamera tidak terlihat sama sekali, jadi tween-nya
+   * kehilangan seluruh isinya dan yang tersisa cuma 1,4 detik menunggu —
+   * ditambah kedipan ruangan LAMA saat halaman dijepret ke atas lebih dulu.
+   *
+   * ⚠️ `goTo` null = chunk <Scene> belum termuat. Cadangannya jatuh ke jalur
+   * lama dengan sengaja: tanpa goTo, tirai tidak punya cara menjepret kamera,
+   * jadi ia akan menutup lalu terangkat memperlihatkan ruangan yang salah.
+   */
   function goRoom(room: RoomKey) {
-    navigate(pathFor(room));
+    if (!heroInView && goTo && room !== currentRoom) {
+      requestRoomTransition(room);
+    } else {
+      navigate(pathFor(room));
+      // ⚠️ `scrollToTop` di sini menambal jalur yang tidak punya siapa-siapa
+      // lagi. RoomRouteSync Arah 1 memang menggulirkan ke atas — tapi hanya
+      // setelah melewati `if (key !== currentRoom && !goTo) return`, dan
+      // `goTo` null itu PERSIS keadaan reduced-motion: Hero tidak pernah
+      // me-mount Scene sama sekali, jadi CameraController tidak pernah
+      // mendaftar. Terukur 19 Agu: dengan prefers-reduced-motion, pindah
+      // ruangan dari tengah konten mendarat di ruangan baru pada posisi gulir
+      // LAMA (y = 2869) — konten yang berganti di bawah kaki tanpa aba-aba.
+      //
+      // Aman dipanggil pada jalur hero juga: di sana RoomRouteSync tetap
+      // menggulirkan, dan menggulir ke puncak dua kali sama saja dengan sekali.
+      scrollToTop();
+    }
     setOpen(false);
   }
 
@@ -395,7 +448,7 @@ export default function Navbar() {
               strut-nya hilang, li ikut tinggi isinya (19,5px), dan logo kembali
               jadi benda tertinggi seperti yang tertulis di komentar besar
               di atas. */}
-          {ACTIVE_KEYS.map((room) => {
+          {NAV_KEYS.map((room) => {
             const active = currentRoom === room;
             return (
               <li key={room} className="flex">
@@ -408,7 +461,7 @@ export default function Navbar() {
                     active ? "text-accent" : "text-zinc-300",
                   ].join(" ")}
                 >
-                  {room}
+                  {ROOM_LABELS[room]}
                 </button>
               </li>
             );
@@ -589,13 +642,16 @@ export default function Navbar() {
  *
  * Tiga hal yang berbeda dari aslinya, dan alasannya:
  *
- * 1. **Daftarnya ruangan (Lounge/Office/…), bukan bagian halaman**
- *    (Deployments/Services/…). Situs lama satu halaman panjang, jadi menunya
- *    daftar jangkar scroll. Di sini pindah ruangan itu pindah rute, dan
- *    INVARIANTS.md §6 mengikatnya lebih keras lagi: di perangkat sentuh
- *    tautan ruangan di navbar adalah **satu-satunya** jalan pindah ruangan —
- *    waypoint 3D sengaja dimatikan di sana. Menggantinya dengan daftar bagian
- *    halaman akan mengunci pengunjung HP di satu ruangan.
+ * 1. **Daftarnya ruangan, bukan bagian halaman.** Situs lama satu halaman
+ *    panjang, jadi menunya daftar jangkar scroll. Di sini pindah ruangan itu
+ *    pindah rute, dan INVARIANTS.md §6 mengikatnya lebih keras lagi: di
+ *    perangkat sentuh tautan ruangan di navbar adalah **satu-satunya** jalan
+ *    pindah ruangan — waypoint 3D sengaja dimatikan di sana. Menggantinya
+ *    dengan daftar bagian halaman akan mengunci pengunjung HP di satu ruangan.
+ *    Sejak 19 Agu tiap entri TAMPIL dengan label konten (Home/Services/Work/
+ *    People, lihat ROOM_LABELS di sceneStore) — tapi itu cuma baju; yang
+ *    di-render tetap ruangan (NAV_KEYS, ACTIVE_KEYS dalam urutan konten)
+ *    dan kliknya tetap pindah ruangan.
  * 2. **Tanpa efek scramble huruf saat hover.** Menu ini `md:hidden`; di layar
  *    yang menampilkannya tidak ada hover sama sekali, jadi efeknya cuma kode
  *    yang tidak pernah jalan.
@@ -658,7 +714,7 @@ function MobileMenu({
           className="fixed inset-0 flex flex-col overflow-y-auto bg-background px-3 pt-18 pb-10 md:hidden"
         >
           <motion.ul variants={listV} className="flex flex-col">
-            {ACTIVE_KEYS.map((room) => {
+            {NAV_KEYS.map((room) => {
               const active = currentRoom === room;
               return (
                 <motion.li key={room} variants={itemV}>
@@ -671,7 +727,7 @@ function MobileMenu({
                       active ? "text-accent" : "text-zinc-200",
                     ].join(" ")}
                   >
-                    {room}
+                    {ROOM_LABELS[room]}
                   </button>
                 </motion.li>
               );

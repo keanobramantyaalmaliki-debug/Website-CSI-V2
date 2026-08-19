@@ -20,9 +20,15 @@ import TheCrew from "@/components/sections/TheCrew";
 /**
  * Konten yang ditampilkan di bawah hero untuk tiap room.
  *
- * Office: satu-satunya tempat detail layanan (9-item accordion, pindahan
- *   dari Services.tsx yang dulu ada di Lounge — dihapus supaya tidak ada
- *   dua sumber layanan yang tumpang tindih).
+ * Function: satu-satunya tempat detail layanan (9-item accordion di
+ *   sections/Office.tsx — nama berkasnya warisan dari masa konten ini tinggal
+ *   di ruangan Office; pindahan dari Services.tsx yang dulu ada di Lounge —
+ *   dihapus supaya tidak ada dua sumber layanan yang tumpang tindih).
+ *
+ * Office ↔ Function ditukar 19 Agu: konten People (crew) lebih nyambung
+ *   dengan scene Office yang karakternya duduk bekerja di meja — sekaligus
+ *   hologram maintenance & glitch karakter idle (keduanya di-gate ke Office)
+ *   jadi latar halaman People. Konten Services pindah ke Function.
  *
  * Page structure (decided 2026-07-07, see reference/ROADMAP.md B5; updated
  * 2026-08-03: Careers → Function, FeaturedProjects dropped (duplicated
@@ -53,7 +59,10 @@ export const ROOM_CONTENT: Record<RoomKey, ReactNode> = {
   ),
   Office: (
     <>
-      <Office />
+      <PeopleIntro />
+      <PeopleValues />
+      <TheCrew />
+      <Careers />
       <Contact />
     </>
   ),
@@ -67,10 +76,7 @@ export const ROOM_CONTENT: Record<RoomKey, ReactNode> = {
   ),
   Function: (
     <>
-      <PeopleIntro />
-      <PeopleValues />
-      <TheCrew />
-      <Careers />
+      <Office />
       <Contact />
     </>
   ),

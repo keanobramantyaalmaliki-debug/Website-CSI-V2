@@ -112,6 +112,23 @@ body {
   min-height: 100dvh;
 }
 
+/* Sisakan lajur scrollbar SELALU, bahkan saat gulir sedang dikunci.
+   `setScrollLocked` (smoothScroll.ts) mengunci dengan `overflow: hidden` di
+   <html>. Di platform ber-scrollbar klasik (Windows/Linux desktop) itu
+   MENCABUT scrollbar-nya, dan viewport melebar ~15px seketika. Konsekuensinya
+   bukan cuma konten yang bergeser: canvas R3F ikut berubah ukuran, dan ia
+   menyusul perubahan tata letak ~58 ms di belakang DOM (terukur, lihat
+   catatan pin di Hero.tsx). Jadi tiap buka/tutup form inquiry, tiap buka/tutup
+   menu HP, dan tiap transisi GridReveal membayar satu kedipan — cuma di
+   platform itu, yang artinya tak akan pernah terlihat dari sini.
+
+   `stable` memesan lajurnya sejak awal, jadi mengunci tidak lagi mengubah
+   lebar apa pun. Di macOS/iOS (scrollbar melayang) ini no-op — tidak ada yang
+   berubah untuk mesin tempat situs ini dikerjakan. */
+html {
+  scrollbar-gutter: stable;
+}
+
 html:not(.lenis) {
   scroll-behavior: smooth;
 }
@@ -216,9 +233,21 @@ body {
   }
 }
 
-/* Honor reduced-motion globally for CSS-driven smooth scroll */
+/* Honor reduced-motion globally for CSS-driven smooth scroll.
+
+   ⚠️ Selektornya WAJIB sama persis dengan yang di atas — bukan `html` polos.
+   Media query tidak menambah spesifisitas apa pun, jadi `html` (0-0-1) kalah
+   dari `html:not(.lenis)` (0-1-1) dan aturan ini tidak pernah menang. Diam
+   pula gagalnya: satu-satunya gejalanya cuma halaman MELUNCUR pelan padahal
+   pengunjung minta tanpa gerakan.
+
+   Terukur 19 Agu lewat scripts/probe-grid-reveal.mjs (CSI_REDUCED=1): pindah
+   ruangan dari konten meluncur 2868 → 0 selama 1,27 detik. Dan di sinilah ia
+   paling mudah lolos — reduced-motion mematikan Lenis, jadi `.lenis` tidak
+   pernah menempel dan cabang `:not()` justru selalu aktif persis di mode yang
+   seharusnya mematikannya. */
 @media (prefers-reduced-motion: reduce) {
-  html {
+  html:not(.lenis) {
     scroll-behavior: auto;
   }
 }

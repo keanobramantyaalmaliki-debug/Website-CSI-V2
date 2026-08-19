@@ -42,6 +42,16 @@ import { useSceneStore } from "@/lib/store/sceneStore";
  * Penjaganya: frameloopGate.invariant.test.ts — Scene.tsx wajib memakai hook
  * ini di prop frameloop, dan kondisi di sini wajib menyebut kedua flag.
  *
+ * ⚠️ `|| pendingRoom !== null` juga WAJIB, dan alasannya persis kebalikan dari
+ * fungsi utama hook ini. Sapuan GridReveal menyingkap 3D SELAGI pengunjung
+ * masih berada jauh di bawah konten — `heroInView` false, `sceneReady` true,
+ * jadi tanpa syarat ini loop-nya diam tepat pada satu-satunya momen ruangan
+ * baru harus menggambar dirinya. Yang terlihat: kotak-kotak membuka ke frame
+ * TERAKHIR ruangan lama, lalu ruangan benar muncul belakangan saat scroll
+ * menyusul. GridReveal memang menunggu frameTick maju sebelum menyapu, tapi
+ * penghitung itu tidak akan pernah maju kalau loop-nya belum dinyalakan — jadi
+ * ia jatuh ke jaring pengaman 300 ms-nya dan tetap menyingkap layar yang basi.
+ *
  * Efek samping yang sudah ditimbang:
  *  - Perubahan frameloop me-reset clock R3F → aman: tidak ada kode canvas/
  *    yang membaca clock.elapsedTime (semua pakai performance.now() atau dt;
@@ -53,5 +63,8 @@ import { useSceneStore } from "@/lib/store/sceneStore";
 export function useGatedFrameloop(): "always" | "never" {
   const heroInView = useSceneStore((s) => s.heroInView);
   const sceneReady = useSceneStore((s) => s.sceneReady);
-  return heroInView || !sceneReady ? "always" : "never";
+  const pendingRoom = useSceneStore((s) => s.pendingRoom);
+  return heroInView || !sceneReady || pendingRoom !== null
+    ? "always"
+    : "never";
 }

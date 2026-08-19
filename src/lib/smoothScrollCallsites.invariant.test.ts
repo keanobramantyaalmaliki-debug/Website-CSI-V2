@@ -27,6 +27,7 @@ import { fileURLToPath } from "node:url";
 const SRC = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 const GUARDED_FILES = [
+  "components/GridReveal.tsx",
   "components/Navbar.tsx",
   "routes/RoomRouteSync.tsx",
   "components/sections/DeploymentCta.tsx",

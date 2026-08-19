@@ -33,21 +33,64 @@ export const START_ROOM: RoomKey = "Lounge";
 export const DISABLED_ROOMS = new Set<RoomKey>(["Pantry"]);
 
 /**
+ * Nama ruangan itu identitas INTERNAL + metafora dunia 3D (label waypoint
+ * tetap "Meeting Room"). Ke luar — navbar dan URL — situs bicara bahasa
+ * KONTEN: pengunjung baru tidak tahu "Function" isinya tim & karier, tapi
+ * "People" langsung terbaca. Dua peta di bawah adalah SATU-SATUNYA tempat
+ * penerjemahan itu; RoomKey tidak berubah di mana pun.
+ *
+ * Pemetaannya mengikuti isi tiap ruangan di roomContent.tsx:
+ *   Lounge → Home (hero + Deployments + Process + Industries + Vision)
+ *   Office → People (crew + values + Careers — scene karakter di meja kerja
+ *   adalah latar yang pas), Meeting → Work (case studies),
+ *   Function → Services (bedah layanan). Office↔Function ditukar 19 Agu;
+ *   sebelumnya Office = Services.
+ * Kalau isi sebuah ruangan pindah tema, kedua peta ini HARUS ikut — label
+ * yang tak lagi menggambarkan isinya lebih buruk dari nama ruangan mentah.
+ */
+export const ROOM_SLUGS: Record<RoomKey, string> = {
+  Lounge: "home",
+  Office: "people",
+  Meeting: "work",
+  Function: "services",
+  Pantry: "pantry",
+};
+
+/** Label yang tampil di navbar (desktop + menu seluler). */
+export const ROOM_LABELS: Record<RoomKey, string> = {
+  Lounge: "Home",
+  Office: "People",
+  Meeting: "Work",
+  Function: "Services",
+  Pantry: "Pantry",
+};
+
+/**
  * Path URL untuk sebuah ruangan. START_ROOM pakai "/" agar URL halaman depan
- * bersih; ruangan lain pakai "/office", "/meeting", "/function".
+ * bersih; ruangan lain pakai slug kontennya: "/services", "/work", "/people".
  */
 export function pathFor(room: RoomKey): string {
-  return room === START_ROOM ? "/" : `/${room.toLowerCase()}`;
+  return room === START_ROOM ? "/" : `/${ROOM_SLUGS[room]}`;
 }
 
 /**
  * Kebalikan pathFor: kembalikan RoomKey dari pathname, atau null jika tidak
  * dikenal / disabled. Case-insensitive.
+ *
+ * Slug LAMA (nama ruangan: "/office", "/meeting", "/function") tetap
+ * dikenali — tautan yang terlanjur dibagikan sebelum slug konten (19 Agu)
+ * tidak boleh mati. Yang menormalkan URL-nya ke slug baru adalah
+ * RoomRouteSync Arah 2 (dengan `replace`), bukan fungsi ini; tugas di sini
+ * cuma menjawab "path ini ruangan yang mana". Route legacy padanannya ada di
+ * App.tsx — tanpa itu, catch-all `*` melempar pengunjung ke "/" jauh sebelum
+ * store sempat membaca path-nya.
  */
 export function roomFromPath(pathname: string): RoomKey | null {
   const slug = pathname.replace(/^\//, "").toLowerCase();
   if (slug === "") return START_ROOM;
-  const key = VIEW_KEYS.find((k) => k.toLowerCase() === slug);
+  const key = VIEW_KEYS.find(
+    (k) => ROOM_SLUGS[k] === slug || k.toLowerCase() === slug,
+  );
   if (!key || DISABLED_ROOMS.has(key)) return null;
   return key;
 }
@@ -55,6 +98,19 @@ export function roomFromPath(pathname: string): RoomKey | null {
 /** Koordinat dunia three.js. Sengaja tuple, bukan THREE.Vector3, supaya store
  *  ini tetap bebas dari import three (dipakai juga oleh komponen DOM). */
 export type Vec3 = readonly [number, number, number];
+
+/**
+ * Opsi perpindahan ruangan.
+ *
+ * `instant` melewati tween 1400 ms dan MENJEPRET kamera ke ruangan tujuan.
+ * Dipakai tirai GridReveal: pengunjung yang berpindah ruangan dari dalam
+ * konten tidak pernah melihat titik berangkat kameranya, jadi menerbangkannya
+ * cuma jadi 1,4 detik menunggu untuk perjalanan yang tak terlihat. Klik
+ * waypoint 3D tetap memakai tween — di sana perjalanannya justru inti dari
+ * afordansnya.
+ */
+export type GoToOptions = { instant?: boolean };
+export type GoToFn = (room: RoomKey, opts?: GoToOptions) => void;
 
 /** Fase permainan billiard. Dipakai untuk mengunci input di fase yang salah:
  *  cuma boleh membidik saat `aiming`, dan tembakan baru sah kalau bola diam. */
@@ -120,8 +176,29 @@ interface SceneStore {
   activeSection: string | null;
   setActiveSection: (id: string | null) => void;
   // goTo is registered by CameraController once the R3F canvas is ready
-  goTo: ((room: RoomKey) => void) | null;
-  registerGoTo: (fn: (room: RoomKey) => void) => void;
+  goTo: GoToFn | null;
+  registerGoTo: (fn: GoToFn) => void;
+
+  /**
+   * Ruangan tujuan sapuan GridReveal yang sedang berjalan, atau null kalau
+   * tidak ada transisi.
+   *
+   * Jembatan Navbar (DOM) → GridReveal + Hero (DOM), lewat store dan bukan
+   * prop, karena ketiganya bersaudara di pohon dan tidak punya pemilik bersama
+   * yang wajar selain SiteLayout — menaruhnya di sana berarti SiteLayout
+   * me-render ulang seluruh halaman tiap kali seseorang mengklik navbar.
+   *
+   * Yang berlangganan, dan untuk apa:
+   *  · GridReveal — memegang fase & waktunya, menggambar kotak-kotak clip
+   *  · Hero       — memaku pembungkus Canvas ke viewport & memasang clip-path
+   *  · FrameloopGate — menyalakan render loop yang seharusnya "never" di posisi
+   *    scroll ini (lihat alasannya di FrameloopGate.tsx)
+   *
+   * Store cuma membawa "ke mana"; tidak ada fase, waktu, atau geometri di sini.
+   */
+  pendingRoom: RoomKey | null;
+  requestRoomTransition: (room: RoomKey) => void;
+  clearRoomTransition: () => void;
 
   /**
    * Teks label benda interaktif yang sedang di-hover, atau null kalau tidak ada.
@@ -220,6 +297,19 @@ export const useSceneStore = create<SceneStore>((set) => ({
   setActiveSection: (id) => set({ activeSection: id }),
   goTo: null,
   registerGoTo: (fn) => set({ goTo: fn }),
+
+  pendingRoom: null,
+  // Permintaan kedua selagi yang pertama berjalan DIABAIKAN, dan itu satu-
+  // satunya penjaga re-entrancy transisi ini. Sapuannya tidak menutupi layar
+  // (justru sebaliknya — ia MEMBUKA), jadi navbar tetap bisa diklik di
+  // tengah jalan tanpa perlu perisai transparan yang menelan klik. Kalau
+  // pendingRoom boleh berubah di tengah sapuan, geometri kotak dan delay-nya
+  // ikut dihitung ulang: sapuannya patah balik ke nol lalu mulai lagi.
+  // Menaruh penjaganya DI SINI, bukan di Navbar, membuatnya berlaku untuk
+  // pemanggil mana pun yang muncul nanti.
+  requestRoomTransition: (room) =>
+    set((s) => (s.pendingRoom ? {} : { pendingRoom: room })),
+  clearRoomTransition: () => set({ pendingRoom: null }),
 
   hoveredLabel: null,
   setHoveredLabel: (hoveredLabel) => set({ hoveredLabel }),

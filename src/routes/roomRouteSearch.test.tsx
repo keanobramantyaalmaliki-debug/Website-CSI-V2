@@ -4,7 +4,7 @@
  * ── Bug yang dijaga (3 Agu) ────────────────────────────────────────────────
  * Arah 2 di RoomRouteSync menyinkronkan `currentRoom` → pathname lewat
  * `navigate(pathFor(currentRoom))`. `pathFor` mengembalikan path TELANJANG
- * ("/office"), jadi seluruh `location.search` ikut terbuang begitu pengunjung
+ * ("/services"), jadi seluruh `location.search` ikut terbuang begitu pengunjung
  * berpindah ruangan.
  *
  * Ketahuan lewat overlay dev ber-query (`?perf=1`) yang menyala di Lounge lalu
@@ -58,7 +58,7 @@ describe("RoomRouteSync mempertahankan query string", () => {
     // Arah 2 yang menyusulkan URL-nya.
     useSceneStore.setState({ currentRoom: "Office" });
 
-    await waitFor(() => expect(url.startsWith("/office")).toBe(true));
+    await waitFor(() => expect(url.startsWith("/people")).toBe(true));
 
     expect(
       url,
@@ -69,7 +69,7 @@ describe("RoomRouteSync mempertahankan query string", () => {
         "perpindahan ruangan pertama, jadi kunjungannya kehilangan " +
         "atribusi.\n\n" +
         "Perbaikan: sertakan location.search saat navigate().\n",
-    ).toBe("/office?perf=1");
+    ).toBe("/people?perf=1");
   });
 
   it("hash ikut bertahan, dan tidak terduplikasi", async () => {
@@ -85,13 +85,13 @@ describe("RoomRouteSync mempertahankan query string", () => {
 
     useSceneStore.setState({ currentRoom: "Meeting" });
 
-    await waitFor(() => expect(url.startsWith("/meeting")).toBe(true));
+    await waitFor(() => expect(url.startsWith("/work")).toBe(true));
 
     // `?` dan `#` masing-masing tepat sekali — menggabungkan search/hash
-    // dengan string apa adanya gampang menghasilkan "/meeting?perf=1?perf=1".
+    // dengan string apa adanya gampang menghasilkan "/work?perf=1?perf=1".
     expect((url.match(/\?/g) || []).length, `URL ganda: ${url}`).toBe(1);
     expect((url.match(/#/g) || []).length, `hash ganda: ${url}`).toBe(1);
-    expect(url).toBe("/meeting?perf=1#contact");
+    expect(url).toBe("/work?perf=1#contact");
   });
 
   it("tanpa query, URL tetap bersih (tidak ada '?' menggantung)", async () => {
@@ -107,10 +107,10 @@ describe("RoomRouteSync mempertahankan query string", () => {
 
     useSceneStore.setState({ currentRoom: "Office" });
 
-    await waitFor(() => expect(url.startsWith("/office")).toBe(true));
+    await waitFor(() => expect(url.startsWith("/people")).toBe(true));
 
-    // Menempelkan search tanpa syarat memberi "/office?" — sah tapi kotor,
+    // Menempelkan search tanpa syarat memberi "/people?" — sah tapi kotor,
     // dan ia mengubah URL yang dibagikan pengunjung tanpa alasan.
-    expect(url, "ada '?' menggantung padahal tidak ada query").toBe("/office");
+    expect(url, "ada '?' menggantung padahal tidak ada query").toBe("/people");
   });
 });

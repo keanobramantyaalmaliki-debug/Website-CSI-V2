@@ -5,7 +5,8 @@ export default function PeopleIntro() {
   return (
     <section
       id="people-intro"
-      /* Section pertama ruangan Function = yang menempel ke hero 3D, jadi
+      /* Section pertama ruangannya (Office sejak tukar konten 19 Agu;
+         sebelumnya Function) = yang menempel ke hero 3D, jadi
          padding-atasnya 12px (`pt-3`) di semua lebar — sama dengan gutter
          `px-3` dan sama dengan tiga ruangan lain (aturan padding-tipis, lihat
          CsiHero.tsx). Dulu `pt-6` di HP dan `md:pt-32` (128px) di desktop. */

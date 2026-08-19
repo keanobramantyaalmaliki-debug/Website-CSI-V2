@@ -26,7 +26,10 @@ describe("Office", () => {
         <Office />
       </MemoryRouter>,
     );
-    expect(screen.getByText("Office")).toBeInTheDocument();
+    // Eyebrow bicara bahasa konten ("Services"), bukan nama ruangan — sejak
+    // konten ini pindah ke ruangan Function (19 Agu), nama ruangan mana pun
+    // di teksnya cuma membingungkan.
+    expect(screen.getByText("Services")).toBeInTheDocument();
   });
 
   it("renders the deep-dive heading", () => {
