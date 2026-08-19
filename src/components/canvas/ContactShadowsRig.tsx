@@ -1,9 +1,30 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Group } from "three";
 import { ContactShadows } from "@react-three/drei";
 import { useSceneStore, type RoomKey } from "@/lib/store/sceneStore";
+
+/**
+ * Layer untuk objek yang TIDAK BOLEH ikut terpotret pass depth bayangan —
+ * saat ini cuma Dust. Dua alasan, dua-duanya nyata:
+ *
+ * 1. Pass depth memakai `scene.overrideMaterial`, yang membuang vertex shader
+ *    kustom Dust — titik-titiknya tergambar di POSISI BASIS-nya (kotak
+ *    [0,9)² di sekitar titik asal dunia, menyerempet bidang Lounge), bukan
+ *    di posisi wrap-mengikuti-kamera yang terlihat mata.
+ * 2. Shader MeshDepthMaterial tidak pernah menulis `gl_PointSize`, jadi untuk
+ *    primitif POINTS ukurannya UNDEFINED per spek GLSL — 1px di kebanyakan
+ *    driver, tapi bebas berapa pun di driver lain (Safari/Metal termasuk yang
+ *    tidak teruji). Titik gendut × ratusan × blur = selubung gelap misterius
+ *    di seluruh bidang penangkap.
+ *
+ * Kamera ortografis internal drei hidup di layer 0 saja, jadi objek yang
+ * `layers.set(NO_BAKE_LAYER)` otomatis lolos dari bake. Kamera UTAMA wajib
+ * `enable(NO_BAKE_LAYER)` (Scene.tsx onCreated) supaya objeknya tetap
+ * terlihat mata. Layer 1 sudah dipakai DYN_LAYER billiard — jangan disatukan.
+ */
+export const NO_BAKE_LAYER = 2;
 
 /**
  * Bayangan kontak — "gelap di bawah meja".
@@ -209,7 +230,12 @@ export default function ContactShadowsRig() {
       };
       if (m.isMesh && m.material?.transparent) m.userData.treatAsOpaque = true;
     });
-  }, [currentRoom]);
+    // billiardActive di deps BUKAN karena nilainya dipakai: keluar billiard
+    // me-remount <ContactShadows/> (guard di bawah sempat mengembalikan null)
+    // dengan MESH baru, dan flag userData hidup di mesh. Tanpa dep ini mesh
+    // barunya lolos tak berflag → bug "bayangan menerangi lantai" kambuh
+    // hanya setelah main billiard — kombinasi yang hampir mustahil dilacak.
+  }, [currentRoom, billiardActive]);
 
   // Disembunyikan saat main billiard. Dua alasan, dan yang kedua bukan
   // kosmetik:
@@ -222,17 +248,36 @@ export default function ContactShadowsRig() {
   //    bayangan penuh. Keadaan akhir sebetulnya aman karena lamps.ts juga
   //    menyetel `visible=false` (itu DIHORMATI pass render), tapi jendela ~0,3
   //    detik saat memudar tidak. Guard ini melewatinya.
-  if (!cfg || billiardActive) return null;
-
-  return (
-    // key={currentRoom} WAJIB. `frames` terbatas berarti bayangan dipanggang
-    // sekali lalu berhenti; tanpa remount, pindah ruangan akan membawa
-    // bayangan ruangan LAMA (render target-nya tidak pernah digambar ulang).
-    // Remount memaksa render target baru, jadi bake ulang terjadi sendiri.
-    <group ref={catcher}>
+  /**
+   * ⚠️ ELEMEN DIBANGUN DI useMemo, DAN ITU MEMIKUL BEBAN — bukan optimasi
+   * gaya. Sumber drei (ContactShadows.js:72) menyimpan penghitung bake-nya
+   * sebagai `let count = 0` DI BADAN RENDER, bukan ref. Konsekuensinya: TIAP
+   * re-render komponen itu me-reset count → bake `frames` frame DIULANG dari
+   * nol, di momen yang tidak dijaga siapa pun.
+   *
+   * Tanpa memo ini, semua re-render Scene menurun sampai sini: tiap flip
+   * heroInView (scroll konten↔hero), tiap langkah AdaptiveDpr, tiap toggle
+   * billiard — masing-masing memicu re-bake 4 frame DI LUAR tirai transisi,
+   * memotret pose karakter & keadaan transien apa pun saat itu. Itulah bug
+   * "bayangan billiard berubah-ubah bentuk tiap pindah ruangan" (laporan
+   * 19 Agu): bentuk bayangan = potret momen acak terakhir, bukan bake yang
+   * dikoreografikan.
+   *
+   * Identitas elemen yang stabil membuat React MELEWATKAN re-render subtree
+   * ContactShadows (bail-out elemen referensi-sama), jadi count hidup terus
+   * dan bake benar-benar terjadi SEKALI per masuk ruangan — di bawah tirai /
+   * bersamaan tween, seperti yang dijanjikan komentar frames di bawah.
+   * Dep [currentRoom] sekaligus menggantikan peran lama key: ganti ruangan =
+   * elemen baru = remount = render target baru + bake ulang yang memang
+   * diinginkan.
+   */
+  const shadowEl = useMemo(() => {
+    const c = SHADOW_CATCHERS[currentRoom];
+    if (!c) return null;
+    return (
     <ContactShadows
       key={currentRoom}
-      {...cfg}
+      {...c}
       // ⚠️ WAJIB saat N8AO aktif (Scene.tsx). Bidang penangkap ini
       // `transparent: true` + `depthWrite: false`, dan N8AO memasukkan objek
       // seperti itu ke pass transparansinya sendiri:
@@ -261,6 +306,10 @@ export default function ContactShadowsRig() {
       // Yang dicari di sini bayangan perabot, dan perabot tidak bergerak.
       frames={4}
     />
-    </group>
-  );
+    );
+  }, [currentRoom]);
+
+  if (!cfg || billiardActive) return null;
+
+  return <group ref={catcher}>{shadowEl}</group>;
 }

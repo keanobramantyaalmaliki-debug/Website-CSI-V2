@@ -13,7 +13,7 @@ import TransitionTear from "./transitionTear";
 import { START_ROOM } from "@/lib/store/sceneStore";
 import BilliardLazy from "./billiard/BilliardLazy";
 import Waypoints from "./Waypoints";
-import ContactShadowsRig from "./ContactShadowsRig";
+import ContactShadowsRig, { NO_BAKE_LAYER } from "./ContactShadowsRig";
 import { useGatedFrameloop } from "./FrameloopGate";
 import IdleFrameCap from "./IdleFrameCap";
 import AdaptiveDprDriver from "./AdaptiveDprDriver";
@@ -133,13 +133,18 @@ export default function Scene() {
       // Konsekuensinya: menyalakan kembali flag ini tidak akan mengembalikan
       // tepi yang mulus — yang menentukan hanya `multisampling` di bawah.
       gl={{ antialias: false, powerPreference: "high-performance" }}
-      onCreated={({ gl }) => {
+      onCreated={({ gl, camera }) => {
         gl.toneMapping = ACESFilmicToneMapping;
         gl.toneMappingExposure = 1.6;
         // Pasangan wajib DPR di atas: buffer internal lebih kecil dari layar,
         // dan tanpa ini browser meng-upscale-nya bilinear (lembek berkabut).
         // pixelated = tetangga terdekat → piksel kotak tegas, look PS1.
         gl.domElement.style.imageRendering = "pixelated";
+        // Separuh kontrak NO_BAKE_LAYER (ContactShadowsRig.tsx): objek yang
+        // dikecualikan dari bake bayangan (Dust) pindah ke layer ini, dan
+        // kamera utama harus MELIHATNYA — kamera ortografis bake (layer 0
+        // saja) yang tidak. Tanpa baris ini debunya lenyap dari mata.
+        camera.layers.enable(NO_BAKE_LAYER);
       }}
     >
       <color attach="background" args={["#0a0a0c"]} />

@@ -76,6 +76,7 @@ import {
 import { useSceneStore, type RoomKey } from "@/lib/store/sceneStore";
 import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import { ACTIVE_KEYS, VIEWS } from "./CameraController";
+import { NO_BAKE_LAYER } from "./ContactShadowsRig";
 import {
   REVEAL_BAND,
   REVEAL_X_FROM,
@@ -546,6 +547,13 @@ export default function Dust() {
   return (
     <points
       ref={points}
+      // Keluar dari pass depth bayangan kontak — di pass itu titik-titik ini
+      // tergambar di posisi BASIS (kotak di titik asal dunia, lihat catatan
+      // bounding di bawah) dengan gl_PointSize yang undefined per driver.
+      // Alasan lengkap + kontrak kameranya di NO_BAKE_LAYER
+      // (ContactShadowsRig.tsx); kamera utama meng-enable layer ini di
+      // Scene.tsx onCreated.
+      onUpdate={(o) => o.layers.set(NO_BAKE_LAYER)}
       // `visible` sengaja TIDAK dipasang di sini — disetel di useFrame, lihat
       // alasannya di sana.
       //
