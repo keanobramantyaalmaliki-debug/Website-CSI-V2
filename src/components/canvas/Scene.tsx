@@ -3,7 +3,7 @@
 import { Canvas } from "@react-three/fiber";
 import { EffectComposer, Bloom, N8AO, HueSaturation, BrightnessContrast } from "@react-three/postprocessing";
 import { ACESFilmicToneMapping } from "three";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import Office from "./Office";
 import MaintenanceHologram from "./MaintenanceHologram";
 import Dust from "./Dust";
@@ -16,6 +16,8 @@ import Waypoints from "./Waypoints";
 import ContactShadowsRig from "./ContactShadowsRig";
 import { useGatedFrameloop } from "./FrameloopGate";
 import IdleFrameCap from "./IdleFrameCap";
+import AdaptiveDprDriver from "./AdaptiveDprDriver";
+import { DPR_LADDER, loadLadderIndex } from "./adaptiveDpr";
 
 // Posisi awal kamera. DIAMBIL dari VIEWS[START_ROOM], bukan angka yang ditulis
 // ulang: sebelumnya di sini ada tuple hardcode [-6.0, 1.6, 4.0] yang bahkan
@@ -25,25 +27,27 @@ import IdleFrameCap from "./IdleFrameCap";
 const START_POS = VIEWS[START_ROOM].pos.toArray() as [number, number, number];
 
 /**
- * Resolusi render internal (19 Agu, bagian dari perbaikan "Safari drop fps").
+ * Resolusi render internal (19 Agu, perbaikan "Safari drop fps" tahap 1;
+ * tahap 2 = AdaptiveDpr di hari yang sama).
  *
- * Dulu `[1, 1.5]`; sekarang 1: buffer 2,25× lebih kecil, dan SEMUA ongkos
- * per-piksel (scene + N8AO + Bloom + grade) ikut turun sebesar itu. Di layar
- * Retina hasilnya di-upscale 2× oleh browser; `image-rendering: pixelated`
- * di onCreated membuat upscale-nya kotak tegas ala PS1, bukan blur bilinear —
- * persis resep basement.studio (render internal rendah + Nearest) dan sejalan
- * dengan preferensi tepi bergigi yang sudah diputuskan (lihat komentar
- * multisampling di bawah).
+ * Dulu `[1, 1.5]` mati; sekarang TANGGA yang dikemudikan AdaptiveDpr, mulai
+ * dari 1 (DPR_LADDER di adaptiveDpr.ts): buffer 2,25× lebih kecil dari 1.5,
+ * dan SEMUA ongkos per-piksel (scene + N8AO + Bloom + grade) ikut turun
+ * sebesar itu; perangkat yang masih keteteran diturunkan bertangga sampai
+ * muat. Di layar Retina hasilnya di-upscale oleh browser; `image-rendering:
+ * pixelated` di onCreated membuat upscale-nya kotak tegas ala PS1, bukan
+ * blur bilinear — resep basement.studio, sejalan preferensi tepi bergigi
+ * (lihat komentar multisampling di bawah).
  *
- * `?dpr=0.75` (0,25–2) = override untuk membandingkan look berdampingan.
- * Seberapa jauh turunnya adalah KEPUTUSAN TAMPILAN Keano; 1 adalah default
- * aman yang sudah disetujui, angka lebih rendah dicoba lewat query ini dulu.
+ * `?dpr=0.75` (0,25–2) = override manual untuk membandingkan look
+ * berdampingan. Override MEMATIKAN AdaptiveDpr total (tidak di-mount) —
+ * jangan sampai angka yang sedang dibandingkan Keano dilawan termostat.
  * Pola module-level sama dengan ?tear / ?glitch / ?dust.
  */
-const DPR = (() => {
-  if (typeof window === "undefined") return 1;
+const DPR_OVERRIDE = (() => {
+  if (typeof window === "undefined") return null;
   const v = Number(new URLSearchParams(window.location.search).get("dpr"));
-  return v >= 0.25 && v <= 2 ? v : 1;
+  return v >= 0.25 && v <= 2 ? v : null;
 })();
 
 /**
@@ -106,11 +110,18 @@ export default function Scene() {
   // akan ditimpa balik ke default "always". Rincian + syarat sceneReady di
   // FrameloopGate.tsx; penjaganya frameloopGate.invariant.test.ts.
   const frameloop = useGatedFrameloop();
+  // dpr HARUS state React yang dipasang sebagai prop, bukan setDpr()
+  // imperatif dari dalam Canvas — alasan yang persis sama dengan frameloop
+  // di atas: R3F menyinkronkan ulang prop tiap re-render dan menimpa
+  // panggilan imperatif. AdaptiveDpr cuma boleh bicara lewat setter ini.
+  const [dpr, setDpr] = useState(
+    () => DPR_OVERRIDE ?? DPR_LADDER[loadLadderIndex()],
+  );
   return (
     <Canvas
       frameloop={frameloop}
       camera={{ position: START_POS, fov: 60, near: 0.05, far: 120 }}
-      dpr={DPR}
+      dpr={dpr}
       // antialias: false — dan ini BUKAN bagian dari uji MSAA di bawah.
       // Terukur terpisah: dengan multisampling 8 tetap menyala, mengubah flag
       // ini true→false TIDAK mengubah frame time sama sekali (33,3 ms
@@ -154,6 +165,11 @@ export default function Scene() {
           (6 Agu, Person2) dan Keano memilih tanpa lampu. Kalau mau dicoba
           lagi: lampu HARUS di layer 0, pagari dengan distance pendek. */}
       <CameraController />
+      {/* Termostat resolusi — jebakan yang dijaganya (cap OS Low Power Mode,
+          sampel jujur fase aktif, override manual menang) didokumentasikan di
+          adaptiveDpr.ts. Gerbang DPR_OVERRIDE = jebakan #3: saat Keano sedang
+          A/B lewat ?dpr=, termostatnya tidak boleh ikut campur. */}
+      {DPR_OVERRIDE === null && <AdaptiveDprDriver onChange={setDpr} />}
 
       <Suspense fallback={null}>
         <Office />

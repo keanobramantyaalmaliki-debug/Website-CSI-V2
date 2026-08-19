@@ -62,6 +62,24 @@ export function markSceneActivity(now: number = performance.now()): void {
 }
 
 /**
+ * "Scene sedang bergerak/berinteraksi" — definisi TUNGGAL yang dipakai dua
+ * konsumen: shouldDrawThisTick di bawah (aktif = gambar tiap tick) dan
+ * monitor AdaptiveDpr (aktif = sampel frame time yang jujur; sampel idle
+ * justru dipakai sebagai pembanding untuk membedakan cap OS dari GPU jenuh
+ * — lihat adaptiveDpr.ts). Kalau definisinya sampai bercabang, dua fitur itu
+ * diam-diam mengukur dunia yang berbeda.
+ */
+export function isSceneActive(now: number = performance.now()): boolean {
+  const s = useSceneStore.getState();
+  return (
+    !s.sceneReady ||
+    s.pendingRoom !== null ||
+    s.billiardActive ||
+    now - lastActivityAt < IDLE_GRACE_MS
+  );
+}
+
+/**
  * Satu panggilan per tick rAF, dari pembungkus composer.render di
  * IdleFrameCap. Mengembalikan false = tick ini tidak digambar.
  *
@@ -71,13 +89,7 @@ export function markSceneActivity(now: number = performance.now()): void {
  */
 export function shouldDrawThisTick(now: number = performance.now()): boolean {
   tick++;
-  const s = useSceneStore.getState();
-  const active =
-    !s.sceneReady ||
-    s.pendingRoom !== null ||
-    s.billiardActive ||
-    now - lastActivityAt < IDLE_GRACE_MS;
-  const draw = active || tick % 2 === 0;
+  const draw = isSceneActive(now) || tick % 2 === 0;
   if (draw) drawn++;
   return draw;
 }
