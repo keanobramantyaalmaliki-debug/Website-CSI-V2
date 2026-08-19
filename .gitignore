@@ -50,8 +50,11 @@ yarn-error.log*
 # model 3D hasil export (besar, di-generate dari Blender — jangan di-track)
 export-test/*.glb
 
-# GLB di public/ harus di-track (fresh clone perlu model ini)
-!public/3d/models/office.glb
+# office.glb TIDAK lagi di-track (19 Agu): 13MB memberati repo & tiap update model
+# memaksa commit+rebuild. Kini tinggal di /3d/models (root) dan disajikan oleh
+# plugin serveLocalModels di vite.config.ts (dev & preview); di produksi path
+# /3d/models/* diambil alih reverse proxy → MinIO. GLB kecil tetap di public/.
+/3d/
 
 /.claude/
 
@@ -78,7 +81,7 @@ matterjs-lab.html
 /Screenshot *.png
 
 # Artefak pipeline bake (5 Agu) — sumber EXR & render antara, ratusan MB.
-# Yang di-commit hanya hasil akhirnya: public/3d/models/office.glb.
+# Hasil akhirnya (office.glb) kini di /3d/models, di luar git — lihat blok di atas.
 /bake-output/
 *.glb.bak-*
 *.test-shrink.glb
