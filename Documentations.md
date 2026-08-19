@@ -84,11 +84,12 @@ Terakhir diupdate: **19 Agustus 2026**.
 
 **Per 19 Agu:**
 - **Pindah ruangan dari konten = potong + tirai kotak, bukan camera fly** (§4ah) — camera fly itu afordans **spasial**; dari dalam konten titik berangkatnya tak pernah terlihat, jadi yang tersisa cuma **1,4 detik menunggu** (plus kedipan ruangan lama saat halaman dijepret ke atas). `GridReveal` menutup layar dengan kisi 64 px yang dikocok Fisher-Yates, menukar ruangannya di puncak, lalu **menunggu FRAME — bukan waktu** — sebelum mengangkat tirai (`frameloop` mati di konten, INVARIANTS §7). Waypoint 3D & jalur hero **tetap** camera fly. 🐛 Empat jebakan tercatat, dua di antaranya gagal **senyap**: `scrollToTop()` ditelan scroll-lock sendiri, dan commit **ANTARA** store ↔ router yang memicu tween 1400 ms di balik tirai.
-- **Navbar & URL bicara bahasa konten** (§4ah) — **Home / Services / Work / People**, bukan nama ruangan; `RoomKey` tidak berubah di mana pun dan label waypoint 3D tetap nama ruangan. Slug lama (`/office`, …) tetap hidup dan dinormalkan dengan **`replace`** — dengan push, Back mendarat di URL yang detik itu juga ditulis ulang dan tombolnya terasa mati.
+- **Navbar & URL bicara bahasa konten** (§4ah) — **Home / Services / Work / People**, bukan nama ruangan; `RoomKey` tidak berubah di mana pun dan label waypoint 3D tetap nama ruangan. Slug lama (`/office`, …) tetap hidup dan dinormalkan dengan **`replace`** — dengan push, Back mendarat di URL yang detik itu juga ditulis ulang dan tombolnya terasa mati. *(Batch ini di-commit `142d573`, 19 Agu.)*
+- **CDN resmi jalan — sisa terakhir §4ab tertutup** (§4ai) — Cache Rule Cloudflare untuk `/3d/*` dibuat rekan yang memegang akses zone; `office.glb` turun dari **4+ menit (50 KB/s)** ke **3,9 detik (3,3 MB/s)**. `.glb` **bukan ekstensi default CF**, jadi tanpa rule eksplisit header apa pun tidak menolong. Sekalian `office.glb` **keluar dari git** (`2357c8e`): kini di `/3d/models` (root, di-ignore) dan disajikan middleware `serveLocalModels` di `vite.config.ts` — update model = **ganti file + scp + purge**, tanpa commit/rebuild. 🐛 Deploy pertama sempat **404 di origin** (scp terlewat) tapi **tak pernah terlihat pengunjung** — edge masih memegang salinan; pelajarannya di §4ai.
 
-**⬅️ Berikutnya:** (a) **commit batch GridReveal + slug konten** (§4ah) — masih di working tree per 19 Agu; (b) **pasang backend Web3Forms untuk form inquiry** (§4ac) — satu-satunya blocker rilis yang tersisa, dan sengaja sudah dikurung dalam satu fungsi; (c) cache edge Cloudflare `/3d/*` (§4ab, di panel Keano); (d) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker (§4n); (e) selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter, §4s); (f) optimasi GLB lanjutan — atlas per ruangan + dedup 29 image kembar (§4s); (g) post-processing PS1 (§4b), pass terakhir untuk look basement.studio. **Optimasi GPU idle ditahan sampai fase finalise** — keputusan Keano 7 Agu, jangan dimulai lebih awal.
+**⬅️ Berikutnya:** (a) **pasang backend Web3Forms untuk form inquiry** (§4ac) — satu-satunya blocker rilis yang tersisa, dan sengaja sudah dikurung dalam satu fungsi; (b) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker (§4n); (c) selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter, §4s); (d) optimasi GLB lanjutan — atlas per ruangan + dedup 29 image kembar (§4s); (e) post-processing PS1 (§4b), pass terakhir untuk look basement.studio. **Optimasi GPU idle ditahan sampai fase finalise** — keputusan Keano 7 Agu, jangan dimulai lebih awal.
 
-> ⚠️ **Test suite: 292 test / 50 berkas, hijau** (19 Agu). Satu test *pernah* merah pada satu putaran penuh — `TheCrewMobileCarousel.test.tsx` ("auto-advances 30s after going idle") — lalu hijau saat dijalankan sendiri **dan** pada putaran penuh berikutnya. **Flake fake-timer di bawah beban, bukan regresi**; kalau ia muncul lagi, curigai `advanceTimersByTimeAsync` di suite yang berbagi sesi timer, bukan komponennya.
+> ⚠️ **Test suite: 297 test / 50 berkas, hijau** (19 Agu). Satu test *pernah* merah pada satu putaran penuh — `TheCrewMobileCarousel.test.tsx` ("auto-advances 30s after going idle") — lalu hijau saat dijalankan sendiri **dan** pada putaran penuh berikutnya. **Flake fake-timer di bawah beban, bukan regresi**; kalau ia muncul lagi, curigai `advanceTimersByTimeAsync` di suite yang berbagi sesi timer, bukan komponennya.
 
 ## 🎉 MVP 1 SELESAI (27 Jul) — **50-60 FPS di browser**
 
@@ -1733,7 +1734,7 @@ Diukur di `csi2.wibudev.com` 13 Agu: origin melayani ~**50 KB/s**, jadi `office.
 
 **Teruji** lewat `scripts/probe-public-loading.mjs` (reproduksi via CDP throttle + blokir GLB): pada 2 Mbps persennya berjalan 0→100 lalu loader lepas (**61 dtk**); GLB diblokir → tombol muncul, unblock + klik → **pulih tanpa reload** (22 dtk).
 
-> **Sisa pekerjaannya BUKAN di kode:** cache edge Cloudflare untuk `/3d/*`, yang ada di panel milik Keano. Sisi klien sudah selesai.
+> **Sisa pekerjaannya BUKAN di kode:** cache edge Cloudflare untuk `/3d/*`. ✅ **Tertutup 19 Agu** — lihat §4ai.
 
 ---
 
@@ -1856,7 +1857,7 @@ Manifesto & LivingArchitecture dicabut dari alur; berkasnya dihapus bersama `Arc
 
 ## 4ah. Pindah Ruangan dari Konten: Tirai `GridReveal` + Slug Konten ✅ (19 Agu)
 
-> 🚧 **Belum di-commit** per 19 Agu — ada di working tree. Berkas barunya: `src/components/GridReveal.tsx`, `src/lib/gridReveal.ts`, `src/components/canvas/frameTick.ts`, dua test, dan `scripts/probe-grid-reveal.mjs`.
+> ✅ **Di-commit `142d573`** (19 Agu). Berkas barunya: `src/components/GridReveal.tsx`, `src/lib/gridReveal.ts`, `src/components/canvas/frameTick.ts`, dua test, dan `scripts/probe-grid-reveal.mjs`.
 
 ### Masalahnya: camera fly di tempat yang salah
 
@@ -1925,6 +1926,40 @@ Dua gotcha kecil yang ikut tercatat di kode: `goTo({ instant })` **mendahului** 
 - **`src/components/GridReveal.test.tsx`** — urutan, bukan tampilan. `goTo({instant:true})` sebelum `navigate` **dibuktikan dengan memasang `RoomRouteSync` sungguhan** (kalau terbalik, `goTo` terpanggil dua kali dan yang kedua tanpa `instant`); tirai tidak terangkat sebelum penghitung frame maju; jaring pengaman tetap mengangkatnya kalau penghitung itu tak pernah maju.
 - **`scripts/probe-grid-reveal.mjs`** — filmstrip lewat Brave. Yang dibuktikan bukan "ada kotak-kotaknya", melainkan tiga hal yang cuma kelihatan dari rentetan frame: tirai betul-betul menutup **sebelum** ruangannya ditukar, frame pertama setelah terangkat sudah memperlihatkan ruangan tujuan **dari sudut akhirnya** (bukan dari perjalanan), dan urutannya acak — bukan menyapu satu arah. Mode `hero` menjaga jalur camera fly yang memang **harus tetap ada**.
 - **INVARIANTS §2** bertambah `z-58`: di atas Navbar (50), di bawah LoadingScreen (60). Tirai yang menutupi seluruh layar **kecuali satu bilah melayang** bukan tirai — yang terbaca "tirainya bocor", persis yang terpotret 13 Agu pada form inquiry.
+
+---
+
+## 4ai. CDN: Cache Edge `/3d/*` + `office.glb` Keluar dari Git ✅ (19 Agu)
+
+Penutup sisa pekerjaan §4ab. Dua perubahan yang saling melengkapi: Cloudflare kini **menyimpan salinan** model 3D di edge (commit tak ada — kerjanya di dashboard CF), dan `office.glb` **tidak lagi lewat git** (commit `2357c8e`).
+
+### Cache Rule — kenapa header saja tidak pernah cukup
+
+Cloudflare secara default hanya meng-cache **daftar ekstensi tertentu** (png, jpg, js, mp4, …) — **`.glb` tidak termasuk**. Jadi selama apa pun origin berteriak lewat `Cache-Control`, `.glb` tetap `cf-cache-status: DYNAMIC`. Satu-satunya jalan: **Cache Rule** eksplisit.
+
+- Rule-nya: `Hostname equals csi2.wibudev.com` **AND** `URI Path starts with /3d/` → Eligible for cache, Edge TTL 1 bulan. Dibuat oleh **rekan kerja yang memegang akses zone `wibudev.com`** — Keano tidak punya akses dashboard CF; tiap urusan rule/purge lewat dia.
+- `/screens/*` **tidak perlu** rule — png & mp4 sudah ekstensi default.
+- DNS `csi2` lewat **wildcard** — tidak relevan: rule mencocokkan hostname **request**, bukan record DNS. Yang penting record-nya proxied (dibuktikan oleh hadirnya header `cf-cache-status`).
+- **Hasil terukur:** 13 MB turun dari **4+ menit @ ~50 KB/s** (origin) ke **3,9 dtk @ 3,3 MB/s** (edge, `HIT`) — **~66× lebih cepat**, dan origin nyaris tak tersentuh lagi.
+
+### `office.glb` keluar dari git — `/3d/models` di root
+
+File 13 MB tiap update model = commit 13 MB + rebuild + restart. Sekarang:
+
+- File tinggal di **`3d/models/office.glb`** (root repo, di-ignore `/3d/`; pengecualian lama `!public/3d/models/office.glb` dicabut). **GLB kecil (billiard ×2, macbook) TETAP di `public/`.**
+- **`vite.config.ts` → plugin `serveLocalModels`**: middleware untuk dev **dan** `vite preview` (= server produksi) yang melayani `/3d/models/*` dari folder root itu — `model/gltf-binary`, dukung **Range 206** (dibutuhkan sambung-ulang `officeModel.ts`). Middleware hanya menangkap file yang **ada** di folder; sisanya jatuh ke `public/`/`dist/`.
+- URL publik **tidak berubah** → nol perubahan kode klien, nol urusan CORS, Cache Rule tetap kena.
+- **Dua jalur update yang kini TERPISAH:** kode = commit → push → `bun run deploy` (JS ber-hash, cache beres sendiri); model 3D = ganti file → `scp` ke `<repo-server>/3d/models/` → **purge by URL** (nama file tak ber-hash!) → hangatkan cache. Runbook singkatnya di `xnote.md`.
+
+### 🐛 Insiden deploy pertama: origin 404, pengunjung tak melihat apa-apa
+
+Rekan pull + deploy **sebelum** file di-scp → `public/office.glb` di server terhapus oleh pull, dist tanpa GLB, origin **404**. Tapi **tak satu pun pengunjung kena** — edge masih memegang salinan lama dan terus melayaninya. Tiga pelajaran:
+
+1. **`HIT` di jalur normal ≠ origin sehat.** Cara memeriksa origin yang sebenarnya: tambahkan query pembeda (`?origincheck=1`) — cache key berubah, edge terpaksa bertanya ke origin.
+2. **Jangan purge saat origin sakit** — cache-nya justru satu-satunya jaring pengaman.
+3. **Urutan deploy yang membawa perubahan model:** file dulu di `<repo-server>/3d/models/` (sejajar `package.json`), **baru** pull + build. Salinan di `dist/` cuma penambal — build berikutnya menghapusnya.
+
+Verifikasi tutup kasus: origin `200` `model/gltf-binary`, unduhan penuh **13.020.916 bytes** — identik byte-per-byte dengan file lokal.
 
 ---
 
