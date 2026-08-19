@@ -86,10 +86,12 @@ Terakhir diupdate: **19 Agustus 2026**.
 - **Pindah ruangan dari konten = potong + tirai kotak, bukan camera fly** (§4ah) — camera fly itu afordans **spasial**; dari dalam konten titik berangkatnya tak pernah terlihat, jadi yang tersisa cuma **1,4 detik menunggu** (plus kedipan ruangan lama saat halaman dijepret ke atas). `GridReveal` menutup layar dengan kisi 64 px yang dikocok Fisher-Yates, menukar ruangannya di puncak, lalu **menunggu FRAME — bukan waktu** — sebelum mengangkat tirai (`frameloop` mati di konten, INVARIANTS §7). Waypoint 3D & jalur hero **tetap** camera fly. 🐛 Empat jebakan tercatat, dua di antaranya gagal **senyap**: `scrollToTop()` ditelan scroll-lock sendiri, dan commit **ANTARA** store ↔ router yang memicu tween 1400 ms di balik tirai.
 - **Navbar & URL bicara bahasa konten** (§4ah) — **Home / Services / Work / People**, bukan nama ruangan; `RoomKey` tidak berubah di mana pun dan label waypoint 3D tetap nama ruangan. Slug lama (`/office`, …) tetap hidup dan dinormalkan dengan **`replace`** — dengan push, Back mendarat di URL yang detik itu juga ditulis ulang dan tombolnya terasa mati. *(Batch ini di-commit `142d573`, 19 Agu.)*
 - **CDN resmi jalan — sisa terakhir §4ab tertutup** (§4ai) — Cache Rule Cloudflare untuk `/3d/*` dibuat rekan yang memegang akses zone; `office.glb` turun dari **4+ menit (50 KB/s)** ke **3,9 detik (3,3 MB/s)**. `.glb` **bukan ekstensi default CF**, jadi tanpa rule eksplisit header apa pun tidak menolong. Sekalian `office.glb` **keluar dari git** (`2357c8e`): kini di `/3d/models` (root, di-ignore) dan disajikan middleware `serveLocalModels` di `vite.config.ts` — update model = **ganti file + scp + purge**, tanpa commit/rebuild. 🐛 Deploy pertama sempat **404 di origin** (scp terlewat) tapi **tak pernah terlihat pengunjung** — edge masih memegang salinan; pelajarannya di §4ai.
+- **Fps drop Safari → optimasi GPU idle DIMAJUKAN sebagian** (§4aj) — scene berjalan **tepat di ambang vsync tanpa headroom** (terukur 7 Agu), dan Safari (ANGLE→Metal, sedikit lebih lambat utk pass fullscreen yang sama) jatuh terkuantisasi ke ~30 fps. Tiga lever terpasang: **cap 30 fps saat idle** (gambar tiap 2 tick rAF — BUKAN `frameloop="demand"` yang diharamkan; semua `useFrame` tetap berdetak serempak), **dpr 1,5 → 1 + `image-rendering: pixelated`** (2,25× lebih sedikit piksel, look kotak PS1), dan **adaptive dpr** — termostat tangga [1 → 0,6] yang dikemudikan frekuensi rAF nyata. 🔥 Jebakan terpenting: **cap OS Low Power Mode dan GPU jenuh terkunci vsync KEMBAR** (sama-sama 33,3 ms rata) — pembedanya **jendela idle** dari cap 30 fps sendiri. Debug: `window.__renderPace()` / `window.__adaptiveDpr()`; A/B look: `?dpr=`.
+- **🐛 Bayangan billiard berubah-ubah bentuk tiap navigasi** (§4ak) — akar di **sumber drei**: penghitung bake `ContactShadows` adalah `let count = 0` **di badan render, bukan ref** → tiap re-render Scene (flip heroInView, langkah adaptive dpr, toggle billiard) mengulang bake 4 frame **di momen acak di luar tirai**. Fix: elemen dibangun di `useMemo` (bail-out identitas elemen React) + Dust keluar dari pass depth lewat `NO_BAKE_LAYER` (posisi basis salah tempat + `gl_PointSize` undefined per driver). Pelajaran probe: "reproduksi" pertama ternyata **artefak parallax kursor probe sendiri** — netralkan posisi mouse sebelum diff screenshot.
 
-**⬅️ Berikutnya:** (a) **pasang backend Web3Forms untuk form inquiry** (§4ac) — satu-satunya blocker rilis yang tersisa, dan sengaja sudah dikurung dalam satu fungsi; (b) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker (§4n); (c) selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter, §4s); (d) optimasi GLB lanjutan — atlas per ruangan + dedup 29 image kembar (§4s); (e) post-processing PS1 (§4b), pass terakhir untuk look basement.studio. **Optimasi GPU idle ditahan sampai fase finalise** — keputusan Keano 7 Agu, jangan dimulai lebih awal.
+**⬅️ Berikutnya:** (a) **pasang backend Web3Forms untuk form inquiry** (§4ac) — satu-satunya blocker rilis yang tersisa, dan sengaja sudah dikurung dalam satu fungsi; (b) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker (§4n); (c) selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter, §4s); (d) optimasi GLB lanjutan — atlas per ruangan + dedup 29 image kembar (§4s); (e) post-processing PS1 (§4b), pass terakhir untuk look basement.studio; (f) **verifikasi perf Safari oleh Keano sendiri** setelah deploy §4aj — `window.__adaptiveDpr()` di console langsung memberi tahu jatuh di kategori mana (GPU-bound → index naik; tetap `{dpr: 1}` tapi lag → cap OS Low Power Mode). **Optimasi GPU idle:** penundaan "tunggu finalise" (7 Agu) **dicabut sebagian 19 Agu** karena Safari — opsi 1/2/4 terpasang (§4aj); sisa **opsi 3** (gabung pass HueSaturation + BrightnessContrast) tetap menunggu finalise.
 
-> ⚠️ **Test suite: 297 test / 50 berkas, hijau** (19 Agu). Satu test *pernah* merah pada satu putaran penuh — `TheCrewMobileCarousel.test.tsx` ("auto-advances 30s after going idle") — lalu hijau saat dijalankan sendiri **dan** pada putaran penuh berikutnya. **Flake fake-timer di bawah beban, bukan regresi**; kalau ia muncul lagi, curigai `advanceTimersByTimeAsync` di suite yang berbagi sesi timer, bukan komponennya.
+> ⚠️ **Test suite: 322 test / 53 berkas, hijau** (19 Agu). Satu test *pernah* merah pada satu putaran penuh — `TheCrewMobileCarousel.test.tsx` ("auto-advances 30s after going idle") — lalu hijau saat dijalankan sendiri **dan** pada putaran penuh berikutnya. **Flake fake-timer di bawah beban, bukan regresi**; kalau ia muncul lagi, curigai `advanceTimersByTimeAsync` di suite yang berbagi sesi timer, bukan komponennya.
 
 ## 🎉 MVP 1 SELESAI (27 Jul) — **50-60 FPS di browser**
 
@@ -1960,6 +1962,64 @@ Rekan pull + deploy **sebelum** file di-scp → `public/office.glb` di server te
 3. **Urutan deploy yang membawa perubahan model:** file dulu di `<repo-server>/3d/models/` (sejajar `package.json`), **baru** pull + build. Salinan di `dist/` cuma penambal — build berikutnya menghapusnya.
 
 Verifikasi tutup kasus: origin `200` `model/gltf-binary`, unduhan penuh **13.020.916 bytes** — identik byte-per-byte dengan file lokal.
+
+---
+
+## 4aj. Perf Safari: Cap 30 fps Idle + dpr 1 + Adaptive DPR ✅ (19 Agu)
+
+Laporan Keano: fps drop di scene 3D `csi2.wibudev.com` di Safari, tapi **langsung mulus begitu scroll ke konten**. Bagian kedua itu diagnostik berharga: mulusnya bukan "pulih" melainkan `FrameloopGate` mematikan render total saat hero off-screen — jadi seluruh beban ada di render loop 3D, bukan di halaman. Diagnosa: scene sudah berjalan **tepat di ambang vsync** (p50 16,7 ms, GPU ~100% idle — audit 7 Agu, §4s) tanpa headroom sama sekali; Safari menjalankan WebGL lewat ANGLE→Metal yang untuk pass fullscreen berloop (N8AO) umumnya sedikit lebih lambat dari Chromium — dan dengan vsync, lewat 16,7 ms sedikit saja langsung terkuantisasi ke **~30 fps patah-patah**, bukan turun mulus. Ini kasus nyata pertama dari isu "GPU 100% saat idle" yang dulu ditunda ke finalise; penundaannya dicabut sebagian atas permintaan Keano. Tiga lever, dua commit (`57bbb28`, `60b3b15`):
+
+### Cap 30 fps saat idle — `renderPace.ts` + `IdleFrameCap.tsx`
+
+Saat tidak ada yang bergerak, gambar **tiap 2 tick rAF** (~50% beban GPU hilang); frame yang dilewati menampilkan frame sebelumnya karena canvas WebGL tidak di-clear kalau tidak digambar — untuk pemandangan diam hasilnya identik.
+
+- **BUKAN `frameloop="demand"`** — kontrak demand↔invalidate pernah rusak senyap lewat merge (§4 riwayat di Scene.tsx). Di sini SEMUA `useFrame` tetap berdetak 60×/dtk; yang dilewati hanya `composer.render()` — dibungkus lewat `EffectComposerContext` (library merender via useFrame priority 1, jadi semua priority 0 — termasuk penanda aktivitas — sudah jalan di tick yang sama sebelum keputusan skip). `useFrame` baru yang ditulis besok otomatis ikut pola tanpa tahu apa-apa.
+- **Definisi idle** (satu fungsi, `isSceneActive`): dipaksa 60 fps penuh selama `!sceneReady` (sinyal loader, INVARIANTS §3), `pendingRoom !== null` (⚠️ menjaga kontrak `frameTick`/GridReveal — `markFrame()` menghitung tick dan anggapan "tick = frame tergambar" hanya sah karena tak ada skip selama transisi), `billiardActive` (bola menggelinding tanpa kamera bergerak), kamera menulis frame (tween/parallax — ditandai `CameraController` tepat setelah early-out-nya), sapuan reveal awal (`Office.tsx`), dan pointer move/down < 1 dtk (hover hologram/HoverScan tetap responsif).
+- Efek samping yang diterima: karakter, video TV, LED bernapas jadi 30 fps saat ditonton diam — justru makin PS1.
+- Penjaga: `renderPace.test.ts` (logika + pemeriksaan teks `markSceneActivity` tetap tersambung). Probe: `scripts/probe-render-pace.mjs` (Brave CDP) — **idle 0,50 · pointer 1,00**. Debug console: `window.__renderPace()`.
+
+### dpr 1,5 → 1 + `image-rendering: pixelated`
+
+Buffer 2,25× lebih kecil, dan SEMUA ongkos per-piksel (scene + N8AO + Bloom + grade) ikut turun sebesar itu. Upscale browser dibuat **kotak tegas** (pixelated), bukan blur bilinear — resep basement.studio (render internal rendah + Nearest) dan sejalan preferensi tepi bergigi (§4s: MSAA tetap 0). Override A/B look: **`?dpr=0.25–2`** (pola module-level yang sama dengan `?tear`/`?glitch`/`?dust`). Turun lebih jauh (0,5–0,75) = keputusan tampilan Keano, belum diambil.
+
+### Adaptive dpr — termostat, bukan angka mati (`adaptiveDpr.ts` + `AdaptiveDprDriver.tsx`)
+
+Setelah dua lever pertama Safari **masih** "agak lag", opsi #4 ikut dimajukan: tangga **[1 → 0,85 → 0,75 → 0,6]** yang dikemudikan frekuensi rAF nyata — perangkat kencang menetap di 1, yang keteteran turun sendiri sampai muat. Logika murni terpisah dari React (unit-testable tanpa WebGL). Tiga jebakan dijaga eksplisit:
+
+1. **Cap OS ≠ GPU jenuh, dan keduanya KEMBAR di jendela aktif.** Low Power Mode Safari meng-cap rAF ke 30 fps; monitor naif membanting dpr ke minimum tanpa hasil. Keseragaman frame time TIDAK membedakannya — GPU jenuh terkunci vsync juga rata sempurna di 33,3 ms (persis gejala pemicu). Pembedanya **jendela idle dari cap 30 fps sendiri**: GPU jenuh pulih ke ~16,7 ms saat separuh draw dilewati; cap OS tetap 33,3 ms berapa pun bebannya. Tanpa bukti idle → tahan posisi (salah tahan = status quo; salah turun = membanting sampai mentok).
+2. **Sampel jujur:** keputusan hanya dari sampel fase aktif (`isSceneActive` yang sama dengan cap idle) — tick idle setengah nganggur mencemari pengukuran.
+3. **`?dpr=` menang:** ada override → driver tidak di-mount sama sekali.
+
+Mekanika kestabilan: jendela 60 sampel aktif; turun butuh 2 jendela lambat beruntun, naik butuh 4 sehat; cooldown 120 tick pasca-langkah (hitch realloc buffer jangan terbaca "lambat"); bolak-balik kedua **mengunci di tangga bawah**; jeda >250 ms (kompilasi shader, pindah tab, pause gate) membuang jendela — ambang yang sama dengan gerbang sweep Office. Tangga terakhir diingat **per-tab** (sessionStorage, sengaja bukan localStorage — colok charger mengubah kesanggupan mesin). Debug: `window.__adaptiveDpr()`.
+
+Dua gotcha implementasi yang mahal kalau diulang:
+
+- 🔥 **dpr WAJIB state React → prop `<Canvas dpr={dpr}>`**, bukan `setDpr()` imperatif — pelajaran yang persis sama dengan FrameloopGate (terukur gagal 4 Agu): R3F menyinkronkan ulang prop tiap re-render dan menimpa panggilan imperatif.
+- ⚠️ Nama file driver **bukan** `AdaptiveDpr.tsx`: di filesystem macOS yang case-insensitive ia bentrok dengan `adaptiveDpr.ts` (beda kapital saja) dan tsc menolak (TS1149).
+
+Penjaga: `adaptiveDpr.test.ts` — termasuk test kembar cap-OS-vs-GPU-jenuh. **Estimasi gabungan: beban idle ~25–30% dari sebelumnya.** Status: terverifikasi CDP (mount default dpr 1; `?dpr=0.75` → driver mati + buffer 1080/1440); **belum dikonfirmasi Keano di Safari-nya sendiri** — lihat butir (f) di "Berikutnya".
+
+---
+
+## 4ak. 🐛 Bayangan Kontak Berubah-ubah Bentuk: Bake Liar drei ✅ (19 Agu)
+
+Laporan: bayangan meja billiard **berubah bentuk setiap navigasi** Home → Services → Home (kadang selubung gelap kotak besar menutupi bidang). Commit `5aa322e`.
+
+### Akar: `let count = 0` di badan render drei
+
+`ContactShadows` drei (v-sekarang, `ContactShadows.js:72`) menyimpan penghitung bake-nya sebagai **variabel biasa di badan render** — bukan ref. Tiap re-render komponen me-reset hitungan → bake `frames` frame **diulang dari nol, di momen acak yang tidak dijaga siapa pun**. Dan re-render Scene menurun sampai sana lewat banyak jalur: **flip `heroInView`** (tiap scroll konten↔hero), **langkah AdaptiveDpr** (§4aj — memperbanyak pemicunya), **toggle billiard**. Jadi kontrak yang tertulis di rig ("dipanggang sekali per masuk ruangan, jatuh di bawah tirai") **tidak pernah benar**: bayangan terpanggang ulang berkali-kali di luar tirai, dan tiap panggangan memotret keadaan sesaat yang berbeda — pose karakter, state transien apa pun di mesin lambat. Bentuk bayangan = potret momen acak terakhir.
+
+### Perbaikan tiga lapis
+
+1. **Elemen `<ContactShadows>` dibangun di `useMemo` ber-dep `[currentRoom]`** — identitas elemen yang stabil membuat React **bail-out** re-render subtree-nya, closure useFrame drei (beserta `count`) selamat, dan bake benar-benar sekali per masuk ruangan. Dep-nya sekaligus menggantikan peran `key` lama: ganti ruangan = elemen baru = remount = bake ulang yang memang diinginkan.
+2. **`NO_BAKE_LAYER` (layer 2): Dust keluar dari pass depth.** Pass bake memakai `scene.overrideMaterial` yang membuang vertex shader wrap Dust — titik-titik tergambar di **posisi BASIS**-nya (kotak [0,9)² di sekitar titik asal dunia, menyerempet bidang Lounge), bukan posisi yang terlihat mata; dan shader `MeshDepthMaterial` tidak pernah menulis `gl_PointSize`, jadi ukuran titik untuk primitif POINTS **undefined per spek GLSL** — 1px di kebanyakan driver, bebas berapa pun di driver lain (kandidat kuat selubung tebal di mesin pelapor). Kamera ortografis drei hidup di layer 0 saja → objek ber-layer ini otomatis lolos bake; kamera utama `enable(NO_BAKE_LAYER)` di `onCreated`. ⚠️ Layer 1 sudah milik `DYN_LAYER` billiard.
+3. **Dep `billiardActive` di effect `treatAsOpaque`** — keluar billiard me-remount mesh penangkap **tanpa flag** (effect lama cuma keyed `currentRoom`), menghidupkan lagi bug "bayangan menerangi lantai" (§4-riwayat N8AO) khusus setelah main billiard — kombinasi yang hampir mustahil dilacak belakangan.
+
+### 🔥 Pelajaran probe: netralkan parallax sebelum diff screenshot
+
+"Reproduksi" pertama (diff antar-kunjungan membesar di bawah CPU throttle 8×) ternyata **artefak probe sendiri**: klik navbar memindahkan pointer → parallax menggeser kamera sub-piksel → diff penuh garis tepi yang terbaca "bayangan berubah". Setelah mouse dipindahkan ke titik tetap + tunggu damp settle sebelum tiap screenshot, diff jatuh ke nol — dan justru itu yang membuktikan bake-nya deterministik di mesin uji, mengarahkan pencarian ke mekanisme re-bake liar di atas. Aturan praktisnya: **diff screenshot scene yang punya parallax kursor wajib menstandarkan posisi pointer dulu.**
+
+Penjaga: `contactShadowsRig.invariant.test.ts` — useMemo tetap terpasang + kontrak `NO_BAKE_LAYER` tersambung di ketiga sisinya (definisi, `layers.set` di Dust, `enable` di kamera). Verifikasi: throttle 8× + 3× bolak-balik Home↔Services → tidak ada varian blob; dust tetap terlihat mata.
 
 ---
 
