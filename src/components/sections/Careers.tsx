@@ -2,82 +2,96 @@
 
 import { motion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
-import CareersPromote, { type CareerRole } from "./CareersPromote";
-import HiringStack from "./HiringStack";
+import CareersRoles, { type CareerRole } from "./CareersRoles";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-// TODO(careers): blurbs are placeholder copy — replace with the real role
-// descriptions from the hiring team before this ships publicly.
+// Konten role (overview + skills) diambil utuh dari careers section V1
+// (Website-CSI index.html) — copy yang sudah tayang, bukan placeholder.
 const ROLES: CareerRole[] = [
   {
     title: "Innovation & Growth Manager",
-    type: "Full-time",
-    mode: "Remote",
-    tag: "Growth",
-    blurb:
-      "Own how we find, test, and scale new bets — turning rough ideas into repeatable growth loops.",
+    meta: "Full-time · Remote · Growth",
+    overview:
+      "Lead market discovery, strategic partnerships, and growth initiatives. This role connects innovation with real-world adoption — bridging what we build with who needs it.",
+    skills: [
+      "Strategic thinking",
+      "Business development",
+      "Market validation",
+      "Stakeholder engagement",
+      "Communication",
+    ],
+    photo: "/careers/innovation-growth-manager.jpg",
   },
   {
     title: "Technical Lead",
-    type: "Full-time",
-    mode: "Hybrid",
-    tag: "Engineering",
-    blurb:
-      "Set the technical direction, mentor the team, and keep our architecture honest as we grow.",
+    meta: "Full-time · Hybrid · Engineering",
+    overview:
+      "Lead engineering execution, guide technical decisions, and mentor the development team. You see architecture before you see code — and you care about shipping as much as quality.",
+    skills: ["Full-stack", "Architecture", "Team leadership", "Delivery ownership"],
+    photo: "/careers/technical-lead.jpg",
   },
   {
     title: "Product Builder",
-    type: "Full-time",
-    mode: "Remote",
-    tag: "Product",
-    blurb:
-      "Take products from a fuzzy problem to a shipped, loved experience — end to end, hands on.",
+    meta: "Full-time · Remote · Product",
+    overview:
+      "Build, test, and iterate new ideas quickly. You move from concept to working product without needing perfect conditions — and you own what you ship.",
+    skills: [
+      "Builder mindset",
+      "Fast execution",
+      "Full-stack",
+      "Curiosity",
+      "Strong ownership",
+    ],
+    photo: "/careers/product-builder.jpg",
   },
   {
     title: "Full Stack Engineer",
-    type: "Full-time",
-    mode: "Hybrid",
-    tag: "Engineering",
-    blurb:
-      "Build across the stack on real features that reach users fast, with room to go deep where it counts.",
+    meta: "Full-time · Hybrid · Engineering",
+    overview:
+      "Design and develop modern web applications, APIs, backend systems, and intelligent digital products. AI/RAG and cloud experience is a strong plus.",
+    skills: [
+      "React / Next.js",
+      "Node.js",
+      "PostgreSQL",
+      "API integration",
+      "Git",
+      "AI / RAG / Cloud",
+    ],
+    photo: "/careers/fullstack-engineer.jpg",
   },
 ];
 
 export default function Careers() {
   return (
     <section id="careers" className="px-3 py-24 sm:py-32">
-      {/* T6 — eyebrow */}
-      <motion.p
-        className="text-xs tracking-widest text-zinc-400 uppercase"
-        initial={{ opacity: 0, x: -8 }}
-        whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, ease: EASE }}
-      >
-        Careers
-      </motion.p>
+      {/* Split ala "Open Positions" basement: kiri 35% headline + subtext,
+          kanan 65% roles list. Di bawah lg menumpuk seperti biasa. */}
+      <div className="lg:grid lg:grid-cols-[35fr_65fr] lg:gap-x-16">
+        <div>
+          {/* T1 — line-mask heading (label eyebrow dihapus atas permintaan 20 Agu) */}
+          {/* Ukuran sama dengan judul "The Crew" (TheCrew.tsx) */}
+          <h2 className="max-w-xl text-[clamp(2.5rem,6vw,5rem)] leading-[0.95] font-semibold tracking-tight text-zinc-100">
+            <LineMask>Build What Comes Next.</LineMask>
+          </h2>
 
-      {/* T1 — line-mask heading */}
-      <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
-        <LineMask>Build What Comes Next.</LineMask>
-      </h2>
+          {/* Subtext dari careers-sub V1 */}
+          <motion.p
+            className="mt-5 max-w-lg text-sm leading-relaxed font-light text-zinc-400 sm:text-base"
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7, ease: EASE, delay: 0.2 }}
+          >
+            We are looking for curious minds who want to create meaningful
+            impact through technology.
+          </motion.p>
+        </div>
 
-      {/* Shared-element promote: one hero role + a strip of the rest. */}
-      <CareersPromote roles={ROLES} />
-
-      {/* T2 — hiring stages stagger */}
-      <div className="mt-12">
-        <motion.p
-          className="text-xs tracking-widest text-zinc-400 uppercase"
-          initial={{ opacity: 0, x: -8 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, ease: EASE }}
-        >
-          How We Works
-        </motion.p>
-        <HiringStack />
+        {/* Roles list gaya V1: preview foto ikut kursor + hover-expand + accordion. */}
+        <div className="mt-12 lg:mt-0">
+          <CareersRoles roles={ROLES} />
+        </div>
       </div>
     </section>
   );

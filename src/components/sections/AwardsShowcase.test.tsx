@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 // jsdom lacks IntersectionObserver; motion's whileInView/useInView need it.
 class IntersectionObserverStub {
@@ -15,207 +15,119 @@ vi.mock("motion/react", async (importOriginal) => {
   return { ...actual, useReducedMotion: () => mockReduced };
 });
 
+let mockCoarse = false;
+vi.mock("@/lib/hooks/useCoarsePointer", () => ({
+  useCoarsePointer: () => mockCoarse,
+}));
+
 const { default: AwardsShowcase } = await import("./AwardsShowcase");
 
 beforeEach(() => {
   mockReduced = false;
+  mockCoarse = false;
 });
 
+function getRow(name: RegExp) {
+  const desc = screen.getByText(name);
+  // Baris = elemen grid yang memasang onMouseEnter — leluhur terdekat desc
+  // yang punya kartu founder di dalamnya.
+  return desc.closest(".group") as HTMLElement;
+}
+
 describe("AwardsShowcase", () => {
-  it("renders the Recognition eyebrow", () => {
+  it("does not render an eyebrow label (removed 20 Aug)", () => {
     render(<AwardsShowcase />);
-    expect(screen.getByText(/recognition/i)).toBeInTheDocument();
+    expect(screen.queryByText(/recognition/i)).not.toBeInTheDocument();
   });
 
-  it("renders 4 award titles", () => {
+  it("renders both founder achievements with the founder card on each row", () => {
     render(<AwardsShowcase />);
-    // jsdom doesn't apply the sm: breakpoint CSS that hides one layout or
-    // the other, so both the desktop row and the mobile carousel card mount
-    // for each award — same "both sets render" situation as Office.test.tsx.
-    expect(screen.getAllByText(/best digital government solution/i)).toHaveLength(2);
-    expect(screen.getAllByText(/top ai implementation/i)).toHaveLength(2);
-    expect(screen.getAllByText(/outstanding enterprise software partner/i)).toHaveLength(2);
-    expect(screen.getAllByText(/rising star in cloud services/i)).toHaveLength(2);
+    expect(
+      screen.getByText(/awarded for the best digital innovation/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/keynote speaker/i)).toBeInTheDocument();
+    // Satu kartu founder per baris.
+    expect(screen.getAllByText("Fami Maliki")).toHaveLength(2);
+    expect(screen.getAllByText(/founder & ceo/i)).toHaveLength(2);
   });
 
-  it("does not render a leftover 'coming soon' disclaimer", () => {
+  it("does not render the old fabricated company awards", () => {
     render(<AwardsShowcase />);
-    expect(screen.queryByText(/coming soon/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/best digital government solution/i),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/top ai implementation/i)).not.toBeInTheDocument();
   });
 
-  it("hovering a row reveals the certificate preview card", async () => {
-    render(<AwardsShowcase />);
-    // Desktop row + mobile carousel card = 2 matches before hover.
-    expect(screen.getAllByText(/top ai implementation/i)).toHaveLength(2);
+  it("hovering a row shows its cursor-follow photo and dims the other row", () => {
+    const { container } = render(<AwardsShowcase />);
+    const row = getRow(/keynote speaker/i);
+    fireEvent.mouseEnter(row);
 
-    const row = screen.getAllByText(/top ai implementation/i)[0].closest("[tabindex]");
-    expect(row).not.toBeNull();
-    fireEvent.mouseEnter(row as Element);
+    const preview = [...container.querySelectorAll("img")].find((img) =>
+      img.src.includes("fami-speaking"),
+    );
+    expect(preview).toBeTruthy();
 
-    expect(screen.getAllByText(/top ai implementation/i)).toHaveLength(3);
+    const otherRow = getRow(/awarded for the best digital innovation/i);
+    expect(otherRow.style.opacity).toBe("0.2");
+    expect(row.style.opacity).toBe("1");
+  });
 
-    fireEvent.mouseLeave(row as Element);
-    // AnimatePresence keeps the exiting card mounted during its exit
-    // transition, so the count only drops back to 2 asynchronously.
+  it("leaving the row plays the photo's exit and restores the other row", async () => {
+    const { container } = render(<AwardsShowcase />);
+    const row = getRow(/keynote speaker/i);
+    fireEvent.mouseEnter(row);
+    fireEvent.mouseLeave(row);
+
+    const otherRow = getRow(/awarded for the best digital innovation/i);
+    expect(otherRow.style.opacity).toBe("1");
+    // Keluarnya kebalikan pop masuk (scale mengecil) — AnimatePresence menahan
+    // foto tetap ter-mount selama exit-nya, jadi unmount-nya asinkron.
     await waitFor(() =>
-      expect(screen.getAllByText(/top ai implementation/i)).toHaveLength(2),
+      expect(
+        [...container.querySelectorAll("img")].find((img) =>
+          img.src.includes("fami-speaking"),
+        ),
+      ).toBeUndefined(),
     );
   });
 
-  it("skips the cursor-follow preview entirely under reduced motion", () => {
+  it("skips hover interactivity entirely under reduced motion", () => {
     mockReduced = true;
+    const { container } = render(<AwardsShowcase />);
+    const row = getRow(/keynote speaker/i);
+    fireEvent.mouseEnter(row);
+    expect(
+      [...container.querySelectorAll("img")].find((img) =>
+        img.src.includes("fami-speaking"),
+      ),
+    ).toBeUndefined();
+    expect(
+      getRow(/awarded for the best digital innovation/i).style.opacity,
+    ).toBe("1");
+  });
+
+  it("skips hover interactivity on coarse pointers (touch)", () => {
+    mockCoarse = true;
+    const { container } = render(<AwardsShowcase />);
+    const row = getRow(/keynote speaker/i);
+    fireEvent.mouseEnter(row);
+    expect(
+      [...container.querySelectorAll("img")].find((img) =>
+        img.src.includes("fami-speaking"),
+      ),
+    ).toBeUndefined();
+  });
+
+  // Scramble teks pada hover dicabut atas permintaan Keano 20 Agu — teks diam,
+  // hover hanya meredupkan baris lain + memunculkan foto.
+  it("leaves the description text untouched on hover", () => {
     render(<AwardsShowcase />);
-    const row = screen.getAllByText(/top ai implementation/i)[0].closest("[tabindex]");
-    fireEvent.mouseEnter(row as Element);
-    expect(screen.getAllByText(/top ai implementation/i)).toHaveLength(2);
-  });
-
-  it("renders the mobile carousel with an image per award", () => {
-    const { container } = render(<AwardsShowcase />);
-    const images = [...container.querySelectorAll("img")].filter((img) =>
-      img.src.includes("picsum.photos"),
-    );
-    // Mobile carousel renders one <img> per award (desktop rows use an
-    // icon, not an <img>, and the preview card is unmounted until hover).
-    expect(images).toHaveLength(4);
-  });
-
-  it("keeps the mobile track's edge inset from being eaten by mandatory snap", () => {
-    const { container } = render(<AwardsShowcase />);
-    const track = container.querySelector(".snap-x") as HTMLDivElement;
-    // The track bleeds to the card edge (-mx-8) and pads the first/last card
-    // back in (px-8). With snap-mandatory the snapport defaults to the
-    // scrollport edge, so the browser snaps card #1 flush against the border
-    // and the left padding is scrolled out of view. scroll-px-8 insets the
-    // snapport to match, which is the only thing preserving that gap.
-    expect(track).toHaveClass("snap-mandatory");
-    expect(track).toHaveClass("px-8");
-    expect(track).toHaveClass("scroll-px-8");
-  });
-
-  describe("mobile carousel auto-scroll", () => {
-    // jsdom performs no layout, so card width / scrollWidth / clientWidth
-    // are all 0 by default — stub them so the auto-scroll effect's
-    // "cardWidth === 0 → bail" guard doesn't just make every tick a no-op.
-    function getTrack(container: HTMLElement) {
-      const track = container.querySelector(".snap-x") as HTMLDivElement;
-      Object.defineProperty(track, "clientWidth", { value: 400, configurable: true });
-      Object.defineProperty(track, "scrollWidth", { value: 1000, configurable: true });
-      let scrollLeft = 0;
-      Object.defineProperty(track, "scrollLeft", {
-        get: () => scrollLeft,
-        set: (v) => {
-          scrollLeft = v;
-        },
-        configurable: true,
-      });
-      track.scrollTo = vi.fn((opts: ScrollToOptions | number) => {
-        if (typeof opts === "object" && typeof opts.left === "number") {
-          scrollLeft = opts.left;
-        }
-      }) as unknown as typeof track.scrollTo;
-      const firstCard = track.firstElementChild as HTMLElement;
-      firstCard.getBoundingClientRect = () =>
-        ({ width: 192 }) as DOMRect;
-      return track;
-    }
-
-    afterEach(() => {
-      vi.useRealTimers();
-    });
-
-    it("auto-scrolls the track forward after the interval fires", () => {
-      vi.useFakeTimers();
-      const { container } = render(<AwardsShowcase />);
-      const track = getTrack(container);
-
-      act(() => {
-        vi.advanceTimersByTime(4500);
-      });
-
-      expect(track.scrollTo).toHaveBeenCalledWith(
-        expect.objectContaining({ left: 208 }),
-      );
-    });
-
-    it("does not auto-scroll under reduced motion", () => {
-      mockReduced = true;
-      vi.useFakeTimers();
-      const { container } = render(<AwardsShowcase />);
-      const track = getTrack(container);
-
-      act(() => {
-        vi.advanceTimersByTime(10000);
-      });
-
-      expect(track.scrollTo).not.toHaveBeenCalled();
-    });
-
-    it("pauses auto-scroll on manual pointer interaction and resumes after idle", () => {
-      vi.useFakeTimers();
-      const { container } = render(<AwardsShowcase />);
-      const track = getTrack(container);
-
-      fireEvent.pointerDown(track);
-
-      // Still within the interval window, but paused — no scroll happens.
-      act(() => {
-        vi.advanceTimersByTime(4500);
-      });
-      expect(track.scrollTo).not.toHaveBeenCalled();
-
-      // After the resume delay, the next interval tick scrolls again.
-      act(() => {
-        vi.advanceTimersByTime(4000);
-      });
-      act(() => {
-        vi.advanceTimersByTime(4500);
-      });
-      expect(track.scrollTo).toHaveBeenCalled();
-    });
-
-    it("does not treat the auto-scroll's own scroll event as a manual pause trigger", () => {
-      vi.useFakeTimers();
-      const { container } = render(<AwardsShowcase />);
-      const track = getTrack(container);
-
-      // Tick fires, calling scrollTo — simulate the browser dispatching the
-      // resulting scroll event from that programmatic call.
-      act(() => {
-        vi.advanceTimersByTime(4500);
-      });
-      expect(track.scrollTo).toHaveBeenCalledTimes(1);
-      fireEvent.scroll(track);
-
-      // Since that scroll was consumed as programmatic (not manual), the
-      // carousel never paused, so the original schedule continues uninterrupted.
-      act(() => {
-        vi.advanceTimersByTime(4500);
-      });
-      expect(track.scrollTo).toHaveBeenCalledTimes(2);
-    });
-
-    it("pauses on a genuine manual scroll not preceded by an auto-scroll tick", () => {
-      vi.useFakeTimers();
-      const { container } = render(<AwardsShowcase />);
-      const track = getTrack(container);
-
-      // No tick has fired yet, so this scroll is unambiguously user-initiated.
-      fireEvent.scroll(track);
-
-      act(() => {
-        vi.advanceTimersByTime(4500);
-      });
-      expect(track.scrollTo).not.toHaveBeenCalled();
-
-      // After the resume delay, auto-scroll picks back up.
-      act(() => {
-        vi.advanceTimersByTime(4000);
-      });
-      act(() => {
-        vi.advanceTimersByTime(4500);
-      });
-      expect(track.scrollTo).toHaveBeenCalled();
-    });
+    const original =
+      "Keynote speaker at leading technology and business innovation conferences.";
+    const desc = screen.getByText(original);
+    fireEvent.mouseEnter(desc.closest(".group") as HTMLElement);
+    expect(desc.textContent).toBe(original);
   });
 });

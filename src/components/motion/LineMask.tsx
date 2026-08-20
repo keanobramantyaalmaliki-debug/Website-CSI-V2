@@ -18,7 +18,12 @@ export default function LineMask({
   const reduced = useReducedMotion();
 
   return (
-    <span ref={ref} className="block overflow-hidden">
+    /* pb + -mb sepasang: pb memberi ruang descender ("g", "y") yang keluar
+       dari line box saat line-height ketat (text-7xl = leading 1) supaya tak
+       terpangkas overflow-hidden; -mb seukuran menariknya kembali sehingga
+       tinggi layout tidak berubah. Posisi awal y:110% tetap tersembunyi:
+       jendela mask cuma bertambah 0.15em, offset-nya 110% tinggi teks. */
+    <span ref={ref} className="-mb-[0.15em] block overflow-hidden pb-[0.15em]">
       <motion.span
         className="block"
         initial={{ y: reduced ? 0 : "110%" }}

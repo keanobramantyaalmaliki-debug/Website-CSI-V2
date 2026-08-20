@@ -12,24 +12,16 @@ class IntersectionObserverStub {
 }
 vi.stubGlobal("IntersectionObserver", IntersectionObserverStub);
 
-// Sama pola dengan Deployments.test.tsx: Lenis tidak hidup di jsdom, jadi yang
-// diperiksa NIAT-nya — CTA memanggil registry smoothScroll, bukan scroll DOM.
-const scrollToSectionSpy = vi.fn();
-vi.mock("@/lib/smoothScroll", () => ({
-  scrollToSection: (id: string) => scrollToSectionSpy(id),
-}));
-
 describe("Office", () => {
-  it("renders without crashing", () => {
+  it("renders without the eyebrow label (removed 20 Aug)", () => {
     render(
       <MemoryRouter>
         <Office />
       </MemoryRouter>,
     );
-    // Eyebrow bicara bahasa konten ("Services"), bukan nama ruangan — sejak
-    // konten ini pindah ke ruangan Function (19 Agu), nama ruangan mana pun
-    // di teksnya cuma membingungkan.
-    expect(screen.getByText("Services")).toBeInTheDocument();
+    // Eyebrow "Services" dicabut 20 Agu: navbar sudah menyebut nama
+    // halamannya, jadi label di atas heading cuma mengulang.
+    expect(screen.queryByText("Services")).not.toBeInTheDocument();
   });
 
   it("renders the deep-dive heading", () => {
@@ -67,19 +59,15 @@ describe("Office", () => {
     expect(screen.getByText("Maintenance & Technical Support")).toBeInTheDocument();
   });
 
-  // Contact sekarang berdiri di ruangan Office juga, jadi CTA-nya menggulir di
-  // tempat lewat smoothScroll — bukan lagi <Link to="/#contact"> ke Lounge.
-  it("scrolls in place to #contact through smoothScroll instead of navigating", async () => {
-    const user = userEvent.setup();
+  // CTA "Talk to us" dicabut 20 Agu bersama panel stat — section ini ditutup
+  // AwardsShowcase, tanpa tombol.
+  it("does not render the removed Talk to us CTA", () => {
     render(
       <MemoryRouter>
         <Office />
       </MemoryRouter>,
     );
-    await user.click(screen.getByRole("button", { name: /talk to us/i }));
-    expect(scrollToSectionSpy).toHaveBeenCalledWith("contact");
-    // Anchor jump bawaan peramban berebut posisi dengan rAF Lenis.
-    expect(document.querySelector('a[href="/#contact"]')).toBeNull();
+    expect(screen.queryByRole("button", { name: /talk to us/i })).toBeNull();
   });
 
   it("renders a dummy testimonial quote with a named client", () => {
@@ -88,31 +76,23 @@ describe("Office", () => {
         <Office />
       </MemoryRouter>,
     );
-    expect(screen.getByText(/cogniti rebuilt the systems/i)).toBeInTheDocument();
-    expect(screen.getByText(/ratna wijaya/i)).toBeInTheDocument();
+    // getAllByText: TestimonialSpotlight merender tiap entri 2x (sizer
+    // pengunci tinggi + overlay aktif), detailnya diuji di
+    // TestimonialSpotlight.test.tsx.
+    expect(screen.getAllByText(/cogniti rebuilt the systems/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/ratna wijaya/i).length).toBeGreaterThan(0);
   });
 
-  it("renders the awards recognition strip", () => {
+  it("renders the founder recognition section", () => {
     render(
       <MemoryRouter>
         <Office />
       </MemoryRouter>,
     );
-    expect(screen.getByText(/recognition/i)).toBeInTheDocument();
-    // jsdom doesn't apply the sm: breakpoint CSS, so both the desktop row
-    // and the mobile carousel card mount for each award.
-    expect(screen.getAllByText(/best digital government solution/i).length).toBeGreaterThan(0);
-  });
-
-  it("renders the dummy stat panel next to the hero heading", () => {
-    render(
-      <MemoryRouter>
-        <Office />
-      </MemoryRouter>,
-    );
-    expect(screen.getByText(/projects delivered/i)).toBeInTheDocument();
-    expect(screen.getByText(/service lines/i)).toBeInTheDocument();
-    expect(screen.getByText(/sectors served/i)).toBeInTheDocument();
+    // Konten founder-section v1, dihidupkan 20 Agu menggantikan daftar award
+    // fiktif (label "Recognition"-nya ikut dicabut) — detailnya diuji di
+    // AwardsShowcase.test.tsx.
+    expect(screen.getAllByText("Fami Maliki").length).toBeGreaterThan(0);
   });
 
   it("renders 9 desktop sticky-panel photos plus 9 mobile row thumbnails", () => {

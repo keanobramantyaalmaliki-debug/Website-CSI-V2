@@ -1,310 +1,266 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  motion,
-  AnimatePresence,
-  useMotionValue,
-  useSpring,
-  useReducedMotion,
-} from "motion/react";
-import { Award } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
+import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-// Cursor-follow preview card dimensions — used to keep the card clear of the
-// pointer and clamped inside the section instead of overflowing it.
-const CARD_W = 192;
-const CARD_H = 300;
-const CARD_GAP = 20;
+/**
+ * Recognition — desain dari founder-section v1 (Apa-ini/founder-section-demo
+ * .html) yang tidak pernah tayang, dihidupkan lagi di sini 20 Agu: baris
+ * pencapaian besar dengan kartu founder di kiri, hover meredupkan baris lain,
+ * dan fotonya mengekor kursor dengan lerp + rotasi dari kecepatan mouse.
+ *
+ * Yang SENGAJA tidak ikut dibawa dari demo:
+ *   · custom cursor (`cursor: none` + titik pengganti) — keputusan look SATU
+ *     HALAMAN penuh di v1; dipasang di satu section saja, kursornya
+ *     lenyap-muncul di perbatasan section dan terbaca sebagai bug, bukan gaya.
+ *   · scramble teks pada hover — sempat ikut, dicabut atas permintaan Keano
+ *     20 Agu; jangan pasang lagi.
+ */
 
-// Mobile carousel auto-scroll — mirrors CaseGrid's FanSlider auto-advance
-// pattern (interval + useReducedMotion guard), adapted for a scroll
-// container instead of an active-index state.
-const AUTO_SCROLL_MS = 4500;
-const RESUME_DELAY_MS = 4000;
-const MOBILE_CARD_GAP_PX = 16; // matches `gap-4` on the mobile scroll track
-
-type AwardEntry = {
-  title: string;
-  org: string;
-  date: string;
+type Achievement = {
+  /** Kalimat pencapaian — teks besar yang jadi tubuh barisnya. */
+  desc: string;
+  /** Meta uppercase kecil di bawah desc: kategori · topik · tahun. */
+  meta: string[];
+  /** Foto yang mengekor kursor saat baris di-hover. */
   image: string;
+  /** width/height intrinsik foto — dipakai menjaga rasio tanpa layout shift. */
+  imageW: number;
+  imageH: number;
 };
 
-// PLACEHOLDER — no real awards yet; names/dates are invented so the section
-// reads as filled content during review, not a fabricated real recognition.
-// TODO(content): replace with actual award certificates once granted.
-const AWARDS: AwardEntry[] = [
+const FOUNDER = {
+  name: "Fami Maliki",
+  role: "Founder & CEO",
+  photo: "/people/fami-profile.jpg",
+};
+
+// Konten dari founder-section v1 (deskripsi aslinya berbahasa Indonesia,
+// diterjemahkan karena seluruh copy situs ini berbahasa Inggris). Fotonya
+// foto asli dari Apa-ini/Photo-founder-section.
+const ACHIEVEMENTS: Achievement[] = [
   {
-    title: "Best Digital Government Solution",
-    org: "GovTech Innovation Awards",
-    date: "November 2024",
-    image: "https://picsum.photos/seed/csi-award-govtech/480/640",
+    desc: "Awarded for the best digital innovation in the business technology category.",
+    meta: ["Award", "Digital Innovation", "2023"],
+    image: "/people/fami-award.jpg",
+    imageW: 640,
+    imageH: 426,
   },
   {
-    title: "Top AI Implementation",
-    org: "Indonesia Tech Excellence Awards",
-    date: "August 2024",
-    image: "https://picsum.photos/seed/csi-award-ai/480/640",
-  },
-  {
-    title: "Outstanding Enterprise Software Partner",
-    org: "National ICT Awards",
-    date: "May 2023",
-    image: "https://picsum.photos/seed/csi-award-enterprise/480/640",
-  },
-  {
-    title: "Rising Star in Cloud Services",
-    org: "Cloud Innovation Summit",
-    date: "March 2023",
-    image: "https://picsum.photos/seed/csi-award-cloud/480/640",
+    desc: "Keynote speaker at leading technology and business innovation conferences.",
+    meta: ["Speaking", "Technology", "2024"],
+    image: "/people/fami-speaking.jpg",
+    imageW: 640,
+    imageH: 640,
   },
 ];
 
-function AwardRow({
-  award,
-  index,
-  isActive,
-  onPointerEnter,
-  onPointerLeave,
-  onFocus,
-  onBlur,
-}: {
-  award: AwardEntry;
-  index: number;
-  isActive: boolean;
-  onPointerEnter: () => void;
-  onPointerLeave: () => void;
-  onFocus: () => void;
-  onBlur: () => void;
-}) {
-  return (
-    <div
-      onMouseEnter={onPointerEnter}
-      onMouseLeave={onPointerLeave}
-      onFocus={onFocus}
-      onBlur={onBlur}
-      tabIndex={0}
-      className="group flex cursor-default items-center gap-4 border-b border-white/[0.08] py-5 outline-none last:border-b-0"
-    >
-      <span
-        className={`font-mono text-xs tabular-nums transition-colors duration-200 ${
-          isActive ? "text-accent" : "text-zinc-600"
-        }`}
-        aria-hidden="true"
-      >
-        {String(index + 1).padStart(2, "0")}
-      </span>
-      <div
-        className={`grid size-10 shrink-0 place-items-center rounded-full border transition-colors duration-200 ${
-          isActive ? "border-accent/50 text-accent" : "border-white/[0.08] text-zinc-500"
-        }`}
-        aria-hidden="true"
-      >
-        <Award className="size-5" strokeWidth={1.5} />
-      </div>
-      <div className="flex-1">
-        <p
-          className={`text-sm font-medium transition-colors duration-200 ${
-            isActive ? "text-zinc-100" : "text-zinc-300"
-          }`}
-        >
-          {award.title}
-        </p>
-        <p className="text-xs text-zinc-500">
-          {award.org} &middot; {award.date}
-        </p>
-      </div>
-    </div>
-  );
-}
+/** Lebar foto pengekor kursor, px — tingginya mengikuti rasio tiap foto. */
+const PREVIEW_W = 240;
 
 /**
- * Recognition strip. Desktop: hovering a row reveals a certificate-style
- * preview card that follows the cursor (basement.studio-style awards list).
- * Mobile has no hover, so the same photos surface directly in a horizontal
- * snap-scroll carousel instead.
+ * Tinggi pratinjau DIBULATKAN ke piksel utuh. 240 × 426/640 = 159,75px —
+ * tinggi pecahan membuat tepi bawah foto jatuh di tengah piksel, dan browser
+ * menambalnya dengan baris interpolasi semi-transparan yang terbaca sebagai
+ * "garis putih di bawah foto" (terlapor 20 Agu, paling kentara saat foto
+ * bergerak/menghilang).
  */
+const previewH = (a: Achievement) =>
+  Math.round((PREVIEW_W * a.imageH) / a.imageW);
+
+/**
+ * Pop masuk & keluarnya SATU gerakan yang diputar balik (permintaan 20 Agu;
+ * versi grid-fade sempat dicoba lalu diganti ini). POP_EASE kurva back-out
+ * dari demo v1; EXIT_EASE cerminannya — cubic-bezier(a,b,c,d) dibalik jadi
+ * (1-c, 1-d, 1-a, 1-b) — sehingga keluarnya menganticipasi sedikit lalu
+ * menyusut, persis rekaman masuknya diputar mundur. Durasi keluar lebih
+ * pendek: pelepasan tidak perlu selama kedatangan untuk terbaca.
+ */
+const POP_EASE: [number, number, number, number] = [0.34, 1.56, 0.64, 1];
+const EXIT_EASE: [number, number, number, number] = [0.36, 0, 0.66, -0.56];
+
 export default function AwardsShowcase() {
   const reduced = useReducedMotion();
-  const containerRef = useRef<HTMLDivElement>(null);
+  const coarse = useCoarsePointer();
+  // Hover butuh kursor sungguhan; di layar sentuh & reduced motion baris
+  // tampil statis — alasan yang sama dengan waypoint 3D (INVARIANTS §6).
+  const interactive = !reduced && !coarse;
 
-  // `active` drives text/icon highlight for both mouse and keyboard focus.
-  // `pointerActive` gates the floating card so keyboard focus doesn't snap
-  // it to a stale cursor position.
-  const [active, setActive] = useState<number | null>(null);
-  const [pointerActive, setPointerActive] = useState<number | null>(null);
+  const [hovered, setHovered] = useState<number | null>(null);
 
-  const cardX = useMotionValue(0);
-  const cardY = useMotionValue(0);
-  const springX = useSpring(cardX, { stiffness: 300, damping: 30 });
-  const springY = useSpring(cardY, { stiffness: 300, damping: 30 });
+  // Posisi mouse & foto hidup di ref, bukan state: dibaca 60×/detik oleh loop
+  // rAF di bawah, dan tidak ada satu pun yang perlu memicu render.
+  const mouse = useRef({ x: 0, y: 0, prevX: 0 });
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const posRef = useRef({ x: 0, y: 0, rotation: 0, snapped: false });
 
-  function onMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    if (reduced || !containerRef.current) return;
-    const r = containerRef.current.getBoundingClientRect();
-    const maxX = Math.max(r.width - CARD_W - 8, 8);
-    cardX.set(Math.min(Math.max(e.clientX - r.left + CARD_GAP, 8), maxX));
-    cardY.set(Math.max(e.clientY - r.top - CARD_H - CARD_GAP, 8));
-  }
-
-  const previewAward = pointerActive !== null ? AWARDS[pointerActive] : null;
-
-  // Mobile auto-scroll — advances the snap-scroll track one card at a time.
-  // Paused as soon as the user touches the track (`onPointerDown`) or the
-  // track scrolls for any reason other than the interval itself, resuming
-  // only after RESUME_DELAY_MS of idle. Dead entirely under reduced motion,
-  // matching CaseGrid's FanSlider.
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [paused, setPaused] = useState(false);
-  const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Distinguishes a scroll caused by the auto-scroll interval itself from a
-  // user-initiated one — the `scroll` listener can't otherwise tell them
-  // apart, and without this guard the interval's own scroll would re-arm the
-  // resume timer and never let `paused` clear.
-  const programmaticScrollRef = useRef(false);
-
-  function pauseAndScheduleResume() {
-    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
-    setPaused(true);
-    resumeTimerRef.current = setTimeout(() => setPaused(false), RESUME_DELAY_MS);
-  }
-
+  /**
+   * Mesin pengekor kursor — lerp posisi + rotasi dari kecepatan horizontal
+   * mouse, persis angka-angka demo v1 (0.09 posisi, 0.08 rotasi, -velX*0.4).
+   *
+   * ⚠️ Loop-nya HANYA hidup selama ada baris yang di-hover — begitu kursor
+   * keluar, cancel. Pelajaran PhysicsHeading (3 Agu): flag yang menggerbangi
+   * efek ≠ menggerbangi mesinnya; rAF abadi untuk foto yang tak terlihat
+   * adalah persis bug "laptop panas" itu. Posisi beku selama fade-out 200 ms
+   * tidak terbaca mata.
+   */
   useEffect(() => {
-    if (reduced) return;
-    const id = setInterval(() => {
-      if (paused) return;
-      const track = trackRef.current;
-      if (!track) return;
-      const cardWidth = track.firstElementChild?.getBoundingClientRect().width ?? 0;
-      if (cardWidth === 0) return;
-      const step = cardWidth + MOBILE_CARD_GAP_PX;
-      const atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - step / 2;
-      programmaticScrollRef.current = true;
-      track.scrollTo({
-        left: atEnd ? 0 : track.scrollLeft + step,
-        behavior: "smooth",
-      });
-    }, AUTO_SCROLL_MS);
-    return () => clearInterval(id);
-  }, [reduced, paused]);
-
-  useEffect(() => {
-    return () => {
-      if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    if (hovered === null || !interactive) return;
+    let raf = 0;
+    const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+    const loop = () => {
+      const p = posRef.current;
+      const m = mouse.current;
+      const velX = m.x - m.prevX;
+      m.prevX = m.x;
+      p.rotation = lerp(p.rotation, -velX * 0.4, 0.08);
+      p.x = lerp(p.x, m.x, 0.09);
+      p.y = lerp(p.y, m.y, 0.09);
+      const el = wrapperRef.current;
+      if (el) {
+        el.style.left = `${p.x}px`;
+        el.style.top = `${p.y}px`;
+        el.style.transform = `translate(-50%, -62%) rotate(${p.rotation}deg)`;
+      }
+      raf = requestAnimationFrame(loop);
     };
-  }, []);
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [hovered, interactive]);
 
-  function onTrackScroll() {
-    if (programmaticScrollRef.current) {
-      programmaticScrollRef.current = false;
-      return;
+  function enterRow(i: number) {
+    if (!interactive) return;
+    // Foto pertama kali muncul: lahir DI kursor, bukan terbang dari pojok
+    // kiri-atas (0,0) — demo v1 punya bug kecil itu karena imgX/imgY mulai
+    // dari nol.
+    if (!posRef.current.snapped) {
+      posRef.current.x = mouse.current.x;
+      posRef.current.y = mouse.current.y;
+      posRef.current.snapped = true;
     }
-    pauseAndScheduleResume();
+    setHovered(i);
   }
+
+  function leaveRow(i: number) {
+    if (!interactive) return;
+    setHovered((h) => (h === i ? null : h));
+  }
+
+  const preview = hovered !== null ? ACHIEVEMENTS[hovered] : null;
 
   return (
     <motion.div
-      ref={containerRef}
-      onMouseMove={onMouseMove}
-      className="relative mt-8 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-8 sm:p-10"
+      className="mt-16"
+      onMouseMove={(e) => {
+        mouse.current.x = e.clientX;
+        mouse.current.y = e.clientY;
+      }}
       initial={{ opacity: 0, y: 8 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
     >
-      <p className="text-xs tracking-widest text-zinc-500 uppercase">Recognition</p>
+      <FadeUpList tag="div">
+        {ACHIEVEMENTS.map((a, i) => (
+          <FadeUpItem key={a.desc} tag="div">
+            <div
+              onMouseEnter={() => enterRow(i)}
+              onMouseLeave={() => leaveRow(i)}
+              className="group grid gap-6 border-t border-white/[0.08] py-6 transition-opacity duration-300 last:border-b last:border-white/[0.08] sm:grid-cols-[220px_1fr] sm:gap-12 sm:py-8"
+              style={{ opacity: hovered !== null && hovered !== i ? 0.2 : 1 }}
+            >
+              {/* Kartu founder — jangkar kiri tiap baris */}
+              <div className="flex items-start gap-3 self-start border border-white/[0.08] bg-white/[0.02] px-3.5 py-2.5">
+                <img
+                  src={FOUNDER.photo}
+                  alt=""
+                  loading="lazy"
+                  width={40}
+                  height={40}
+                  className="size-10 shrink-0 border border-white/[0.08] object-cover"
+                />
+                <div className="flex flex-col gap-0.5 pt-0.5">
+                  <span className="text-xs font-medium text-zinc-300">
+                    {FOUNDER.name}
+                  </span>
+                  <span className="text-[9px] tracking-widest text-zinc-600 uppercase">
+                    {FOUNDER.role}
+                  </span>
+                </div>
+              </div>
 
-      {/* Desktop — hover/focus a row for the certificate preview */}
-      <FadeUpList tag="div" className="mt-4 hidden sm:block">
-        {AWARDS.map((award, i) => (
-          <FadeUpItem key={award.title} tag="div">
-            <AwardRow
-              award={award}
-              index={i}
-              isActive={active === i}
-              onPointerEnter={() => {
-                setActive(i);
-                setPointerActive(i);
-              }}
-              onPointerLeave={() => {
-                setActive(null);
-                setPointerActive(null);
-              }}
-              onFocus={() => setActive(i)}
-              onBlur={() => setActive(null)}
-            />
-          </FadeUpItem>
-        ))}
-      </FadeUpList>
-
-      {/* Mobile — snap-scroll carousel, photo always visible (no hover on touch).
-          `-mx-8 px-8` bleeds the track to the card edge so cards scroll past it,
-          while insetting the first/last card back to the content column.
-          `scroll-px-8` is what makes that inset survive: the snapport otherwise
-          starts at the scrollport edge, so mandatory snap scrolls the left
-          padding straight out of view and card #1 sits flush on the border.
-
-          ⚠️ The three 8s are ONE number, and it is the `p-8` on the panel
-          wrapper right above — NOT the section gutter. Tried lowering them to 3
-          on 18 Aug alongside the site-wide `px-3` gutter change and measured the
-          result: the track started 33px in (12 gutter + 32 panel padding − 12
-          margin) and the panel's `overflow-hidden` clipped the bleed, so cards
-          no longer scrolled to the panel edge. If the panel padding changes
-          (`p-8 sm:p-10`), these move with it; the section gutter never touches
-          them. */}
-      <FadeUpList
-        ref={trackRef}
-        tag="div"
-        onScroll={onTrackScroll}
-        onPointerDown={pauseAndScheduleResume}
-        className="-mx-8 mt-4 flex snap-x snap-mandatory scroll-px-8 gap-4 overflow-x-auto px-8 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden"
-      >
-        {AWARDS.map((award) => (
-          <FadeUpItem
-            key={award.title}
-            tag="div"
-            className="relative aspect-[3/4] w-48 shrink-0 snap-start overflow-hidden rounded-2xl border border-white/[0.08]"
-          >
-            <img src={award.image} alt="" loading="lazy" className="h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 p-4">
-              <p className="text-sm font-medium text-zinc-50">{award.title}</p>
-              <p className="mt-1 text-[11px] text-zinc-300">
-                {award.org} &middot; {award.date}
-              </p>
+              {/* Konten kanan: kalimat besar + meta */}
+              {/* Padding & gap sengaja jauh lebih rapat dari demo v1 (88px py,
+                  48px gap): daftarnya akan bertambah seiring award baru, dan
+                  pada rapat begini tiap baris tetap satu layar penuh napas
+                  tanpa memakan tinggi halaman (permintaan 20 Agu). */}
+              <div className="flex flex-col justify-between gap-5 sm:gap-6">
+                <p className="text-2xl leading-snug tracking-tight text-zinc-200 sm:text-3xl lg:text-4xl">
+                  {a.desc}
+                </p>
+                <div className="flex items-center text-[10px] tracking-widest text-zinc-600 uppercase transition-colors duration-200 group-hover:text-zinc-400">
+                  {a.meta.map((m, mi) => (
+                    <span key={m} className="flex items-center">
+                      {mi > 0 && (
+                        <span
+                          className="mx-5 inline-block size-[3px] rounded-full bg-zinc-700"
+                          aria-hidden="true"
+                        />
+                      )}
+                      {m}
+                    </span>
+                  ))}
+                  <span
+                    className="ml-auto text-sm text-zinc-700 transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-zinc-400"
+                    aria-hidden="true"
+                  >
+                    ↗
+                  </span>
+                </div>
+              </div>
             </div>
           </FadeUpItem>
         ))}
       </FadeUpList>
 
-      {/* Cursor-follow certificate preview — desktop only */}
-      {!reduced && (
-        <AnimatePresence>
-          {previewAward && (
-            <motion.div
-              key={previewAward.title}
-              className="pointer-events-none absolute top-0 left-0 z-10 hidden w-48 overflow-hidden rounded-xl border border-white/10 bg-zinc-900 shadow-2xl sm:block"
-              style={{ x: springX, y: springY }}
-              initial={{ opacity: 0, scale: 0.92 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.92 }}
-              transition={{ duration: 0.2, ease: EASE }}
-            >
-              <img
-                src={previewAward.image}
+      {/* Foto pengekor kursor — wrapper diposisikan loop rAF (left/top +
+          rotate), inner milik Motion (scale/opacity pop). Dua elemen karena
+          dua sistem menulis `transform`: digabung di satu elemen, saling
+          menimpa tiap frame. Pola yang sama dengan demo v1. */}
+      {interactive && (
+        <div
+          ref={wrapperRef}
+          className="pointer-events-none fixed top-0 left-0 z-50 will-change-transform"
+        >
+          {/* popLayout: saat hover pindah baris, foto lama keluar sebagai
+              elemen absolut — tanpa ini ia tetap di flow dan MENDORONG foto
+              baru ke bawah selama exit-nya. */}
+          <AnimatePresence mode="popLayout">
+            {preview && (
+              <motion.img
+                key={preview.image}
+                src={preview.image}
                 alt=""
-                className="aspect-[3/4] w-full object-cover"
+                width={preview.imageW}
+                height={preview.imageH}
+                style={{ width: PREVIEW_W, height: previewH(preview) }}
+                className="object-cover"
+                initial={{ opacity: 0, scale: 0.05 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{
+                  opacity: 0,
+                  scale: 0.05,
+                  transition: { duration: 0.45, ease: EXIT_EASE },
+                }}
+                transition={{ duration: 0.7, ease: POP_EASE }}
               />
-              <div className="p-3">
-                <p className="text-xs font-medium text-zinc-100">{previewAward.title}</p>
-                <p className="mt-0.5 text-[10px] text-zinc-500">{previewAward.date}</p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>
+        </div>
       )}
     </motion.div>
   );

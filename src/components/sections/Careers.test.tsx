@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Careers from "./Careers";
 
@@ -20,94 +20,112 @@ class IntersectionObserverStub {
 }
 vi.stubGlobal("IntersectionObserver", IntersectionObserverStub);
 
+const scrollToSectionSpy = vi.fn();
+vi.mock("@/lib/smoothScroll", () => ({
+  scrollToSection: (id: string) => scrollToSectionSpy(id),
+}));
+
 const ROLE_TITLES = [
   "Innovation & Growth Manager",
   "Technical Lead",
   "Product Builder",
   "Full Stack Engineer",
 ];
-const HIRING_STAGES = [
-  "Application",
-  "Conversation",
-  "Practical Challenge",
-  "Final Interview",
-  "Welcome Aboard",
-];
 
-describe("Careers — promote", () => {
-  it("renders every role once across the hero + strip", () => {
+/** Header accordion sebuah role — button yang accessible name-nya memuat judul. */
+function roleHeader(title: string) {
+  return screen.getByRole("button", {
+    name: (name) => name.includes(title),
+  });
+}
+
+/** matchMedia palsu; `(pointer: coarse)` menjawab sesuai skenario. */
+function stubPointer(coarse: boolean) {
+  vi.spyOn(window, "matchMedia").mockImplementation(
+    (query: string) =>
+      ({
+        matches: query.includes("pointer: coarse") ? coarse : false,
+        media: query,
+        onchange: null,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        addListener: () => {},
+        removeListener: () => {},
+        dispatchEvent: () => false,
+      }) as unknown as MediaQueryList,
+  );
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  scrollToSectionSpy.mockClear();
+});
+
+describe("Careers — roles list (port V1)", () => {
+  it("renders every role as an accordion row, all collapsed", () => {
     render(<Careers />);
     for (const title of ROLE_TITLES) {
-      expect(screen.getByText(title)).toBeInTheDocument();
+      expect(roleHeader(title)).toHaveAttribute("aria-expanded", "false");
     }
   });
 
-  it("features the first role in the hero, with no Apply CTA", () => {
-    render(<Careers />);
-    const hero = screen.getByTestId("career-hero");
-    expect(within(hero).getByText(ROLE_TITLES[0])).toBeInTheDocument();
-
-    // The Apply CTA was removed — the hero is presentational + promote-only.
-    expect(
-      within(hero).queryByRole("link", { name: /apply for this role/i }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("exposes the other three roles as promote buttons", () => {
-    render(<Careers />);
-    for (const title of ROLE_TITLES.slice(1)) {
-      expect(
-        screen.getByRole("button", { name: `Feature the ${title} role` }),
-      ).toBeInTheDocument();
-    }
-    // The featured role is not also a promote button.
-    expect(
-      screen.queryByRole("button", { name: `Feature the ${ROLE_TITLES[0]} role` }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("promotes a clicked role to the hero and demotes the old hero to the strip", async () => {
+  it("expands a clicked role and shows its overview + skill tags", async () => {
     const user = userEvent.setup();
     render(<Careers />);
 
+    await user.click(roleHeader("Technical Lead"));
+
+    expect(roleHeader("Technical Lead")).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText(/lead engineering execution/i)).toBeInTheDocument();
+    expect(screen.getByText("Team leadership")).toBeInTheDocument();
+  });
+
+  it("only one role is open at a time", async () => {
+    const user = userEvent.setup();
+    render(<Careers />);
+
+    await user.click(roleHeader("Technical Lead"));
+    await user.click(roleHeader("Product Builder"));
+
+    expect(roleHeader("Product Builder")).toHaveAttribute("aria-expanded", "true");
+    expect(roleHeader("Technical Lead")).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("clicking an open role collapses it again", async () => {
+    const user = userEvent.setup();
+    render(<Careers />);
+
+    await user.click(roleHeader("Full Stack Engineer"));
+    await user.click(roleHeader("Full Stack Engineer"));
+
+    expect(roleHeader("Full Stack Engineer")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
+  it("the role CTA scrolls to #contact through smoothScroll", async () => {
+    const user = userEvent.setup();
+    render(<Careers />);
+
+    await user.click(roleHeader(ROLE_TITLES[0]));
+    // Body role lain aria-hidden, jadi query role hanya melihat CTA yang terbuka.
     await user.click(
-      screen.getByRole("button", { name: "Feature the Technical Lead role" }),
+      screen.getByRole("button", { name: /start a conversation/i }),
     );
 
-    const hero = screen.getByTestId("career-hero");
-    expect(within(hero).getByText("Technical Lead")).toBeInTheDocument();
-
-    // Old hero is now a strip button; promoted role no longer is.
-    expect(
-      screen.getByRole("button", {
-        name: "Feature the Innovation & Growth Manager role",
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Feature the Technical Lead role" }),
-    ).not.toBeInTheDocument();
+    expect(scrollToSectionSpy).toHaveBeenCalledWith("contact");
   });
 
-  it("renders the hero spotlight + icon sweep when motion is not reduced", () => {
+  it("touch: no cursor-follow preview; photo renders inside the expanded body", async () => {
+    stubPointer(true);
+    const user = userEvent.setup();
     render(<Careers />);
-    const hero = screen.getByTestId("career-hero");
 
-    expect(hero.querySelector('[data-testid="spotlight"]')).toBeInTheDocument();
-    const field = hero.querySelector('[data-testid="career-field"]') as HTMLElement;
-    expect(field.querySelectorAll("svg").length).toBe(2);
-    expect(
-      field.querySelector('[data-testid="career-field-sweep"]'),
-    ).toBeInTheDocument();
-  });
+    await user.click(roleHeader("Product Builder"));
 
-  it("How We Hire stages still render in order", () => {
-    render(<Careers />);
-    const nodes = HIRING_STAGES.map((stage) => screen.getByText(stage));
-    for (let i = 1; i < nodes.length; i++) {
-      expect(
-        nodes[i - 1].compareDocumentPosition(nodes[i]) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
-    }
+    // Satu foto per body role (fallback .role-photo-mobile V1) — bukan
+    // preview pengikut kursor, yang memang tidak dirender di pointer kasar.
+    expect(screen.getAllByTestId("career-role-photo-mobile")).toHaveLength(4);
   });
 });

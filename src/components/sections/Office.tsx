@@ -2,14 +2,12 @@
 
 import { useRef, useState } from "react";
 import { motion, useScroll, useMotionValueEvent, useReducedMotion } from "motion/react";
-import { UserRound } from "lucide-react";
 import AwardsShowcase from "@/components/sections/AwardsShowcase";
+import TestimonialSpotlight from "@/components/sections/TestimonialSpotlight";
 import LineMask from "@/components/motion/LineMask";
 import Disclosure from "@/components/motion/Disclosure";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
-import { NumberTicker } from "@/components/ui/number-ticker";
 import PinnedServiceStack from "@/components/motion/PinnedServiceStack";
-import { scrollToSection } from "@/lib/smoothScroll";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -80,13 +78,6 @@ const SERVICES: { num: string; title: string; desc: string; image: string; subs?
   },
 ];
 
-// TODO(content): replace dummy stats with verified numbers once available.
-const STATS: { value: number; suffix: string; label: string }[] = [
-  { value: 50, suffix: "+", label: "Projects delivered" },
-  { value: 9, suffix: "", label: "Service lines" },
-  { value: 5, suffix: "+", label: "Sectors served" },
-];
-
 export default function Office() {
   const listRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
@@ -116,57 +107,28 @@ export default function Office() {
          dari kantor, dicabut 18 Agu. */
       className="relative z-10 px-3 pt-3 pb-24 sm:pb-32"
     >
-      <div className="grid gap-12 lg:grid-cols-[1fr_auto] lg:items-end lg:gap-8">
-        <div>
-          {/* T6 — eyebrow */}
-          <motion.p
-            className="text-xs tracking-widest text-zinc-400 uppercase"
-            initial={{ opacity: 0, x: -8 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, ease: EASE }}
-          >
-            Services
-          </motion.p>
+      <div>
+        {/* T1 — line-mask heading. Ukuran font & lebar maksimum MENYAMAI h2
+            CsiHero di Home (text-4xl sm:text-6xl lg:text-7xl, max-w-5xl) —
+            keduanya heading pembuka ruangan yang menempel ke hero 3D, jadi
+            skalanya harus terbaca setara (20 Agu). Eyebrow "Services" dicabut
+            bersamaan: navbar sudah menyebut nama halamannya. */}
+        <h2 className="max-w-5xl text-4xl font-semibold tracking-tight text-zinc-100 sm:text-6xl lg:text-7xl">
+          <LineMask>Where Software Becomes Intelligence.</LineMask>
+        </h2>
 
-          {/* T1 — line-mask heading */}
-          <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-5xl">
-            <LineMask>Where Software Becomes Intelligence.</LineMask>
-          </h2>
-
-          {/* Overview — [what we build] + [impact on audience] + [who we serve, X to Y] */}
-          <motion.p
-            className="mt-6 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg"
-            initial={{ opacity: 0, y: 8 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
-          >
-            We build the software, AI, and cloud infrastructure that turn
-            scattered operations into decisions your team can act on — for
-            government agencies and enterprises across Indonesia.
-          </motion.p>
-        </div>
-
-        {/* Stat panel — fills the empty right-side space next to the hero
-            heading. Dummy figures until real numbers are available. */}
-        <motion.dl
-          className="grid grid-cols-3 gap-6 border-t border-white/[0.08] pt-6 lg:grid-cols-1 lg:gap-8 lg:border-t-0 lg:border-l lg:border-white/[0.08] lg:pt-0 lg:pl-8"
+        {/* Overview — [what we build] + [impact on audience] + [who we serve, X to Y] */}
+        <motion.p
+          className="mt-6 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg"
           initial={{ opacity: 0, y: 8 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5, ease: EASE, delay: 0.2 }}
+          transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
         >
-          {STATS.map((stat) => (
-            <div key={stat.label}>
-              <dd className="flex items-baseline gap-0.5 text-3xl font-bold tabular-nums text-zinc-100 sm:text-4xl">
-                <NumberTicker value={stat.value} className="text-inherit" />
-                <span aria-hidden="true">{stat.suffix}</span>
-              </dd>
-              <dt className="mt-1 text-xs text-zinc-500">{stat.label}</dt>
-            </div>
-          ))}
-        </motion.dl>
+          We build the software, AI, and cloud infrastructure that turn
+          scattered operations into decisions your team can act on — for
+          government agencies and enterprises across Indonesia.
+        </motion.p>
       </div>
 
       {/*
@@ -276,34 +238,11 @@ export default function Office() {
         />
       </div>
 
-      {/* Testimonial — fabricated quote so the layout reads as filled content
-          during review, not a real endorsement: name/role/agency are an
-          invented placeholder client, not an actual person.
-          TODO(content): replace with an actual client quote + name/role/company. */}
-      <motion.blockquote
-        className="mt-16 flex flex-col gap-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-8 sm:flex-row sm:items-center sm:gap-8 sm:p-10"
-        initial={{ opacity: 0, y: 8 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, ease: EASE, delay: 0.1 }}
-      >
-        <div
-          className="grid size-14 shrink-0 place-items-center rounded-full bg-zinc-800 text-zinc-500"
-          aria-hidden="true"
-        >
-          <UserRound className="size-7" strokeWidth={1.5} />
-        </div>
-        <div className="flex-1">
-          <p className="text-lg leading-relaxed text-zinc-200">
-            &ldquo;Cogniti rebuilt the systems we&rsquo;d been patching together for years —
-            what used to take a week of manual work now happens in an
-            afternoon.&rdquo;
-          </p>
-          <footer className="mt-4 text-xs tracking-wide text-zinc-500 uppercase">
-            Ratna Wijaya &middot; Head of IT, Dinas Komunikasi &amp; Informatika
-          </footer>
-        </div>
-      </motion.blockquote>
+      {/* Testimonial — redesain 20 Agu: kartu blockquote lama diganti
+          spotlight gaya basement.studio (quote raksasa di tengah + hairline
+          per baris + panah prev/next). Isi masih placeholder fiktif —
+          lihat TODO(content) di TestimonialSpotlight.tsx. */}
+      <TestimonialSpotlight />
 
       {/* Recognition strip — dummy award entries so the layout reads as
           filled content during review; names are placeholder labels, not
@@ -311,37 +250,6 @@ export default function Office() {
           TODO(content): replace with real award/recognition list, if any. */}
       <AwardsShowcase />
 
-      {/*
-        CTA — GULIR DI TEMPAT ke <Contact /> yang sekarang berdiri di ruangan
-        ini juga (roomContent.tsx, 17 Agu). Dulu ini `<Link to="/#contact">`
-        karena Office satu-satunya ruangan tanpa Contact, jadi satu-satunya
-        tujuan yang ada memang di Lounge. Begitu Office punya sendiri, melempar
-        pengunjung ke ruangan lain jadi salah dua kali: ia kehilangan tempatnya
-        tanpa meminta, dan tujuannya ada beberapa layar di bawah kakinya.
-
-        `scrollToSection`, bukan `<a href="#contact">` — sama seperti
-        DeploymentCta: anchor jump bawaan peramban berjalan di luar rAF Lenis
-        dan berebut posisi dengannya di frame yang sama (lihat
-        smoothScrollCallsites.invariant.test.ts, berkas ini ikut dijaga).
-      */}
-      <motion.div
-        className="mt-16 flex flex-wrap items-center gap-4"
-        initial={{ opacity: 0, y: 8 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, ease: EASE, delay: 0.25 }}
-      >
-        <button
-          type="button"
-          onClick={() => scrollToSection("contact")}
-          className="group relative inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium text-black transition-colors hover:bg-zinc-200"
-        >
-          Talk to us
-          <span className="grid h-5 w-5 place-items-center rounded-full bg-zinc-900/10 text-zinc-900 transition-transform duration-200 group-hover:translate-x-0.5">
-            →
-          </span>
-        </button>
-      </motion.div>
     </section>
   );
 }

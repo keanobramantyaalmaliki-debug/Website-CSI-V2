@@ -65,8 +65,13 @@ const SETTLE_TAIL_MS = 300;
  * tidak pernah dipakai. Yang dijaga test ini urutan & hasil akhirnya; bahwa
  * kotak terakhir yang mendaratkan dibuktikan lewat filmstrip
  * (scripts/probe-grid-reveal.mjs), bukan di sini.
+ *
+ * Rantai terburuknya: FRAME_WAIT 300 + SWEEP 800 + TILE 80 + LAND_NET 400 =
+ * 1580 ms. Batas lama 1600 dipatok saat sapuan masih 420 dan jadi pas-pasan
+ * begitu Keano menaikkan SWEEP_MS ke 800 (20 Agu) — dilonggarkan lagi supaya
+ * angka ini tidak ikut disetel ulang tiap durasi sapuan dicicipi ulang.
  */
-const WHOLE_MS = 1600;
+const WHOLE_MS = 2400;
 
 const path = () => screen.getByTestId("path").textContent;
 const rects = () =>

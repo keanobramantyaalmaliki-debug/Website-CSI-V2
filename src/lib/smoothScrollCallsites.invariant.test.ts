@@ -31,7 +31,12 @@ const GUARDED_FILES = [
   "components/Navbar.tsx",
   "routes/RoomRouteSync.tsx",
   "components/sections/DeploymentCta.tsx",
-  "components/sections/Office.tsx",
+  // CTA "Start a conversation" di baris role Careers — masuk 20 Agu bersama
+  // port roles-list V1, menggulir ke #contact lewat scrollToSection.
+  "components/sections/CareersRoles.tsx",
+  // Office.tsx pernah dijaga di sini — CTA "Talk to us"-nya memanggil
+  // scrollToSection. CTA itu dihapus 20 Agu; berkasnya kini tidak menggulir
+  // apa pun, jadi tidak ada kontrak untuk dijaga.
 ] as const;
 
 function stripComments(src: string): string {

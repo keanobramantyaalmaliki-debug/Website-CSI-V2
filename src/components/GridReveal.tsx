@@ -59,8 +59,12 @@ import {
  * angka (380 menutup, 450 membuka) karena dua fase itu menjawab hal yang
  * berbeda. Satu arah = satu jawaban: cukup cepat untuk terbaca sebagai respons
  * atas klik, cukup lambat untuk kisinya sempat terbaca sebagai kisi.
+ *
+ * 420 ternyata masih di sisi "respons" dari tawar-menawar itu — sapuannya
+ * lewat sebelum kisinya sempat dinikmati (20 Agu). 600 masih kurang; 800
+ * angka yang dipilih Keano setelah melihat keduanya.
  */
-const SWEEP_MS = 420;
+const SWEEP_MS = 800;
 
 /**
  * Durasi SATU kotak membesar, ms.

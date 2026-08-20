@@ -283,11 +283,12 @@ export default function TheCrew() {
           ))}
         </div>
 
-        {/* Dinding foto — 5 kotak per baris (13 orang = 3 baris), celah 1px saja
-            & sudut lurus, seperti basement. */}
+        {/* Dinding foto — 5 kotak per baris (13 orang = 3 baris), celah 4px
+            & sudut lurus. Tiap kotak diberi garis tepi tipis (lihat className
+            CrewAvatar di bawah) supaya kotak kosong tetap terbaca sebagai sel. */}
         <div
           data-testid="crew-wall"
-          className="grid grid-cols-5 content-start gap-px"
+          className="grid grid-cols-5 content-start gap-1"
         >
           {ORDERED.map((member) => {
             const isActive = activeName === member.name;
@@ -305,11 +306,14 @@ export default function TheCrew() {
                 {/* Tanpa prop `dimmed` lagi: yang meredupkan kotak lain sekarang
                     tirai sorot yang menutupi seluruh halaman, jadi meredupkan
                     per-kotak cuma menumpuk efek yang sama dua kali. */}
+                {/* Outline lewat `border`, bukan `ring`: ring-1 sudah dipakai
+                    CrewAvatar sebagai penanda kotak aktif (warna aksen), jadi
+                    keduanya bisa hidup berdampingan tanpa saling menimpa. */}
                 <CrewAvatar
                   photoUrl={member.photoUrl}
                   name={member.name}
                   active={isActive}
-                  className="rounded-none"
+                  className="rounded-none border border-white/[0.08]"
                 />
               </button>
             );

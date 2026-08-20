@@ -31,12 +31,14 @@ export const TEAM_MEMBERS: TeamMember[] = [
     role: "Manager",
     category: "Management",
     social: [{ platform: "linkedin", url: "#" }],
+    photoUrl: "/people/jun.webp",
   },
   {
     name: "Imam Maliki",
     role: "Head of Operations",
     category: "Management",
     social: [{ platform: "linkedin", url: "#" }],
+    photoUrl: "/people/imam.webp",
   },
   {
     name: "Lisa Puspitasari",
@@ -52,6 +54,7 @@ export const TEAM_MEMBERS: TeamMember[] = [
       { platform: "linkedin", url: "#" },
       { platform: "x", url: "#" },
     ],
+    photoUrl: "/people/bagas.webp",
   },
   {
     name: "Amallia Dwi Yustianti",
@@ -61,12 +64,14 @@ export const TEAM_MEMBERS: TeamMember[] = [
       { platform: "linkedin", url: "#" },
       { platform: "x", url: "#" },
     ],
+    photoUrl: "/people/amallia.webp",
   },
   {
     name: "Nico Arya Putra Laksana",
     role: "Junior Developer",
     category: "Developer",
     social: [{ platform: "linkedin", url: "#" }],
+    photoUrl: "/people/nico.webp",
   },
   {
     name: "Keano Bramantya Almaliki",
@@ -79,24 +84,28 @@ export const TEAM_MEMBERS: TeamMember[] = [
     role: "Junior Developer",
     category: "Developer",
     social: [{ platform: "linkedin", url: "#" }],
+    photoUrl: "/people/sayyid.webp",
   },
   {
     name: "Bayu",
     role: "Research & Development",
     category: "R & D",
     social: [{ platform: "linkedin", url: "#" }],
+    photoUrl: "/people/bayu.webp",
   },
   {
     name: "Roni",
     role: "Research & Development",
     category: "R & D",
     social: [{ platform: "linkedin", url: "#" }],
+    photoUrl: "/people/roni.webp",
   },
   {
     name: "Inno",
     role: "Research & Development",
     category: "R & D",
     social: [{ platform: "linkedin", url: "#" }],
+    photoUrl: "/people/inno.webp",
   },
 ];
 
@@ -106,17 +115,20 @@ export const VALUES: Value[] = [
     tagline: "Precision over speed",
     description:
       "We believe the details are the work. Every margin, transition, and copy decision is deliberate, because what looks effortless took effort to get right.",
+    photo: "/people/craft-first.webp",
   },
   {
     title: "Partnership",
     tagline: "Embedded, not adjacent",
     description:
       "We work as part of your team, not apart from it. That means shared context, honest feedback, and outcomes we're both responsible for.",
+    photo: "/people/partnership.webp",
   },
   {
     title: "Long-Term Thinking",
     tagline: "Built to outlast the brief",
     description:
       "We design systems, not artifacts. The work we ship should still make sense two years from now, even after the team changes.",
+    photo: "/people/long-term-thinking.webp",
   },
 ];
