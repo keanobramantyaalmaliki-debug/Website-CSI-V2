@@ -1228,6 +1228,8 @@ App.tsx  →  <SiteLayout>            ← persisten, TIDAK ikut berganti
 | **Meeting** `/meeting` | MeetingLead → CaseGrid → CaseStudySpotlight → Contact | studi kasus |
 | **Function** `/function` | PeopleIntro → PeopleValues → TheCrew → Careers → Contact | orang & karir |
 
+> Tabel di atas keadaan saat section ini ditulis. **Sejak 19 Agu isi Office ↔ Function ditukar** dan URL-nya memakai slug konten (`/people`, `/services`, `/work`) — lihat §4ah.
+
 `Services.tsx` **dihapus** — isinya diserap jadi accordion 9-item di `Office.tsx`, supaya tidak ada dua sumber layanan yang tumpang tindih. `FeaturedProjects` juga dibuang karena menduplikasi `CaseGrid` di Meeting.
 
 ### `RoomRouteSync` — tiga arah, bukan satu
@@ -1915,9 +1917,11 @@ Dua gotcha kecil yang ikut tercatat di kode: `goTo({ instant })` **mendahului** 
 | RoomKey | Label & URL | Isinya |
 |---|---|---|
 | Lounge | **Home** — `/` | hero + Deployments + Process + Industries + Vision |
-| Office | **Services** — `/services` | bedah layanan |
+| Office | **People** — `/people` | crew + values + Careers |
 | Meeting | **Work** — `/work` | studi kasus |
-| Function | **People** — `/people` | crew + values + Careers |
+| Function | **Services** — `/services` | bedah layanan |
+
+Commit yang sama juga **menukar konten Office ↔ Function** (alasannya di komentar `roomContent.tsx`): konten People lebih nyambung dengan scene Office yang karakternya duduk bekerja di meja — sekaligus hologram maintenance (§4t) & glitch karakter idle (§4u), yang dua-duanya di-gate ke ruangan Office, jadi latar halaman People. Konten Services (accordion `sections/Office.tsx` — nama berkasnya warisan) pindah ke Function. *(Tabel di atas sempat tertulis terbalik — Office/Services & Function/People — sampai dikoreksi 20 Agu.)*
 
 - **Slug lama tetap hidup** (`/office`, `/meeting`, `/function`) — tautan yang terlanjur beredar tidak boleh mati. `roomFromPath` mengenali keduanya, dan **route legacy-nya ada di `App.tsx`**: tanpa itu catch-all `*` melempar pengunjung ke `/` jauh sebelum store sempat membaca path-nya. ⚠️ Elemennya `RoomContent` **sungguhan, bukan `<Navigate>`** — pada deep-link, RoomRouteSync sengaja menahan URL apa adanya sampai chunk `<Scene>` tiba, dan `<Navigate>` akan balapan dengan penahan itu.
 - **Normalisasinya `replace`, bukan push.** Path yang menunjuk ruangan yang sama tapi ejaannya bukan kanonis itu **bukan perpindahan**. Dengan push, menekan Back dari `/services` mendarat di `/office` yang detik itu juga ditulis ulang jadi `/services` lagi — **tombol Back terasa mati** dan riwayatnya terisi entri kembar tanpa batas.
@@ -2020,6 +2024,72 @@ Laporan: bayangan meja billiard **berubah bentuk setiap navigasi** Home → Serv
 "Reproduksi" pertama (diff antar-kunjungan membesar di bawah CPU throttle 8×) ternyata **artefak probe sendiri**: klik navbar memindahkan pointer → parallax menggeser kamera sub-piksel → diff penuh garis tepi yang terbaca "bayangan berubah". Setelah mouse dipindahkan ke titik tetap + tunggu damp settle sebelum tiap screenshot, diff jatuh ke nol — dan justru itu yang membuktikan bake-nya deterministik di mesin uji, mengarahkan pencarian ke mekanisme re-bake liar di atas. Aturan praktisnya: **diff screenshot scene yang punya parallax kursor wajib menstandarkan posisi pointer dulu.**
 
 Penjaga: `contactShadowsRig.invariant.test.ts` — useMemo tetap terpasang + kontrak `NO_BAKE_LAYER` tersambung di ketiga sisinya (definisi, `layers.set` di Dust, `enable` di kamera). Verifikasi: throttle 8× + 3× bolak-balik Home↔Services → tidak ada varian blob; dust tetap terlihat mata.
+
+---
+
+## 4al. 🐛 404 saat Refresh di Rute SPA ✅ (20 Agu)
+
+Refresh (atau deep-link) di `/people` dkk. di produksi jatuh ke 404. Sebabnya di tumpukan servernya sendiri (§7): pm2 + `serve` Vercel melayani `dist/` sebagai berkas statis biasa — `/people` bukan berkas fisik, dan `serve` tidak dijalankan dalam mode SPA. Selama ini tidak ketahuan karena navigasi internal ditangani React Router di sisi klien; 404-nya baru muncul saat request pertama benar-benar menyentuh server.
+
+Perbaikan: `public/serve.json` berisi satu rewrite `** → /index.html`. Dua sifat yang membuatnya cukup:
+
+- **Rewrite `serve` hanya berlaku untuk request yang tidak menemukan berkas** — aset nyata (`/assets/*.js`, `/3d/models/*` beserta Range request-nya, §4ai) tetap dilayani apa adanya.
+- **Ditaruh di `public/`, bukan dikonfigurasi di server** — Vite menyalin `public/` ke `dist/` saat build, jadi konfigurasinya ikut terdeploy bersama artefak dan tidak ada langkah manual yang bisa terlupa di server. (Konsekuensi sisi lain dari perilaku salin-`public/` yang pernah bocor jadi URL publik saat bersih-bersih 13 Agu — kali ini perilakunya justru dimanfaatkan.)
+
+Commit `3fc9410`.
+
+---
+
+## 4am. Rombak People: Roles V1, Testimonial Spotlight, Foto Asli ✅ (20 Agu)
+
+Halaman People (ruangan Office sejak penukaran §4ah) dirombak besar supaya kontennya berhenti jadi placeholder dan look-nya menyusul V1 yang sudah tayang. Commit `8893c5a`; 308 test lulus (50 berkas, naik dari 251/46).
+
+### `CareersRoles` — port careers V1, empat komponen jadi satu
+
+`CareersPromote`, `HiringStack`, `CareersRoleHero`, `CareersRoleChip`, dan `promote-logic` **dihapus semua**, diganti satu `CareersRoles.tsx`: daftar role gaya V1 (Website-CSI `index.html` §careers) — baris bernomor dengan judul besar, **preview foto yang membuka dari tengah dan mengikuti kursor**, accordion satu-terbuka untuk detail. Konten overview + skills **diambil utuh dari careers V1 yang sudah tayang** (bukan placeholder), foto per role di `public/careers/`.
+
+Port vanilla JS → React dengan tiga penyesuaian sadar (tercatat di header berkasnya): toggle hanya di header (`<button aria-expanded>`, bukan seluruh item clickable — tidak ada interactive-dalam-interactive), tinggi body via `grid-template-rows` 0fr→1fr (bukan ukur `scrollHeight` manual), dan tirai reveal dua panel `::before/::after` diganti `clip-path` inset 50%→0 (efek sama tanpa harus menyamakan warna panel dengan latar).
+
+Halaman ini jauh lebih berat dari V1, jadi mekanika hover-nya ditulis ulang untuk compositor:
+
+- **Preview digerakkan imperatif per-frame** (lerp rAF ke kursor) lewat **transform, bukan `style.left`** ala V1 — `left` pada elemen absolut menginvalidasi layout dokumen tiap frame. `mousemove` tidak memicu render React sama sekali; hanya visibilitas yang state. `rect.left` header di-cache saat `mouseenter` (scroll vertikal tidak mengubahnya) supaya tidak ada `getBoundingClientRect` per-mousemove.
+- **Ekspansi baris saat hover hanya menumbuhkan padding-BOTTOM** (+`items-baseline`, bukan center): judul tidak bergerak vertikal, satu-satunya gerakan teks adalah translateX di compositor. Ekspansi simetris + center membuat judul ikut animasi layout = patah-patah.
+- **`will-change` persisten** pada judul — akan/lepasnya promosi layer di awal/akhir transform terbaca sebagai dua "snap" rasterisasi. Hover menerangkan lewat **opacity**, bukan animasi `color` yang me-repaint glyph tiap frame.
+- **Akar "flick" yang sebenarnya = gotcha Tailwind v4**: `translate-x-3` di-generate sebagai properti CSS `translate`, bukan `transform`, jadi transisinya wajib mencantumkan `translate` — `transition-[...,transform]` tidak menganimasikannya sama sekali. (Sekarang tercatat sebagai aturan umum; pertama kali kejadian di sini.)
+
+Touch (`useCoarsePointer`): tanpa hover, foto role tampil di dalam body accordion — meniru fallback `.role-photo-mobile` V1.
+
+### `TestimonialSpotlight` — quote raksasa gaya basement
+
+Kartu blockquote lama di Office.tsx diganti spotlight: tanpa kartu, **quote-nya adalah layout** — teks tengah ukuran besar dengan **hairline di dasar tiap baris** via `repeating-linear-gradient` berjenjang `1lh` (unit `lh` mengikuti line-height terkomputasi, jadi garis tetap nempel ke baris di semua breakpoint tanpa ukur manual), panah prev/next memutar entri.
+
+- **Tinggi dikunci sizer**: replika tak terlihat merender SEMUA entri menumpuk di satu sel grid, jadi kolom tengah selalu setinggi entri terpanjang — pindah ke quote pendek tidak menggeser panah/section di bawahnya; entri aktif absolute di atasnya.
+- **Index + arah slide satu state** (`[index, direction]`): kalau terpisah, exit `AnimatePresence` bisa memakai arah basi dari klik sebelumnya.
+- `aria-live="polite"` — pergantian quote tidak memindahkan fokus.
+- ⚠️ Isinya masih **placeholder fiktif** (`TODO(content)` di berkasnya) — nama/instansi karangan, bukan endorsement sungguhan.
+
+### `AwardsShowcase` — founder-section v1 dihidupkan lagi
+
+Dirombak memakai desain `founder-section-demo.html` V1 yang tidak pernah tayang: baris pencapaian besar + kartu founder (Fami, foto asli di `public/people/fami-*.jpg`), hover meredupkan baris lain, **foto mengekor kursor dengan lerp + rotasi dari kecepatan mouse**. Yang sengaja TIDAK dibawa dari demo: custom cursor (keputusan look satu-halaman; di satu section saja ia lenyap-muncul di perbatasan dan terbaca bug) dan **scramble teks pada hover — dicabut atas permintaan Keano 20 Agu, jangan pasang lagi**.
+
+Dua detail yang sempat jadi bug:
+
+- **Tinggi preview dibulatkan ke piksel utuh** — 240 × 426/640 = 159,75px membuat tepi bawah foto jatuh di tengah piksel; browser menambalnya dengan baris interpolasi semi-transparan yang terbaca "garis putih di bawah foto", paling kentara saat foto bergerak.
+- **Pop masuk & keluar = satu gerakan diputar balik** (permintaan 20 Agu; versi grid-fade dicoba lalu diganti): EXIT_EASE = cermin kurva back-out masuknya — `cubic-bezier(a,b,c,d)` dibalik jadi `(1-c, 1-d, 1-a, 1-b)`.
+
+### Foto asli & penyesuaian ikutan
+
+- **TheCrew & PeopleValues pakai foto asli crew** (`public/people/*.webp`, `src/data/people.ts` diperbarui). Dinding foto: celah `gap-px` → `gap-1` + tiap kotak diberi `border border-white/[0.08]` supaya sel kosong tetap terbaca sebagai sel (outline via `border`, bukan `ring` — `ring-1` sudah dipakai penanda kotak aktif). `grayscale` di foto PeopleValues dicabut.
+- **Heading Office.tsx menyamai h2 CsiHero** (`text-4xl sm:text-6xl lg:text-7xl`, `max-w-5xl`) — keduanya heading pembuka ruangan yang menempel ke hero 3D, skalanya harus terbaca setara. Eyebrow "Services" dicabut: navbar sudah menyebut nama halamannya.
+- **`LineMask` dapat pasangan `pb-[0.15em]` + `-mb-[0.15em]`** — descender ("g", "y") keluar dari line box saat line-height ketat dan terpangkas `overflow-hidden`; pb memberi ruang, -mb seukuran menariknya kembali sehingga tinggi layout tidak berubah. Posisi awal `y: 110%` tetap tersembunyi.
+- **`GridReveal` `SWEEP_MS` 420 → 800** — 420 ternyata masih di sisi "respons" dari tawar-menawar §4ah; sapuannya lewat sebelum kisinya sempat dinikmati. 600 masih kurang; 800 dipilih Keano setelah melihat keduanya.
+- **Jarak subtext `PeopleIntro` ke heading dirapatkan** `mt-16` → `mt-8` (laporan 20 Agu, celahnya terbaca menganga).
+
+### Skrip ukur baru (pola CDP §4r, Brave via `CSI_BROWSER`)
+
+- `scripts/shoot-careers.mjs` & `shoot-testimonial.mjs` — screenshot section terkait.
+- `scripts/measure-careers-hover.mjs` — frame time roles-list per fase: idle vs hover-sweep vs buka accordion, untuk A/B "lag setelah port V1". ⚠️ Terima argumen **cpuThrottle** (mis. 4): M2 tanpa throttle mengunci 60fps dan menyembunyikan selisih ongkos antar-fase — jebakan yang sama kelasnya dengan "wajib dpr 2".
+- `scripts/attribute-scroll-hitch.mjs` — jawaban untuk "lag-nya di section mana?": wheel-scroll `/people` atas-ke-bawah sambil mencatat `scrollY` tiap frame, cetak frame terpanjang + posisinya relatif batas-batas section.
 
 ---
 
@@ -2536,7 +2606,7 @@ Kode billiard cuma bergantung 3 hal dari `office.glb`: (a) nama node mengandung 
   - Cycles: **GPU Metal** (`prefs.compute_device_type='METAL'` + `cycles.device='GPU'`) — cek tiap sesi, default-nya CPU
 - **Polycam** untuk scanning (GLB)
 - **Vite + bun** (project web ini) — **GLB sudah terintegrasi (§4h)**. Stack: **Vite 6** (dulu Next 16.2, dimigrasikan 29 Jul — §4j), React 19, three 0.185, @react-three/fiber 9 + drei 10 + postprocessing 3, zustand 5, Tailwind 4, **react-router-dom 7** (routing per-ruangan, §4q), **cannon-es 0.20** (billiard, §6d), **motion 12** (animasi teks, §4i), **matter-js 0.20** (`PhysicsHeading`, §4r-3). Jalankan: `bun dev` → `http://localhost:3000`
-- **Vitest 4** — `bun run test`. **251 test di 46 berkas**, semuanya hijau per 12 Agu (naik dari 189/34 pada 7 Agu). Empat di antaranya invariant lintas-wilayah (`INVARIANTS.md` §1, §3, §6, §7). Norma repo: **buktikan test-nya MERAH di kondisi rusak dulu** sebelum dipakai memverifikasi perbaikan
+- **Vitest 4** — `bun run test`. **308 test di 50 berkas**, semuanya hijau per 20 Agu (naik dari 251/46 pada 12 Agu). Empat di antaranya invariant lintas-wilayah (`INVARIANTS.md` §1, §3, §6, §7). Norma repo: **buktikan test-nya MERAH di kondisi rusak dulu** sebelum dipakai memverifikasi perbaikan
 - **Pengukuran performa: CDP langsung, tanpa dependency** (§4r) — `scripts/measure-frames.mjs` (frame time) + `scripts/shoot.mjs` (screenshot) + `scripts/drive.mjs` (klik/eval/tembak berurutan). ⚠️ **Wajib jalankan di dpr 2**; dpr 1 mentok vsync dan semua setelan terlihat sama
   - **Browser verifikasi = Brave**, bukan Chrome. CDP-nya identik, cukup tukar path binary-nya. ⚠️ Kelima skrip di `scripts/` masih **hardcode path Chrome** — ganti manual saat dipakai
   - **`drive.mjs` dapat tiga langkah baru** (10 Agu): `emulate` memasang device metrics **sekaligus** `setTouchEmulationEnabled` — tanpa itu halaman terbaca sebagai desktop sempit, `(pointer: coarse)` tidak cocok, dan gerbang INVARIANTS §6 **tidak ikut teruji padahal itu justru yang sedang diperiksa** saat mengemulasi HP; `scroll` memindahkan halaman ke posisi tertentu sebelum memotret; `media` memaksa `prefers-reduced-motion` (cabang itu dipilih saat komponen **dipasang**, jadi tidak bisa dipalsukan dari `eval`)
