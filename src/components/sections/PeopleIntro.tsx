@@ -16,7 +16,7 @@ export default function PeopleIntro() {
         <LineMask>The People Behind CSI.</LineMask>
       </h1>
 
-      <FadeUpList className="mt-16 grid gap-10 max-w-3xl sm:grid-cols-2">
+      <FadeUpList className="mt-8 grid gap-10 max-w-3xl sm:grid-cols-2">
         <FadeUpItem tag="div">
           <p className="text-zinc-400 leading-relaxed">
             We are a collective of strategists, designers, and builders who
