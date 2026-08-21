@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import Office from "./Office";
 
@@ -11,6 +10,17 @@ class IntersectionObserverStub {
   disconnect() {}
 }
 vi.stubGlobal("IntersectionObserver", IntersectionObserverStub);
+
+// jsdom lacks ResizeObserver; @react-three/fiber's Canvas needs it to mount —
+// Office menampung <ServicesTicker/> (sabuk teks 3D). Stub-nya tidak pernah
+// memanggil balik, jadi canvas tidak pernah mengukur dirinya dan konteks WebGL
+// tidak pernah dibuat — sama seperti pola overflow-guard.test.tsx.
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 
 describe("Office", () => {
   it("renders without the eyebrow label (removed 20 Aug)", () => {
@@ -35,7 +45,10 @@ describe("Office", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders exactly 9 service accordion items", () => {
+  // Sejak 21 Agu daftar layanan tampil sebagai sabuk teks 3D (ServicesTicker);
+  // konten yang terbaca mesin adalah <ul> sr-only — itu yang diuji di sini.
+  // Canvas-nya sendiri tidak bisa diuji di jsdom (tidak ada WebGL).
+  it("renders exactly 9 services in the machine-readable sr-only list", () => {
     render(
       <MemoryRouter>
         <Office />
@@ -45,18 +58,29 @@ describe("Office", () => {
     expect(list.children).toHaveLength(9);
   });
 
-  it("renders the service titles moved from the former Lounge accordion", () => {
+  it("keeps titles AND descriptions readable despite the canvas presentation", () => {
     render(
       <MemoryRouter>
         <Office />
       </MemoryRouter>,
     );
-    // "Custom Software Development" is service #0, the default active
-    // panel, so it also appears in PinnedServiceStack's sr-only label.
-    expect(screen.getAllByText("Custom Software Development").length).toBeGreaterThan(0);
-    expect(screen.getByText("Artificial Intelligence Solutions")).toBeInTheDocument();
-    expect(screen.getByText("Cloud & DevOps")).toBeInTheDocument();
-    expect(screen.getByText("Maintenance & Technical Support")).toBeInTheDocument();
+    expect(screen.getByText(/custom software development/i)).toBeInTheDocument();
+    expect(screen.getByText(/artificial intelligence solutions/i)).toBeInTheDocument();
+    expect(screen.getByText(/maintenance & technical support/i)).toBeInTheDocument();
+    // desc + subs pindah dari accordion ke baris sr-only yang sama.
+    expect(screen.getByText(/software built around your processes/i)).toBeInTheDocument();
+    expect(screen.getByText(/jenna\.ai/i)).toBeInTheDocument();
+  });
+
+  it("hides the decorative ticker panel from assistive tech", () => {
+    render(
+      <MemoryRouter>
+        <Office />
+      </MemoryRouter>,
+    );
+    // Panel canvas murni dekoratif (aria-hidden); pembaca layar hanya boleh
+    // bertemu daftar sr-only, bukan kotak kosong berisi petunjuk drag.
+    expect(screen.getByText(/drag to explore/i).closest("[aria-hidden='true']")).not.toBeNull();
   });
 
   // CTA "Talk to us" dicabut 20 Agu bersama panel stat — section ini ditutup
@@ -95,49 +119,15 @@ describe("Office", () => {
     expect(screen.getAllByText("Fami Maliki").length).toBeGreaterThan(0);
   });
 
-  it("renders 9 desktop sticky-panel photos plus 9 mobile row thumbnails", () => {
+  it("no longer hotlinks Unsplash photos (accordion thumbnails removed with the ticker redesign)", () => {
     render(
       <MemoryRouter>
         <Office />
       </MemoryRouter>,
     );
-    // jsdom doesn't apply the lg: breakpoint CSS that hides one set or the
-    // other, so both mount: 9 in PinnedServiceStack (desktop) + 9 collapsed
-    // row thumbnails (mobile card anchor) = 18.
-    const panelImages = [...document.querySelectorAll("img")].filter((img) =>
+    const photos = [...document.querySelectorAll("img")].filter((img) =>
       img.src.includes("images.unsplash.com"),
     );
-    expect(panelImages).toHaveLength(18);
-  });
-
-  it("expanding a row swaps its thumbnail for a full photo and reveals the description", async () => {
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <Office />
-      </MemoryRouter>,
-    );
-    // Collapsed thumbnail is removed and replaced by the expanded full photo
-    // (shared layoutId morph) — net image count for this row stays at 1, so
-    // the total across all 18 images is unchanged.
-    const before = document.querySelectorAll("img").length;
-    await user.click(screen.getByRole("button", { name: /custom software development/i }));
-    expect(document.querySelectorAll("img").length).toBe(before);
-    expect(screen.getByRole("region").textContent).toMatch(
-      /software built around your processes/i,
-    );
-  });
-
-  it("shows the first service's photo by default (scroll-driven index starts at 0)", () => {
-    render(
-      <MemoryRouter>
-        <Office />
-      </MemoryRouter>,
-    );
-    // jsdom has no real scroll geometry, so scrollYProgress stays at rest —
-    // this just guards against a crash and confirms the initial state is
-    // sane (first panel visible, announced via the sr-only label) rather
-    // than driving an actual scroll simulation.
-    expect(screen.getAllByText("Custom Software Development").length).toBeGreaterThan(0);
+    expect(photos).toHaveLength(0);
   });
 });
