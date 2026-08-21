@@ -89,9 +89,18 @@ Terakhir diupdate: **19 Agustus 2026**.
 - **Fps drop Safari → optimasi GPU idle DIMAJUKAN sebagian** (§4aj) — scene berjalan **tepat di ambang vsync tanpa headroom** (terukur 7 Agu), dan Safari (ANGLE→Metal, sedikit lebih lambat utk pass fullscreen yang sama) jatuh terkuantisasi ke ~30 fps. Tiga lever terpasang: **cap 30 fps saat idle** (gambar tiap 2 tick rAF — BUKAN `frameloop="demand"` yang diharamkan; semua `useFrame` tetap berdetak serempak), **dpr 1,5 → 1 + `image-rendering: pixelated`** (2,25× lebih sedikit piksel, look kotak PS1), dan **adaptive dpr** — termostat tangga [1 → 0,6] yang dikemudikan frekuensi rAF nyata. 🔥 Jebakan terpenting: **cap OS Low Power Mode dan GPU jenuh terkunci vsync KEMBAR** (sama-sama 33,3 ms rata) — pembedanya **jendela idle** dari cap 30 fps sendiri. Debug: `window.__renderPace()` / `window.__adaptiveDpr()`; A/B look: `?dpr=`.
 - **🐛 Bayangan billiard berubah-ubah bentuk tiap navigasi** (§4ak) — akar di **sumber drei**: penghitung bake `ContactShadows` adalah `let count = 0` **di badan render, bukan ref** → tiap re-render Scene (flip heroInView, langkah adaptive dpr, toggle billiard) mengulang bake 4 frame **di momen acak di luar tirai**. Fix: elemen dibangun di `useMemo` (bail-out identitas elemen React) + Dust keluar dari pass depth lewat `NO_BAKE_LAYER` (posisi basis salah tempat + `gl_PointSize` undefined per driver). Pelajaran probe: "reproduksi" pertama ternyata **artefak parallax kursor probe sendiri** — netralkan posisi mouse sebelum diff screenshot.
 
+**Per 20–21 Agu:**
+- **🐛 404 saat refresh di rute SPA** (§4al) — produksi = pm2 + `serve` Vercel di atas `dist`, dan `serve` tidak tahu rute klien; fix = `public/serve.json` berisi rewrite semua rute ke `index.html` (Vite menyalin `public/` ke `dist`, jadi konfigurasinya ikut ter-deploy sendiri).
+- **Rombak People** (§4am) — CareersRoles diisi konten V1, TestimonialSpotlight baru, foto crew asli menggantikan placeholder.
+- **Grading foto via ffmpeg** (§4an) — resep netralkan-amber-dulu (⚠️ `colortemperature` kebalikan intuisi: Kelvin TINGGI = mendinginkan) + zoom-blur radial dirakit dari `mix` + `maskedmerge` tanpa plugin. Outputnya kini dipakai Vision (§4ar).
+- **Lift scroll hero** (§4ao) — kamera "melorot" saat hero digulir habis, **titik pandang TERKUNCI** (dongakan muncul sendiri dari lookAt; versi dua-kurva dicabut). Anti-void = jaminan geometris: `LIFT_MIN_CAM_Y` di atas lantai, bukan angka yang kebetulan pas.
+- **🐛 Debu patah-patah kalau tab hidup lama** (§4ap) — presisi float32 `uTime` habis pelan-pelan (9 jam = gerak bertangga, 37 jam = beku-lompat). Fix: **wrap waktu 800 dtk** + laju naik dikuantisasi 9 tingkat supaya semua periode sepadan; verifikasi via `?dustT0=` tanpa menunggu berjam-jam.
+- **Services: accordion → sabuk teks 3D** (§4aq) — panel putih ala Lusion di `/services`, porting selektif pmndrs `infinite-scroll` (damp + pop + pudar-saat-diam), wheel disandera di atas panel (desktop) + **drag pointer** (HP 1,5×, mouse 1:1). Canvas kedua di halaman → `frameloop="demand"` dengan pesan-frame-sendiri sampai menetap; diam = 0 draw call.
+- **Perampingan sections** (§4ar) — eyebrow dicabut serempak (Portfolio/Featured/Meeting Room·The Work/Our Vision), Vision dirombak jadi headtext + foto kantor ter-grading full-bleed, panel stat & NumberTicker dibuang, + 🐛 fix meta CareersRoles menumpuk di HP (jebakan flex-wrap: `flex-1` basis-0 + `basis-full` muat "satu baris").
+
 **⬅️ Berikutnya:** (a) **pasang backend Web3Forms untuk form inquiry** (§4ac) — satu-satunya blocker rilis yang tersisa, dan sengaja sudah dikurung dalam satu fungsi; (b) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker (§4n); (c) selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter, §4s); (d) optimasi GLB lanjutan — atlas per ruangan + dedup 29 image kembar (§4s); (e) post-processing PS1 (§4b), pass terakhir untuk look basement.studio; (f) **verifikasi perf Safari oleh Keano sendiri** setelah deploy §4aj — `window.__adaptiveDpr()` di console langsung memberi tahu jatuh di kategori mana (GPU-bound → index naik; tetap `{dpr: 1}` tapi lag → cap OS Low Power Mode). **Optimasi GPU idle:** penundaan "tunggu finalise" (7 Agu) **dicabut sebagian 19 Agu** karena Safari — opsi 1/2/4 terpasang (§4aj); sisa **opsi 3** (gabung pass HueSaturation + BrightnessContrast) tetap menunggu finalise.
 
-> ⚠️ **Test suite: 322 test / 53 berkas, hijau** (19 Agu). Satu test *pernah* merah pada satu putaran penuh — `TheCrewMobileCarousel.test.tsx` ("auto-advances 30s after going idle") — lalu hijau saat dijalankan sendiri **dan** pada putaran penuh berikutnya. **Flake fake-timer di bawah beban, bukan regresi**; kalau ia muncul lagi, curigai `advanceTimersByTimeAsync` di suite yang berbagi sesi timer, bukan komponennya.
+> ⚠️ **Test suite: 324 test / 53 berkas, hijau** (21 Agu). Satu test *pernah* merah pada satu putaran penuh — `TheCrewMobileCarousel.test.tsx` ("auto-advances 30s after going idle") — lalu hijau saat dijalankan sendiri **dan** pada putaran penuh berikutnya. **Flake fake-timer di bawah beban, bukan regresi**; kalau ia muncul lagi, curigai `advanceTimersByTimeAsync` di suite yang berbagi sesi timer, bukan komponennya.
 
 ## 🎉 MVP 1 SELESAI (27 Jul) — **50-60 FPS di browser**
 
@@ -2095,7 +2104,7 @@ Dua detail yang sempat jadi bug:
 
 ## 4an. Grading Foto via ffmpeg + Velocity Blur ke Kartu ✅ (21 Agu)
 
-`P1330392.JPG` (foto main UNO di lounge, `~/Documents/Foto foto CSI/Office/`) di-color-grade lalu diberi zoom-blur radial tipis yang menarik fokus ke kartu merah "9" di tengah meja. Output: `P1330392_velocity.jpg` full-res di folder yang sama — **belum masuk `public/`**; kalau dipakai di situs, convert dulu ke webp seperti `P1330392_noir.webp`.
+`P1330392.JPG` (foto main UNO di lounge, `~/Documents/Foto foto CSI/Office/`) di-color-grade lalu diberi zoom-blur radial tipis yang menarik fokus ke kartu merah "9" di tengah meja. Output: `P1330392_velocity.jpg` full-res di folder yang sama. *(Update 21 Agu: versi webp-nya — `P1330392_velocity.webp` + `P1330392_noir.webp` — sudah masuk `public/home/` dan velocity dipakai section Vision, lihat §4ar.)*
 
 ### Resep grading (terbukti sejak P1330346, 20 Agu)
 
@@ -2122,6 +2131,48 @@ Tiga jebakan yang ketemu:
 - **Pusat zoom ≠ pusat frame.** Kartu ada di `(2493, 1700)` dari 4592×3448. Zoom "diam di titik itu" = offset crop `cx*(z-1), cy*(z-1)` — tanpa ini smear-nya konvergen ke pusat frame, bukan ke kartu.
 - **Mask gray untuk maskedmerge**: kerjakan semua stream di `format=gbrp` dan konversi mask `gray→gbrp` (channel tereplikasi) — mask satu-plane atas stream YUV cuma mengenai luma.
 - **"Tipis" = setengah dari yang terasa pas di preview kecil.** Versi pertama (8 step s/d 1.02×) terbaca oke sebagai efek tapi wajah di tepi jadi rusak; final 1.0112× dengan step lebih banyak (12) supaya di full-res gradasi ghost-nya tidak bertangga. Kalibrasi intensitas di preview 1400px dulu — full-res satu render ~30 dtk.
+
+---
+
+## 4ao. Lift Scroll Hero — Kamera Melorot, Pandangan Terkunci ✅ (21 Agu, commit `965014d`)
+
+Saat halaman digulir melewati hero, kamera "turun lift": Y meluncur turun mengikuti progres scroll (0 = hero penuh, 1 = hero habis), sementara **titik pandang TIDAK ikut** — terkunci di target ruangan. Karena mata terpaku ke titik yang sama sementara kepala turun, **dongakan ke atas muncul SENDIRI dari lookAt**. Versi pertama (titik pandang ikut turun + kurva dongak kedua) **dicabut** pilihan Keano: dua gerakan bisa saling membatalkan di layar, satu gerakan tidak.
+
+- Matematika murni di `scrollLift.ts` (+ `scrollLift.test.ts`), integrasi di `CameraController.tsx`; potret verifikasi `scripts/shoot-lift.mjs`.
+- Kurva turun = Hermite klasik di **sepanjang** progres — tidak dipadatkan ke sebagian rentang, jadi terasa mengikuti gulir, bukan menghunjam.
+- **Anti-void geometris, bukan kalibrasi**: turunnya dangkal (`LIFT_DROP_MAX` 0,6 m; pose 1,13–1,60 berakhir 0,53–1,00, setinggi mata orang duduk) DAN dijepit `LIFT_MIN_CAM_Y` 0,35 yang berada di atas lantai (y=0). Selama mata di atas lantai, lantai menutupi void dari sudut mana pun — angka-angkanya bebas di-tweak tanpa bisa bocor.
+- Pengejaran progres `LIFT_TAU` 0,12 — lebih tegas dari parallax (0,22): Lenis sudah menghaluskan scroll-nya, peredam di sini cuma penata frame.
+
+## 4ap. 🐛 Debu Patah-patah di Tab yang Hidup Lama: Presisi float32 `uTime` ✅ (21 Agu, commit `fc53b88`)
+
+`uTime` debu dulu bertambah tanpa batas, dan uniform float diunggah ke GPU sebagai **float32 (mantissa 24 bit)** — makin besar nilainya makin kasar langkah yang bisa diwakilinya. Pada ~9 jam ulp-nya ~4 ms (¼ frame) dan gerakan mulai bertangga; ~37 jam ulp = satu frame penuh — debu beku lalu melompat. Bug kelas "tak akan pernah ketemu di sesi dev", cuma di tab yang ditinggal hidup.
+
+- **Fix: waktu dilipat ke `[0, 800)` (`TIME_WRAP`)** — sah tanpa sambungan terlihat karena semua gerakan shader periodik DAN 800 kelipatan bulat semua periodenya: sway 20 dtk × 40 putaran persis; laju naik `RISE` digeser ke 1/32 supaya `RISE × 0,1 × 800 = 2,5` = tepat tinggi pita Y.
+- Syarat kedua yang tidak gratis: **laju naik per bintik DIKUANTISASI 9 tingkat (0,6–1,4, langkah 0,1)** — bukan estetika, tapi syarat matematis: wrap hanya tak terlihat kalau tiap bintik menempuh kelipatan **bulat** pita Y per periode, dan itu butuh laju yang sepadan (commensurable). 9 tingkat × ~100 bintik berfase acak tetap terbaca taburan.
+- Kedua syarat dijaga `dust.wrap.test.ts` (konstantanya di-export khusus untuk itu).
+- **Verifikasi tanpa menunggu berjam-jam**: `?dustT0=8388608` (DEV-only) membuka halaman seolah tab sudah hidup selama itu; `scripts/probe-dust-precision.mjs` membuktikan — sebelum fix debu hanya bergerak di 5/13 pasangan frame, sesudahnya 13/13.
+- ⚠️ **Bug laten yang sama masih ada di hatch Waypoints** (uniform waktu tak berbatas) — belum digarap.
+
+## 4aq. Services: Accordion → Sabuk Teks 3D ala Lusion ✅ (21 Agu, commit `bfa8068`)
+
+Accordion daftar layanan di `/services` diganti **panel putih rounded** (satu-satunya bidang terang di halaman) berisi 9 judul layanan sebagai **sabuk teks 3D tak berujung** (`ServicesTicker.tsx` + matematika murni `servicesBelt.ts`). `PinnedServiceStack` jadi tak terpakai. Porting **selektif** dari pmndrs `infinite-scroll`: diambil damping `MathUtils.damp` (λ=4), pop ke kamera sebanding laju, dan pudar-saat-diam/berwarna-saat-bergerak; **ditolak** ScrollControls (container scroll bohongannya rebutan wheel dengan Lenis) dan duplikasi-konten + teleport-scrollbar — wrap modulo per item (`beltX`) lebih sederhana dan tanpa titik sambung.
+
+- **Wheel disandera di atas panel (desktop)**: non-passive `preventDefault` + `stopPropagation` sebelum sampai Lenis — kursor di panel = geser sabuk, keluar = scroll halaman. `deltaMode` 1 (baris, Firefox) dinormalkan ~16 px.
+- **Drag horizontal (revisi hari yang sama, untuk HP)**: pointer events → jalan untuk sentuh DAN mouse. Konversi px→unit-dunia lewat tinggi panel (`VIEW_H / clientHeight`) supaya konten menempel jari **1:1**; sentuh dikali `DRAG_MULT_TOUCH` 1,5 ("sedikit lebih licin" — slot HP selebar layar, 1:1 butuh sapuan penuh per item). `touch-action: pan-y` menyerahkan gestur vertikal ke halaman: geser atas-bawah tetap scroll, kanan-kiri milik sabuk. Label: "Drag to explore".
+- **Mobile**: panel 45svh (desktop tetap 70svh) + faktor judul diperkecil 0,13 → 0,095 (slot HP = selebar viewport; faktor desktop membuat judul 3 baris menelan panel).
+- **Canvas KEDUA di halaman** (pelajaran "laptop panas" §4ac tetap dihormati): `frameloop="demand"` — wheel/drag memesan frame lewat `invalidate()` yang diserahkan keluar canvas (pola `PublishInvalidate`), dan `useFrame` memesan frame lanjutan sendiri **selama damping/warna belum menetap** (ambang `SETTLE_*`). Diam = 0 draw call, tanpa gerbang inView.
+- Aksesibilitas: teks troika bukan DOM → panel `aria-hidden`, daftar layanan yang terbaca mesin = `<ul>` sr-only di `Office.tsx` (termasuk desc + subs bekas accordion).
+- Gotcha kecil: prop `uniforms` R3F menyalin (§4v) tidak relevan di sini karena warna ditulis langsung ke material troika per frame — justru **jangan** lewat prop `color` (memicu re-layout glyph).
+
+## 4ar. Perampingan Sections: Eyebrow Dicabut, Vision Pakai Foto ✅ (21 Agu, commit `c978877`)
+
+Batch penyederhanaan serempak — pola **eyebrow kecil di atas heading dicabut** di empat section (Portfolio/CaseGrid, Featured/CaseStudySpotlight, "Meeting Room · The Work"/MeetingLead, "Our Vision"/Vision): navbar dan heading-nya sendiri sudah menyebut konteksnya.
+
+- **Vision dirombak total**: `ScrollHighlight` + `MissionShowcase` (5 kartu misi berfoto Unsplash) dibuang → satu headtext bold besar + **foto kantor asli ter-grading** `P1330392_velocity.webp` full-bleed (aspect 16/9 di HP, 90vh di desktop). Foto §4an akhirnya masuk situs; Unsplash keluar.
+- **MeetingLead**: heading disamakan skala `CsiHero` (grid 2 kolom + panel stat 8+/50+/4 dibuang — angka fiktif menunggu konten betulan).
+- **TheCrew**: `NumberTicker` diganti angka statis.
+- **🐛 CareersRoles di HP — meta menumpuk di atas judul**: baris role dulunya `flex-wrap` dengan judul `flex-1` + meta `basis-full`. Jebakannya: `flex-1` = basis **0%**, jadi `0% + 100% ≤ 100%` — keduanya "muat" di SATU baris flex, judul kebagian 0px dan teksnya meluap per kata. Fix: mobile jadi **grid 3 kolom** (judul | meta | panah) ala tabel "Open Positions" basement — tepi kiri meta lurus antar baris, boleh wrap. JANGAN kembalikan ke flex-wrap (komentar penjaga ada di berkasnya).
+- Test ikut dibalik: `CaseGrid.test.tsx` kini memastikan eyebrow "Portfolio" **tidak** kembali (pola yang sama dengan test "Talk to us" di Office).
 
 ---
 
