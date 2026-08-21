@@ -21,6 +21,7 @@ import {
   usePointerParallax,
   TAU as PARALLAX_TAU,
 } from "./mouseParallax";
+import { applyLift, useHeroScrollProgress, LIFT_TAU } from "./scrollLift";
 import { driveTear, resetTear } from "./transitionTear";
 
 const bl = (x: number, y: number, z: number) => new Vector3(x, z, -y);
@@ -191,6 +192,8 @@ export default function CameraController() {
   const aimTarget      = useRef(new Vector3());
   /** Posisi kursor yang sudah dihaluskan, −1…1. */
   const smooth         = useRef({ x: 0, y: 0 });
+  /** Progres lift scroll yang sudah dihaluskan, 0…1 — lihat scrollLift.ts. */
+  const liftSmooth     = useRef(0);
   const fromUp         = useRef(new Vector3(0, 1, 0));
   const toUp           = useRef(new Vector3(0, 1, 0));
   const fromFov        = useRef(DEFAULT_FOV);
@@ -202,6 +205,7 @@ export default function CameraController() {
   const prevBase       = useRef(new Vector3());
 
   const pointer = usePointerParallax();
+  const liftProgress = useHeroScrollProgress();
   const reduced = useReducedMotion();
 
   useEffect(() => resetTear, []);
@@ -412,7 +416,8 @@ export default function CameraController() {
     // (BilliardGame.tsx), jadi kamera yang bergoyang menggeser titik pusat
     // bidikan sementara kursornya diam. Menuju 0 lewat peredam yang sama,
     // bukan dipotong mendadak, supaya masuk/keluar meja tetap mulus.
-    const idleAim = useSceneStore.getState().billiardActive;
+    const st = useSceneStore.getState();
+    const idleAim = st.billiardActive;
     const wantX = idleAim ? 0 : pointer.current.x;
     const wantY = idleAim ? 0 : pointer.current.y;
 
@@ -428,13 +433,37 @@ export default function CameraController() {
     smooth.current.x = nx;
     smooth.current.y = ny;
 
-    // Kamera diam DAN kursor diam → tidak ada yang perlu ditulis. Ini yang
-    // menjaga perilaku lama untuk pengunjung yang menyalakan reduced-motion:
-    // pointer-nya tak pernah bergerak, jadi blok di bawah tak pernah jalan.
-    if (!tweening && nx === prevX && ny === prevY) return;
+    // ── Lift scroll (turun, pandangan terkunci) — kontraknya di scrollLift.ts ──
+    // Dua gerbang, dengan perilaku BEDA yang disengaja:
+    //  · pendingRoom → SNAP ke 0, bukan diredam. Tirai GridReveal menjepret
+    //    kamera ke ruangan baru selagi pengunjung masih jauh di bawah konten
+    //    (scrollY besar → progres 1); pose lift dari posisi scroll lama tidak
+    //    boleh menempel di reveal. Lompatannya tersembunyi: canvas ter-clip
+    //    kosong sampai kotak pertama membesar (lihat CanvasStage di Hero.tsx),
+    //    dan naskah transisi memanggil jumpToTop sebelum tirai terangkat.
+    //  · billiard → menuju 0 lewat peredam yang sama dengan parallax. Kamera
+    //    billiard menatap tegak lurus ke bawah; lift yang menyeret Y-nya akan
+    //    membenamkan kamera ke meja.
+    const prevLift = liftSmooth.current;
+    let nl: number;
+    if (st.pendingRoom !== null) {
+      nl = 0;
+    } else {
+      const wantL = idleAim ? 0 : liftProgress.current;
+      nl = dampTowards(prevLift, wantL, LIFT_TAU, delta);
+      if (Math.abs(nl - wantL) < 1e-3) nl = wantL;
+    }
+    liftSmooth.current = nl;
 
-    // Sampai di sini = kamera benar-benar MENULIS frame ini (tween atau
-    // parallax). Itu definisi "ada gerakan" untuk cap 30 fps idle: selama
+    // Kamera diam DAN kursor diam DAN lift diam → tidak ada yang perlu
+    // ditulis. Ini yang menjaga perilaku lama untuk pengunjung yang menyalakan
+    // reduced-motion: pointer-nya tak pernah bergerak, jadi blok di bawah tak
+    // pernah jalan. (Lift yang konstan ≠ nol juga aman berhenti di sini —
+    // pose terakhir yang tertulis sudah memuat liftnya.)
+    if (!tweening && nx === prevX && ny === prevY && nl === prevLift) return;
+
+    // Sampai di sini = kamera benar-benar MENULIS frame ini (tween, parallax,
+    // atau lift scroll). Itu definisi "ada gerakan" untuk cap 30 fps idle: selama
     // baris ini tersentuh tiap tick, renderPace menggambar penuh 60 fps.
     // Letaknya SETELAH early-out di atas — kamera yang diam tidak boleh
     // terhitung aktivitas, atau cap-nya tidak pernah aktif.
@@ -448,6 +477,12 @@ export default function CameraController() {
       nx,
       ny,
     );
+    // Lift di ATAS hasil parallax, SEBELUM lookAt — urutan ini kontrak
+    // applyLift. applyParallax barusan menulis ulang posisi kamera dari pose
+    // resmi, jadi lift tidak pernah menumpuk antar frame. aimTarget sengaja
+    // TIDAK diturunkan: mata tetap terpaku ke target ruangan, dan dongakan
+    // muncul sendiri dari lookAt saat kameranya turun.
+    applyLift(camera.position, nl);
     camera.lookAt(aimTarget.current);
   });
 
