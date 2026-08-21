@@ -79,8 +79,12 @@ describe("Office", () => {
       </MemoryRouter>,
     );
     // Panel canvas murni dekoratif (aria-hidden); pembaca layar hanya boleh
-    // bertemu daftar sr-only, bukan kotak kosong berisi petunjuk drag.
-    expect(screen.getByText(/drag to explore/i).closest("[aria-hidden='true']")).not.toBeNull();
+    // bertemu daftar sr-only, bukan kotak kosong berisi petunjuk interaksi.
+    // Bunyinya ikut perangkat: "scroll to explore" di pointer presisi (jsdom
+    // default), "drag to explore" di layar sentuh (useCoarsePointer).
+    expect(
+      screen.getByText(/(scroll|drag) to explore/i).closest("[aria-hidden='true']"),
+    ).not.toBeNull();
   });
 
   // CTA "Talk to us" dicabut 20 Agu bersama panel stat — section ini ditutup

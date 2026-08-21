@@ -7,6 +7,7 @@ import { useReducedMotion } from "motion/react";
 import { Color, MathUtils, type Group, type Mesh, type MeshBasicMaterial } from "three";
 import geistSemiBold from "@fontsource/geist-sans/files/geist-sans-latin-600-normal.woff";
 import { beltX, motionIntensity } from "./servicesBelt";
+import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 
 /**
  * Panel Services ala Lusion: kotak putih rounded yang berdiri sendiri di
@@ -21,9 +22,12 @@ import { beltX, motionIntensity } from "./servicesBelt";
  * wrap modulo yang melipat.
  *
  * Revisi 21 Agu (lanjutan): DRAG horizontal ditambahkan sebagai penggerak
- * kedua — pointer events, jadi jalan untuk sentuhan HP DAN mouse desktop.
+ * kedua. Revisi 21 Agu malam: penggeraknya DIPISAH per perangkat (permintaan
+ * Keano) — pointer presisi HANYA wheel, pointer coarse (sentuh) HANYA drag;
+ * gerbangnya `useCoarsePointer`, sumber yang sama dengan hint teks di kaki
+ * panel ("scroll to explore" vs "drag to explore").
  * Konten mengikuti jari (delta px dikonversi ke unit dunia lewat tinggi
- * panel; mouse 1:1, sentuh dikali DRAG_MULT_TOUCH biar lebih licin)
+ * panel; dikali DRAG_MULT_TOUCH biar lebih licin)
  * dengan damping yang sama, dan `touch-action: pan-y` menyerahkan
  * gestur vertikal ke halaman: geser atas-bawah tetap scroll, kanan-kiri
  * milik sabuk. Pada prefers-reduced-motion wheel tidak disandera dan pop
@@ -219,6 +223,10 @@ export default function ServicesTicker({
      supaya handler wheel (DOM, di luar canvas) bisa memesan frame. */
   const invalidateRef = useRef<(() => void) | null>(null);
   const reduced = useReducedMotion() ?? false;
+  /* Hint interaksi: perangkat sentuh (coarse, tanpa wheel) diajak drag,
+     perangkat ber-mouse diajak scroll — mengikuti penggerak utama
+     masing-masing (lihat catatan wheel & drag di atas). */
+  const coarse = useCoarsePointer();
 
   /**
    * Penyandera wheel — inti permintaan "kursor di dalam = geser item, kursor
@@ -241,7 +249,8 @@ export default function ServicesTicker({
   }, [reduced]);
 
   /**
-   * Drag horizontal — penggerak utama HP, sekaligus jalan di mouse desktop.
+   * Drag horizontal — penggerak SATU-SATUNYA di perangkat sentuh; di pointer
+   * presisi efek ini tidak dipasang sama sekali (desktop = wheel saja).
    * Delta ditulis ke akumulator wheel yang SAMA (satu sumber kebenaran untuk
    * sabuk), dikonversi supaya konten mengikuti jari 1:1: px → unit dunia via
    * tinggi panel (VIEW_H / clientHeight), lalu ÷ WHEEL_SENS balik ke satuan
@@ -254,7 +263,7 @@ export default function ServicesTicker({
    */
   useEffect(() => {
     const el = wrapRef.current;
-    if (!el) return;
+    if (!el || !coarse) return;
     let dragging = false;
     let lastX = 0;
     const onDown = (e: PointerEvent) => {
@@ -283,7 +292,7 @@ export default function ServicesTicker({
       el.removeEventListener("pointerup", onEnd);
       el.removeEventListener("pointercancel", onEnd);
     };
-  }, []);
+  }, [coarse]);
 
   return (
     /* aria-hidden: teks troika bukan DOM — daftar layanan yang bisa dibaca
@@ -294,7 +303,7 @@ export default function ServicesTicker({
     <div
       ref={wrapRef}
       aria-hidden="true"
-      className={`relative h-[45svh] min-h-[300px] sm:h-[70svh] sm:min-h-[420px] cursor-grab touch-pan-y select-none overflow-hidden rounded-3xl bg-zinc-50 ${className ?? ""}`}
+      className={`relative h-[45svh] min-h-[300px] sm:h-[70svh] sm:min-h-[420px] touch-pan-y select-none overflow-hidden rounded-3xl bg-zinc-50 ${className ?? ""}`}
     >
       <Canvas
         frameloop="demand"
@@ -309,7 +318,7 @@ export default function ServicesTicker({
         </Suspense>
       </Canvas>
       <span className="pointer-events-none absolute inset-x-0 bottom-4 text-center font-mono text-[10px] uppercase tracking-[0.35em] text-zinc-400">
-        Drag to explore
+        {coarse ? "Drag to explore" : "Scroll to explore"}
       </span>
     </div>
   );
