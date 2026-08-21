@@ -111,20 +111,62 @@ const FADE_FROM = 2.9;
  * debu. Batas bawah 0,05 menjaga bintik tidak muncul TEPAT di bidang lantai —
  * di situ z-fighting dengan lantai membuatnya berkedip.
  */
-const Y_MIN = 0.05;
-const Y_MAX = 2.55;
+export const Y_MIN = 0.05;
+export const Y_MAX = 2.55;
 
 /** Laju naik rata-rata, m/detik. Sengaja SANGAT lambat: debu sungguhan
  *  praktis menggantung: yang membuatnya hidup itu sway di bawah, bukan ini.
  *  Tiap bintik mengalikannya dengan 0,6–1,4 (dari seed) supaya tidak ada
- *  kolom debu yang naik serempak. */
-const RISE = 0.032;
+ *  kolom debu yang naik serempak.
+ *
+ *  Nilainya 1/32 — dulunya 0,032, digeser 2,3% (tak terlihat) supaya TIME_WRAP
+ *  di bawah jatuh di angka bulat yang sekaligus kelipatan periode sway. */
+export const RISE = 0.03125;
+
+/**
+ * Pengali laju naik per bintik DIKUANTISASI ke kelipatan 0,1 (9 tingkat,
+ * 0,6–1,4) — bukan kontinu dari seed seperti semula.
+ *
+ * Ini bukan pilihan estetika melainkan syarat matematis TIME_WRAP: wrap waktu
+ * hanya tak terlihat kalau SETIAP bintik menempuh kelipatan BULAT pita Y
+ * selama satu periode wrap, dan itu cuma mungkin kalau laju-lajunya
+ * sepadan (commensurable). Dengan langkah 0,1: RISE × 0,1 × TIME_WRAP =
+ * 1/32 × 0,1 × 800 = 2,5 = tepat satu pita — setiap tingkat di atasnya
+ * otomatis kelipatan bulatnya. 9 tingkat × ~100 bintik dengan fase acak tetap
+ * terbaca sebagai taburan, bukan kolom serempak; kecerahan masih memakai
+ * seed.z mentah jadi tetap kontinu.
+ */
+export const SPEED_STEP = 0.1;
+
+/**
+ * Periode wrap waktu, detik. OBAT "debu patah-patah kalau tab hidup lama":
+ *
+ * uTime dulu bertambah tanpa batas, dan uniform float diunggah ke GPU sebagai
+ * float32 (mantissa 24 bit). Makin besar nilainya makin kasar langkah yang
+ * bisa diwakilinya: pada 9 jam ulp-nya ~4 ms (¼ frame 60 fps) dan gerakan
+ * mulai bertangga; pada ~37 jam ulp menyamai satu frame penuh — debu beku
+ * lalu melompat. Dibuktikan scripts/probe-dust-precision.mjs: pada
+ * `?dustT0=8388608` (ulp = 1 detik) debu hanya bergerak di 5/13 pasangan
+ * frame; setelah wrap ini 13/13.
+ *
+ * Semua gerakan di shader periodik, jadi waktunya boleh dilipat ke [0, 800)
+ * TANPA sambungan terlihat asal 800 kelipatan bulat semua periodenya:
+ *   - sway  : periode 1/SWAY_HZ = 20 s → 800 = 40 putaran persis.
+ *   - naik  : RISE × SPEED_STEP × 800 = 2,5 = tepat tinggi pita Y_MIN–Y_MAX,
+ *             jadi tiap tingkat laju menempuh kelipatan bulat pita (lihat
+ *             SPEED_STEP). Sisa lompatannya cuma galat pembulatan float32
+ *             (~mikrometer).
+ * Kedua syarat itu dijaga dust.wrap.test.ts — konstanta di blok ini sengaja
+ * di-export untuk test itu. Dengan uTime ≤ 800 ulp-nya ≤ 61 µs: ~270 langkah
+ * per frame, mulus selamanya berapa lama pun tab hidup.
+ */
+export const TIME_WRAP = 800;
 
 /** Amplitudo goyang mendatar (m) dan lajunya (putaran/detik). 13 cm pada 0,05
  *  Hz = satu ayunan penuh ~20 detik. Di bawah ambang "terlihat beranimasi",
  *  cukup untuk membuat bintik tidak terbaca sebagai titik mati. */
 const SWAY = 0.13;
-const SWAY_HZ = 0.05;
+export const SWAY_HZ = 0.05;
 
 /**
  * Ukuran bintik dalam piksel pada jarak 1 m, sebelum dikali device pixel ratio.
@@ -282,6 +324,25 @@ const DISABLED =
   typeof window !== "undefined" &&
   new URLSearchParams(window.location.search).get("dust") === "0";
 
+/**
+ * Pra-penuaan waktu debu: `?dustT0=8388608` membuka halaman seolah tab sudah
+ * hidup selama itu (detik) — cara memverifikasi bug presisi float32 dalam
+ * hitungan detik alih-alih menunggu berjam-jam. Dipagari DEV seperti
+ * `?glitch=1`: ia MEMAKSA keadaan, bukan sekadar mematikan hiasan.
+ * Diukur scripts/probe-dust-precision.mjs.
+ */
+const DEV_T0 =
+  import.meta.env.DEV && typeof window !== "undefined"
+    ? Number(new URLSearchParams(window.location.search).get("dustT0")) || 0
+    : 0;
+
+declare global {
+  interface Window {
+    /** DEV saja — uTime saat ini, dibaca probe-dust-precision.mjs. */
+    __dustTime?: number;
+  }
+}
+
 /** Arah sapuan reveal, diturunkan dari konstanta sapuannya sendiri — bukan
  *  angka terpisah yang bisa lupa disesuaikan kalau arahnya dibalik. Pola yang
  *  sama dengan REVEAL_DIR di MaintenanceHologram. */
@@ -333,7 +394,9 @@ const VERT = /* glsl */ `
     // muncul lagi dari bawah, jadi jumlahnya kekal tanpa perlu
     // "melahirkan" partikel baru di CPU.
     float band  = ${(Y_MAX - Y_MIN).toFixed(3)};
-    float speed = ${RISE.toFixed(4)} * ( 0.6 + aSeed.z * 0.8 );
+    // floor(x+0.5) = pembulatan seed ke 9 tingkat laju — syarat wrap waktu
+    // yang mulus, lihat SPEED_STEP di atas.
+    float speed = ${RISE.toFixed(5)} * ( 0.6 + floor( aSeed.z * 8.0 + 0.5 ) * ${SPEED_STEP.toFixed(1)} );
     p.y = ${Y_MIN.toFixed(3)} + mod( p.y - ${Y_MIN.toFixed(3)} + uTime * speed, band );
 
     // ── Wrap toroidal terhadap kamera (X & Z saja) ────────────────
@@ -444,7 +507,9 @@ export default function Dust() {
 
   const uniforms = useMemo(
     () => ({
-      uTime: { value: 0 },
+      // DEV_T0 ikut dilipat: probe memverifikasi usia berapa pun kini
+      // berperilaku identik dengan menit-menit pertama.
+      uTime: { value: DEV_T0 % TIME_WRAP },
       uCam: { value: new Vector3() },
       /** Ukuran bintik pada 1 m, SUDAH dikali dpr. Ditulis tiap frame dari
        *  pixelRatio renderer supaya besar fisiknya tetap sama saat pengunjung
@@ -513,7 +578,16 @@ export default function Dust() {
     // digambar: yang mengganggu bagi yang sensitif itu gerakannya, bukan
     // keberadaannya. Menghapus debu sekalian akan membuat ruangannya terasa
     // berbeda tanpa alasan.
-    if (!reduced) uniforms.uTime.value += dt;
+    // Dilipat ke [0, TIME_WRAP) supaya presisi float32-nya tidak pernah aus —
+    // tanpa ini debu bertangga setelah tab hidup ~9 jam (lihat TIME_WRAP).
+    // Akumulasinya di number JS (float64), jadi modulonya sendiri presisi.
+    if (!reduced)
+      uniforms.uTime.value = (uniforms.uTime.value + dt) % TIME_WRAP;
+    // Jendela intip untuk probe-dust-precision.mjs (pola window.__renderPace):
+    // uniform tidak terjangkau dari luar canvas, dan probe perlu tahu persis
+    // di antara dua screenshot mana lipatan 800 dtk terjadi untuk memastikan
+    // sambungannya tak terlihat.
+    if (import.meta.env.DEV) window.__dustTime = uniforms.uTime.value;
     // Kamera tetap diperbarui walau waktu beku — tanpa ini wrap berhenti
     // mengikuti kamera dan debu tertinggal di ruangan sebelumnya.
     uniforms.uCam.value.copy(state.camera.position);
