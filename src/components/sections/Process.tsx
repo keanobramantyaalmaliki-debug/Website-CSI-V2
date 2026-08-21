@@ -47,7 +47,7 @@ const STEPS: { num: string; kicker: string; title: string; desc: string }[] = [
     num: "02",
     kicker: "PLAN",
     title: "Strategy & Planning",
-    desc: "Scope, architecture, and timeline locked in — so the build has a clear target.",
+    desc: "Scope, architecture, and timeline locked in, so the build has a clear target.",
   },
   {
     num: "03",
@@ -59,7 +59,7 @@ const STEPS: { num: string; kicker: string; title: string; desc: string }[] = [
     num: "04",
     kicker: "BUILD",
     title: "Development",
-    desc: "Engineers build in short, reviewable cycles — nothing lands without a second pair of eyes.",
+    desc: "Engineers build in short, reviewable cycles. Nothing lands without a second pair of eyes.",
   },
   {
     num: "05",

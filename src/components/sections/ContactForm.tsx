@@ -208,7 +208,7 @@ export default function ContactForm({ className = "" }: { className?: string }) 
           {status === "error" && error
             ? error
             : status === "sent"
-              ? "Thanks — your message is in. We'll be in touch."
+              ? "Thanks, your message is in. We'll be in touch."
               : "We typically respond within one business day."}
         </p>
       </form>

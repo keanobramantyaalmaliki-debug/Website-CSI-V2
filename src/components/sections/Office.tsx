@@ -21,7 +21,7 @@ const SERVICES: { num: string; title: string; desc: string; subs?: string[] }[] 
   {
     num: "01",
     title: "Custom Software Development",
-    desc: "Software built around your processes — not the other way around.",
+    desc: "Software built around your processes, not the other way around.",
   },
   {
     num: "02",
@@ -116,7 +116,7 @@ export default function Office() {
       <ul className="sr-only">
         {SERVICES.map((s) => (
           <li key={s.num}>
-            {s.title} — {s.desc}
+            {s.title}: {s.desc}
             {s.subs ? ` (${s.subs.join(", ")})` : ""}
           </li>
         ))}

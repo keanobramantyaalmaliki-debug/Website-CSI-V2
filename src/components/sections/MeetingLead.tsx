@@ -30,7 +30,7 @@ export default function MeetingLead() {
           viewport={{ once: true }}
           transition={{ duration: 0.6, ease: EASE, delay: 0.2 }}
         >
-          Every project is an answer to a real problem — not a demo,
+          Every project is an answer to a real problem, not a demo,
           not a prototype. Here is the work already running in the field,
           from citizen service portals to enterprise cloud infrastructure.
         </motion.p>

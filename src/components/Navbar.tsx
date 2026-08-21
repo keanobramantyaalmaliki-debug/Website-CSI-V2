@@ -418,7 +418,7 @@ export default function Navbar() {
         />
 
         {/* Logo */}
-        <Link to="/" className="shrink-0" aria-label="Cogniti — home">
+        <Link to="/" className="shrink-0" aria-label="Cogniti, home">
           <img
             src="/brand/Logo-Final.png"
             alt="CSI Logo"

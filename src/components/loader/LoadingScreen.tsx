@@ -67,11 +67,11 @@ function ModelProgress() {
   const { loaded, total } = modelLoad;
   let label: string;
   if (total > 0 && loaded < total) {
-    label = `loading 3d office — ${Math.floor((loaded / total) * 100)}%`;
+    label = `loading 3d office ${Math.floor((loaded / total) * 100)}%`;
   } else if (total === 0) {
     // Content-Length tak diketahui (proxy yang membuang header) — tunjukkan
     // byte berjalan supaya tetap kelihatan hidup.
-    label = `loading 3d office — ${(loaded / 1048576).toFixed(1)} mb`;
+    label = `loading 3d office ${(loaded / 1048576).toFixed(1)} mb`;
   } else {
     // Unduhan tuntas tapi sceneReady belum: three sedang parse + kompilasi
     // shader (~2,3 dtk, lihat sceneStore.ts). Jangan diam di "100%".

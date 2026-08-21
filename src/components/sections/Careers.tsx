@@ -13,7 +13,7 @@ const ROLES: CareerRole[] = [
     title: "Innovation & Growth Manager",
     meta: "Full-time · Remote · Growth",
     overview:
-      "Lead market discovery, strategic partnerships, and growth initiatives. This role connects innovation with real-world adoption — bridging what we build with who needs it.",
+      "Lead market discovery, strategic partnerships, and growth initiatives. This role connects innovation with real-world adoption, bridging what we build with who needs it.",
     skills: [
       "Strategic thinking",
       "Business development",
@@ -27,7 +27,7 @@ const ROLES: CareerRole[] = [
     title: "Technical Lead",
     meta: "Full-time · Hybrid · Engineering",
     overview:
-      "Lead engineering execution, guide technical decisions, and mentor the development team. You see architecture before you see code — and you care about shipping as much as quality.",
+      "Lead engineering execution, guide technical decisions, and mentor the development team. You see architecture before you see code, and you care about shipping as much as quality.",
     skills: ["Full-stack", "Architecture", "Team leadership", "Delivery ownership"],
     photo: "/careers/technical-lead.jpg",
   },
@@ -35,7 +35,7 @@ const ROLES: CareerRole[] = [
     title: "Product Builder",
     meta: "Full-time · Remote · Product",
     overview:
-      "Build, test, and iterate new ideas quickly. You move from concept to working product without needing perfect conditions — and you own what you ship.",
+      "Build, test, and iterate new ideas quickly. You move from concept to working product without needing perfect conditions, and you own what you ship.",
     skills: [
       "Builder mindset",
       "Fast execution",

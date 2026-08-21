@@ -20,13 +20,13 @@ const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 const TESTIMONIALS: { quote: string; name: string; role: string }[] = [
   {
     quote:
-      "Cogniti rebuilt the systems we’d been patching together for years — what used to take a week of manual work now happens in an afternoon.",
+      "Cogniti rebuilt the systems we’d been patching together for years. What used to take a week of manual work now happens in an afternoon.",
     name: "Ratna Wijaya",
     role: "Head of IT, Dinas Komunikasi & Informatika",
   },
   {
     quote:
-      "They didn’t just ship the platform — they sat with our staff until every workflow made sense to the people actually using it.",
+      "They didn’t just ship the platform, they sat with our staff until every workflow made sense to the people actually using it.",
     name: "Budi Hartono",
     role: "Operations Director, PT Nusantara Logistik",
   },
