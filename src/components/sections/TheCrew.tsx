@@ -4,7 +4,6 @@ import { Fragment, useState } from "react";
 import { useReducedMotion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
-import { NumberTicker } from "@/components/ui/number-ticker";
 import CrewAvatar from "@/components/sections/CrewAvatar";
 import TheCrewMobileCarousel from "@/components/sections/TheCrewMobileCarousel";
 import { TEAM_MEMBERS } from "@/data/people";
@@ -176,10 +175,9 @@ export default function TheCrew() {
               jumlah orang. Sengaja BUKAN font-mono — pada ukuran display angka
               mono terbaca sempit dan teknis di sebelah judul sans yang tebal;
               sifat angka-rapinya dijaga `tabular-nums`. */}
-          <NumberTicker
-            value={ORDERED.length}
-            className="text-[clamp(2rem,4.5vw,3.5rem)] font-semibold leading-none tracking-tight tabular-nums text-zinc-600"
-          />
+          <span className="inline-block text-[clamp(2rem,4.5vw,3.5rem)] font-semibold leading-none tracking-tight tabular-nums text-zinc-600">
+            {ORDERED.length}
+          </span>
         </div>
       </div>
 

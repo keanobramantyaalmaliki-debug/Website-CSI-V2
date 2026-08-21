@@ -5,8 +5,7 @@ import TheCrew from "./TheCrew";
 import { TEAM_MEMBERS } from "@/data/people";
 
 // jsdom lacks IntersectionObserver; motion's whileInView/useInView need it.
-// Fires the callback immediately so NumberTicker's useInView resolves and
-// the count-up settles at its target value instead of staying at 0.
+// Fires the callback immediately so in-view reveals resolve on mount.
 class IntersectionObserverStub {
   callback: IntersectionObserverCallback;
   constructor(callback: IntersectionObserverCallback) {

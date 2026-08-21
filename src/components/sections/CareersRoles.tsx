@@ -187,7 +187,13 @@ function RoleItem({
           }
           onMouseLeave={coarse ? undefined : hide}
           className={
-            "group relative flex w-full flex-wrap items-start gap-y-2 overflow-hidden px-[clamp(10px,1.4vw,26px)] py-2.5 text-left transition-[padding] duration-[450ms] ease-[cubic-bezier(0.16,1,0.3,1)] select-none sm:flex-nowrap sm:items-baseline sm:py-3 " +
+            // Mobile = GRID tiga kolom (judul | meta | panah), ala tabel "Open
+            // Positions" basement: kolom meta lebarnya sama di semua baris jadi
+            // tepi kirinya lurus, dan boleh wrap 2 baris. JANGAN kembalikan ke
+            // flex-wrap + basis-full: judul flex-1 (basis 0%) dan meta 100%
+            // muat di SATU baris flex (0+100% ≤ 100%) → judul kebagian 0px,
+            // teksnya meluap per kata menumpuk dengan meta.
+            "group relative grid w-full grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_auto] items-center gap-x-4 overflow-hidden px-[clamp(10px,1.4vw,26px)] py-2.5 text-left transition-[padding] duration-[450ms] ease-[cubic-bezier(0.16,1,0.3,1)] select-none sm:flex sm:items-baseline sm:py-3 " +
             // Expand-saat-HOVER: baris meninggi supaya preview foto (inset-y-0,
             // ikut tinggi baris) terlihat jelas. Terpisah dari accordion klik —
             // yang itu tidak disentuh. Hanya di pointer halus, dan tidak saat
@@ -223,7 +229,7 @@ function RoleItem({
               // `transform`. Transisi harus mencantumkan `translate` —
               // `transition-[...,transform]` tidak menganimasikannya sama
               // sekali, gesernya lompat instan. Jangan ganti ke `transform`.
-              "relative z-[1] min-w-0 flex-1 text-[17px] font-bold tracking-[-0.01em] text-zinc-100 transition-[opacity,translate] duration-[450ms] ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[translate,opacity] sm:flex-none sm:text-[clamp(17px,1.4vw,21px)] " +
+              "relative z-[1] min-w-0 text-[17px] font-bold tracking-[-0.01em] text-zinc-100 transition-[opacity,translate] duration-[450ms] ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[translate,opacity] sm:flex-none sm:text-[clamp(17px,1.4vw,21px)] " +
               (active
                 ? "opacity-100"
                 : "opacity-60 group-hover:translate-x-3 group-hover:opacity-100")
@@ -234,7 +240,7 @@ function RoleItem({
 
           <span
             className={
-              "relative z-[1] basis-full text-[9.5px] tracking-[0.14em] uppercase transition-colors duration-300 sm:ml-auto sm:basis-auto sm:pr-7 sm:whitespace-nowrap " +
+              "relative z-[1] min-w-0 text-[9.5px] leading-[1.6] tracking-[0.14em] uppercase transition-colors duration-300 sm:ml-auto sm:pr-7 sm:whitespace-nowrap " +
               (active ? "text-zinc-500" : "text-zinc-700 group-hover:text-zinc-500")
             }
           >
@@ -244,7 +250,7 @@ function RoleItem({
           <span
             aria-hidden
             className={
-              "relative z-[3] shrink-0 basis-full text-base transition-[transform,color] duration-[400ms] sm:basis-auto " +
+              "relative z-[3] shrink-0 justify-self-end text-base transition-[transform,color] duration-[400ms] " +
               (active
                 ? "rotate-90 text-zinc-500"
                 : "text-zinc-700 group-hover:text-zinc-400")

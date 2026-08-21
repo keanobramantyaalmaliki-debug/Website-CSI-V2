@@ -27,9 +27,11 @@ afterEach(() => {
 });
 
 describe("CaseGrid", () => {
-  it("renders without crashing and shows the Portfolio eyebrow", () => {
+  // Eyebrow "Portfolio" dicabut 21 Agu — heading "Selected Work" berdiri
+  // sendiri; pastikan eyebrow-nya tidak kembali diam-diam.
+  it("does not render the removed Portfolio eyebrow", () => {
     render(<CaseGrid />);
-    expect(screen.getByText("Portfolio")).toBeInTheDocument();
+    expect(screen.queryByText("Portfolio")).toBeNull();
   });
 
   it("renders the heading text", () => {

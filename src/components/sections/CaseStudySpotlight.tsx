@@ -162,16 +162,7 @@ export default function CaseStudySpotlight() {
     >
       {/* Section header */}
       <div className="mb-12">
-        <motion.p
-          className="text-xs tracking-widest text-zinc-400 uppercase"
-          initial={{ opacity: 0, x: -8 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, ease: EASE }}
-        >
-          Featured
-        </motion.p>
-        <h2 className="mt-3 text-[clamp(1.875rem,4.5vw,2.25rem)] font-semibold tracking-tight text-zinc-100 leading-[1.05]">
+        <h2 className="text-[clamp(1.875rem,4.5vw,2.25rem)] font-semibold tracking-tight text-zinc-100 leading-[1.05]">
           <LineMask>Case Studies</LineMask>
         </h2>
       </div>
