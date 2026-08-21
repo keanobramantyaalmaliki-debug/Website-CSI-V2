@@ -95,8 +95,10 @@ Terakhir diupdate: **19 Agustus 2026**.
 - **Grading foto via ffmpeg** (§4an) — resep netralkan-amber-dulu (⚠️ `colortemperature` kebalikan intuisi: Kelvin TINGGI = mendinginkan) + zoom-blur radial dirakit dari `mix` + `maskedmerge` tanpa plugin. Outputnya kini dipakai Vision (§4ar).
 - **Lift scroll hero** (§4ao) — kamera "melorot" saat hero digulir habis, **titik pandang TERKUNCI** (dongakan muncul sendiri dari lookAt; versi dua-kurva dicabut). Anti-void = jaminan geometris: `LIFT_MIN_CAM_Y` di atas lantai, bukan angka yang kebetulan pas.
 - **🐛 Debu patah-patah kalau tab hidup lama** (§4ap) — presisi float32 `uTime` habis pelan-pelan (9 jam = gerak bertangga, 37 jam = beku-lompat). Fix: **wrap waktu 800 dtk** + laju naik dikuantisasi 9 tingkat supaya semua periode sepadan; verifikasi via `?dustT0=` tanpa menunggu berjam-jam.
-- **Services: accordion → sabuk teks 3D** (§4aq) — panel putih ala Lusion di `/services`, porting selektif pmndrs `infinite-scroll` (damp + pop + pudar-saat-diam), wheel disandera di atas panel (desktop) + **drag pointer** (HP 1,5×, mouse 1:1). Canvas kedua di halaman → `frameloop="demand"` dengan pesan-frame-sendiri sampai menetap; diam = 0 draw call.
+- **Services: accordion → sabuk teks 3D** (§4aq) — panel putih ala Lusion di `/services`, porting selektif pmndrs `infinite-scroll` (damp + pop + pudar-saat-diam), wheel disandera di atas panel (desktop) + **drag pointer** (HP 1,5×; drag mouse dicabut malamnya → §4at). Canvas kedua di halaman → `frameloop="demand"` dengan pesan-frame-sendiri sampai menetap; diam = 0 draw call.
 - **Perampingan sections** (§4ar) — eyebrow dicabut serempak (Portfolio/Featured/Meeting Room·The Work/Our Vision), Vision dirombak jadi headtext + foto kantor ter-grading full-bleed, panel stat & NumberTicker dibuang, + 🐛 fix meta CareersRoles menumpuk di HP (jebakan flex-wrap: `flex-1` basis-0 + `basis-full` muat "satu baris").
+- **Audit teks: em dash dihapus** (§4as) — 16 titik di 9 berkas teks tampil (title/meta, copy sections, label loader, aria-label, sr-only) diganti koma/titik seperlunya; komentar kode & console sengaja tidak disentuh.
+- **Services ticker dipisah per perangkat** (§4at) — desktop hanya wheel, sentuh hanya drag (drag mouse dicabut); hint "Scroll/Drag to explore" ikut `useCoarsePointer` yang sama dengan gerbang efeknya. 🔥 Gotcha probe CDP: clip `captureScreenshot` = koordinat dokumen, bukan viewport.
 
 **⬅️ Berikutnya:** (a) **pasang backend Web3Forms untuk form inquiry** (§4ac) — satu-satunya blocker rilis yang tersisa, dan sengaja sudah dikurung dalam satu fungsi; (b) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker (§4n); (c) selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter, §4s); (d) optimasi GLB lanjutan — atlas per ruangan + dedup 29 image kembar (§4s); (e) post-processing PS1 (§4b), pass terakhir untuk look basement.studio; (f) **verifikasi perf Safari oleh Keano sendiri** setelah deploy §4aj — `window.__adaptiveDpr()` di console langsung memberi tahu jatuh di kategori mana (GPU-bound → index naik; tetap `{dpr: 1}` tapi lag → cap OS Low Power Mode). **Optimasi GPU idle:** penundaan "tunggu finalise" (7 Agu) **dicabut sebagian 19 Agu** karena Safari — opsi 1/2/4 terpasang (§4aj); sisa **opsi 3** (gabung pass HueSaturation + BrightnessContrast) tetap menunggu finalise.
 
@@ -2173,6 +2175,22 @@ Batch penyederhanaan serempak — pola **eyebrow kecil di atas heading dicabut**
 - **TheCrew**: `NumberTicker` diganti angka statis.
 - **🐛 CareersRoles di HP — meta menumpuk di atas judul**: baris role dulunya `flex-wrap` dengan judul `flex-1` + meta `basis-full`. Jebakannya: `flex-1` = basis **0%**, jadi `0% + 100% ≤ 100%` — keduanya "muat" di SATU baris flex, judul kebagian 0px dan teksnya meluap per kata. Fix: mobile jadi **grid 3 kolom** (judul | meta | panah) ala tabel "Open Positions" basement — tepi kiri meta lurus antar baris, boleh wrap. JANGAN kembalikan ke flex-wrap (komentar penjaga ada di berkasnya).
 - Test ikut dibalik: `CaseGrid.test.tsx` kini memastikan eyebrow "Portfolio" **tidak** kembali (pola yang sama dengan test "Talk to us" di Office).
+
+## 4as. Audit Teks: Em Dash Dihapus dari Semua Copy ✅ (21 Agu, commit `e2202ba`)
+
+Permintaan Keano: audit seluruh teks yang **tampil** di situs, hapus semua dash. Hasil: **16 titik em dash (—) di 9 berkas** — `<title>` + `og:title` + `twitter:title` di `index.html`, quote TestimonialSpotlight, desc Process & Careers & Office/Services, MeetingLead, pesan sukses ContactForm, label loader ("loading 3d office 57%"), `aria-label` logo Navbar ("Cogniti, home"), dan pemisah daftar sr-only di `Office.tsx` (`{title} — {desc}` → `{title}: {desc}`).
+
+- Di kalimat yang butuh jeda, dash diganti **koma/titik** seadanya — bukan dihapus polos yang meninggalkan run-on ("for years what used to take…").
+- **Lingkup: teks tampil saja.** Komentar kode (ratusan em dash) dan pesan `console.*` (dev-facing) sengaja **tidak disentuh** — audit "teks di website" bukan alasan menyapu komentar.
+- Cara audit yang kepakai: grep `—|–` lalu saring baris komentar; pola hyphen berspasi (` - `) dan en dash di teks tampil ternyata **nol** (satu-satunya hit = `calc(1lh - 1px)` di CSS dan nama mesh Sketchfab di komentar).
+
+## 4at. Services Ticker: Penggerak Dipisah per Perangkat ✅ (21 Agu, commit `4bf5b63`)
+
+Revisi §4aq atas permintaan Keano: **desktop hanya wheel, layar sentuh hanya drag** — drag mouse di desktop dicabut. Gerbangnya `useCoarsePointer` (soal INTERAKSI, bukan lebar layar — pembagian kerja vs `useNarrowViewport` yang sudah baku): efek drag di `ServicesTicker.tsx` hanya dipasang saat pointer coarse (dep `[coarse]`), dan **hint di kaki panel ikut sumber yang sama** — "Scroll to explore" (fine) vs "Drag to explore" (coarse), jadi teks dan perilaku tidak mungkin selisih. `cursor-grab` ikut dicabut (tanpa drag ia menyesatkan).
+
+- Test `Office.test.tsx` yang mencari "drag to explore" disesuaikan jadi regex `/(scroll|drag) to explore/i` — jsdom pointer-nya fine, jadi yang tampil "Scroll to explore".
+- Diverifikasi CDP Brave 3 arah di `/services`: wheel desktop menggeser sabuk ✓, drag mouse desktop TIDAK ✓, drag sentuh (emulasi `pointer: coarse` + touch events) menggeser ✓.
+- 🔥 Gotcha probe yang sempat menyesatkan: `clip` di `Page.captureScreenshot` memakai **koordinat DOKUMEN** (wajib `+scrollX/scrollY`), bukan viewport — clip dari `getBoundingClientRect` mentah memotret area hero yang gelap, dan diff before/after selalu "identik" (dua putaran pertama menyimpulkan "drag mati di mobile" padahal probe-nya yang buta).
 
 ---
 
