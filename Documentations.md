@@ -2093,6 +2093,38 @@ Dua detail yang sempat jadi bug:
 
 ---
 
+## 4an. Grading Foto via ffmpeg + Velocity Blur ke Kartu ✅ (21 Agu)
+
+`P1330392.JPG` (foto main UNO di lounge, `~/Documents/Foto foto CSI/Office/`) di-color-grade lalu diberi zoom-blur radial tipis yang menarik fokus ke kartu merah "9" di tengah meja. Output: `P1330392_velocity.jpg` full-res di folder yang sama — **belum masuk `public/`**; kalau dipakai di situs, convert dulu ke webp seperti `P1330392_noir.webp`.
+
+### Resep grading (terbukti sejak P1330346, 20 Agu)
+
+Mesin tidak punya ImageMagick — semua grading via `~/.local/bin/ffmpeg` (⚠️ `ffprobe` TIDAK ikut terinstall; dimensi dibaca dari stderr `ffmpeg -i`):
+
+```
+colortemperature=temperature=9800:pl=0.85,curves=master='0/0 0.21/0.15 0.5/0.5 0.79/0.84 1/1',vibrance=intensity=0.28
+```
+
+- ⚠️ **Arah `colortemperature` kebalikan dari intuisi "suhu lampu"**: Kelvin RENDAH = output makin hangat/oranye, TINGGI = mendinginkan. Menetralkan cast amber lampu kantor = ~9800K, bukan 4300K (kesalahan 20 Agu, hasilnya makin kuning).
+- Urutannya prinsip, bukan kebetulan: **netralkan white balance dulu, baru kontras + vibrance**. Grade yang mempertahankan cast warm (look teal-orange/warm-film) sudah pernah ditolak — lampunya sendiri sudah amber, hasilnya kuning semua.
+- Workflow: preview 1400px ke `/tmp/grade` → lihat → iterasi → render full-res `-q:v 2`.
+
+### Velocity blur (zoom-blur radial) tanpa plugin — mix + maskedmerge
+
+ffmpeg tidak punya filter radial/zoom blur; disusun dari primitif:
+
+1. **12 salinan ter-zoom bertahap** (1.00093× … 1.0112×) dari foto ter-grade, masing-masing `scale=iw*z:ih*z` lalu `crop=W:H:cx*(z-1):cy*(z-1)`.
+2. `mix=inputs=13` (asli + 12 salinan, bobot rata) → smear yang arahnya radial dari titik pusat zoom.
+3. `maskedmerge` dengan mask radial `geq` — putih (tajam) di sekitar kartu, fade ke hitam (blur penuh) di tepi. Full-res: tajam ~radius 1000px, fade habis di ~2165px dari kartu `(2493, 1700)`.
+
+Tiga jebakan yang ketemu:
+
+- **Pusat zoom ≠ pusat frame.** Kartu ada di `(2493, 1700)` dari 4592×3448. Zoom "diam di titik itu" = offset crop `cx*(z-1), cy*(z-1)` — tanpa ini smear-nya konvergen ke pusat frame, bukan ke kartu.
+- **Mask gray untuk maskedmerge**: kerjakan semua stream di `format=gbrp` dan konversi mask `gray→gbrp` (channel tereplikasi) — mask satu-plane atas stream YUV cuma mengenai luma.
+- **"Tipis" = setengah dari yang terasa pas di preview kecil.** Versi pertama (8 step s/d 1.02×) terbaca oke sebagai efek tapi wajah di tepi jadi rusak; final 1.0112× dengan step lebih banyak (12) supaya di full-res gradasi ghost-nya tidak bertangga. Kalibrasi intensitas di preview 1400px dulu — full-res satu render ~30 dtk.
+
+---
+
 ## 5. Foto Referensi
 
 | Folder | Isi |
