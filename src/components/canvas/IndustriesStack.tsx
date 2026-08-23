@@ -19,6 +19,7 @@ import {
   type Texture,
 } from "three";
 import type { Industry } from "@/data/industries";
+import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import { cn } from "@/lib/utils";
 
 /**
@@ -52,8 +53,20 @@ import { cn } from "@/lib/utils";
  * call. Pulse sin demo SENGAJA tidak diporting (permintaan Keano, "hilangin
  * effect berdenyut").
  *
- * Komponen ini hanya di-mount di desktop pointer presisi (gerbang di
- * Industries.tsx); perangkat sentuh tetap memakai IndustriesMobile.
+ * SEMUA PERANGKAT memakai komponen ini sejak 23 Agu malam (sesi mobile) —
+ * gerbang desktop di Industries.tsx dihapus dan carousel IndustriesMobile
+ * pensiun. Adaptasi sentuh + layar sempit: kamera dimundurkan responsif
+ * (CameraRig) supaya spiral tidak terpotong di kanvas portrait, mode fokus
+ * pindah ke layout kartu-atas/panel-bawah di bawah NARROW_PX, dan hover HUD
+ * dilewati di pointer kasar (jari tidak punya hover).
+ *
+ * NAVIGASI SEKTOR (ide Keano, sesi mobile): plank tipis + bertumpuk + miring
+ * perspektif = target tap kecil yang gampang meleset ke tetangganya. Di
+ * pointer kasar baris bawah HUD diganti navigasi `‹ 04 Nama Sektor ›` —
+ * arrow menggilir sektor (wrap-around), plank terpilih di-tint aksen di 3D
+ * sebagai umpan balik, dan NAMANYA SENDIRI tombol pembuka fokus (tanpa
+ * tombol enter terpisah). Tap langsung di plank tetap hidup sebagai jalur
+ * kedua — dua-duanya menuju fokus yang sama dan menyinkronkan navIndex.
  */
 
 /** Kamera demo, verbatim (tinggi dari kiri, menunduk ke origin). Pernah
@@ -62,6 +75,14 @@ import { cn } from "@/lib/utils";
  *  framing terbaik untuk strip lebar juga. */
 const CAM_POS: [number, number, number] = [-10, 10, 5];
 const CAM_FOV = 50;
+/** Framing demo pas untuk strip lebar; di kanvas sempit (portrait) spiral
+ *  terpotong sisi. Di bawah aspek ini kamera DIMUNDURKAN sepanjang arah
+ *  pandangnya proporsional dengan rasio aspek (lebar pandang bertambah
+ *  linear terhadap jarak), dengan plafon pengaman. Varian sqrt sudah
+ *  dicoba — di 390×844 ekor spiral masih terpotong tepi kanan; rasio penuh
+ *  (k≈1,9 di HP) yang lolos verifikasi screenshot. */
+const WIDE_ASPECT = 1.4;
+const MAX_PULLBACK = 2.2;
 /** Ambang "sudah menetap" — di bawah ini useFrame berhenti memesan frame. */
 const SETTLE = 0.002;
 /** λ damping progress fokus & fade — sedikit lebih tegas dari ServicesTicker
@@ -73,12 +94,15 @@ const PLANK_IDLE = new Color("#ffffff");
 const PLANK_HOVER = new Color("#fed7aa");
 const SCRATCH = new Color();
 
-/** Pose fokus: plank berhenti di titik ray NDC ini (kiri layar, sedikit di
- *  bawah tengah), FOCUS_DIST unit di depan kamera, di-slerp ke quaternion
- *  kamera (tepat menghadap layar) sambil mengembang FOCUS_SCALE. */
-const FOCUS_NDC_X = -0.45;
-const FOCUS_NDC_Y = -0.04;
-const FOCUS_DIST = 8.8;
+/** Pose fokus: plank berhenti di titik ray NDC ini, `dist` unit di depan
+ *  kamera, di-slerp ke quaternion kamera (tepat menghadap layar) sambil
+ *  mengembang FOCUS_SCALE. Dua varian: layar lebar = kartu di kiri
+ *  berpasangan panel kanan; layar sempit (< NARROW_PX, selaras breakpoint
+ *  `md:` panel DOM) = kartu di atas-tengah, dist lebih jauh supaya kartu
+ *  mengecil dan menyisakan ruang panel di bawah. */
+const FOCUS_WIDE = { ndcX: -0.45, ndcY: -0.04, dist: 8.8 };
+const FOCUS_NARROW = { ndcX: 0, ndcY: 0.3, dist: 11.5 };
+const NARROW_PX = 768;
 const FOCUS_SCALE: [number, number, number] = [2.2, 1.1, 1];
 /** Foto duduk di plane anak [1.9 × 5.9] yang ikut skala plank — rasio
  *  tampil finalnya yang dipakai untuk cover-crop texture. */
@@ -116,6 +140,32 @@ function VisibleFilter() {
       setEvents({ filter: prev });
     };
   }, [get, setEvents]);
+
+  return null;
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Kamera responsif: posisi demo dipertahankan sebagai ARAH, tapi jaraknya
+ * dikalikan faktor mundur saat kanvas sempit — tanpa ini ekor spiral
+ * terpotong tepi kiri/kanan di layar potret. lookAt origin dipanggil
+ * eksplisit (jangan mengandalkan default R3F) karena mode fokus men-slerp
+ * plank ke quaternion kamera, jadi orientasinya harus deterministik.
+ */
+function CameraRig() {
+  const camera = useThree((s) => s.camera);
+  const size = useThree((s) => s.size);
+  const invalidate = useThree((s) => s.invalidate);
+
+  useEffect(() => {
+    const aspect = size.width / size.height;
+    const k =
+      aspect >= WIDE_ASPECT ? 1 : Math.min(WIDE_ASPECT / aspect, MAX_PULLBACK);
+    camera.position.set(CAM_POS[0] * k, CAM_POS[1] * k, CAM_POS[2] * k);
+    camera.lookAt(0, 0, 0);
+    invalidate();
+  }, [camera, size, invalidate]);
 
   return null;
 }
@@ -194,7 +244,9 @@ function fitCover(tex: Texture) {
 function StairSpiral({
   industries,
   reduced,
+  coarse,
   hover,
+  navActive,
   selected,
   onHover,
   onSelect,
@@ -202,7 +254,12 @@ function StairSpiral({
 }: {
   industries: Industry[];
   reduced: boolean;
+  coarse: boolean;
   hover: number | null;
+  /** Sektor terpilih navigasi bawah (pointer kasar) — di-tint seperti hover
+   *  supaya arrow punya umpan balik terlihat di tumpukan; null di pointer
+   *  presisi. */
+  navActive: number | null;
   selected: number | null;
   onHover: (index: number | null) => void;
   onSelect: (index: number | null) => void;
@@ -219,29 +276,35 @@ function StairSpiral({
   useCursor(hover !== null);
 
   /* Pose spiral tiap plank, dihitung sekali — sumber kebenaran untuk ujung
-     "0" interpolasi (rumus demo yang sama sejak versi pertama). */
+     "0" interpolasi. Rumus demo dipertahankan, tapi indeks pose DIBALIK
+     (k = n-1-i): sektor 01 menempati anak tangga TERATAS, 13 paling bawah
+     (permintaan Keano 23 Agu — urutan naratif dibaca dari atas). */
   const bases = useMemo(
     () =>
-      industries.map((_, i) => ({
-        pos: new Vector3(
-          2 - Math.sin(i / 5) * 5,
-          i * 0.5,
-          2 - Math.cos(i / 5) * 5,
-        ),
-        quat: new Quaternion().setFromEuler(
-          new Euler(-Math.PI / 2, 0, i / Math.PI / 2),
-        ),
-      })),
+      industries.map((_, i) => {
+        const k = industries.length - 1 - i;
+        return {
+          pos: new Vector3(
+            2 - Math.sin(k / 5) * 5,
+            k * 0.5,
+            2 - Math.cos(k / 5) * 5,
+          ),
+          quat: new Quaternion().setFromEuler(
+            new Euler(-Math.PI / 2, 0, k / Math.PI / 2),
+          ),
+        };
+      }),
     [industries],
   );
 
   const progRef = useRef<Float32Array>(new Float32Array(n));
 
-  /* Perubahan target (hover / klik / tutup) harus membangunkan frameloop
-     demand — tanpa ini animasi baru jalan saat pointer kebetulan bergerak. */
+  /* Perubahan target (hover / navigasi / klik / tutup) harus membangunkan
+     frameloop demand — tanpa ini animasi baru jalan saat pointer kebetulan
+     bergerak. */
   useEffect(() => {
     invalidate();
-  }, [hover, selected, invalidate]);
+  }, [hover, navActive, selected, invalidate]);
 
   /* Foto sektor terpilih: dimuat saat dibutuhkan, di-cache per URL, dicabut
      dari material saat fokus ditutup (cleanup) supaya plank kembali buram. */
@@ -276,7 +339,7 @@ function StairSpiral({
     };
   }, [selected, industries, invalidate]);
 
-  useFrame((_, rawDt) => {
+  useFrame((state, rawDt) => {
     /* Frame pertama setelah idle "demand" membawa delta raksasa (clock terus
        berjalan) — dijepit supaya damp tidak melompat (pola ServicesTicker). */
     const dt = Math.min(rawDt, 0.1);
@@ -284,10 +347,12 @@ function StairSpiral({
     let settled = true;
 
     /* Titik fokus dihitung dari kamera (bukan angka dunia hardcoded):
-       unproject NDC → arah ray → FOCUS_DIST unit di depan kamera. */
-    V_RAY.set(FOCUS_NDC_X, FOCUS_NDC_Y, 0.5).unproject(camera);
+       unproject NDC → arah ray → `dist` unit di depan kamera. Varian pose
+       mengikuti lebar kanvas, selaras breakpoint `md:` panel DOM. */
+    const F = state.size.width < NARROW_PX ? FOCUS_NARROW : FOCUS_WIDE;
+    V_RAY.set(F.ndcX, F.ndcY, 0.5).unproject(camera);
     V_RAY.sub(camera.position).normalize();
-    V_FOCUS.copy(camera.position).addScaledVector(V_RAY, FOCUS_DIST);
+    V_FOCUS.copy(camera.position).addScaledVector(V_RAY, F.dist);
 
     for (let i = 0; i < n; i++) {
       const mesh = meshRefs.current[i];
@@ -324,8 +389,11 @@ function StairSpiral({
       // visible, jadi ini sekalian mematikan raycast + shadow-nya.
       mesh.visible = o > 0.02;
 
-      // Tint hover hanya di mode spiral — di mode fokus foto tidak diwarnai.
-      SCRATCH.set(hover === i && !focusing ? PLANK_HOVER : PLANK_IDLE);
+      // Tint hover / sektor navigasi hanya di mode spiral — di mode fokus
+      // foto tidak diwarnai.
+      SCRATCH.set(
+        (hover === i || navActive === i) && !focusing ? PLANK_HOVER : PLANK_IDLE,
+      );
       if (reduced) {
         if (!mat.color.equals(SCRATCH)) settled = false;
         mat.color.copy(SCRATCH);
@@ -384,7 +452,10 @@ function StairSpiral({
           }}
           onPointerOver={(e) => {
             e.stopPropagation();
-            onHover(i);
+            // Pointer kasar tidak punya hover sungguhan — pointerover-nya
+            // ikut tap dan menempel sampai tap berikutnya, jadi HUD hover
+            // dilewati; tap langsung membuka fokus.
+            if (!coarse) onHover(i);
           }}
           onPointerOut={() => onHover(null)}
         >
@@ -437,6 +508,7 @@ export default function IndustriesStack({
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion() ?? false;
+  const coarse = useCoarsePointer();
   /* Canvas baru di-mount saat strip mendekati viewport — konteks WebGL +
      shadow map tidak ikut membebani load awal halaman. */
   const inView = useInView(wrapRef, { once: true, margin: "600px 0px" });
@@ -444,9 +516,19 @@ export default function IndustriesStack({
   const shadowMatRef = useRef<ShadowMaterial | null>(null);
   const [hover, setHover] = useState<number | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
+  /* Sektor terpilih navigasi bawah (dipakai di pointer kasar saja). Tap
+     langsung di plank ikut menyinkronkannya supaya sesudah fokus ditutup
+     navigasi menunjuk sektor yang barusan dibuka, bukan melompat balik. */
+  const [navIndex, setNavIndex] = useState(0);
+
+  const selectAndSync = (index: number | null) => {
+    setSelected(index);
+    if (index !== null) setNavIndex(index);
+  };
 
   const hovered = hover !== null ? industries[hover] : null;
   const focused = selected !== null ? industries[selected] : null;
+  const nav = industries[navIndex];
 
   return (
     /* aria-hidden: plank di canvas bukan DOM — heading sr-only + daftar
@@ -471,14 +553,17 @@ export default function IndustriesStack({
           style={{ width: "100%", height: "100%" }}
         >
           <Suspense fallback={null}>
+            <CameraRig />
             <Stage shadowMatRef={shadowMatRef} />
             <StairSpiral
               industries={industries}
               reduced={reduced}
+              coarse={coarse}
               hover={hover}
+              navActive={coarse ? navIndex : null}
               selected={selected}
               onHover={setHover}
-              onSelect={setSelected}
+              onSelect={selectAndSync}
               shadowMatRef={shadowMatRef}
             />
             <VisibleFilter />
@@ -505,68 +590,138 @@ export default function IndustriesStack({
         </p>
       </div>
 
-      {/* HUD hover — identitas plank di bawah kursor + panduan interaksi di
-          kanan ("Hover the stack" saat idle → "Click to open" saat hover;
-          panduannya SELALU tampil, permintaan Keano). Kolom kiri kosong saat
-          idle (label "13 sectors, one stack" dicabut 23 Agu malam);
-          semuanya disembunyikan saat fokus (panel fokus yang bicara). */}
-      {!focused && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between p-6 sm:p-8">
-          {/* justify-end: min-h menahan tinggi baris supaya HUD tidak
-              loncat-loncat, tapi teksnya harus duduk di DASAR kotak itu —
-              sejajar dengan hint di kanan (permintaan Keano). */}
-          <div className="flex min-h-[5.5rem] max-w-md flex-col justify-end">
-            {hovered && (
-              <>
-                <p className="text-sm font-semibold tracking-tight text-zinc-900">
-                  <span className="mr-2 tabular-nums text-accent">{hovered.num}</span>
-                  {hovered.name}
-                  {hovered.tier === "core" && (
-                    <span className="ml-2 text-[10px] tracking-widest text-accent uppercase">
-                      Core Focus
-                    </span>
-                  )}
-                </p>
-                <p className="mt-1 text-sm leading-relaxed text-zinc-600">
-                  {hovered.desc}
-                </p>
-              </>
-            )}
+      {/* Baris bawah strip, dua wujud:
+          — Pointer kasar: navigasi sektor `‹ 04 Nama ›` (ide Keano) — arrow
+            menggilir dengan wrap-around, nama = tombol pembuka fokus, plank
+            terpilih di-tint di canvas. Tombol-tombolnya pointer-events-auto
+            di atas wrapper yang pointer-events-none, dan tabIndex −1 karena
+            seisi strip aria-hidden (pola tombol back panel fokus).
+          — Pointer presisi: HUD hover (identitas plank di bawah kursor) +
+            panduan di kanan ("Hover the stack" → "Click to open"; SELALU
+            tampil, permintaan Keano).
+          Dua-duanya disembunyikan saat fokus (panel fokus yang bicara). */}
+      {!focused &&
+        (coarse ? (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 p-4">
+            {/* Arah arrow mengikuti RUANG, bukan urutan nomor (revisi
+                Keano): di tumpukan sektor 01 duduk di kanan-atas dan nomor
+                naik ke arah kiri, jadi arrow KIRI = nomor naik (sorotan
+                bergeser kiri) dan arrow KANAN = nomor turun (sorotan
+                bergeser kanan). Kalau komposisi spiral berubah, cek lagi
+                pemetaan ini. */}
+            <button
+              type="button"
+              tabIndex={-1}
+              onClick={() => setNavIndex((i) => (i + 1) % industries.length)}
+              className="pointer-events-auto touch-manipulation p-3 text-zinc-400 transition-colors active:text-zinc-900"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              >
+                <path d="M15 6l-6 6 6 6" />
+              </svg>
+            </button>
+            {/* Lebar TETAP, bukan mengikuti panjang nama: baris ini
+                justify-center, jadi kolom tengah yang melar membuat kedua
+                arrow ikut bergeser tiap nama berganti — tap beruntun di
+                arrow jadi meleset (kejadian di probe: arrow pindah 48px).
+                15.5rem muat nama terpanjang; truncate jaring pengaman. */}
+            <button
+              type="button"
+              tabIndex={-1}
+              onClick={() => selectAndSync(navIndex)}
+              className="pointer-events-auto w-[15.5rem] max-w-[70vw] truncate px-2 py-3 text-center text-sm font-semibold tracking-tight text-zinc-900 underline decoration-zinc-300 underline-offset-4"
+            >
+              <span className="mr-2 tabular-nums text-accent">{nav.num}</span>
+              {nav.name}
+            </button>
+            <button
+              type="button"
+              tabIndex={-1}
+              onClick={() =>
+                setNavIndex((i) => (i + industries.length - 1) % industries.length)
+              }
+              className="pointer-events-auto touch-manipulation p-3 text-zinc-400 transition-colors active:text-zinc-900"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              >
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+            </button>
           </div>
-          <span className="hidden font-mono text-[10px] uppercase tracking-[0.35em] text-zinc-400 sm:block">
-            {hovered ? "Click to open" : "Hover the stack"}
-          </span>
-        </div>
-      )}
+        ) : (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between p-6 sm:p-8">
+            {/* justify-end: min-h menahan tinggi baris supaya HUD tidak
+                loncat-loncat, tapi teksnya harus duduk di DASAR kotak itu —
+                sejajar dengan hint di kanan (permintaan Keano). */}
+            <div className="flex min-h-[5.5rem] max-w-md flex-col justify-end">
+              {hovered && (
+                <>
+                  <p className="text-sm font-semibold tracking-tight text-zinc-900">
+                    <span className="mr-2 tabular-nums text-accent">{hovered.num}</span>
+                    {hovered.name}
+                    {hovered.tier === "core" && (
+                      <span className="ml-2 text-[10px] tracking-widest text-accent uppercase">
+                        Core Focus
+                      </span>
+                    )}
+                  </p>
+                  <p className="mt-1 text-sm leading-relaxed text-zinc-600">
+                    {hovered.desc}
+                  </p>
+                </>
+              )}
+            </div>
+            <span className="font-mono text-[10px] uppercase tracking-[0.35em] text-zinc-400">
+              {hovered ? "Click to open" : "Hover the stack"}
+            </span>
+          </div>
+        ))}
 
-      {/* Panel fokus — deskripsi industri di kanan, berpasangan dengan kartu
-          foto yang terbang ke kiri. */}
+      {/* Panel fokus — layar lebar: deskripsi di kanan berpasangan kartu yang
+          terbang ke kiri; layar sempit (< md, selaras NARROW_PX): kartu ke
+          atas-tengah dan panel jadi lembar bawah. */}
       <AnimatePresence>
         {focused && (
           <motion.div
             key={focused.num}
-            className="pointer-events-none absolute inset-y-0 right-0 flex w-1/2 items-center p-8 sm:p-12"
+            className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end p-6 pb-8 md:inset-y-0 md:left-auto md:w-1/2 md:items-center md:p-12"
             initial={{ opacity: 0, x: 24 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 24 }}
             transition={{ duration: reduced ? 0 : 0.45, ease: EASE }}
           >
+            {/* Di bawah md teksnya DIKECILKAN + margin dirapatkan (revisi
+                Keano: panel sempat mepet foto) dan tombol back DISEMBUNYIKAN
+                supaya ruangnya jatuh ke deskripsi — menutup fokus di sentuh
+                cukup tap kartu / area kosong (onPointerMissed). */}
             <div className="max-w-md">
-              <p className="text-xs tracking-widest text-zinc-400 uppercase">
+              <p className="text-[10px] tracking-widest text-zinc-400 uppercase md:text-xs">
                 <span className="mr-2 tabular-nums text-accent">{focused.num}</span>
                 {focused.tier === "core" ? "Core Focus" : "Sector"}
               </p>
-              <h3 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl">
+              <h3 className="mt-2 text-lg font-semibold tracking-tight text-zinc-900 md:mt-3 md:text-3xl">
                 {focused.name}
               </h3>
-              <p className="mt-4 text-base leading-relaxed text-zinc-600">
+              <p className="mt-2 text-sm leading-relaxed text-zinc-600 md:mt-4 md:text-base">
                 {focused.desc}
               </p>
               <button
                 type="button"
                 tabIndex={-1}
                 onClick={() => setSelected(null)}
-                className="pointer-events-auto mt-8 font-mono text-[10px] uppercase tracking-[0.35em] text-zinc-400 transition-colors hover:text-zinc-900"
+                className="pointer-events-auto mt-8 font-mono text-[10px] uppercase tracking-[0.35em] text-zinc-400 transition-colors hover:text-zinc-900 max-md:hidden"
               >
                 Back to the stack
               </button>
