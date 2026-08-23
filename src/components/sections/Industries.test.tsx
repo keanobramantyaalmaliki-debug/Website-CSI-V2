@@ -1,6 +1,5 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, within, act, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import Industries from "./Industries";
 import { INDUSTRIES } from "@/data/industries";
 
@@ -16,18 +15,27 @@ vi.stubGlobal("IntersectionObserver", IntersectionObserverStub);
 // stub on Window) — the auto-advance carousel calls it directly.
 Element.prototype.scrollTo = vi.fn();
 
+/**
+ * Tiga query berbeda hidup di komponen ini — min-width (layout),
+ * pointer: coarse (gerbang stack 3D), prefers-reduced-motion — jadi mock-nya
+ * memilah per isi query, bukan satu boolean untuk semua.
+ */
 function mockMatchMedia({
   minWidthMatches = false,
+  coarseMatches = false,
   reducedMotionMatches = false,
 }: {
   minWidthMatches?: boolean;
+  coarseMatches?: boolean;
   reducedMotionMatches?: boolean;
 }) {
   window.matchMedia = (query: string) =>
     ({
       matches: query.includes("prefers-reduced-motion")
         ? reducedMotionMatches
-        : minWidthMatches,
+        : query.includes("pointer: coarse")
+          ? coarseMatches
+          : minWidthMatches,
       media: query,
       onchange: null,
       addEventListener: () => {},
@@ -67,66 +75,57 @@ describe("Industries", () => {
     expect(screen.getByText("13 SECTORS · 3 core")).toBeInTheDocument();
   });
 
-  describe("desktop gallery", () => {
-    it("renders the expanding gallery with one image per sector", () => {
+  // Sejak 23 Agu cabang desktop adalah tumpukan kartu 3D (IndustriesStack,
+  // porting pmndrs raycast-cycling). Kartu-kartunya hidup di canvas WebGL
+  // yang tidak bisa diuji di jsdom (dan canvas-nya baru mount saat inView,
+  // yang tak pernah menyala di stub IntersectionObserver) — konten yang
+  // terbaca mesin adalah <ul> sr-only, itu yang diuji di sini. Pola yang
+  // sama dengan ServicesTicker di Office.test.tsx.
+  describe("desktop stack", () => {
+    it("renders the stack strip instead of the mobile carousel", () => {
       mockMatchMedia({ minWidthMatches: true });
       render(<Industries />);
-      const gallery = screen.getByTestId("industries-gallery");
-      expect(gallery.querySelectorAll("img")).toHaveLength(INDUSTRIES.length);
+      expect(screen.getByTestId("industries-stack")).toBeInTheDocument();
+      expect(screen.queryByTestId("industries-mobile")).not.toBeInTheDocument();
     });
 
-    it("every sector description stays in the DOM even when not hovered", () => {
+    it("lists every sector name and description in the sr-only list", () => {
       mockMatchMedia({ minWidthMatches: true });
       render(<Industries />);
-      const gallery = screen.getByTestId("industries-gallery");
-      for (const industry of INDUSTRIES) {
-        expect(within(gallery).getByText(industry.desc)).toBeInTheDocument();
-      }
+      const list = screen.getByRole("list");
+      const items = Array.from(list.children);
+      expect(items).toHaveLength(INDUSTRIES.length);
+      INDUSTRIES.forEach((industry, i) => {
+        expect(items[i]).toHaveTextContent(industry.name);
+        expect(items[i]).toHaveTextContent(industry.desc);
+      });
     });
 
-    it("hovering a column marks it as the active one", async () => {
+    it("tags exactly the core sectors with Core Focus in the sr-only list", () => {
       mockMatchMedia({ minWidthMatches: true });
-      const user = userEvent.setup();
       render(<Industries />);
-      const gallery = screen.getByTestId("industries-gallery");
-      const target = within(gallery)
-        .getByText(INDUSTRIES[3].name)
-        .closest("button");
-      expect(target).not.toBeNull();
-
-      await user.hover(target as HTMLElement);
-
-      expect(target).toHaveAttribute("aria-current", "true");
+      const list = screen.getByRole("list");
+      const tagged = Array.from(list.children).filter((li) =>
+        li.textContent?.includes("(Core Focus)"),
+      );
+      const coreCount = INDUSTRIES.filter((s) => s.tier === "core").length;
+      expect(tagged).toHaveLength(coreCount);
     });
 
-    it("the active indicator follows the hovered column, not every core column", async () => {
-      mockMatchMedia({ minWidthMatches: true });
-      const user = userEvent.setup();
+    it("falls back to the mobile carousel on coarse pointers, even at desktop width", () => {
+      // Tablet landscape 1024px+: lebar lolos, tapi wheel-cycling butuh
+      // hover + wheel yang tidak ada di layar sentuh (INVARIANTS §6 punya
+      // alasan yang sama untuk scene hero).
+      mockMatchMedia({ minWidthMatches: true, coarseMatches: true });
       render(<Industries />);
-      const gallery = screen.getByTestId("industries-gallery");
-
-      // 04 is not core; 01 is. Hovering 04 should light 04 up, not 01.
-      const target = within(gallery)
-        .getByText(INDUSTRIES[3].name)
-        .closest("button") as HTMLElement;
-      const idleCore = within(gallery)
-        .getByText(INDUSTRIES[0].name)
-        .closest("button") as HTMLElement;
-
-      expect(within(gallery).queryAllByTestId("active-indicator")).toHaveLength(0);
-
-      await user.hover(target);
-
-      expect(target).toHaveAttribute("aria-current", "true");
-      expect(within(target).getByTestId("active-indicator")).toBeInTheDocument();
-      expect(within(idleCore).queryByTestId("active-indicator")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("industries-stack")).not.toBeInTheDocument();
+      expect(screen.getByTestId("industries-mobile")).toBeInTheDocument();
     });
 
-    it("respects prefers-reduced-motion: content still renders, nothing crashes", () => {
+    it("respects prefers-reduced-motion: still renders, nothing crashes", () => {
       mockMatchMedia({ minWidthMatches: true, reducedMotionMatches: true });
       render(<Industries />);
-      const gallery = screen.getByTestId("industries-gallery");
-      expect(gallery.querySelectorAll("img")).toHaveLength(INDUSTRIES.length);
+      expect(screen.getByTestId("industries-stack")).toBeInTheDocument();
     });
   });
 
