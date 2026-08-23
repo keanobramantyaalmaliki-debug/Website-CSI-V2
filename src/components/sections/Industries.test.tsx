@@ -69,10 +69,14 @@ describe("Industries", () => {
     }
   });
 
-  it("shows the sector/core count stat", () => {
+  // Eyebrow "Industries" + counter "13 SECTORS · 3 core" dicabut 23 Agu
+  // (bersama blok header di luar strip) — pola test yang sama dengan
+  // eyebrow "Portfolio" di CaseGrid: pastikan tidak kembali.
+  it("no longer renders the eyebrow label or the sector counter", () => {
     mockMatchMedia({ minWidthMatches: true });
     render(<Industries />);
-    expect(screen.getByText("13 SECTORS · 3 core")).toBeInTheDocument();
+    expect(screen.queryByText("Industries")).not.toBeInTheDocument();
+    expect(screen.queryByText(/13 SECTORS/)).not.toBeInTheDocument();
   });
 
   // Sejak 23 Agu cabang desktop adalah tumpukan kartu 3D (IndustriesStack,

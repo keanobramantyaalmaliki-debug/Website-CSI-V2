@@ -23,31 +23,26 @@ import { cn } from "@/lib/utils";
 
 /**
  * Industries sebagai tumpukan lempeng 3D — porting dari pmndrs/examples
- * `raycast-cycling`, KOMPOSISinya juga setia ke demo (revisi 23 Agu, permintaan
- * Keano): 13 plank kaca buram membentuk tangga spiral, dilihat kamera tinggi,
- * bayangan lembut jatuh ke lantai strip putih full-bleed. Hover menyorot plank
- * terdepan di bawah kursor, WHEEL menggilir plank-plank yang TERTUTUP di
- * tumpukan yang sama (metafora "menembus lapisan"), dan HUD DOM di kaki strip
- * menampilkan titik per lapisan + num/nama/desc sektor yang sedang aktif.
+ * `raycast-cycling`, KOMPOSISinya setia ke demo: 13 plank kaca buram
+ * membentuk tangga spiral, dilihat kamera tinggi, bayangan lembut jatuh ke
+ * lantai strip putih full-bleed. Heading section ikut jadi overlay di dalam
+ * strip (blok header di luar strip dihapus 23 Agu malam).
  *
- * MODE FOKUS (23 Agu): KLIK sebuah plank menerbangkannya ke kiri layar sambil
+ * Interaksi (disederhanakan 23 Agu malam, permintaan Keano): HOVER menyorot
+ * plank terdepan di bawah kursor + HUD num/nama/desc, KLIK membuka mode
+ * fokus. WHEEL-CYCLING DICABUT TOTAL — override events.filter yang merotasi
+ * intersection, penyandera wheel, dan HUD titik lapisan ikut pergi; wheel di
+ * atas strip sekarang selalu scroll halaman. Jangan bawa balik tanpa
+ * keputusan baru. Yang tersisa dari filter hanyalah penyaring `visible`:
+ * raycaster three TIDAK memeriksa visible, jadi tanpa saringan ini klik
+ * "area kosong" saat mode fokus bisa mendarat di plank yang disembunyikan.
+ *
+ * MODE FOKUS: KLIK sebuah plank menerbangkannya ke kiri layar sambil
  * berputar menghadap kamera dan mengembang jadi kartu foto sektornya; sisa
  * tangga fade out (blob bayangan ikut pudar lewat opacity shadowMaterial,
  * karena bayangan three tidak peduli opacity mesh) dan deskripsi industri
  * muncul sebagai panel DOM di kanan. Klik plank lagi / tombol back / klik
- * area kosong (onPointerMissed) mengembalikan spiral. Selama fokus,
- * wheel-cycling mati dan wheel lolos jadi scroll halaman.
- *
- * Yang diambil dari demo: override `events.filter` R3F yang MEROTASI daftar
- * intersection (plank ke-N dalam tumpukan "dianggap terdepan"), lalu
- * pointercancel + pointermove palsu supaya state hover pindah ke plank
- * berikutnya. Yang SENGAJA tidak diambil dari <CycleRaycast/> drei:
- *   • wheel listener document-level dengan preventDefault TANPA SYARAT —
- *     di halaman scroll ini artinya scroll mati total. Di sini listener
- *     menempel di strip dan hanya menyandera wheel saat ray mengenai ≥2
- *     plank (kesepakatan 23 Agu: di luar itu wheel lolos jadi scroll
- *     halaman, beda dengan panel Services yang menyandera penuh).
- *   • keyCode default 9 (Tab) — membajak navigasi keyboard, dibuang.
+ * area kosong (onPointerMissed) mengembalikan spiral.
  *
  * KONTRAK FRAMELOOP — canvas ke-3 di halaman (lihat ServicesTicker.tsx dan
  * pelajaran "laptop panas" di InquiryLaptop.tsx): "demand" selamanya. Pointer
@@ -58,8 +53,7 @@ import { cn } from "@/lib/utils";
  * effect berdenyut").
  *
  * Komponen ini hanya di-mount di desktop pointer presisi (gerbang di
- * Industries.tsx) — wheel-cycling tidak punya padanan sentuh; perangkat
- * sentuh tetap memakai IndustriesMobile.
+ * Industries.tsx); perangkat sentuh tetap memakai IndustriesMobile.
  */
 
 /** Kamera demo, verbatim (tinggi dari kiri, menunduk ke origin). Pernah
@@ -98,95 +92,30 @@ const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 const V_RAY = new Vector3();
 const V_FOCUS = new Vector3();
 
-const mod = (n: number, m: number) => ((n % m) + m) % m;
-
-export type StackStatus = {
-  /** Indeks industri yang tertusuk ray, urutan mentah (terdekat dulu). */
-  hits: number[];
-  /** Posisi siklus — hits[cycle] adalah plank yang sedang aktif. */
-  cycle: number;
-};
-
 /* ────────────────────────────────────────────────────────────────────────── */
 
 /**
- * Override events.filter ala <CycleRaycast/> drei, dirampingkan: rotasi
- * daftar intersection sebesar cycleRef, reset saat keanggotaan tumpukan
- * berubah, dan `refreshRef` (dipanggil handler wheel di luar canvas) yang
- * membatalkan hover lalu memalsukan pointermove supaya plank berikutnya
- * menerima onPointerOver.
+ * Sisa terakhir dari fork <CycleRaycast/>: raycaster three tidak memeriksa
+ * `visible`, jadi plank yang disembunyikan mode fokus harus disaring manual —
+ * tanpa ini klik "area kosong" saat fokus mendarat di plank tak terlihat
+ * (dan onPointerMissed tidak pernah menutup fokusnya).
  */
-function CycleFilter({
-  hitsRef,
-  cycleRef,
-  refreshRef,
-  onChanged,
-}: {
-  hitsRef: React.RefObject<number[]>;
-  cycleRef: React.RefObject<number>;
-  refreshRef: React.RefObject<(() => void) | null>;
-  onChanged: (status: StackStatus) => void;
-}) {
+function VisibleFilter() {
   const setEvents = useThree((s) => s.setEvents);
   const get = useThree((s) => s.get);
 
   useEffect(() => {
     const prev = get().events.filter;
-    let uuids: string[] = [];
-    let lastEvent: PointerEvent | undefined;
-
-    const report = () => {
-      const hits = hitsRef.current;
-      onChanged({
-        hits: [...hits],
-        cycle: hits.length ? mod(cycleRef.current, hits.length) : 0,
-      });
-    };
-
     setEvents({
       filter: (intersections, state) => {
-        // Plank yang sedang disembunyikan mode fokus tidak dihitung —
-        // raycaster three TIDAK memeriksa visible, jadi tanpa saringan ini
-        // klik "area kosong" saat fokus bisa mendarat di plank tak terlihat.
-        let clone = intersections.filter((h) => h.object.visible);
-        // Reset siklus saat isi tumpukan berubah (pindah kursor).
-        const ids = clone.map((h) => h.object.uuid);
-        if (
-          ids.length !== uuids.length ||
-          !ids.every((id) => uuids.includes(id))
-        ) {
-          uuids = ids;
-          cycleRef.current = 0;
-          hitsRef.current = clone.map((h) => h.object.userData.index as number);
-          report();
-        }
-        if (prev) clone = prev(clone, state);
-        // Rotasi: plank ke-cycle dalam tumpukan jadi "terdepan".
-        const k = clone.length ? mod(cycleRef.current, clone.length) : 0;
-        for (let i = 0; i < k; i++) clone.push(clone.shift()!);
-        return clone;
+        const clone = intersections.filter((h) => h.object.visible);
+        return prev ? prev(clone, state) : clone;
       },
     });
-
-    const onMove = (e: PointerEvent) => (lastEvent = e);
-    document.addEventListener("pointermove", onMove, { passive: true });
-
-    refreshRef.current = () => {
-      const handlers = get().events.handlers;
-      // Urutan drei: batalkan hover lama, lalu pointermove palsu menjalankan
-      // raycast + filter lagi — plank hasil rotasi baru menerima Over.
-      handlers?.onPointerCancel?.(undefined as never);
-      if (lastEvent) handlers?.onPointerMove?.(lastEvent as never);
-      report();
-      get().invalidate();
-    };
-
     return () => {
       setEvents({ filter: prev });
-      document.removeEventListener("pointermove", onMove);
-      refreshRef.current = null;
     };
-  }, [get, setEvents, hitsRef, cycleRef, refreshRef, onChanged]);
+  }, [get, setEvents]);
 
   return null;
 }
@@ -253,11 +182,9 @@ function fitCover(tex: Texture) {
 /**
  * Tangga spiral demo, verbatim: plank [2 × 6 × 0.075] rebah (rot X −90°),
  * berputar `i / π / 2` sambil naik setengah unit per anak tangga, posisi
- * melingkar sin/cos(i/5). Dari kamera tinggi [-10, 10, 5] lempengan-lempengan
- * transparan ini saling menutupi — satu titik kursor menusuk beberapa plank,
- * dan itulah bahan mainan wheel-cycling.
+ * melingkar sin/cos(i/5).
  *
- * Pose plank TIDAK lagi lewat prop statis: tiap plank punya progress fokus
+ * Pose plank TIDAK lewat prop statis: tiap plank punya progress fokus
  * (0 = duduk di spiral, 1 = kartu fokus di kiri layar) dan useFrame
  * meng-interpolasi posisi (lerp), orientasi (slerp ke quaternion kamera),
  * dan skala di antara keduanya. Foto hidup di plane anak yang fade in
@@ -267,13 +194,17 @@ function fitCover(tex: Texture) {
 function StairSpiral({
   industries,
   reduced,
+  hover,
   selected,
+  onHover,
   onSelect,
   shadowMatRef,
 }: {
   industries: Industry[];
   reduced: boolean;
+  hover: number | null;
   selected: number | null;
+  onHover: (index: number | null) => void;
   onSelect: (index: number | null) => void;
   shadowMatRef: React.RefObject<ShadowMaterial | null>;
 }) {
@@ -285,14 +216,10 @@ function StairSpiral({
   const matRefs = useRef<(MeshStandardMaterial | null)[]>([]);
   const photoMeshRefs = useRef<(Mesh | null)[]>([]);
   const photoMatRefs = useRef<(MeshBasicMaterial | null)[]>([]);
-  /* Plank yang sedang hovered (sesudah rotasi filter) — REF, bukan state:
-     berubah saat kursor jalan dan dibaca tiap frame. */
-  const hoveredRef = useRef<number | null>(null);
-  const [anyHover, setAnyHover] = useState(false);
-  useCursor(anyHover);
+  useCursor(hover !== null);
 
   /* Pose spiral tiap plank, dihitung sekali — sumber kebenaran untuk ujung
-     "0" interpolasi (rumus demo yang sama dengan versi prop statis dulu). */
+     "0" interpolasi (rumus demo yang sama sejak versi pertama). */
   const bases = useMemo(
     () =>
       industries.map((_, i) => ({
@@ -310,11 +237,11 @@ function StairSpiral({
 
   const progRef = useRef<Float32Array>(new Float32Array(n));
 
-  /* Perubahan target (klik / tutup) harus membangunkan frameloop demand —
-     tanpa ini animasi baru jalan saat pointer kebetulan bergerak. */
+  /* Perubahan target (hover / klik / tutup) harus membangunkan frameloop
+     demand — tanpa ini animasi baru jalan saat pointer kebetulan bergerak. */
   useEffect(() => {
     invalidate();
-  }, [selected, invalidate]);
+  }, [hover, selected, invalidate]);
 
   /* Foto sektor terpilih: dimuat saat dibutuhkan, di-cache per URL, dicabut
      dari material saat fokus ditutup (cleanup) supaya plank kembali buram. */
@@ -349,7 +276,7 @@ function StairSpiral({
     };
   }, [selected, industries, invalidate]);
 
-  useFrame((state, rawDt) => {
+  useFrame((_, rawDt) => {
     /* Frame pertama setelah idle "demand" membawa delta raksasa (clock terus
        berjalan) — dijepit supaya damp tidak melompat (pola ServicesTicker). */
     const dt = Math.min(rawDt, 0.1);
@@ -393,12 +320,12 @@ function StairSpiral({
         : MathUtils.damp(mat.opacity, oTarget, DAMP, dt);
       if (Math.abs(o - oTarget) > SETTLE) settled = false;
       mat.opacity = o;
-      // Plank pudar total disembunyikan — CycleFilter menyaring lewat
+      // Plank pudar total disembunyikan — VisibleFilter menyaring lewat
       // visible, jadi ini sekalian mematikan raycast + shadow-nya.
       mesh.visible = o > 0.02;
 
       // Tint hover hanya di mode spiral — di mode fokus foto tidak diwarnai.
-      SCRATCH.set(hoveredRef.current === i && !focusing ? PLANK_HOVER : PLANK_IDLE);
+      SCRATCH.set(hover === i && !focusing ? PLANK_HOVER : PLANK_IDLE);
       if (reduced) {
         if (!mat.color.equals(SCRATCH)) settled = false;
         mat.color.copy(SCRATCH);
@@ -444,7 +371,6 @@ function StairSpiral({
           ref={(el) => {
             meshRefs.current[i] = el;
           }}
-          userData={{ index: i }}
           castShadow
           receiveShadow
           position={bases[i].pos}
@@ -458,17 +384,9 @@ function StairSpiral({
           }}
           onPointerOver={(e) => {
             e.stopPropagation();
-            hoveredRef.current = i;
-            setAnyHover(true);
-            invalidate();
+            onHover(i);
           }}
-          onPointerOut={() => {
-            if (hoveredRef.current === i) {
-              hoveredRef.current = null;
-              setAnyHover(false);
-            }
-            invalidate();
-          }}
+          onPointerOut={() => onHover(null)}
         >
           <boxGeometry args={[2, 6, 0.075]} />
           <meshStandardMaterial
@@ -523,64 +441,22 @@ export default function IndustriesStack({
      shadow map tidak ikut membebani load awal halaman. */
   const inView = useInView(wrapRef, { once: true, margin: "600px 0px" });
 
-  const hitsRef = useRef<number[]>([]);
-  const cycleRef = useRef(0);
-  /* refresh() hidup di dalam canvas (CycleFilter) dan sudah memanggil
-     invalidate store sendiri — handler wheel di luar cukup lewat ref ini. */
-  const refreshRef = useRef<(() => void) | null>(null);
   const shadowMatRef = useRef<ShadowMaterial | null>(null);
-  const [status, setStatus] = useState<StackStatus>({ hits: [], cycle: 0 });
+  const [hover, setHover] = useState<number | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
-  /* Dibaca handler wheel yang sengaja dipasang sekali (deps []). */
-  const selectedRef = useRef<number | null>(null);
-  selectedRef.current = selected;
 
-  /**
-   * Penyandera wheel BERSYARAT — inti kesepakatan 23 Agu: wheel hanya
-   * diambil saat ray mengenai ≥2 plank (ada tumpukan untuk digilir) DAN
-   * tidak sedang mode fokus; selebihnya event lolos dan halaman scroll
-   * normal. Non-passive supaya preventDefault sah; stopPropagation menahan
-   * bubbling sebelum sampai listener window milik Lenis (pola ServicesTicker).
-   */
-  useEffect(() => {
-    const el = wrapRef.current;
-    if (!el) return;
-    const onWheel = (e: WheelEvent) => {
-      if (selectedRef.current !== null) return;
-      if (hitsRef.current.length < 2) return;
-      e.preventDefault();
-      e.stopPropagation();
-      cycleRef.current += e.deltaY > 0 ? 1 : -1;
-      refreshRef.current?.();
-    };
-    // Kursor bisa keluar strip tanpa sempat memicu raycast kosong (gerakan
-    // cepat) — bersihkan manual supaya HUD tidak menampilkan sisa hover.
-    const onLeave = () => {
-      hitsRef.current = [];
-      cycleRef.current = 0;
-      setStatus({ hits: [], cycle: 0 });
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    el.addEventListener("pointerleave", onLeave);
-    return () => {
-      el.removeEventListener("wheel", onWheel);
-      el.removeEventListener("pointerleave", onLeave);
-    };
-  }, []);
-
-  const active =
-    status.hits.length > 0 ? industries[status.hits[status.cycle]] : null;
+  const hovered = hover !== null ? industries[hover] : null;
   const focused = selected !== null ? industries[selected] : null;
 
   return (
-    /* aria-hidden: plank di canvas bukan DOM — daftar sektor yang terbaca
-       mesin hidup sebagai <ul> sr-only di Industries.tsx, bukan di sini. */
+    /* aria-hidden: plank di canvas bukan DOM — heading sr-only + daftar
+       sektor yang terbaca mesin hidup di Industries.tsx, bukan di sini. */
     <div
       ref={wrapRef}
       data-testid="industries-stack"
       aria-hidden="true"
       className={cn(
-        "relative h-[70svh] min-h-[440px] w-full touch-pan-y select-none overflow-hidden bg-zinc-50",
+        "relative h-[85svh] min-h-[520px] w-full touch-pan-y select-none overflow-hidden bg-zinc-50",
         className,
       )}
     >
@@ -599,63 +475,66 @@ export default function IndustriesStack({
             <StairSpiral
               industries={industries}
               reduced={reduced}
+              hover={hover}
               selected={selected}
+              onHover={setHover}
               onSelect={setSelected}
               shadowMatRef={shadowMatRef}
             />
-            <CycleFilter
-              hitsRef={hitsRef}
-              cycleRef={cycleRef}
-              refreshRef={refreshRef}
-              onChanged={setStatus}
-            />
+            <VisibleFilter />
           </Suspense>
         </Canvas>
       )}
 
-      {/* HUD spiral — terjemahan DOM dari status <CycleRaycast/>: titik per
-          lapisan yang tertusuk ray + identitas plank aktif. Disembunyikan
-          selama mode fokus (panel fokus yang bicara). */}
+      {/* Heading section — pindah ke DALAM strip (23 Agu malam, permintaan
+          Keano; blok header gelap di luar strip dihapus). Ikut aria-hidden
+          wrapper — h2 yang terbaca mesin ada sebagai sr-only di
+          Industries.tsx. Disembunyikan saat fokus: kartu terbang melewati
+          area kiri atas ini. */}
+      <div
+        className={cn(
+          "pointer-events-none absolute top-0 left-0 max-w-md p-6 transition-opacity duration-300 sm:p-8",
+          focused && "opacity-0",
+        )}
+      >
+        <p className="text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl">
+          Built Across Sectors
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-zinc-500">
+          From national platforms to neighborhood apps.
+        </p>
+      </div>
+
+      {/* HUD hover — identitas plank di bawah kursor + panduan interaksi di
+          kanan ("Hover the stack" saat idle → "Click to open" saat hover;
+          panduannya SELALU tampil, permintaan Keano). Kolom kiri kosong saat
+          idle (label "13 sectors, one stack" dicabut 23 Agu malam);
+          semuanya disembunyikan saat fokus (panel fokus yang bicara). */}
       {!focused && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between p-6 sm:p-8">
-          <div className="min-h-[5.5rem] max-w-md">
-            {active ? (
+          {/* justify-end: min-h menahan tinggi baris supaya HUD tidak
+              loncat-loncat, tapi teksnya harus duduk di DASAR kotak itu —
+              sejajar dengan hint di kanan (permintaan Keano). */}
+          <div className="flex min-h-[5.5rem] max-w-md flex-col justify-end">
+            {hovered && (
               <>
-                <div className="flex items-center gap-1.5">
-                  {status.hits.map((hit, i) => (
-                    <span
-                      key={hit}
-                      data-testid={i === status.cycle ? "stack-dot-active" : "stack-dot"}
-                      className={cn(
-                        "h-1.5 w-1.5 rounded-full",
-                        i === status.cycle ? "bg-accent" : "bg-zinc-300",
-                      )}
-                    />
-                  ))}
-                </div>
-                <p className="mt-2 text-sm font-semibold tracking-tight text-zinc-900">
-                  <span className="mr-2 tabular-nums text-accent">{active.num}</span>
-                  {active.name}
-                  {active.tier === "core" && (
+                <p className="text-sm font-semibold tracking-tight text-zinc-900">
+                  <span className="mr-2 tabular-nums text-accent">{hovered.num}</span>
+                  {hovered.name}
+                  {hovered.tier === "core" && (
                     <span className="ml-2 text-[10px] tracking-widest text-accent uppercase">
                       Core Focus
                     </span>
                   )}
                 </p>
                 <p className="mt-1 text-sm leading-relaxed text-zinc-600">
-                  {active.desc}
+                  {hovered.desc}
                 </p>
               </>
-            ) : (
-              <p className="text-xs tracking-widest text-zinc-400 uppercase">
-                13 sectors, one stack
-              </p>
             )}
           </div>
           <span className="hidden font-mono text-[10px] uppercase tracking-[0.35em] text-zinc-400 sm:block">
-            {status.hits.length > 1
-              ? "Scroll to cycle layers, click to open"
-              : "Hover the stack"}
+            {hovered ? "Click to open" : "Hover the stack"}
           </span>
         </div>
       )}

@@ -1,8 +1,9 @@
 /**
- * Potret + probe IndustriesStack (tumpukan kartu 3D raycast-cycling di Home)
- * dalam beberapa keadaan — idle, hover (HUD nyala + dots), dua kali wheel
- * untuk membuktikan CYCLE berjalan (nama di HUD berganti, halaman DIAM),
- * lalu wheel di area kosong strip untuk membuktikan halaman tetap scroll.
+ * Potret + probe IndustriesStack (tangga spiral 3D di Home) dalam beberapa
+ * keadaan — idle, hover (HUD num/nama/desc nyala), wheel di atas tumpukan
+ * (WAJIB men-scroll halaman — wheel-cycling dicabut 23 Agu malam), klik
+ * plank (mode fokus: kartu foto kiri + panel deskripsi kanan), dan klik
+ * area kosong (fokus tertutup, spiral kembali).
  *
  *   node scripts/shoot-industries-stack.mjs [url-dasar] [dir-keluaran]
  *
@@ -123,51 +124,23 @@ async function main() {
     );
     return r?.result?.value ?? "";
   };
-  const dots = async () => {
-    const r = await evaluate(
-      `document.querySelectorAll('[data-testid^="stack-dot"]').length`,
-    );
-    return r?.result?.value ?? 0;
-  };
 
-  // Hover pusat tumpukan — HUD wajib menyala dengan ≥2 titik lapisan.
+  // Hover pusat tumpukan — HUD wajib menyala (num/nama/desc + Click to open).
   await mouseAt(c.x, c.y);
   await sleep(700);
-  console.log("dots setelah hover:", await dots());
-  console.log("HUD hover:", (await hud()).slice(0, 140));
+  console.log("HUD hover:", (await hud()).slice(0, 160));
   await shot("2-hover");
 
-  // Wheel di atas tumpukan: halaman DIAM, nama di HUD BERGANTI.
-  const before = await hud();
+  // Wheel-cycling DICABUT 23 Agu malam: wheel di atas tumpukan sekarang
+  // WAJIB men-scroll halaman seperti area mana pun.
   const yBefore = (await evaluate("window.scrollY"))?.result?.value;
   await wheelAt(c.x, c.y, 120);
   await sleep(700);
-  const after = await hud();
   const yAfter = (await evaluate("window.scrollY"))?.result?.value;
   console.log(
-    `wheel di tumpukan → scrollY ${yBefore} → ${yAfter} (wajib sama); ` +
-      `HUD berganti: ${before !== after}`,
+    `wheel di tumpukan → scrollY ${yBefore} → ${yAfter} (wajib BERUBAH — hijack dicabut)`,
   );
-  console.log("HUD cycle 1:", after.slice(0, 140));
-  await shot("3-cycle");
-
-  await wheelAt(c.x, c.y, 120);
-  await sleep(700);
-  console.log("HUD cycle 2:", (await hud()).slice(0, 140));
-  await shot("4-cycle-lagi");
-
-  // Wheel di area kosong strip (pojok atas, tidak ada kartu): halaman WAJIB
-  // ikut scroll — bukti wheel tidak disandera di luar tumpukan.
-  await mouseAt(c.x, c.top + 20);
-  await sleep(400);
-  const yBefore2 = (await evaluate("window.scrollY"))?.result?.value;
-  await wheelAt(c.x, c.top + 20, 120);
-  await sleep(500);
-  const yAfter2 = (await evaluate("window.scrollY"))?.result?.value;
-  console.log(
-    `wheel di area kosong → scrollY ${yBefore2} → ${yAfter2} (wajib berubah)`,
-  );
-  await shot("5-wheel-kosong");
+  await shot("3-wheel-lolos");
 
   // KLIK plank → mode fokus: plank terbang ke kiri + expand foto, sisa
   // tangga fade out, panel deskripsi muncul di kanan. Koordinat strip
