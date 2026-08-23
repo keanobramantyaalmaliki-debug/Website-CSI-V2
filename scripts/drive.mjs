@@ -191,6 +191,40 @@ async function main() {
         clickCount: 1,
       });
       console.log(`geser ${x0},${y0} -> ${x1},${y1}`);
+    } else if (s.t === "down") {
+      // Tekan tanpa melepas — untuk menahan power bar sambil dipotret.
+      // Pasangannya "up"; "drag" selalu melepas di akhir (= menembak).
+      await move(s.x, s.y);
+      await sleep(60);
+      await send("Input.dispatchMouseEvent", {
+        type: "mousePressed",
+        x: s.x,
+        y: s.y,
+        button: "left",
+        buttons: 1,
+        clickCount: 1,
+      });
+      console.log(`tekan ${s.x},${s.y}`);
+    } else if (s.t === "holdmove") {
+      // Gerak sambil tombol tetap ditekan (lanjutan "down").
+      await send("Input.dispatchMouseEvent", {
+        type: "mouseMoved",
+        x: s.x,
+        y: s.y,
+        button: "left",
+        buttons: 1,
+      });
+      await sleep(s.ms ?? 120);
+    } else if (s.t === "up") {
+      await send("Input.dispatchMouseEvent", {
+        type: "mouseReleased",
+        x: s.x,
+        y: s.y,
+        button: "left",
+        buttons: 0,
+        clickCount: 1,
+      });
+      console.log(`lepas ${s.x},${s.y}`);
     } else if (s.t === "key") {
       for (const type of ["keyDown", "keyUp"]) {
         await send("Input.dispatchKeyEvent", { type, key: s.key });

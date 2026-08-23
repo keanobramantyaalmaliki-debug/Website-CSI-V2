@@ -250,6 +250,11 @@ interface SceneStore {
   exitBilliard: () => void;
   setBilliardPhase: (phase: BilliardPhase) => void;
 
+  /** true = bola putih bebas dipindah di zona kitchen (break awal, atau
+   *  setelah bola putih masuk lubang). Padam begitu tembakan dilepas. */
+  ballInHand: boolean;
+  setBallInHand: (v: boolean) => void;
+
   /** Sudut bidik dalam radian, diukur di bidang XZ dunia. 0 = menuju −Z
    *  (dari bola putih ke arah rak bola). */
   aimAngle: number;
@@ -324,9 +329,18 @@ export const useSceneStore = create<SceneStore>((set) => ({
   billiardPhase: "off",
   // Sudut awal 0 = membidik lurus dari bola putih ke arah rak.
   enterBilliard: () =>
-    set({ billiardActive: true, billiardPhase: "aiming", aimAngle: 0 }),
+    set({
+      billiardActive: true,
+      billiardPhase: "aiming",
+      aimAngle: 0,
+      // Break selalu diawali free ball.
+      ballInHand: true,
+    }),
   exitBilliard: () => set({ billiardActive: false, billiardPhase: "off" }),
   setBilliardPhase: (billiardPhase) => set({ billiardPhase }),
+
+  ballInHand: true,
+  setBallInHand: (ballInHand) => set({ ballInHand }),
 
   aimAngle: 0,
   setAimAngle: (aimAngle) => set({ aimAngle }),

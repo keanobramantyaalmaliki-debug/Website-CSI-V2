@@ -96,6 +96,31 @@ export const POCKET_SENSOR_R = POCKET_R - BALL_R * 0.5;
 /** Head spot — posisi bola putih. Seperempat panjang meja dari bantalan bawah. */
 export const HEAD_SPOT = [0.375, BALL_Y, -1.115] as const;
 
+/**
+ * Zona free ball ("kitchen") — 35% panjang meja dari ujung head (sisi KANAN
+ * layar pada orientasi normal). Bola putih hanya boleh ditaruh di sini, baik
+ * saat break maupun setelah bola putih masuk lubang.
+ *
+ * `z0` = garis batasnya (head string). Head spot ada di dalam zona, jadi
+ * respot bawaan tidak pernah menaruh bola di luar batasnya sendiri.
+ */
+export const KITCHEN_Z0 = FELT.z1 - 0.35 * (FELT.z1 - FELT.z0);
+
+/**
+ * Jepit posisi free ball ke dalam zona kitchen. Semua sisi dikurangi radius
+ * bola: di bantalan supaya bola tidak spawn menembus rail, di garis batas
+ * supaya SELURUH bola berada di dalam zona — pusat tepat di garis membuat
+ * separuh bola nongol keluar dan batasnya terlihat bohong. Murni geometri —
+ * pengecekan tabrakan dengan bola lain urusan pemanggil, yang tahu posisi
+ * bola hidup.
+ */
+export function clampFreeBall(x: number, z: number): [number, number] {
+  return [
+    Math.max(FELT.x0 + BALL_R, Math.min(FELT.x1 - BALL_R, x)),
+    Math.max(KITCHEN_Z0 + BALL_R, Math.min(FELT.z1 - BALL_R, z)),
+  ];
+}
+
 /** Foot spot — puncak segitiga rak. */
 const FOOT_SPOT_Z = -2.145;
 

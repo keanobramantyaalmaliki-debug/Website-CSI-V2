@@ -5,7 +5,7 @@ import Deployments from "./Deployments";
 import Process from "./Process";
 import Contact from "./Contact";
 
-// jsdom lacks IntersectionObserver; motion's whileInView and useScrollStepper need it.
+// jsdom lacks IntersectionObserver; motion's whileInView needs it.
 class IntersectionObserverStub {
   observe() {}
   unobserve() {}

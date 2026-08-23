@@ -30,6 +30,8 @@ export default function BilliardHUD() {
   const tableRotated = useSceneStore((s) => s.tableRotated);
   const cueScreen = useSceneStore((s) => s.cueScreen);
 
+  const ballInHand = useSceneStore((s) => s.ballInHand);
+
   const aiming = phase === "aiming";
   const barRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -48,13 +50,14 @@ export default function BilliardHUD() {
     );
   }, [exitBilliard, goToView, setShotPower]);
 
-  // ── Bar tenaga: seret ke atas untuk menambah kekuatan, lepas untuk menembak ──
+  // ── Bar tenaga: tarik ke bawah untuk menambah kekuatan, lepas untuk menembak ──
   const powerFromEvent = useCallback((clientY: number) => {
     const el = barRef.current;
     if (!el) return 0;
     const r = el.getBoundingClientRect();
-    // Bawah bar = 0, atas = 1.
-    const t = (r.bottom - clientY) / r.height;
+    // Atas bar = 0, bawah = 1 — menarik ke bawah seperti menarik stik ke
+    // belakang sebelum menembak.
+    const t = (clientY - r.top) / r.height;
     return Math.max(0, Math.min(1, t));
   }, []);
 
@@ -104,6 +107,8 @@ export default function BilliardHUD() {
   rotRef.current = tableRotated;
   const cueScreenRef = useRef(cueScreen);
   cueScreenRef.current = cueScreen;
+  const ballInHandRef = useRef(ballInHand);
+  ballInHandRef.current = ballInHand;
 
   useEffect(() => {
     if (!active || !aiming) return;
@@ -125,6 +130,19 @@ export default function BilliardHUD() {
     const down = (e: PointerEvent) => {
       // Abaikan kalau yang disentuh elemen HUD (bar tenaga, tombol).
       if ((e.target as HTMLElement)?.closest?.("[data-hud]")) return;
+      // Saat free ball, area sekitar bola putih milik drag-pindah-bola
+      // (ditangani bidang raycast di BilliardGame) — aim tidak boleh ikut
+      // berputar saat bolanya digeser. Radius 48 px sengaja LEBIH BESAR dari
+      // radius genggam bola (CUE_GRAB_R ≈ 0,063 m ≈ 42 px) supaya tidak ada
+      // cincin tempat keduanya aktif berbarengan.
+      if (ballInHandRef.current) {
+        const c = cueScreenRef.current;
+        if (c) {
+          const dx = e.clientX - c.x;
+          const dy = e.clientY - c.y;
+          if (dx * dx + dy * dy < 48 * 48) return;
+        }
+      }
       const a = angleAt(e);
       if (a === null) return;
       grab = { pointer: a, aim: aimRef.current };
@@ -193,7 +211,7 @@ export default function BilliardHUD() {
         data-hud
         className="fixed left-6 top-1/2 z-30 flex -translate-y-1/2 flex-col items-center gap-3 select-none"
       >
-        <span className="text-[9px] uppercase tracking-[1.5px] text-white/40">
+        <span className="text-[10px] uppercase tracking-[1.5px] text-white/80">
           Power
         </span>
 
@@ -206,23 +224,36 @@ export default function BilliardHUD() {
             setShotPower(powerFromEvent(e.clientY));
           }}
           className={[
-            "relative h-48 w-8 touch-none rounded-full border border-white/10 bg-white/5",
+            "relative h-48 w-8 touch-none rounded-full border border-white/25 bg-black/50",
             aiming ? "cursor-grab active:cursor-grabbing" : "opacity-30",
           ].join(" ")}
         >
-          {/* isian */}
+          {/* Isian tumbuh dari ATAS ke bawah mengikuti tarikan. Gradasinya
+              hijau → orange → merah, dipatok setinggi bar penuh dan
+              dijangkarkan ke atas, lalu terpotong oleh tinggi isian — jadi
+              merah hanya tampak saat tarikan mendekati 100%.
+
+              TANPA transition: garis pegangan mengikuti pointer mentah, dan
+              transisi 75ms di sini membuat warnanya terseret telat di
+              belakang garis. */}
           <div
-            className="absolute inset-x-0 bottom-0 rounded-full bg-orange-500 transition-[height] duration-75"
-            style={{ height: `${pct}%` }}
+            className="absolute inset-x-0 top-0 rounded-full"
+            style={{
+              height: `${pct}%`,
+              backgroundImage:
+                "linear-gradient(to bottom, #22c55e 0%, #f97316 60%, #ef4444 100%)",
+              backgroundSize: "100% 12rem",
+              backgroundPosition: "top",
+            }}
           />
           {/* pegangan */}
           <div
             className="absolute inset-x-[-3px] h-[2px] rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.6)]"
-            style={{ bottom: `calc(${pct}% - 1px)` }}
+            style={{ top: `calc(${pct}% - 1px)` }}
           />
         </div>
 
-        <span className="font-mono text-[10px] tabular-nums text-white/50">
+        <span className="font-mono text-[11px] tabular-nums text-white/80">
           {pct}%
         </span>
       </div>
@@ -232,22 +263,26 @@ export default function BilliardHUD() {
         data-hud
         className="fixed bottom-8 right-6 z-30 flex flex-col items-end gap-3"
       >
-        <p className="text-[9px] uppercase tracking-[1.5px] text-white/40">
+        <p className="text-[10px] uppercase tracking-[1.5px] text-white/80">
           {pocketed}/15 pocketed
         </p>
-        <p className="text-[9px] uppercase tracking-[1.5px] text-white/25">
-          {aiming ? "Drag to aim · pull bar to shoot" : "…"}
+        <p className="text-[10px] uppercase tracking-[1.5px] text-white/60">
+          {aiming
+            ? ballInHand
+              ? "Free ball — drag it inside the zone · drag elsewhere to aim"
+              : "Drag to aim · pull bar to shoot"
+            : "…"}
         </p>
         <div className="flex gap-2">
           <button
             onClick={() => billiard?.reset()}
-            className="rounded-full border border-white/10 px-4 py-1.5 text-[10px] uppercase tracking-[1.5px] text-white/60 transition-colors hover:border-white/25 hover:text-white"
+            className="rounded-full border border-white/30 bg-black/50 px-5 py-2 text-[11px] uppercase tracking-[1.5px] text-white/90 backdrop-blur-sm transition-colors hover:border-white hover:bg-white hover:text-black"
           >
             Reset
           </button>
           <button
             onClick={exit}
-            className="rounded-full border border-white/10 px-4 py-1.5 text-[10px] uppercase tracking-[1.5px] text-white/60 transition-colors hover:border-white/25 hover:text-white"
+            className="rounded-full border border-white/30 bg-black/50 px-5 py-2 text-[11px] uppercase tracking-[1.5px] text-white/90 backdrop-blur-sm transition-colors hover:border-white hover:bg-white hover:text-black"
           >
             Exit
           </button>

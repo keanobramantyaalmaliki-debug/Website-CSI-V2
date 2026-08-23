@@ -416,6 +416,22 @@ function StairSpiral({
         photoMat.opacity = p;
         photoMesh.visible = p > 0.02 && photoMat.map !== null;
       }
+
+      // Plank dalam transit fokus WAJIB jadi lapisan teratas (revisi Keano
+      // 23 Agu: saat terbang ia sempat "menyelam" di balik plank yang
+      // dilewatinya sebelum mereka fadeout). depthTest dimatikan + renderOrder
+      // dinaikkan selama progress hidup, dipulihkan begitu duduk lagi di
+      // spiral. Plank TERPILIH diberi order di atas plank yang sedang
+      // mengalir pulang (dua-duanya bisa transit bersamaan saat pindah
+      // fokus cepat); foto anak selalu +1 di atas plank pembawanya.
+      const lifted = p > 0.02;
+      const order = lifted ? (selected === i ? 20 : 10) : 0;
+      mesh.renderOrder = order;
+      mat.depthTest = !lifted;
+      if (photoMesh && photoMat) {
+        photoMesh.renderOrder = order + 1;
+        photoMat.depthTest = !lifted;
+      }
     }
 
     // Blob bayangan ikut memudar — bayangan three tidak mengenal opacity
@@ -551,6 +567,15 @@ export default function IndustriesStack({
           onPointerMissed={() => setSelected(null)}
           gl={{ antialias: false, powerPreference: "high-performance", alpha: true }}
           style={{ width: "100%", height: "100%" }}
+          /* GOTCHA "plank telat 2-3 dtk" (23 Agu): canvas ini SELALU mount di
+             tengah scroll (inView), dan react-use-measure bawaan <Canvas>
+             melewatkan ResizeObserver + scroll lewat SATU debounce 50ms yang
+             sama — tiap event scroll me-reset timernya, jadi selama Lenis
+             masih meluncur ukuran container tidak pernah keluar, R3F menahan
+             pembuatan root + konteks WebGL, dan strip tampil kosong sampai
+             scroll benar-benar diam. scroll:false melepas listener scroll-nya;
+             rect posisi memang tidak dipakai (pointer R3F pakai offsetX/Y). */
+          resize={{ scroll: false, debounce: { scroll: 50, resize: 0 } }}
         >
           <Suspense fallback={null}>
             <CameraRig />

@@ -1,13 +1,22 @@
 "use client";
 
 import { forwardRef, useCallback, useEffect, useMemo, useRef } from "react";
-import { useFrame, useThree } from "@react-three/fiber";
+import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { Vec3 } from "cannon-es";
 import { DirectionalLight, Group, Mesh, Vector3 } from "three";
 import { useSceneStore } from "@/lib/store/sceneStore";
 import { useBallMeshes, CUE } from "./Balls";
 import Cue from "./Cue";
-import { BOUNDS, FELT, HEAD_SPOT, BALL_Y, startPositions } from "./table";
+import {
+  BALL_R,
+  BOUNDS,
+  FELT,
+  HEAD_SPOT,
+  BALL_Y,
+  KITCHEN_Z0,
+  clampFreeBall,
+  startPositions,
+} from "./table";
 import {
   BALL_MASS,
   aimDistance,
@@ -81,6 +90,17 @@ const REST_SPEED = 0.01;
  */
 const SETTLE_DELAY = 0.4;
 
+/**
+ * Radius genggam free ball (meter, di bidang XZ). Tekanan yang jatuh lebih
+ * dekat dari ini ke bola putih dianggap "pegang bola", sisanya tetap jadi
+ * geser-membidik.
+ *
+ * ⚠️ Harus LEBIH KECIL dari zona mati aim di BilliardHUD (48 px layar ≈
+ * 0,07 m pada kamera billiard standar). Kalau lebih besar, ada cincin tempat
+ * KEDUANYA aktif: bola ikut pointer sambil stik berputar.
+ */
+const CUE_GRAB_R = BALL_R * 2.2;
+
 export default function BilliardGame() {
   const active = useSceneStore((s) => s.billiardActive);
   const phase = useSceneStore((s) => s.billiardPhase);
@@ -89,6 +109,8 @@ export default function BilliardGame() {
   const setPocketed = useSceneStore((s) => s.setPocketed);
   const registerBilliard = useSceneStore((s) => s.registerBilliard);
   const setCueScreen = useSceneStore((s) => s.setCueScreen);
+  const ballInHand = useSceneStore((s) => s.ballInHand);
+  const setBallInHand = useSceneStore((s) => s.setBallInHand);
 
   const meshes = useBallMeshes();
   const aimGroup = useRef<Group>(null);
@@ -164,9 +186,11 @@ export default function BilliardGame() {
       // akan memberi spin, dan itu justru membuat arah bola sulit ditebak.
       cue.applyImpulse(new Vec3(dir.x * mag, 0, dir.z * mag));
       settle.current = 0;
+      // Tembakan pertama mengunci posisi bola — free ball selesai.
+      setBallInHand(false);
       setPhase("rolling");
     },
-    [aimAngle, setPhase],
+    [aimAngle, setPhase, setBallInHand],
   );
 
   const reset = useCallback(() => {
@@ -191,8 +215,9 @@ export default function BilliardGame() {
       const b = s?.balls[i];
       if (b) m.position.set(b.position.x, b.position.y, b.position.z);
     });
+    setBallInHand(true);
     setPhase("aiming");
-  }, [meshes, setPhase, setPocketed]);
+  }, [meshes, setPhase, setPocketed, setBallInHand]);
 
   useEffect(() => {
     registerBilliard({ shoot, reset });
@@ -374,12 +399,14 @@ export default function BilliardGame() {
       const count = pocketed.current.filter(Boolean).length;
       setPocketed(count);
 
-      // Bola putih masuk lubang → dikembalikan ke head spot, permainan lanjut.
+      // Bola putih masuk lubang → dikembalikan ke head spot sebagai FREE BALL:
+      // pemain boleh menggesernya di zona kitchen sebelum menembak lagi.
       if (cueWentIn && cue) {
         placeBall(cue, [HEAD_SPOT[0], BALL_Y, HEAD_SPOT[2]]);
         restoreBall(s.world, cue);
         const cm = meshes[CUE];
         if (cm) cm.visible = true;
+        setBallInHand(true);
       }
 
       // Semua 15 bola habis → tata ulang otomatis supaya pemain bisa langsung
@@ -400,9 +427,104 @@ export default function BilliardGame() {
   // lantai sebelah meja sepanjang tur.
   const aiming = active && phase === "aiming";
 
+  // ── Free ball: geser bola putih di zona kitchen ─────────────────────────
+  //
+  // Drag ditangkap bidang raycast tak terlihat di atas felt (bukan listener
+  // window seperti aim di HUD): `e.point` langsung memberi posisi DUNIA di
+  // bidang meja, tanpa perlu unproject manual dari piksel. Genggaman hanya
+  // dimulai kalau tekanan jatuh dekat bola putih — sisanya dibiarkan lolos
+  // supaya geser-membidik milik HUD tetap jalan di atas felt.
+  const draggingCue = useRef(false);
+
+  const beginCueDrag = useCallback((e: ThreeEvent<PointerEvent>) => {
+    const cue = sim.current?.balls[CUE];
+    if (!cue) return;
+    const dx = e.point.x - cue.position.x;
+    const dz = e.point.z - cue.position.z;
+    if (dx * dx + dz * dz > CUE_GRAB_R * CUE_GRAB_R) return;
+    draggingCue.current = true;
+    // Capture: pointer yang keluar dari bidang (mis. tarikan cepat melewati
+    // bantalan) tetap mengalirkan move/up ke sini, tidak nyangkut di tengah.
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    e.stopPropagation();
+  }, []);
+
+  const moveCueDrag = useCallback((e: ThreeEvent<PointerEvent>) => {
+    if (!draggingCue.current) return;
+    const s = sim.current;
+    const cue = s?.balls[CUE];
+    if (!s || !cue) return;
+
+    const [x, z] = clampFreeBall(e.point.x, e.point.z);
+
+    // Jangan taruh menimpa bola lain: posisi yang tumpang tindih DIABAIKAN
+    // (bola berhenti di posisi sah terakhir), bukan didorong solver — solver
+    // yang menyelesaikan dua bola saling tembus akan meledakkannya keluar.
+    const minD2 = (BALL_R * 2 + 0.001) ** 2;
+    for (let i = 1; i < s.balls.length; i++) {
+      if (pocketed.current[i] || pending.current.has(i)) continue;
+      const b = s.balls[i];
+      if (!b) continue;
+      const ddx = b.position.x - x;
+      const ddz = b.position.z - z;
+      if (ddx * ddx + ddz * ddz < minD2) return;
+    }
+
+    placeBall(cue, [x, BALL_Y, z]);
+  }, []);
+
+  const endCueDrag = useCallback(() => {
+    draggingCue.current = false;
+  }, []);
+
+  const freeBall = aiming && ballInHand;
+
   return (
     <>
       <BilliardLights meshes={meshes} />
+      {freeBall && (
+        <group>
+          {/* Bidang tangkap drag — tak terlihat (raycast three tidak peduli
+              visible), sedikit lebih luas dari felt supaya tarikan yang
+              melewati bantalan tetap terbaca lalu dijepit clampFreeBall. */}
+          <mesh
+            position={[
+              (FELT.x0 + FELT.x1) / 2,
+              FELT.y + 0.002,
+              (FELT.z0 + FELT.z1) / 2,
+            ]}
+            rotation-x={-Math.PI / 2}
+            visible={false}
+            onPointerDown={beginCueDrag}
+            onPointerMove={moveCueDrag}
+            onPointerUp={endCueDrag}
+            onPointerCancel={endCueDrag}
+          >
+            <planeGeometry
+              args={[FELT.x1 - FELT.x0 + 0.6, FELT.z1 - FELT.z0 + 0.6]}
+            />
+          </mesh>
+
+          {/* Garis batas zona kitchen (head string) — penanda "sampai mana
+              bola boleh digeser". Sorotan bidang zona pernah ada dan DICABUT
+              atas permintaan Keano: mewarnai 35% meja terlalu ramai, garis
+              saja sudah cukup terbaca. */}
+          <mesh
+            position={[(FELT.x0 + FELT.x1) / 2, FELT.y + 0.0015, KITCHEN_Z0]}
+            rotation-x={-Math.PI / 2}
+            renderOrder={2}
+          >
+            <planeGeometry args={[FELT.x1 - FELT.x0, 0.006]} />
+            <meshBasicMaterial
+              color="#ffffff"
+              transparent
+              opacity={0.4}
+              toneMapped={false}
+              depthWrite={false}
+            />
+          </mesh>
+        </group>
+      )}
       {meshes.map((m, i) =>
         m ? <primitive key={i} object={m} /> : null,
       )}
