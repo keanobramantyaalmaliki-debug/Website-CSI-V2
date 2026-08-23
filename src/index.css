@@ -252,14 +252,3 @@ body {
   }
 }
 
-/* Marquee (Industries) — dulunya tween motion/react `repeat: Infinity`, yang
-   terus berdetak di rAF walau strip-nya jauh di luar viewport (ikut membuat
-   laptop panas, audit 3 Agu 2026). Sebagai CSS animation ia dijalankan
-   compositor, dan Marquee.tsx mem-pause-nya via `animation-play-state` saat
-   off-screen — resume mulus dari posisi terakhir, bukan restart.
-   Konten dirender dua kali, jadi -50% = tepat satu putaran konten asli. */
-@keyframes marquee-scroll {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-
