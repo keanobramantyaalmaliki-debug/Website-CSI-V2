@@ -18,8 +18,9 @@ import {
  * begitu semua hook `useScroll` di bawah tidak pernah berjalan di desktop, jadi
  * jalur mouse tetap murni CSS tanpa listener tambahan.
  *
- * Kecerahan mengikuti posisi kartu di viewport: paling terang saat kartu berada
- * di tengah layar, meredup lagi di tepi — meniru "hidup"-nya hover yang kontinu.
+ * Kecerahan mengikuti posisi kartu di viewport: foto tampil PENUH (opacity 1,
+ * setara `group-hover:opacity-100` di jalur mouse — disamakan 24 Agu) saat
+ * kartu berada di tengah layar, meredup lagi ke 0.4 di tepi — meniru "hidup"-nya hover yang kontinu.
  * Di bawah prefers-reduced-motion, crossfade opacity/grayscale tetap (sama
  * seperti hover desktop yang juga tetap beranimasi), hanya zoom yang dimatikan.
  */
@@ -40,7 +41,7 @@ export default function DeploymentRevealImage({
 
   // Segitiga: redup di kedua tepi (0), memuncak ke 1 saat kartu di tengah.
   const reveal = useTransform(scrollYProgress, [0.15, 0.5, 0.85], [0, 1, 0]);
-  const opacity = useTransform(reveal, [0, 1], [0.4, 0.72]);
+  const opacity = useTransform(reveal, [0, 1], [0.4, 1]);
   const grayscale = useTransform(reveal, [0, 1], [1, 0]);
   const filter = useMotionTemplate`grayscale(${grayscale})`;
   const scale = useTransform(reveal, [0, 1], [1, reduced ? 1 : 1.03]);

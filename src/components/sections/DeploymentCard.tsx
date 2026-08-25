@@ -47,7 +47,7 @@ export default function DeploymentCard({ d }: { d: DeploymentData }) {
           src={image}
           alt=""
           loading="lazy"
-          className={`absolute inset-0 h-full w-full object-cover opacity-40 grayscale transition-[filter,opacity,transform] duration-500 group-hover:opacity-70 group-hover:grayscale-0 ${reduced ? "" : "group-hover:scale-[1.03]"}`}
+          className={`absolute inset-0 h-full w-full object-cover opacity-40 grayscale transition-[filter,opacity,transform] duration-500 group-hover:opacity-100 group-hover:grayscale-0 ${reduced ? "" : "group-hover:scale-[1.03]"}`}
         />
       )}
 

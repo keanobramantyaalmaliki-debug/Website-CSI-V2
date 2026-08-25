@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "motion/react";
-import AwardsShowcase from "@/components/sections/AwardsShowcase";
 import TestimonialSpotlight from "@/components/sections/TestimonialSpotlight";
 import LineMask from "@/components/motion/LineMask";
 import ServicesTicker from "@/components/canvas/ServicesTicker";
@@ -127,12 +126,6 @@ export default function Office() {
           per baris + panah prev/next). Isi masih placeholder fiktif —
           lihat TODO(content) di TestimonialSpotlight.tsx. */}
       <TestimonialSpotlight />
-
-      {/* Recognition strip — dummy award entries so the layout reads as
-          filled content during review; names are placeholder labels, not
-          real recognitions.
-          TODO(content): replace with real award/recognition list, if any. */}
-      <AwardsShowcase />
 
     </section>
   );

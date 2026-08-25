@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render } from "@testing-library/react";
 import Deployments from "./Deployments";
 
@@ -8,7 +8,14 @@ class IntersectionObserverStub {
   unobserve() {}
   disconnect() {}
 }
-vi.stubGlobal("IntersectionObserver", IntersectionObserverStub);
+// Dipasang ulang per test, BUKAN sekali saat modul dimuat: `afterEach` di bawah
+// memanggil `vi.unstubAllGlobals()`, jadi stub sekali-pasang ikut tersapu dan
+// test kedua kehilangan IntersectionObserver. Dulu tak ketahuan karena pohon
+// Deployments kebetulan belum menyentuh useInView di jalur itu; begitu heading
+// physics diganti <LineMask> (24 Agu) ia langsung meledak.
+beforeEach(() => {
+  vi.stubGlobal("IntersectionObserver", IntersectionObserverStub);
+});
 
 vi.mock("@/lib/smoothScroll", () => ({ scrollToSection: vi.fn() }));
 

@@ -88,7 +88,7 @@ describe("Office", () => {
   });
 
   // CTA "Talk to us" dicabut 20 Agu bersama panel stat — section ini ditutup
-  // AwardsShowcase, tanpa tombol.
+  // TestimonialSpotlight, tanpa tombol.
   it("does not render the removed Talk to us CTA", () => {
     render(
       <MemoryRouter>
@@ -109,18 +109,6 @@ describe("Office", () => {
     // TestimonialSpotlight.test.tsx.
     expect(screen.getAllByText(/cogniti rebuilt the systems/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/ratna wijaya/i).length).toBeGreaterThan(0);
-  });
-
-  it("renders the founder recognition section", () => {
-    render(
-      <MemoryRouter>
-        <Office />
-      </MemoryRouter>,
-    );
-    // Konten founder-section v1, dihidupkan 20 Agu menggantikan daftar award
-    // fiktif (label "Recognition"-nya ikut dicabut) — detailnya diuji di
-    // AwardsShowcase.test.tsx.
-    expect(screen.getAllByText("Fami Maliki").length).toBeGreaterThan(0);
   });
 
   it("no longer hotlinks Unsplash photos (accordion thumbnails removed with the ticker redesign)", () => {

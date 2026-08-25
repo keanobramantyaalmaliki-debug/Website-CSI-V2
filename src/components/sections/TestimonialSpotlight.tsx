@@ -102,7 +102,14 @@ export default function TestimonialSpotlight() {
 
   return (
     <motion.div
-      className="my-28 sm:my-40"
+      /* Jarak ATAS saja (`mt-*`, bukan `my-*`). Sejak AwardsShowcase dicabut
+         24 Agu blok ini jadi anak terakhir <Office/>, dan margin-bawahnya
+         menumpuk di atas `pb-24 sm:pb-32` section + `pt-24 sm:pt-32` Contact
+         — terukur 280px ke wordmark, sementara ruangan lain (/work 112px,
+         /people 128px) menutup dengan padding section saja. Aturannya di
+         situs ini: anak terakhir sebuah section ber-margin-bawah nol, jarak
+         ke Contact milik section-nya. */
+      className="mt-28 sm:mt-40"
       initial={{ opacity: 0, y: 8 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}

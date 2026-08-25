@@ -2,7 +2,7 @@
 
 import DeploymentCard, { type DeploymentData } from "@/components/sections/DeploymentCard";
 import DeploymentCta from "@/components/sections/DeploymentCta";
-import PhysicsHeading from "@/components/motion/PhysicsHeading";
+import LineMask from "@/components/motion/LineMask";
 import { FadeUpList } from "@/components/motion/FadeUp";
 
 const DEPLOYMENTS: DeploymentData[] = [
@@ -51,14 +51,19 @@ export default function Deployments() {
          `.ambient-grid`) sudah cukup — jangan pasang wash di sini lagi. */
       className="relative overflow-x-clip px-3 py-24 sm:py-32"
     >
-      {/* T1: physics heading — click to fall, leave/release to spring back.
+      {/* T1 — heading diam dengan line-mask reveal, idiom yang sama dengan
+          h2 pembuka section lain.
 
-          Eyebrow "DEPLOYMENTS" DIHAPUS 18 Agu — judulnya sudah menyebut isinya
-          sendiri, dan labelnya cuma mengulang nama section. */}
-      <PhysicsHeading
-        text="Built for real-world environments where decisions matter."
-        className="relative max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl"
-      />
+          Dulu <PhysicsHeading>: tiap kata jadi rigid body matter-js dan
+          berjatuhan saat kursor masuk. DICABUT 24 Agu atas permintaan Keano —
+          bentuk ini persis cabang `prefers-reduced-motion` komponen itu, jadi
+          tampilan diamnya tidak berubah sedikit pun. Eyebrow "DEPLOYMENTS"
+          sudah dihapus lebih dulu 18 Agu (judulnya menyebut isinya sendiri). */}
+      <h2 className="relative max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
+        <LineMask>
+          Built for real-world environments where decisions matter.
+        </LineMask>
+      </h2>
 
       {/* Deployment cards with stagger entrance */}
       <FadeUpList className="relative mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
