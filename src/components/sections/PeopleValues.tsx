@@ -115,7 +115,7 @@ export default function PeopleValues() {
   return (
     <section
       id="people-values"
-      className="overflow-x-clip py-24"
+      className="section-shell overflow-x-clip py-24"
       aria-label="What We Stand For"
     >
       {/* Pembungkus label + daftar = containing block sticky-nya label, jadi

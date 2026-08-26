@@ -76,7 +76,7 @@ export default function Office() {
          section pertama tiap ruangan, lihat CsiHero.tsx). Dulu `pt-6` di HP
          dan `md:pt-32` (128px) di desktop; 128px itu terbaca mengambang jauh
          dari kantor, dicabut 18 Agu. */
-      className="relative z-10 px-3 pt-3 pb-24 sm:pb-32"
+      className="section-shell relative z-10 px-3 pt-3 pb-24 sm:pb-32"
     >
       <div>
         {/* T1 — line-mask heading. Ukuran font & lebar maksimum MENYAMAI h2

@@ -141,6 +141,23 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Kolom konten situs (QC zoom-out 26 Agu). Section teks/grid dulu melar
+   selebar viewport — di monitor lebar & saat browser di-zoom-out (viewport
+   CSS membengkak) kartu dan heading ikut molor dari tepi ke tepi, sementara
+   acuan look-nya (basement.studio) menahan konten di kolom terpusat.
+   1600px = plafon yang SUDAH dipakai teks Vision — di viewport ≤1600px
+   (termasuk 1440 milik Keano di zoom 100%) utility ini tidak mengubah
+   satu piksel pun.
+
+   SENGAJA tidak dipakai oleh: hero 3D, strip Industries, dan <Contact/>
+   (wordmark COGNITI.ID memang dari tepi ke tepi, seperti wordmark footer
+   basement) — full-bleed di sana adalah desain, bukan kebocoran. */
+@utility section-shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1600px;
+}
+
 /* Ambient depth layer — ultra-subtle grid, GPU-safe, fixed & non-interactive.
    Radial mask fades it toward edges so it reads as atmosphere, not a wireframe. */
 .ambient-grid {

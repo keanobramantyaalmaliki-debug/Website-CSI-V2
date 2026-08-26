@@ -18,6 +18,7 @@ import { useGatedFrameloop } from "./FrameloopGate";
 import IdleFrameCap from "./IdleFrameCap";
 import AdaptiveDprDriver from "./AdaptiveDprDriver";
 import { DPR_LADDER, loadLadderIndex } from "./adaptiveDpr";
+import { useZoomOutFactor } from "./zoomDpr";
 
 // Posisi awal kamera. DIAMBIL dari VIEWS[START_ROOM], bukan angka yang ditulis
 // ulang: sebelumnya di sini ada tuple hardcode [-6.0, 1.6, 4.0] yang bahkan
@@ -117,11 +118,19 @@ export default function Scene() {
   const [dpr, setDpr] = useState(
     () => DPR_OVERRIDE ?? DPR_LADDER[loadLadderIndex()],
   );
+  // Jepitan zoom-out (QC 26 Agu, rincian di zoomDpr.ts): dpr R3F = rasio
+  // terhadap ukuran CSS, jadi saat browser di-zoom-out (devicePixelRatio<1,
+  // viewport CSS membesar) tangga di atas diam-diam merender 4–9× piksel.
+  // Faktornya mengalikan HASIL tangga di prop — termostat AdaptiveDpr tetap
+  // mengemudikan tangganya sendiri, tidak tahu-menahu soal zoom. Override
+  // ?dpr= TIDAK ikut dikalikan: angka yang sedang di-A/B harus terpasang
+  // apa adanya.
+  const zoomFactor = useZoomOutFactor();
   return (
     <Canvas
       frameloop={frameloop}
       camera={{ position: START_POS, fov: 60, near: 0.05, far: 120 }}
-      dpr={dpr}
+      dpr={DPR_OVERRIDE !== null ? dpr : dpr * zoomFactor}
       // antialias: false — dan ini BUKAN bagian dari uji MSAA di bawah.
       // Terukur terpisah: dengan multisampling 8 tetap menyala, mengubah flag
       // ini true→false TIDAK mengubah frame time sama sekali (33,3 ms

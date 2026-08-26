@@ -13,7 +13,7 @@ export default function MeetingLead() {
          padding-atasnya 12px (`pt-3`) di semua lebar — sama dengan gutter
          `px-3` dan sama dengan tiga ruangan lain (aturan padding-tipis, lihat
          CsiHero.tsx). Dulu `pt-6` di HP dan `md:pt-28` (112px) di desktop. */
-      className="relative z-10 border-b border-white/[0.06] px-3 pt-3 pb-20 sm:pb-28"
+      className="section-shell relative z-10 border-b border-white/[0.06] px-3 pt-3 pb-20 sm:pb-28"
     >
       <div>
         {/* Ukuran heading & subtext mengikuti CsiHero (home page) persis —

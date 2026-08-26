@@ -521,7 +521,13 @@ export default function Contact() {
           di situ blok ini boleh melebihi jatahnya dan wordmark naik ke balik
           navbar — mengorbankan pemandangan yang cuma terlihat di ujung gulir,
           bukan laptop yang harus tetap bisa dipakai. */}
-      <div className="flex min-h-[520px] flex-col [height:calc(100svh-var(--nav-h)-10px)]">
+      {/* `section-shell` menyusul 26 Agu (QC zoom-out): semula section ini
+          sengaja full-bleed demi wordmark tepi-ke-tepi ala footer basement,
+          tapi SVG `w-full` justru membesar bersama viewport saat browser
+          di-zoom-out — satu-satunya blok halaman yang terlihat tidak ikut
+          mengecil. Di viewport ≤1600px (semua layar biasa pada zoom 100%)
+          shell tidak mengubah apa pun; wordmark tetap terasa full-bleed. */}
+      <div className="section-shell flex min-h-[520px] flex-col [height:calc(100svh-var(--nav-h)-10px)]">
         {/* Kepala section kembali — tapi sebagai TANDA, bukan teks. Yang dihapus
           13 Agu (lihat catatan di atas) adalah judul + subjudul yang mengulang
           isi form; wordmark ini tidak mengulang apa pun, ia cuma menutup

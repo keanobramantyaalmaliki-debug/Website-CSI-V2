@@ -468,7 +468,7 @@ export default function Process() {
   });
 
   return (
-    <section id="process" className="overflow-x-clip px-3 pt-24 sm:pt-32">
+    <section id="process" className="section-shell overflow-x-clip px-3 pt-24 sm:pt-32">
       {/* T6 — eyebrow; ref = patokan titik start tali (30px di atasnya) */}
       <motion.p
         ref={eyebrowRef}

@@ -160,8 +160,12 @@ describe("penyambungan tetap utuh (pemeriksaan teks)", () => {
   });
 
   it("prop dpr Canvas datang dari state React, bukan konstanta", () => {
+    // Sejak jepitan zoom-out (26 Agu, zoomDpr.ts) prop-nya bukan `dpr={dpr}`
+    // polos lagi: tangga (state) dikalikan faktor zoom, dan override ?dpr=
+    // dipasang apa adanya. Yang dijaga di sini tetap sama — nilai dasarnya
+    // state React `dpr`, bukan konstanta / setDpr() imperatif.
     expect(
-      scene.includes("dpr={dpr}") && scene.includes("useState"),
+      /dpr=\{[^}]*\bdpr\b[^}]*\}/.test(scene) && scene.includes("useState"),
       `Prop dpr di <Canvas> Scene.tsx tidak lagi dikemudikan state React. ` +
         `setDpr() imperatif akan ditimpa sync prop R3F tiap re-render — ` +
         `pelajaran yang sama dengan FrameloopGate (terukur gagal 4 Agu).\n`,

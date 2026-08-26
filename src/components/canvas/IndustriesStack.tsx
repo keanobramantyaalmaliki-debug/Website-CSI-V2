@@ -20,6 +20,7 @@ import {
 } from "three";
 import type { Industry } from "@/data/industries";
 import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
+import { useZoomAwareDpr } from "./zoomDpr";
 import { cn } from "@/lib/utils";
 
 /**
@@ -162,7 +163,19 @@ function CameraRig() {
     const aspect = size.width / size.height;
     const k =
       aspect >= WIDE_ASPECT ? 1 : Math.min(WIDE_ASPECT / aspect, MAX_PULLBACK);
-    camera.position.set(CAM_POS[0] * k, CAM_POS[1] * k, CAM_POS[2] * k);
+    /* Mundur kedua (QC zoom-out 26 Agu): fov vertikal memetakan dunia ke
+       SELURUH tinggi canvas, jadi canvas yang lebih tinggi dari tinggi
+       desain (765 = 85svh pada viewport 900px) menggambar tumpukan LEBIH
+       BESAR dalam px CSS — saat browser di-zoom-out stack terlihat tidak
+       ikut mengecil walau strip sudah di-max-h. Faktor ini membuat ukuran
+       CSS stack konstan di atas 765px (ikut max-h-[900px], mundurnya
+       mentok 900/765 ≈ 1,18). Canvas ≤765px (laptop, HP) tidak tersentuh;
+       yang ikut terkena cuma monitor tinggi & iPad potret (kena cap 900
+       juga), keduanya sejalan filosofi section-shell. Mode fokus aman:
+       kartu fokus diukur DARI kamera (F.dist), bukan dari origin. */
+    const kh = Math.max(1, size.height / 765);
+    const kk = k * kh;
+    camera.position.set(CAM_POS[0] * kk, CAM_POS[1] * kk, CAM_POS[2] * kk);
     camera.lookAt(0, 0, 0);
     invalidate();
   }, [camera, size, invalidate]);
@@ -525,6 +538,11 @@ export default function IndustriesStack({
   const wrapRef = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion() ?? false;
   const coarse = useCoarsePointer();
+  /* Dulu `dpr={[1, 1.5]}` — lantai 1 membuat buffer meledak saat browser
+     di-zoom-out (devicePixelRatio<1, viewport CSS membesar); rincian &
+     jepitannya di zoomDpr.ts. Di zoom ≥100% nilainya identik dengan rentang
+     lama. */
+  const dpr = useZoomAwareDpr(1, 1.5);
   /* Canvas baru di-mount saat strip mendekati viewport — konteks WebGL +
      shadow map tidak ikut membebani load awal halaman. */
   const inView = useInView(wrapRef, { once: true, margin: "600px 0px" });
@@ -554,7 +572,14 @@ export default function IndustriesStack({
       data-testid="industries-stack"
       aria-hidden="true"
       className={cn(
-        "relative h-[85svh] min-h-[520px] w-full touch-pan-y select-none overflow-hidden bg-zinc-50",
+        /* `max-h-[900px]` = padanan vertikal `section-shell` (QC zoom-out 26
+           Agu): tinggi `svh` ikut MEMBESAR saat browser di-zoom-out (viewport
+           CSS melebar), dan karena fov three.js vertikal, tumpukan plank ikut
+           membesar — strip terlihat "tidak ikut zoom". Plafon px menghentikan
+           itu tanpa menyentuh layar biasa: 85svh baru melewati 900px pada
+           viewport >1059px CSS (lebih tinggi dari laptop & 1080p). Latar putih
+           tetap full-bleed; yang dijepit cuma tingginya. */
+        "relative h-[85svh] max-h-[900px] min-h-[520px] w-full touch-pan-y select-none overflow-hidden bg-zinc-50",
         className,
       )}
     >
@@ -562,7 +587,7 @@ export default function IndustriesStack({
         <Canvas
           frameloop="demand"
           shadows
-          dpr={[1, 1.5]}
+          dpr={dpr}
           camera={{ position: CAM_POS, fov: CAM_FOV }}
           onPointerMissed={() => setSelected(null)}
           gl={{ antialias: false, powerPreference: "high-performance", alpha: true }}

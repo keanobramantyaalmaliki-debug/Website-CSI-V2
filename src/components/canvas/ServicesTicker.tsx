@@ -7,6 +7,7 @@ import { useReducedMotion } from "motion/react";
 import { Color, MathUtils, type Group, type Mesh, type MeshBasicMaterial } from "three";
 import geistSemiBold from "@fontsource/geist-sans/files/geist-sans-latin-600-normal.woff";
 import { beltX, motionIntensity } from "./servicesBelt";
+import { useZoomAwareDpr } from "./zoomDpr";
 import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 
 /**
@@ -227,6 +228,11 @@ export default function ServicesTicker({
      perangkat ber-mouse diajak scroll — mengikuti penggerak utama
      masing-masing (lihat catatan wheel & drag di atas). */
   const coarse = useCoarsePointer();
+  /* Dulu `dpr={[1, 1.5]}` — lantai 1 membuat buffer meledak saat browser
+     di-zoom-out (devicePixelRatio<1, viewport CSS membesar); rincian &
+     jepitannya di zoomDpr.ts. Di zoom ≥100% nilainya identik dengan rentang
+     lama. */
+  const dpr = useZoomAwareDpr(1, 1.5);
 
   /**
    * Penyandera wheel — inti permintaan "kursor di dalam = geser item, kursor
@@ -303,11 +309,19 @@ export default function ServicesTicker({
     <div
       ref={wrapRef}
       aria-hidden="true"
-      className={`relative h-[45svh] min-h-[300px] sm:h-[70svh] sm:min-h-[420px] touch-pan-y select-none overflow-hidden rounded-3xl bg-zinc-50 ${className ?? ""}`}
+    /* `sm:max-h-[630px]` (QC zoom-out 26 Agu) = 70svh pada viewport desain
+       900px. Tinggi `svh` membesar bersama viewport CSS saat browser
+       di-zoom-out, dan ukuran teks troika ikut TINGGI panel (fontSize
+       di-cap `viewport.height * 0.17`, dipetakan ke tinggi CSS canvas) —
+       jadi panel yang lebarnya sudah dijepit section-shell tetap memuat
+       teks raksasa. Menjepit tingginya menjepit teksnya sekaligus. Cabang
+       HP (45svh) tidak diberi cap: browser-zoom-out urusan desktop, dan
+       menjepitnya mengubah tampilan iPad potret yang sudah disetujui. */
+      className={`relative h-[45svh] min-h-[300px] sm:h-[70svh] sm:max-h-[630px] sm:min-h-[420px] touch-pan-y select-none overflow-hidden rounded-3xl bg-zinc-50 ${className ?? ""}`}
     >
       <Canvas
         frameloop="demand"
-        dpr={[1, 1.5]}
+        dpr={dpr}
         camera={{ position: [0, 0, CAM_Z], fov: CAM_FOV }}
         gl={{ antialias: false, powerPreference: "high-performance", alpha: true }}
         style={{ width: "100%", height: "100%" }}

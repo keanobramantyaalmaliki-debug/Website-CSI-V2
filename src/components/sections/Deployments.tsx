@@ -49,7 +49,7 @@ export default function Deployments() {
          CsiHero dicabut, ia terbaca sebagai BALOK gelap dengan garis potong
          tegas persis di perbatasan dua section. Latar halaman (body +
          `.ambient-grid`) sudah cukup — jangan pasang wash di sini lagi. */
-      className="relative overflow-x-clip px-3 py-24 sm:py-32"
+      className="section-shell relative overflow-x-clip px-3 py-24 sm:py-32"
     >
       {/* T1 — heading diam dengan line-mask reveal, idiom yang sama dengan
           h2 pembuka section lain.

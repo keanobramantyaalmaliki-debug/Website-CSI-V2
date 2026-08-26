@@ -9,13 +9,33 @@ const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 export type CareerRole = {
   title: string;
-  /** "Full-time · Remote · Growth" — satu string utuh seperti di V1. */
-  meta: string;
+  /** Kolom "Type" tabel — departemen saja ("Engineering"). Lokasi sengaja
+   *  tidak ditampilkan, jadi jangan gabungkan lagi jadi satu string meta. */
+  type: string;
+  /** "closed" = baris abu-abu statis: bukan <button>, tanpa hover, tanpa
+   *  preview foto, tanpa accordion. Detailnya tidak dirender sama sekali. */
+  status: "open" | "closed";
   overview: string;
   skills: string[];
   /** Foto preview yang mengikuti kursor (desktop) / tampil di body (touch). */
   photo: string;
 };
+
+/**
+ * Satu grid dipakai bersama header tabel, baris open, dan baris closed —
+ * kalau ketiganya tidak memakai template yang PERSIS sama, kolom "Type"
+ * tidak lurus dengan judul kolomnya. Ubah di satu tempat ini saja.
+ *
+ * ⚠️ Kolom status WAJIB lebar TETAP, jangan dikembalikan ke `auto`. Tiap
+ * baris adalah grid TERPISAH (bukan satu <table>), jadi track `auto`
+ * diukur per-baris dari isinya sendiri: header kosong → 0px, "(closed)"
+ * → 54px, "(open) →" → 61px. Tiga lebar berbeda menggeser kolom Type ke
+ * tiga posisi x berbeda — persis keluhan "Type tidak sejajar" 26 Agu.
+ * 5rem = 80px, muat untuk isi terlebar (61px) dengan sisa aman; teks
+ * status di-nowrap supaya tidak pernah membungkus di dalamnya.
+ */
+const ROW_GRID =
+  "grid grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_5rem] items-baseline gap-x-4 px-[clamp(10px,1.4vw,26px)]";
 
 /**
  * Roles list gaya V1 (Website-CSI index.html §careers): baris bernomor dengan
@@ -38,19 +58,104 @@ export default function CareersRoles({ roles }: { roles: CareerRole[] }) {
 
   return (
     // Jarak dari headline diatur pembungkusnya di Careers.tsx (split 35/65).
-    <div className="divide-y divide-white/[0.08] border-y border-white/[0.08]">
-      {roles.map((role, i) => (
-        <RoleItem
-          key={role.title}
-          role={role}
-          index={i}
-          active={active === i}
-          dimmed={hasActive && active !== i}
-          hasActive={hasActive}
-          onToggle={() => setActive((cur) => (cur === i ? null : i))}
-        />
-      ))}
+    <div className="divide-y divide-white/[0.08] border-b border-white/[0.08]">
+      {/* Header tabel — divide-y pembungkus yang menggarisi bawahnya. */}
+      <div className={ROW_GRID + " py-3"} aria-hidden>
+        {/* Seukuran judul job (lihat RoleItem / ClosedRoleRow) — kalau
+            ukurannya diubah di sana, ubah di sini juga. */}
+        <span className="text-[17px] font-bold tracking-[-0.01em] text-zinc-500 sm:text-[clamp(17px,1.4vw,21px)]">
+          Role
+        </span>
+        <span className="text-[17px] font-bold tracking-[-0.01em] text-zinc-500 sm:text-[clamp(17px,1.4vw,21px)]">
+          Type
+        </span>
+        <span />
+      </div>
+
+      {roles.map((role, i) =>
+        role.status === "closed" ? (
+          // Cabang di SINI, bukan early-return di dalam RoleItem: RoleItem
+          // memanggil hook (preview pengikut kursor) yang tidak boleh
+          // dilewati secara kondisional.
+          <ClosedRoleRow
+            key={role.title}
+            role={role}
+            index={i}
+            dimmed={hasActive}
+          />
+        ) : (
+          <RoleItem
+            key={role.title}
+            role={role}
+            index={i}
+            active={active === i}
+            dimmed={hasActive && active !== i}
+            hasActive={hasActive}
+            onToggle={() => setActive((cur) => (cur === i ? null : i))}
+          />
+        ),
+      )}
     </div>
+  );
+}
+
+/** Fade-in bertahap per baris; dipakai baris open maupun closed. */
+function RowReveal({
+  index,
+  children,
+}: {
+  index: number;
+  children: React.ReactNode;
+}) {
+  const reduced = useReducedMotion();
+  return (
+    <motion.div
+      initial={reduced ? false : { opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.6, ease: EASE, delay: 0.05 + index * 0.07 }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/**
+ * Role yang sudah ditutup: teks abu-abu, MATI total. Bukan <button>, jadi
+ * tidak bisa diklik, tidak bisa di-hover, dan tidak bisa di-tab — bukan
+ * sekadar tombol yang di-disable. Overview/skills/foto sengaja tidak
+ * dirender: tidak ada yang bisa membukanya.
+ */
+function ClosedRoleRow({
+  role,
+  index,
+  dimmed,
+}: {
+  role: CareerRole;
+  index: number;
+  dimmed: boolean;
+}) {
+  return (
+    <RowReveal index={index}>
+      <div
+        data-testid="career-role-closed"
+        className={
+          ROW_GRID +
+          " w-full py-2.5 text-left cursor-default select-none transition-opacity duration-[350ms] sm:py-3 " +
+          (dimmed ? "opacity-20" : "opacity-100")
+        }
+      >
+        <span className="min-w-0 text-[17px] font-bold tracking-[-0.01em] text-zinc-600 sm:text-[clamp(17px,1.4vw,21px)]">
+          {role.title}
+        </span>
+        <span className="min-w-0 text-[9.5px] leading-[1.6] font-bold tracking-[0.14em] text-zinc-700 uppercase">
+          {role.type}
+        </span>
+        <span className="shrink-0 justify-self-end text-[9.5px] font-bold tracking-[0.14em] whitespace-nowrap text-zinc-700 uppercase">
+          (closed)
+        </span>
+      </div>
+    </RowReveal>
   );
 }
 
@@ -69,7 +174,6 @@ function RoleItem({
   hasActive: boolean;
   onToggle: () => void;
 }) {
-  const reduced = useReducedMotion();
   const coarse = useCoarsePointer();
 
   const headerRef = useRef<HTMLButtonElement>(null);
@@ -148,12 +252,7 @@ function RoleItem({
   const bodyId = `career-role-body-${index}`;
 
   return (
-    <motion.div
-      initial={reduced ? false : { opacity: 0, y: 12 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.6, ease: EASE, delay: 0.05 + index * 0.07 }}
-    >
+    <RowReveal index={index}>
       <div
         className={
           "transition-opacity duration-[350ms] " +
@@ -193,7 +292,8 @@ function RoleItem({
             // flex-wrap + basis-full: judul flex-1 (basis 0%) dan meta 100%
             // muat di SATU baris flex (0+100% ≤ 100%) → judul kebagian 0px,
             // teksnya meluap per kata menumpuk dengan meta.
-            "group relative grid w-full grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_auto] items-center gap-x-4 overflow-hidden px-[clamp(10px,1.4vw,26px)] py-2.5 text-left transition-[padding] duration-[450ms] ease-[cubic-bezier(0.16,1,0.3,1)] select-none sm:flex sm:items-baseline sm:py-3 " +
+            ROW_GRID +
+            " group relative w-full overflow-hidden py-2.5 text-left transition-[padding] duration-[450ms] ease-[cubic-bezier(0.16,1,0.3,1)] select-none sm:py-3 " +
             // Expand-saat-HOVER: baris meninggi supaya preview foto (inset-y-0,
             // ikut tinggi baris) terlihat jelas. Terpisah dari accordion klik —
             // yang itu tidak disentuh. Hanya di pointer halus, dan tidak saat
@@ -217,11 +317,17 @@ function RoleItem({
             }
           />
 
-          {/* will-change PERSISTEN: tanpanya teks dipromosikan jadi layer saat
+          {/* Judul role yang OPEN selalu terang penuh saat diam — kontras
+              terhadap baris closed (zinc-600) itu inti tabelnya, jadi jangan
+              diredupkan lagi jadi opacity-60 seperti desain hover lama.
+              Isyarat hover-nya tinggal geser translate-x + wash gradient +
+              preview foto, yang sudah cukup.
+
+              will-change PERSISTEN: tanpanya teks dipromosikan jadi layer saat
               transform mulai lalu dilepas di akhir — dua "snap" rasterisasi
-              yang terbaca ngeflick. Hover menerangkan lewat OPACITY (compositor,
-              nol repaint), BUKAN animasi color yang me-repaint glyph tiap frame
-              dan bikin gesernya keruh. */}
+              yang terbaca ngeflick. Yang dianimasikan HANYA translate; jangan
+              ganti ke animasi color, itu me-repaint glyph tiap frame dan bikin
+              gesernya keruh. */}
           <span
             className={
               // ⚠️ AKAR "flick" yang sebenarnya: Tailwind v4 men-generate
@@ -229,34 +335,35 @@ function RoleItem({
               // `transform`. Transisi harus mencantumkan `translate` —
               // `transition-[...,transform]` tidak menganimasikannya sama
               // sekali, gesernya lompat instan. Jangan ganti ke `transform`.
-              "relative z-[1] min-w-0 text-[17px] font-bold tracking-[-0.01em] text-zinc-100 transition-[opacity,translate] duration-[450ms] ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[translate,opacity] sm:flex-none sm:text-[clamp(17px,1.4vw,21px)] " +
-              (active
-                ? "opacity-100"
-                : "opacity-60 group-hover:translate-x-3 group-hover:opacity-100")
+              "relative z-[1] min-w-0 text-[17px] font-bold tracking-[-0.01em] text-zinc-100 transition-[translate] duration-[450ms] ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[translate] sm:text-[clamp(17px,1.4vw,21px)] " +
+              (active ? "" : "group-hover:translate-x-3")
             }
           >
             {role.title}
           </span>
 
-          <span
-            className={
-              "relative z-[1] min-w-0 text-[9.5px] leading-[1.6] tracking-[0.14em] uppercase transition-colors duration-300 sm:ml-auto sm:pr-7 sm:whitespace-nowrap " +
-              (active ? "text-zinc-500" : "text-zinc-700 group-hover:text-zinc-500")
-            }
-          >
-            {role.meta}
+          {/* Terang setara judul job — kolom Type-lah yang membedakan role
+              open dari yang closed (zinc-700). Jangan diredupkan lagi: dua
+              baris yang sama-sama abu-abu bikin status tabelnya tidak terbaca. */}
+          <span className="relative z-[1] min-w-0 text-[9.5px] leading-[1.6] font-bold tracking-[0.14em] text-zinc-100 uppercase">
+            {role.type}
           </span>
 
-          <span
-            aria-hidden
-            className={
-              "relative z-[3] shrink-0 justify-self-end text-base transition-[transform,color] duration-[400ms] " +
-              (active
-                ? "rotate-90 text-zinc-500"
-                : "text-zinc-700 group-hover:text-zinc-400")
-            }
-          >
-            →
+          <span className="relative z-[3] flex shrink-0 items-baseline gap-2 justify-self-end whitespace-nowrap">
+            <span className="text-[9.5px] font-bold tracking-[0.14em] text-zinc-100 uppercase">
+              (open)
+            </span>
+            <span
+              aria-hidden
+              className={
+                "text-base transition-[transform,color] duration-[400ms] " +
+                (active
+                  ? "rotate-90 text-zinc-400"
+                  : "text-zinc-700 group-hover:text-zinc-400")
+              }
+            >
+              →
+            </span>
           </span>
 
           {/* Preview foto pengikut kursor — desktop saja. `transform` ditulis
@@ -338,6 +445,6 @@ function RoleItem({
           </div>
         </div>
       </div>
-    </motion.div>
+    </RowReveal>
   );
 }

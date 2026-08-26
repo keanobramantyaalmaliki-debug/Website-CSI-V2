@@ -10,7 +10,7 @@ export default function PeopleIntro() {
          padding-atasnya 12px (`pt-3`) di semua lebar — sama dengan gutter
          `px-3` dan sama dengan tiga ruangan lain (aturan padding-tipis, lihat
          CsiHero.tsx). Dulu `pt-6` di HP dan `md:pt-32` (128px) di desktop. */
-      className="px-3 pt-3 pb-24"
+      className="section-shell px-3 pt-3 pb-24"
     >
       <h1 className="text-[clamp(3rem,9vw,6.5rem)] font-semibold tracking-tight text-zinc-100 leading-[1.05]">
         <LineMask>The People Behind CSI.</LineMask>

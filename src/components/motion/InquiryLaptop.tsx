@@ -29,6 +29,7 @@ import {
   Vector3,
 } from "three";
 import SceneEnvironment from "@/components/canvas/SceneEnvironment";
+import { useZoomAwareDpr } from "@/components/canvas/zoomDpr";
 import { useNarrowViewport } from "@/lib/hooks/useNarrowViewport";
 
 /**
@@ -877,6 +878,11 @@ export default function InquiryLaptop({
   const wrapRef = useRef<HTMLDivElement>(null);
   const narrow = useNarrowViewport();
   const rig = useMemo(() => cameraFor(narrow), [narrow]);
+  /* Dulu `dpr={[1, 1.5]}` — lantai 1 membuat buffer meledak saat browser
+     di-zoom-out (devicePixelRatio<1, viewport CSS membesar); rincian &
+     jepitannya di zoomDpr.ts. Di zoom ≥100% nilainya identik dengan rentang
+     lama. */
+  const dpr = useZoomAwareDpr(1, 1.5);
 
   /**
    * ⚠️ UKURAN CANVAS DISAMAKAN SENDIRI, DALAM COMMIT YANG SAMA. Jangan dicabut.
@@ -987,7 +993,7 @@ export default function InquiryLaptop({
     >
       <Canvas
         frameloop={active ? "always" : "demand"}
-        dpr={[1, 1.5]}
+        dpr={dpr}
         camera={camera}
         gl={{
           antialias: false,

@@ -290,7 +290,7 @@ export default function CaseGrid() {
   return (
     <section
       id="case-grid"
-      className="relative z-10 px-3 pb-24 sm:pb-32"
+      className="section-shell relative z-10 px-3 pb-24 sm:pb-32"
     >
       {/* Header */}
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

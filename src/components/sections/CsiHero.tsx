@@ -46,7 +46,7 @@ export default function CsiHero() {
          bergrid — terbaca sebagai balok yang lebih terang dengan garis potong
          tegas tepat di perbatasan Deployments. Section lain (Deployments dst.)
          memang tidak memasang latar sendiri; jangan tambahkan di sini. */
-      className="relative overflow-hidden px-3 pt-3 pb-16 sm:pb-20"
+      className="section-shell relative overflow-hidden px-3 pt-3 pb-16 sm:pb-20"
     >
       {/* Satu kolom penuh. Dulu `lg:grid-cols-2` dengan CsiParticleField di
           kolom kanan — partikelnya DICABUT 18 Agu, dan kolom kanan ikut

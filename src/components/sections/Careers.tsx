@@ -8,10 +8,15 @@ const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 // Konten role (overview + skills) diambil utuh dari careers section V1
 // (Website-CSI index.html) — copy yang sudah tayang, bukan placeholder.
+//
+// `status: "closed"` = lowongan sudah ditutup: barisnya abu-abu dan mati
+// (lihat ClosedRoleRow). Untuk membuka lagi tinggal ganti ke "open" —
+// overview/skills/photo-nya sudah siap dan langsung terpakai.
 const ROLES: CareerRole[] = [
   {
     title: "Innovation & Growth Manager",
-    meta: "Full-time · Remote · Growth",
+    type: "Management and Strategy",
+    status: "closed",
     overview:
       "Lead market discovery, strategic partnerships, and growth initiatives. This role connects innovation with real-world adoption, bridging what we build with who needs it.",
     skills: [
@@ -25,7 +30,8 @@ const ROLES: CareerRole[] = [
   },
   {
     title: "Technical Lead",
-    meta: "Full-time · Hybrid · Engineering",
+    type: "Engineering",
+    status: "closed",
     overview:
       "Lead engineering execution, guide technical decisions, and mentor the development team. You see architecture before you see code, and you care about shipping as much as quality.",
     skills: ["Full-stack", "Architecture", "Team leadership", "Delivery ownership"],
@@ -33,7 +39,8 @@ const ROLES: CareerRole[] = [
   },
   {
     title: "Product Builder",
-    meta: "Full-time · Remote · Product",
+    type: "Product",
+    status: "closed",
     overview:
       "Build, test, and iterate new ideas quickly. You move from concept to working product without needing perfect conditions, and you own what you ship.",
     skills: [
@@ -47,7 +54,8 @@ const ROLES: CareerRole[] = [
   },
   {
     title: "Full Stack Engineer",
-    meta: "Full-time · Hybrid · Engineering",
+    type: "Engineering",
+    status: "open",
     overview:
       "Design and develop modern web applications, APIs, backend systems, and intelligent digital products. AI/RAG and cloud experience is a strong plus.",
     skills: [
@@ -60,11 +68,41 @@ const ROLES: CareerRole[] = [
     ],
     photo: "/careers/fullstack-engineer.jpg",
   },
+  {
+    title: "Accountant",
+    type: "Finance",
+    status: "open",
+    overview:
+      "Own the books end to end: bookkeeping, tax compliance, payroll, and monthly reporting. You keep the numbers clean enough that the team can make decisions from them.",
+    skills: [
+      "Bookkeeping",
+      "Tax compliance",
+      "Financial reporting",
+      "Accounting software",
+      "Attention to detail",
+    ],
+    photo: "/careers/accountant.jpg",
+  },
+  {
+    title: "Customer Success",
+    type: "Customer Success",
+    status: "open",
+    overview:
+      "Be the bridge between our clients and what we build. You onboard, support, and grow accounts, turning feedback into product direction instead of letting it sit in a thread.",
+    skills: [
+      "Client relationship",
+      "Onboarding",
+      "Problem solving",
+      "Communication",
+      "Product empathy",
+    ],
+    photo: "/careers/customer-success.jpg",
+  },
 ];
 
 export default function Careers() {
   return (
-    <section id="careers" className="px-3 py-24 sm:py-32">
+    <section id="careers" className="section-shell px-3 py-24 sm:py-32">
       {/* Split ala "Open Positions" basement: kiri 35% headline + subtext,
           kanan 65% roles list. Di bawah lg menumpuk seperti biasa. */}
       <div className="lg:grid lg:grid-cols-[35fr_65fr] lg:gap-x-16">
