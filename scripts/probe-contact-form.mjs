@@ -1,7 +1,8 @@
 /**
  * Buktikan form di layar MacBook benar-benar BISA DIPAKAI, bukan cuma terlihat.
  *
- *   node scripts/probe-contact-form.mjs [url]
+ *   node scripts/probe-contact-form.mjs [url]          # aman: tak ada email terkirim
+ *   node scripts/probe-contact-form.mjs [url] --live   # KIRIM SUNGGUHAN ke Web3Forms
  *
  * Kenapa perlu terpisah dari shoot-contact.mjs: potret cuma membuktikan form-nya
  * TERGAMBAR. Yang belum terbukti justru rantai masukannya, dan rantai itu panjang
@@ -16,15 +17,25 @@
  *
  * Karena itu kliknya pakai `Input.dispatchMouseEvent` di KOORDINAT LAYAR asli —
  * `element.click()` melewati hit-testing dan akan lulus walau ketiganya rusak.
+ *
+ * ⚠️ Sejak Web3Forms dipasang (§4bd), langkah 3 di bawah menekan tombol kirim
+ * SUNGGUHAN. Dulu itu tak berakibat apa-apa karena `submitInquiry()` cuma stub;
+ * sekarang tiap kali probe ini jalan ia akan mengirim email ke kotak masuk
+ * sungguhan dan memakan jatah 250/bulan. Karena yang dibuktikan di sini adalah
+ * RANTAI MASUKAN — bukan pengirimannya — fetch ke web3forms disadap dan dijawab
+ * tiruan "success". Jalur UI yang ditempuh tetap jalur sukses yang sebenarnya.
+ * Pakai --live hanya kalau memang mau menguji pengiriman ujung-ke-ujung.
  */
 import { spawn } from "node:child_process";
 import { get as httpGet } from "node:http";
 
+const LIVE = process.argv.includes("--live");
 const CHROME =
   process.env.CSI_BROWSER ??
   "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser";
 const PORT = 9230;
-const URL = process.argv[2] ?? "http://localhost:3000/";
+const URL = process.argv.slice(2).find((a) => a.startsWith("http")) ??
+  "http://localhost:3000/";
 
 const chrome = spawn(
   CHROME,
@@ -126,6 +137,29 @@ async function main() {
     return box;
   };
 
+  /* Sadap fetch SEBELUM apa pun diklik — lihat catatan ⚠️ di kepala berkas. */
+  await evaluate(`(() => {
+    window.__sentLive = ${LIVE};
+    const real = window.fetch.bind(window);
+    window.fetch = async (url, opts) => {
+      if (String(url).includes('web3forms') && !${LIVE}) {
+        /* Jeda 800ms DISENGAJA. Jawaban seketika membuat keadaan "Sending"
+           lewat dalam satu frame, dan check-nya jatuh karena stub-nya terlalu
+           cepat — bukan karena UI-nya salah. Jaringan sungguhan tidak pernah
+           seketika, jadi ini justru versi yang jujur. */
+        await new Promise((r) => setTimeout(r, 800));
+        return new Response(JSON.stringify({ success: true, message: 'stub' }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      return real(url, opts);
+    };
+    return true;
+  })()`);
+
+  /* Cooldown 5 menit dibersihkan: dua kali jalan beruntun akan gagal di langkah
+     3 dengan alasan yang salah — terbaca "form rusak", padahal justru bekerja. */
+  await evaluate(`localStorage.removeItem('cogniti_last_sent'), true`);
+
   const geom = await evaluate(`(() => {
     const el = document.querySelector('[data-inquiry-laptop]');
     const r = el.getBoundingClientRect();
@@ -185,8 +219,8 @@ async function main() {
     (await evaluate(`!document.querySelector("button[type='submit']").disabled`)),
   );
 
-  /* 3. Kirim — stub-nya menjeda 900ms, jadi keadaan "sending" harus terlihat
-        dulu sebelum berubah jadi "sent". */
+  /* 3. Kirim. Keadaan "sending" harus terlihat dulu sebelum berubah jadi
+        "sent" — di mode aman jawabannya tiruan, jalur UI-nya tetap asli. */
   await clickAt("button[type='submit']");
   await sleep(300);
   const mid = await evaluate(
@@ -194,11 +228,15 @@ async function main() {
   );
   check("keadaan mengirim terlihat", /Sending/i.test(mid), `teks: "${mid}"`);
 
-  await sleep(1500);
+  await sleep(LIVE ? 4000 : 1500);
   const done = await evaluate(
     `document.querySelector("button[type='submit']").textContent`,
   );
-  check("terkirim (stub)", /Sent/i.test(done), `teks: "${done}"`);
+  check(
+    "terkirim",
+    /Sent/i.test(done),
+    LIVE ? `teks: "${done}" — SUNGGUHAN` : `teks: "${done}" (jawaban tiruan)`,
+  );
 
   /* 4. Esc menutup. */
   await send("Input.dispatchKeyEvent", {
