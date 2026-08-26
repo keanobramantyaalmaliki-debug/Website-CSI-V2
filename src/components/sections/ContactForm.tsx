@@ -2,7 +2,9 @@
 
 import { useCallback, useMemo, useState } from "react";
 import {
+  FIELD_ORDER,
   INTERESTS,
+  inquiryFieldErrors,
   submitInquiry,
   validateInquiry,
   type InquiryPayload,
@@ -27,10 +29,22 @@ import {
  * ini bertindak sebagai piksel layar yang menyala di dalam bezel hitam.
  */
 
-const FIELD =
-  "field-sizing-content min-w-[7ch] border-b border-white/25 bg-transparent px-1 pb-0.5 " +
+const FIELD_BASE =
+  "field-sizing-content min-w-[7ch] border-b bg-transparent px-1 pb-0.5 " +
   "text-inherit outline-none transition-colors placeholder:text-zinc-600 " +
-  "focus:border-white/70 disabled:opacity-50";
+  "disabled:opacity-50";
+
+/* Warna garis bawah dipisah dari kelas dasar DENGAN SENGAJA. Kalau
+   "border-red-400" cuma ditempel di belakang string yang sudah memuat
+   "border-white/25", yang menang bukan yang ditulis belakangan di atribut
+   melainkan yang muncul belakangan di stylesheet — jadi penandanya bisa
+   diam-diam tidak kelihatan. Dipilih salah satu, tidak pernah dua-duanya. */
+const FIELD_OK = "border-white/25 focus:border-white/70";
+const FIELD_BAD = "border-red-400/80 focus:border-red-400";
+const fieldClass = (bad: boolean) =>
+  `${FIELD_BASE} ${bad ? FIELD_BAD : FIELD_OK}`;
+
+type TouchKey = (typeof FIELD_ORDER)[number];
 
 type Status = "idle" | "sending" | "sent" | "error";
 
@@ -40,7 +54,13 @@ export default function ContactForm({ className = "" }: { className?: string }) 
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [interests, setInterests] = useState<readonly string[]>([]);
+  /* Honeypot. Dibiarkan kosong oleh manusia — lihat isiannya di dasar form. */
+  const [botcheck, setBotcheck] = useState("");
   const [status, setStatus] = useState<Status>("idle");
+  /* Isian yang SUDAH pernah ditinggalkan pengunjung. Peringatan baru muncul
+     setelah itu — memerahkan isian yang belum sempat disentuh sama saja
+     memarahi orang sebelum ia mulai mengetik. */
+  const [touched, setTouched] = useState<Partial<Record<TouchKey, boolean>>>({});
   const [error, setError] = useState<string | null>(null);
 
   /* Di-memo bukan demi kecepatan — objek sekecil ini gratis dibuat ulang.
@@ -48,10 +68,22 @@ export default function ContactForm({ className = "" }: { className?: string }) 
      `payload` objek baru tiap render, useCallback-nya tidak pernah stabil dan
      jadi pura-pura belaka. */
   const payload: InquiryPayload = useMemo(
-    () => ({ name, company, email, interests, message }),
-    [name, company, email, interests, message],
+    () => ({ name, company, email, interests, message, botcheck }),
+    [name, company, email, interests, message, botcheck],
   );
   const invalid = validateInquiry(payload);
+  const fieldErrors = inquiryFieldErrors(payload);
+
+  /* Peringatan yang sedang layak tampil: masalah pertama (urut dari isian
+     teratas) di antara isian yang sudah disentuh. */
+  const visibleError =
+    FIELD_ORDER.map((field) =>
+      touched[field] ? fieldErrors[field] : undefined,
+    ).find(Boolean) ?? null;
+
+  const markTouched = useCallback((field: TouchKey) => {
+    setTouched((prev) => (prev[field] ? prev : { ...prev, [field]: true }));
+  }, []);
 
   const toggleInterest = useCallback((value: string) => {
     setInterests((prev) =>
@@ -105,11 +137,13 @@ export default function ContactForm({ className = "" }: { className?: string }) 
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onBlur={() => markTouched("name")}
               disabled={busy}
               aria-label="Your name"
+              aria-invalid={Boolean(touched.name && fieldErrors.name)}
               placeholder="your name"
               autoComplete="name"
-              className={FIELD}
+              className={fieldClass(Boolean(touched.name && fieldErrors.name))}
             />
             , and I represent{" "}
             <input
@@ -119,7 +153,7 @@ export default function ContactForm({ className = "" }: { className?: string }) 
               aria-label="Company or organisation"
               placeholder="company"
               autoComplete="organization"
-              className={FIELD}
+              className={fieldClass(false)}
             />
             .
           </p>
@@ -129,11 +163,13 @@ export default function ContactForm({ className = "" }: { className?: string }) 
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => markTouched("email")}
               disabled={busy}
               aria-label="Your email address"
+              aria-invalid={Boolean(touched.email && fieldErrors.email)}
               placeholder="you@company.com"
               autoComplete="email"
-              className={FIELD}
+              className={fieldClass(Boolean(touched.email && fieldErrors.email))}
             />
             .
           </p>
@@ -177,12 +213,20 @@ export default function ContactForm({ className = "" }: { className?: string }) 
           {/* Pil SEND duduk DI DALAM kotak pesan (pojok kanan bawah), seperti
               rujukannya — jadi kotaknya `relative` dan textarea-nya diberi
               padding kanan-bawah supaya teks tidak menyelinap ke bawah tombol. */}
-          <div className="relative mt-3 min-h-[7rem] flex-1 rounded-xl border border-white/12 bg-white/[0.02] transition-colors focus-within:border-white/30 @3xl:mt-4">
+          <div
+            className={`relative mt-3 min-h-[7rem] flex-1 rounded-xl border bg-white/[0.02] transition-colors @3xl:mt-4 ${
+              touched.message && fieldErrors.message
+                ? "border-red-400/80 focus-within:border-red-400"
+                : "border-white/12 focus-within:border-white/30"
+            }`}
+          >
             <textarea
               id="inquiry-message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
+              onBlur={() => markTouched("message")}
               disabled={busy}
+              aria-invalid={Boolean(touched.message && fieldErrors.message)}
               placeholder="What's on your mind?"
               className="h-full w-full resize-none bg-transparent px-4 pt-3 pb-16 text-sm outline-none placeholder:text-zinc-600 disabled:opacity-50 @3xl:px-6 @3xl:pt-5 @3xl:pb-16 @3xl:text-lg"
             />
@@ -196,20 +240,41 @@ export default function ContactForm({ className = "" }: { className?: string }) 
           </div>
         </div>
 
+        {/* Honeypot — perangkap bot, bukan isian.
+            Disembunyikan dengan MENGGESER KE LUAR LAYAR, bukan `display:none`
+            atau `hidden`: sebagian bot memang melewati field yang jelas-jelas
+            disembunyikan, sedangkan yang tergeser tetap terbaca sebagai isian
+            biasa oleh mereka. Tiga penjaga supaya tak ada manusia yang tersangkut:
+            `aria-hidden` menyembunyikannya dari pembaca layar, `tabIndex={-1}`
+            melompatinya saat Tab, dan `autoComplete="off"` menahan browser
+            mengisinya otomatis — autofill di sini akan membuang kiriman TAMU
+            SUNGGUHAN secara diam-diam. */}
+        <input
+          type="text"
+          name="botcheck"
+          value={botcheck}
+          onChange={(e) => setBotcheck(e.target.value)}
+          tabIndex={-1}
+          aria-hidden="true"
+          autoComplete="off"
+          className="pointer-events-none absolute left-[-9999px] h-0 w-0 opacity-0"
+        />
+
         {/* Satu baris kaki yang berubah peran: catatan waktu balas, atau pesan
             galat/berhasil. Tingginya dipatok supaya tata letaknya tidak melompat
             saat statusnya berganti. */}
         <p
           aria-live="polite"
           className={`mt-4 min-h-[1.25rem] text-[0.65rem] @3xl:mt-6 @3xl:text-sm ${
-            status === "error" ? "text-red-400" : "text-zinc-500"
+            status === "error" || visibleError ? "text-red-400" : "text-zinc-500"
           }`}
         >
           {status === "error" && error
             ? error
             : status === "sent"
               ? "Thanks, your message is in. We'll be in touch."
-              : "We typically respond within one business day."}
+              : (visibleError ??
+                "We typically respond within one business day.")}
         </p>
       </form>
     </div>
