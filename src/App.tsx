@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import SiteLayout from "@/routes/SiteLayout";
 import RoomContent from "@/routes/RoomContent";
+import JobDetail from "@/routes/JobDetail";
 
 export default function App() {
   return (
@@ -20,6 +21,16 @@ export default function App() {
         <Route path="/office"   element={<RoomContent room="Office" />} />
         <Route path="/meeting"  element={<RoomContent room="Meeting" />} />
         <Route path="/function" element={<RoomContent room="Function" />} />
+        {/* Halaman lowongan. Sengaja anak <SiteLayout> yang SAMA, bukan
+            cabang route terpisah: keluar-masuk halaman job tidak boleh
+            meng-unmount <Canvas> milik Hero — itu berarti office.glb (puluhan
+            MB) diunduh & dikompilasi ulang tiap pelamar menekan Back.
+            Hero-nya disembunyikan dari dalam SiteLayout, bukan dilepas.
+
+            "/careers" telanjang dialihkan ke section-nya, karena satu-satunya
+            daftar lowongan yang ada memang di sana. */}
+        <Route path="/careers"       element={<Navigate to="/people#careers" replace />} />
+        <Route path="/careers/:slug" element={<JobDetail />} />
         <Route path="*"         element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

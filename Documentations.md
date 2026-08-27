@@ -1,7 +1,7 @@
 # Documentations — Cogniti Office 3D Tour
 
 Dokumentasi progres pembuatan 3D office tour ala [basement.studio](https://basement.studio) untuk **cogniti.id**.
-Terakhir diupdate: **19 Agustus 2026**.
+Terakhir diupdate: **27 Agustus 2026**.
 
 **Status ringkas:** **5 ruangan sudah ~95% jadi** dan seluruhnya sudah jalan di browser (lihat MVP 1 di bawah):
 - **Lounge/Billiard** (§2) & **Function Room** (eks Smoking, §3) — furniture & dekorasi lengkap
@@ -71,7 +71,7 @@ Terakhir diupdate: **19 Agustus 2026**.
 
 **Per 13 Agu:**
 - **Loading di deploy publik tidak lagi buntu** (§4ab) — origin melayani ~50 KB/s, jadi `office.glb` 13 MB berarti **4+ menit di balik loader tanpa tanda kemajuan**, dan putus di tengah = **hero statis permanen**. Sekarang GLB diunduh sendiri (progres byte + sambung ulang lewat header `Range`), dan `SceneFailed` punya tombol retry yang pulih **tanpa reload**. 🔥 `useGLTF.preload` **DIHAPUS** — mengembalikannya = unduhan dobel. Sisa: cache edge Cloudflare `/3d/*`, yang ada di panel Keano, bukan di repo.
-- **Form inquiry pindah ke layar MacBook 3D** (§4ac) — MacBook tertutup yang membuka saat diklik, layarnya jadi form. Engsel & kamera dapat **pegas terpisah** (satu nilai untuk keduanya terbaca sentakan), melayang dimatikan selama terbuka supaya teksnya tidak melunak, dan di layar sentuh/jendela sempit form-nya lewat lembar datar — bukan lewat laptop. ✅ Backend-nya dipasang 26 Agu (§4bd).
+- **Form inquiry pindah ke layar MacBook 3D** (§4ac) — MacBook tertutup yang membuka saat diklik, layarnya jadi form. Engsel & kamera dapat **pegas terpisah** (satu nilai untuk keduanya terbaca sentakan), melayang dimatikan selama terbuka supaya teksnya tidak melunak, dan di layar sentuh/jendela sempit form-nya lewat lembar datar — bukan lewat laptop. ✅ Backend-nya dipasang 26 Agu (§4bd). ✅ Sejak 27 Agu form ini punya pintu kedua: CTA navbar membukanya sebagai modal global tanpa menggulir (§4be).
 - **🐛 "Ngeflick" ternyata TIGA bug bertumpuk** (§4ac) — canvas R3F tertinggal ~58 ms dari tata letak DOM; lalu membatalkan lompatan lewat **kamera** ternyata mengubah sudut pandang, bukan skala (ketahuan karena lebarnya meleset 1% tapi tingginya 9%); lalu `setViewOffset` yang membetulkannya **merusak `<Html transform>` drei**, yang meniru kamera lewat CSS 3D dan memaku titik hilangnya di pusat canvas. 🔥 Pelajarannya: **probe geometri canvas yang bersih tidak membuktikan render yang bersih** — sentakannya cuma tertangkap oleh probe yang membaca piksel.
 
 **Per 18 Agu:**
@@ -106,13 +106,18 @@ Terakhir diupdate: **19 Agustus 2026**.
 - **Billiard dibuka lagi: free ball zona kitchen** (§4ay) — bola putih bisa digeser di zona 35% panjang meja (break + setelah bola putih masuk lubang); drag via bidang raycast di atas felt, `clampFreeBall` murni geometri (+4 test). Power bar **dibalik** (tarik ke bawah = mengisi, gradasi hijau→merah) + pass kontras HUD. ⚠️ zona mati aim HUD (48 px) wajib > radius genggam bola.
 - **Susulan Industries** (§4az) — 🔥 plank telat 2–3 dtk: `react-use-measure` bawaan `<Canvas>` di-reset tiap event scroll Lenis → R3F menahan pembuatan root WebGL sampai scroll diam; fix `resize={{ scroll: false }}`. 🐛 plank transit fokus menyelam di balik plank lain → `depthTest` off + `renderOrder` bertingkat selama terbang.
 - **PhysicsHeading & AwardsShowcase dicabut + foto Deployments terang penuh** (§4ba, 25 Agu) — heading physics matter-js diganti `<h2>` + `LineMask` (tampilan diamnya = cabang reduced-motion komponen lama, jadi tidak berubah); AwardsShowcase (award dummy + foto founder) dicabut, Office kini ditutup TestimonialSpotlight; puncak kecerahan foto kartu Deployments disamakan jalur mouse & sentuh (hover 70→100, reveal 0.72→1). 🐛 fix test laten: stub IntersectionObserver wajib per-test (beforeEach), `vi.unstubAllGlobals()` menyapu stub level-modul.
-- **QC zoom-out browser** (§4bb, 26 Agu) — dua akar: **beban piksel** (zoom-out → `devicePixelRatio`<1 + viewport CSS membesar → lantai `dpr={[1,…]}` meledakkan buffer; `zoomDpr.ts` jepit `min(1, devicePixelRatio)` di 4 Canvas, p95 zoom 33% **66,6→17,3 ms**) dan **layout melar** (utility `section-shell` max-w 1600px di 14 section). 🔑 Pelajaran 3 ronde review Keano: "ikut zoom out" = jepit **KOTAK section-nya** (shell), bukan cuma kontennya — dan karena fov three.js **vertikal**, tinggi canvas ikut menentukan ukuran konten 3D: Industries `max-h-[900px]` + kamera mundur `kh=h/765`, ServicesTicker `sm:max-h-[630px]` (teks troika otomatis ikut). Probe baru `scripts/probe-zoom-out.mjs`; zoom 100% **bit-identik** di 1440×900. Full-bleed disengaja tinggal hero 3D.
+- **QC zoom-out browser** (§4bb, 26 Agu) — dua akar: **beban piksel** (zoom-out → `devicePixelRatio`<1 + viewport CSS membesar → lantai `dpr={[1,…]}` meledakkan buffer; `zoomDpr.ts` jepit `min(1, devicePixelRatio)` di 4 Canvas, p95 zoom 33% **66,6→17,3 ms**) dan **layout melar** (utility `section-shell` max-w 1600px di 14 section). 🔑 Pelajaran 3 ronde review Keano: "ikut zoom out" = jepit **KOTAK section-nya** (shell), bukan cuma kontennya — dan karena fov three.js **vertikal**, tinggi canvas ikut menentukan ukuran konten 3D: Industries `max-h-[900px]` + kamera mundur `kh=h/765`, ServicesTicker `sm:max-h-[630px]` (teks troika otomatis ikut). Probe baru `scripts/probe-zoom-out.mjs`; zoom 100% **bit-identik** di 1440×900. Full-bleed disengaja tinggal hero 3D. ⚠️ Plafon 1600px ternyata bikin gap di monitor AOC looks-like-1080 → **dinaikkan ke 1920px** 27 Agu (§4bg).
 - **Careers: tabel Role/Type + status open/closed + 2 role baru** (§4bc, 26 Agu) — `meta` string tunggal dipecah jadi `type` + `status`; baris closed = teks abu-abu inert (bukan `<button>`, overview/skills tidak dirender); header tabel Role/Type; role baru **Accountant** & **Customer Success** (open), 3 role lama ditutup. 🐛 kolom status wajib lebar TETAP (5rem): tiap baris grid TERPISAH, track `auto` diukur per baris → kolom Type jatuh di tiga posisi x berbeda.
 - **Form inquiry benar-benar mengirim: Web3Forms + peringatan isian** (§4bd, 26 Agu) — `submitInquiry()` berhenti jadi stub; **blocker rilis terakhir tertutup**. Access key sama dengan situs V1 (publik by design), dibedakan lewat `from_name`. Honeypot `botcheck` + cooldown 5 mnt + timeout 15 dtk. 🐛 **Peringatan email tak sah mustahil tampil**: pesan galat hanya dirender setelah percobaan kirim, dan percobaan itu dihalangi tombol yang mati oleh galat yang sama — deadlock struktural, bukan salah ketik. Diganti galat per-isian saat blur. ⚠️ `scripts/probe-contact-form.mjs` ikut diamankan: dulu menekan stub, sekarang akan mengirim email sungguhan.
+- **CTA navbar "Talk to us": scroll → modal laptop-naik** (§4be, 27 Agu) — CTA berhenti menggulir ke section Contact; kini membuka **`InquiryOverlay.tsx`** (mount di SiteLayout, **LUAR `<main>`**) lewat flag store `navInquiryOpen`. Desktop: tirai menggelap + laptop **naik dari bawah layar** (`translateY 100vh→0`, pegas LIFT 70/20 ~0,7 dtk), di `lift ≥ 0,7` engsel + kamera menyala — pegasnya **diimpor dari Contact.tsx** (kini di-export) jadi dua pintu ke form yang sama mustahil beda rasa; urutan terbaca *tiba → membuka → mendekat*. Menutup dibalik dengan overlap (laptop turun begitu `zoom ≤ 0,4`) — satu gerakan "pergi", bukan tiga babak antre. Sentuh/sempit: lembar datar fade, **tanpa canvas 3D sama sekali** (INVARIANTS §6). **Bukan ekstraksi dari Contact.tsx**: hampir seluruh kerumitan di sana (dock, promosi kotak→fixed, hitbox) ada karena laptopnya menyatu di halaman dulu — overlay ini lahir langsung `fixed`, semua itu gugur. Canvas dibuat di klik pertama lalu **ditahan** (kompilasi shader dibayar sekali, selagi laptop masih di bawah layar). ⚠️ Overlay **sengaja tidak menyentuh `setInquiryOpen`**: tidak butuh pelepasan z-10 `<main>` (ia di luarnya), dan boolean yang ditulis dua modal saling clobber di ekor animasi. `roomHasContact()` + `roomContent.test.tsx` **dihapus** (pemakai terakhirnya CTA lama; −4 test). Terverifikasi CDP: deret sampel pegas mulus, scrollY utuh 600→600, Esc menutup; laptop section Contact **tidak disentuh**.
+- **Detail lowongan jadi halaman sendiri: `/careers/:slug`** (§4bf, 27 Agu) — accordion yang mengembang di tempat diganti **halaman ber-URL** yang bisa dibagikan ke pelamar (Full Stack Engineer dulu; Accountant & Customer Success ✅ menyusul di hari yang sama, §4bi). Route-nya anak **`SiteLayout` yang SAMA** supaya `<Canvas>` tidak pernah unmount — Hero-nya disembunyikan pakai `h-0 overflow-hidden`, **bukan `display:none`**, jadi canvas tidak ikut di-resize (terukur `1440x763 → 1440x763`) dan `heroInView` mati sendiri → **0 draw call** selagi orang membaca teks. Deep-link dingin tidak mengunduh `office.glb` sama sekali. Toggle **EN/ID** disimpan di `localStorage`. 🐛 **Lenis menjepit `scrollTo` ke `limit` halaman SEBELUMNYA**: "Back to careers" berhenti 2200px di atas sasaran padahal anchor-nya tidak pernah bergeser — `resize()` dulu, baru `scrollTo`. 🔥 **Probe-nya sendiri berbohong**: CDP mengirim `-0` lewat `unserializableValue` dan mengosongkan `value`, jadi pendaratan yang TEPAT (`rectTop` = `-0`) dilaporkan sebagai "anchor tidak pernah muncul".
+- **Revisi `section-shell`: plafon 1600 → 1920px** (§4bg, 27 Agu) — di monitor AOC U28P2G6B (4K, UI looks-like **1920×1080**) semua section bergap ±160px kiri-kanan pada zoom 100%: efek samping §4bb yang "sadar" ternyata terasa bug begitu kejadian di monitor sungguhan. 🔑 CSS **tidak bisa membedakan zoom-out dari monitor besar** (dua-duanya cuma viewport lebar; dpr juga bukan pembeda) → plafon dipatok di lebar CSS monitor riil terlebar. Satu angka di `index.css`; jepitan vertikal & `max-w` teks Vision sengaja tidak disentuh. Terverifikasi CDP: 1920 → full-bleed pulih, 2880 (≈zoom 50%) → tetap terjepit 1920 terpusat.
+- **Plafon `section-shell` dinamis: capture-and-freeze `screen.width`** (§4bh, 27 Agu) — kelanjutan §4bg: monitor >1920 (QHD/ultrawide) kini **full-bleed** juga, tanpa mengorbankan jepitan zoom-out §4bb. 🔥 Asumsi awal tumbang oleh pengukuran Brave sungguhan: `outerWidth` DAN `screen.width` **ikut membesar saat zoom** (semua CSS px; trik `outerWidth/innerWidth` mati) — satu-satunya invarian = piksel fisik `screen.width × dpr`. Maka `src/lib/shellMax.ts`: capture `screen.width` saat load (lantai 1920) → `--shell-max`, lalu **beku** selama tanda-tangan fisik panel sama; capture ulang hanya saat pindah monitor (fisik berubah >2%). ⚠️ Degradasi sadar: load saat SUDAH zoom-out (zoom nempel per-origin) → sesi itu tanpa jepitan — saat QC, **Cmd+0 dulu sebelum reload**. Unit 10 kasus dari angka pengukuran riil; suite 406/58.
+- **Careers tuntas: form lamaran sendiri + tiga lowongan punya halaman + footer dipakai bersama** (§4bi, 27 Agu) — tombol Apply berhenti mendarat di form Contact; halaman lowongan dapat **`ApplyForm.tsx`** sendiri (Web3Forms yang sama dengan inquiry — key di-impor bukan disalin; cooldown 60 dtk, galat per-isian dua bahasa; **GitHub dicabut global** atas permintaan Keano, catatan "kalau balik harus per-lowongan" ditinggal di kode). `accountant` & `customer-success` masuk `jobs.ts` (bullet ID verbatim dari poster resmi) → **semua lowongan open kini tautan halaman, nol accordion tersisa** — test accordion pindah ke fixture sintetis, bukan dihapus. Footer Contact diangkat jadi **`SiteFooter.tsx`** dipakai bersama. Foto `accountant.jpg` & `customer-success.jpg` terisi (menutup 404 diam-diam preview hover sejak §4bc). 📌 `customer-success.jpg` 640×427 lembek di Retina — menunggu foto resolusi lebih tinggi.
 
 **⬅️ Berikutnya:** ~~(a) pasang backend Web3Forms~~ ✅ **selesai 26 Agu** (§4bd) — blocker rilis terakhir; (b) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker (§4n); (c) selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter, §4s); (d) optimasi GLB lanjutan — atlas per ruangan + dedup 29 image kembar (§4s); (e) post-processing PS1 (§4b), pass terakhir untuk look basement.studio; (f) **verifikasi perf Safari oleh Keano sendiri** setelah deploy §4aj — `window.__adaptiveDpr()` di console langsung memberi tahu jatuh di kategori mana (GPU-bound → index naik; tetap `{dpr: 1}` tapi lag → cap OS Low Power Mode). **Optimasi GPU idle:** penundaan "tunggu finalise" (7 Agu) **dicabut sebagian 19 Agu** karena Safari — opsi 1/2/4 terpasang (§4aj); sisa **opsi 3** (gabung pass HueSaturation + BrightnessContrast) tetap menunggu finalise.
 
-> ⚠️ **Test suite: 348 test / 53 berkas, hijau** (26 Agu; 322/53 turun ke 308/51 saat PhysicsHeading + AwardsShowcase dicabut berikut test-nya §4ba, lalu naik lagi lewat `zoomDpr.test.ts` §4bb, test baris closed di `Careers.test.tsx` §4bc, dan 29 test `submitInquiry.test.ts` §4bd). Satu test *pernah* merah pada satu putaran penuh — `TheCrewMobileCarousel.test.tsx` ("auto-advances 30s after going idle") — lalu hijau saat dijalankan sendiri **dan** pada putaran penuh berikutnya. **Flake fake-timer di bawah beban, bukan regresi**; kalau ia muncul lagi, curigai `advanceTimersByTimeAsync` di suite yang berbagi sesi timer, bukan komponennya.
+> ⚠️ **Test suite: 407 test / 58 berkas, hijau** (27 Agu; 348/53 turun ke 344/52 saat `roomContent.test.tsx` dicabut bersama `roomHasContact` §4be, lalu naik bertahap lewat batch halaman lowongan §4bf, `shellMax.test.ts` §4bh, dan batch form lamaran + accountant/customer-success §4bi). Satu test *pernah* merah pada satu putaran penuh — `TheCrewMobileCarousel.test.tsx` ("auto-advances 30s after going idle") — lalu hijau saat dijalankan sendiri **dan** pada putaran penuh berikutnya. **Flake fake-timer di bawah beban, bukan regresi**; kalau ia muncul lagi, curigai `advanceTimersByTimeAsync` di suite yang berbagi sesi timer, bukan komponennya.
 
 ## 🎉 MVP 1 SELESAI (27 Jul) — **50-60 FPS di browser**
 
@@ -1284,6 +1289,8 @@ Penjaganya `roomRouteSearch.test.tsx`, dibuktikan **merah** dulu (dapat `/meetin
 
 ### "Talk to us" tidak lagi melempar ke Lounge (`7c8408f`)
 
+> ⚠️ **Basi sejak 27 Agu (§4be):** CTA-nya berhenti menggulir SAMA SEKALI — kini membuka modal global `InquiryOverlay` (laptop naik dari bawah layar), dan `roomHasContact()` beserta test-nya ikut dicabut. Catatan di bawah dipertahankan sebagai sejarah dua generasi keputusan sebelumnya; norma test di kakinya tetap berlaku umum.
+
 Perilaku lama: dari ruangan mana pun selain Lounge, tombolnya `navigate("/#contact")`. Alasannya sempat benar — "`#contact` cuma ada di Lounge" — lalu jadi basi begitu Meeting & Function ikut memuat `<Contact />`, **tanpa ada yang berubah di Navbar**.
 
 Sekarang ia menggulir **di tempat** kalau ruangannya punya Contact. Hanya dari Office — satu-satunya yang memang tidak punya — ia pindah ke Lounge. Memindahkan pengunjung hanya karena ia menekan tombol kontak itu mengagetkan; ia kehilangan tempatnya tanpa meminta.
@@ -2303,7 +2310,7 @@ Keluhan Keano: browser di-zoom-out → scene 3D frame drop + banyak bagian halam
 2. Ronde 2 — Contact & tinggi 3D: `section-shell` ke-13 di ekor `<Contact/>` (wordmark SVG `w-full` ikut ter-cap); strip Industries `max-h-[900px]`; ServicesTicker `sm:max-h-[630px]` (=70svh viewport desain 900; fontSize troika di-cap `viewport.height*0.17` yang dipetakan ke tinggi CSS panel, jadi menjepit panel = menjepit teks — keluhan "teks Our Service tetap besar"). 🔑 **fov three.js vertikal**: dunia dipetakan ke SELURUH tinggi canvas, jadi canvas yang lebih tinggi dari tinggi desain menggambar konten LEBIH BESAR dalam px CSS — jepit DOM saja tidak cukup, `IndustriesStack` CameraRig dapat faktor mundur kedua `kh = max(1, size.height/765)` (765 = 85svh viewport desain 900) supaya ukuran CSS stack konstan. Mode fokus aman: kartu fokus diukur DARI kamera (`F.dist`), bukan origin.
 3. Ronde 3 — **pelajaran intinya**: strip Industries masih terbaca "tidak ikut zoom" walau plank sudah mengecil, karena **kanvas putihnya sendiri masih full-bleed**. Pembandingnya panel ServicesTicker yang Keano nilai sudah benar — bedanya cuma satu: panel itu di dalam shell. Fix: `section-shell` ke-14 di `<section id="industries">`. **"Ikut zoom out" = jepit KOTAK section-nya, bukan cuma konten/kameranya.**
 
-Full-bleed disengaja tinggal **hero 3D**. Verifikasi tiap ronde: `scripts/probe-zoom-out.mjs <url> <zoom> <outdir>` (emulasi zoom via `Emulation.setDeviceMetricsOverride` Brave headless; ukuran fisik canvas + p95 rAF + screenshot semua posisi scroll) — zoom 100% di 1440×900 **bit-identik** (PSNR inf; semua angka jepitan sengaja dipilih pas di titik netral viewport itu: 765→kh=1, 630=cap, 1440<1600), zoom 50% konten terpusat proporsional. ⚠️ Efek samping sadar: monitor >1600px CSS atau >1059px tinggi pada zoom 100% (ultrawide/4K/1200p) ikut terjepit — sejalan filosofi shell.
+Full-bleed disengaja tinggal **hero 3D**. Verifikasi tiap ronde: `scripts/probe-zoom-out.mjs <url> <zoom> <outdir>` (emulasi zoom via `Emulation.setDeviceMetricsOverride` Brave headless; ukuran fisik canvas + p95 rAF + screenshot semua posisi scroll) — zoom 100% di 1440×900 **bit-identik** (PSNR inf; semua angka jepitan sengaja dipilih pas di titik netral viewport itu: 765→kh=1, 630=cap, 1440<1600), zoom 50% konten terpusat proporsional. ⚠️ Efek samping sadar: monitor >1600px CSS atau >1059px tinggi pada zoom 100% (ultrawide/4K/1200p) ikut terjepit — sejalan filosofi shell. **Efek ini benar-benar kejadian sehari kemudian** di monitor AOC Keano (viewport 1920) dan diputuskan bug, bukan filosofi → plafon dinaikkan 1600→1920 (**§4bg**).
 
 ## 4bc. Careers: Tabel Role/Type + Status Open/Closed + 2 Role Baru ✅ (26 Agu)
 
@@ -2364,6 +2371,285 @@ Semua pesan yang dilihat pengunjung **berbahasa Inggris** mengikuti form-nya (ko
 > 🔎 **Situs V1 sengaja TIDAK diubah.** Sempat dibahas mencabut Web3Forms dari V1 (satu commit `36aaca9` tinggal di-revert, kembali ke `mailto:`), Keano memutuskan **"jangan dicabut dulu"** — V1 masih tayang dan mencabutnya menurunkan form yang bekerja. Keduanya hidup berdampingan di satu key.
 
 ---
+
+## 4bf. Careers: Detail Lowongan Jadi Halaman Sendiri (`/careers/:slug`) ✅ (27 Agu)
+
+Accordion yang mengembang di tempat (§4bc) berhenti jadi satu-satunya cara membaca lowongan. Sekarang tiap role yang punya materi lengkap dapat **halaman ber-URL sendiri** — bisa dikirim ke pelamar, dibagikan di grup, dibuka di tab baru. Dikerjakan **Full Stack Engineer dulu**; Accountant & Customer Success menyusul lewat jalur yang persis sama.
+
+Keputusan Keano di awal (dijawab langsung, bukan asumsi saya):
+
+| Hal | Keputusan |
+|---|---|
+| Bentuk halaman | Route di **dalam** `SiteLayout` — `<Canvas>` **tidak** unmount; hero-nya disembunyikan |
+| Bahasa | Toggle **EN/ID** di halaman job saja, default English, diingat di `localStorage` |
+| Tombol Apply | Ke **form Contact yang sudah ada**, bukan `mailto:` |
+| Accordion lama | Role yang **punya** halaman → barisnya jadi `<Link>`; yang belum → accordion lama **tidak disentuh** |
+
+### Berkas
+
+**Baru** — `src/data/jobs.ts` (satu-satunya sumber isi: `JOBS`, `getJob`, `isJobPath`, plus `JOB_UI` untuk label section per bahasa, supaya teks UI tidak berserak di komponen), `src/routes/JobDetail.tsx`, dan `scripts/probe-job-page.mjs`.
+
+**Diubah** — `App.tsx` (dua route), `SiteLayout.tsx` (gerbang hero + loader), `CareersRoles.tsx` (`<Link>` vs `<button>`), `Careers.tsx` (`slug`), `Contact.tsx` + `ContactForm.tsx` (prop `prefillMessage` → "Applying for: …"), `smoothScroll.ts`.
+
+### Empat rintangan struktural (inti pekerjaannya)
+
+Menulis halamannya bagian yang gampang. Yang menolak route baru ini ada empat, dan semuanya di kode yang sudah ada:
+
+**1. 🐛 `RoomRouteSync` memantulkan URL-nya balik ke `/people`.** `roomFromPath("/careers/<slug>")` → `null`, tapi Arah 1 tetap menandai `resolvedPath.current = pathname` sebelum pulang — dan penanda itulah pintu masuk Arah 2, yang lalu melihat `pathFor(currentRoom) !== pathname` dan **menulis ulang** URL-nya. Terbaca di browser sebagai `pushState "/careers/full-stack-engineer"` yang langsung disusul `pushState "/people"`. Obatnya `if (!key) return;` **DI ATAS** penanda itu; di bawahnya tidak menyelesaikan apa pun. Dijaga `jobRoute.test.tsx`.
+
+**2. Loader menggantung kalau `<Scene>` tak pernah mount.** `LoadingScreen` digerbangi `sceneReady`, yang cuma dinyalakan `useFrame` di dalam canvas (INVARIANTS §3). Di **deep-link dingin** ke halaman job hero-nya sengaja tidak mount — jadi loader-nya juga **tidak boleh dirender**, kalau tidak halaman ini tertutup layar putih permanen. Digerbangi flag yang **SAMA** dengan Hero (`heroMounted`); `siteLayoutHeroGate.invariant.test.ts` mengunci keduanya tetap satu flag.
+
+**3. Tidak ada reset scroll saat ganti route.** Tidak ada `<ScrollRestoration>` di situs ini. Klik role dari `/people` yang sudah tergulir 4592px akan mendarat di offset yang sama. `JobDetail` memanggil `scrollToTop()` sendiri.
+
+**4. Menyembunyikan hero tidak boleh me-resize canvas.** `display:none` bikin canvas 0×0, dan R3F menyusul layout ~58 ms di belakang DOM (§4ac) → kedipan saat kembali. Dipakai **`h-0 overflow-hidden`**: `<section>` di dalamnya tetap `h-dvh` (dvh relatif viewport, bukan induk), jadi **ukurannya tidak berubah**, cuma terpotong habis. Bonusnya `IntersectionObserver` ikut memperhitungkan clip induk → `heroInView` false → gerbang frameloop mati sendiri.
+
+> 🔑 Pembungkus hero **selalu** dirender selagi `heroMounted` — yang ditukar cuma `className`-nya. Membungkus `<Hero/>` secara kondisional mengubah posisi tipe di pohon React = **Hero unmount** = `office.glb` diunduh & dikompilasi ulang, persis yang dihindari.
+
+### 🐛 "Back to careers" mendarat 2200px di atas sasaran
+
+Gejalanya: kembali dari halaman job memang sampai di `/people#careers`, tapi berhenti di section **"What We Stand For"**, bukan di tabel Careers.
+
+Dua tebakan pertama saya salah dua-duanya ("anchor-nya bergeser sesudah konten mount", "ada yang menggulir ulang"). Yang menyelesaikannya bukan tebakan ketiga, tapi **merekam `scrollY` + `#careers.offsetTop` tiap rAF** sepanjang transisi:
+
+| | |
+|---|---|
+| `#careers.offsetTop` | **3875, tetap** sepanjang animasi → anchor **tidak pernah bergeser** |
+| gulir berhenti di | **≈1630** |
+| tinggi dokumen halaman **job** | 2396, viewport 763 → **limit 1633** |
+
+Angka berhentinya bukan angka acak: itu **jepitan halaman sebelumnya**. `lenis.scrollTo()` menjepit tiap target ke `limit` (tinggi dokumen − viewport) yang Lenis simpan dari ResizeObserver, dan observer-nya baru berbunyi di frame berikutnya — jadi tepat sesudah ganti route, jepitannya masih memakai ukuran halaman yang baru saja ditinggalkan. Tidak ada error, tidak ada warning; gulirnya cuma berhenti lebih awal.
+
+Obatnya satu baris di `scrollToSection`: **`instance.resize()` sebelum `instance.scrollTo()`**. Sesudahnya mendarat di 3875 (`rectTop` 0). Test-nya mengunci **urutannya**, bukan sekadar "resize pernah dipanggil" — kalau `resize()` jalan belakangan, jepitannya tetap yang lama dan bug-nya utuh.
+
+⚠️ `scrollToSection` dipakai bersama (CTA navbar, tombol Apply), jadi perubahan ini menyentuh **semua** gulir-ke-anchor. Itu memang benar di semua tempat, tapi radiusnya lebih lebar dari satu bug yang memicunya.
+
+### 🔥 Probe-nya sendiri yang berbohong: `-0` di CDP
+
+Sesudah fix di atas, `probe-job-page.mjs` malah melapor **"#careers tidak pernah muncul"** — terbaca seperti fix yang gagal total. Halamannya tidak salah sedikit pun.
+
+`Runtime.evaluate` **tidak bisa** menaruh `-0`, `NaN`, atau `Infinity` di `result.value`; CDP mengirimnya sebagai string di `result.unserializableValue` dan **mengosongkan `value`**. Probe yang cuma membaca `value` menerima `undefined`.
+
+Dan `Math.round(rect.top)` menghasilkan **`-0`** justru ketika anchor-nya mendarat sepersekian piksel di atas puncak viewport — yaitu **tepat ketika gulirnya BERHASIL**. Jadi alat ukurnya menghukum satu-satunya keadaan yang sehat, dan gejalanya identik dengan bug aplikasi. `evalJs` sekarang membaca `unserializableValue` lebih dulu; alternatif cepat kalau menulis probe baru: bungkus hasilnya dengan `JSON.stringify` di sisi halaman.
+
+### ⚠️ `git checkout` menghapus fix yang belum di-commit
+
+Saat membatalkan satu eksperimen di `RoomRouteSync.tsx`, `git checkout <berkas>` ikut membuang **penjaga rintangan #1 yang belum di-commit** — bug pantulan `/careers/… → /people` hidup lagi tanpa satu pun baris diff yang mencurigakan. Ketahuan dari probe browser, baru dikonfirmasi test.
+
+Karena itu perekam `pushState`/`replaceState` **sengaja ditinggal** di probe: ia diam kalau semuanya benar, dan mencetak stack pelakunya hanya kalau check URL gagal. Pelajarannya umum: `git checkout <berkas>` di berkas yang memuat kerja belum-commit **membuang semuanya**, bukan cuma eksperimen terakhir.
+
+### Verifikasi
+
+- `bun run test` **358/55 hijau**, `bun run lint` **0 error**, `bunx tsc --noEmit` bersih.
+- **`scripts/probe-job-page.mjs` — 24/24 di Brave, dpr 2.** Yang dibuktikan di sana dan tidak bisa dibuktikan jsdom: URL bertahan; mendarat `scrollY 0`; **canvas tidak di-resize** (`1440x763 → 1440x763`); pembungkus hero `0px`; tidak ada overlay loader; **0 draw call** selama 2 dtk halaman dibaca; profil bersih membuka **English**; toggle ID menukar isi & bertahan sesudah refresh; Apply meluncur ke Contact; **kembali mendarat `top 0px` di section Careers**, tanpa loading screen, canvas utuh.
+- **Deep-link dingin** (tab baru): isinya tampil, **tidak ada loader**, cuma 1 canvas (laptop inquiry navbar — bukan hero), **0 permintaan `office.glb`**, 0 draw call saat diam. Navbar tetap membawa keluar; `/careers/ngawur` dipulangkan ke `/people#careers`; accordion Accountant masih mengembang seperti biasa.
+
+> 📌 ~~**Belum dikerjakan:** halaman Accountant & Customer Success (tinggal tambah entri di `jobs.ts` + `slug` di `Careers.tsx`). **Temuan sampingan yang masih menganggur sejak §4bc:** `Careers.tsx` menunjuk `/careers/accountant.jpg` & `/careers/customer-success.jpg`, dan **kedua berkas itu tidak ada** di `public/careers/` — dua dari tiga role open kehilangan foto preview-nya.~~ ✅ **Dua-duanya ditutup §4bi di hari yang sama** — sekaligus MEREVISI keputusan "Apply → form Contact" di tabel atas: halaman lowongan kini punya form lamarannya sendiri (`ApplyForm.tsx`), bukan gulir ke Contact.
+
+---
+
+## 4bg. Revisi `section-shell`: Plafon 1600 → 1920 (Gap di Monitor AOC) ✅ (27 Agu)
+
+Sehari setelah §4bb, Keano buka situs di monitor eksternal **AOC U28P2G6B**
+(4K, macOS "UI looks like **1920×1080**", dpr 2) → **semua section bergap
+±160px kiri-kanan** pada zoom 100%, termasuk wordmark COGNITI.ID yang
+harusnya tepi-ke-tepi. Ini efek samping yang §4bb sudah catat sadar
+("monitor >1600px CSS ikut terjepit") — tapi begitu kejadian di monitor
+sungguhan, rasanya bukan "sejalan filosofi shell" melainkan bug.
+
+**Akar dilema — CSS tidak bisa membedakan "zoom-out" dari "monitor
+besar".** Dua-duanya cuma terlihat sebagai viewport CSS yang lebar.
+(`devicePixelRatio` juga bukan pembeda: MacBook zoom 50% = dpr 1, dan
+monitor 1080p non-HiDPI pada 100% juga dpr 1.) Jadi satu-satunya kebijakan
+yang konsisten: **patok plafon di lebar CSS monitor riil terlebar yang
+dipakai (1920)** — monitor sungguhan pada zoom 100% selalu full-bleed,
+jepitan baru terasa saat zoom-out ekstrem atau ultrawide >1920.
+
+**Fix: satu angka.** `max-width` utility `section-shell` di
+`src/index.css` **1600 → 1920px**. Sekalian dibetulkan komentar-komentar
+yang basi: blok komentar di index.css masih bilang Industries & Contact
+"sengaja full-bleed" (padahal sudah ikut shell sejak ronde susulan §4bb),
+plus angka ≤1600px di komentar `Industries.tsx`, `Contact.tsx`,
+`JobDetail.tsx`.
+
+**Yang SENGAJA tidak diubah:**
+
+- `max-w-[1600px]` paragraf **Vision** — itu desain lama pra-§4bb (lebar
+  baca teks), bukan regresi; di AOC ia memang bergap dan itu wajar untuk
+  paragraf.
+- **Jepitan vertikal** (Industries `max-h-[900px]` + `kh=h/765`, ticker
+  `sm:max-h-[630px]`): di tinggi AOC (~980px CSS dalam browser) Industries
+  tak tersentuh sama sekali (85svh≈833 < 900), panel ticker terjepit tipis
+  ~8% (686 proporsional → 630). Belum ada keluhan; kalau kelak panel
+  Services terasa pendek di AOC, naikkan cap dengan pola yang sama
+  (rasio 1920/1600 = 1,2 → ticker 756, Industries 1080, kh=h/918).
+
+**Trade-off sadar:** saat zoom-out kolomnya kini mentok 1920, bukan 1600
+— sedikit lebih lebar dari look yang di-QC tiga ronde di §4bb. Konsekuensi
+tak terhindarkan dari menaikkan plafon; kalau Keano merasa zoom-out jadi
+kurang "mengecil", satu-satunya tuas ya angka yang sama itu (turunkan =
+gap balik di AOC).
+
+> ✅ **Disusul §4bh di hari yang sama:** plafon statis 1920 ini jadi
+> LANTAI-nya saja — di monitor >1920 plafonnya kini dinamis mengikuti lebar
+> monitor (capture-and-freeze via JS). Kalimat "satu-satunya tuas" di atas
+> tidak berlaku lagi.
+
+**Verifikasi** (probe CDP sekali-pakai, dev port 3000; ukur
+`getBoundingClientRect` semua `.section-shell` + screenshot):
+
+| Emulasi | Hasil |
+|---|---|
+| 1920×1080 dpr 2 (AOC, zoom 100%) | Semua shell **1920px, left 0** — full-bleed pulih; wordmark tepi-ke-tepi (ekor `/people`, persis view yang dikeluhkan) |
+| 2880×1800 dpr 1 (≈zoom 50% dari 1440×900) | Semua shell **1920px terpusat, left 480** — jepitan zoom-out §4bb masih bekerja |
+
+Di 1440×900 zoom 100% tidak ada yang berubah by construction (1440 < 1600
+< 1920). Suite hijau penuh saat verifikasi (**396 test / 57 berkas** —
+lebih banyak dari catatan §4bf karena working tree memuat batch lain yang
+saat itu belum terdokumentasi, a.l. `ApplyForm.test` — kini §4bi). Screenshot: `/tmp/shellqc/`.
+
+## 4bh. Plafon `section-shell` Dinamis: Capture-and-Freeze `screen.width` ✅ (27 Agu)
+
+Lanjutan langsung §4bg, dipicu pertanyaan Keano: "kalau kubuka di layar
+lebih lebar dari AOC, aman atau bergap lagi?" Jawaban plafon statis: bergap
+(QHD 2560 → ±320px per sisi). Keano pilih opsi "full-bleed di monitor
+selebar apa pun tanpa mengorbankan fix zoom-out §4bb" → plafonnya dibuat
+dinamis lewat JS.
+
+**🔥 Asumsi awal TUMBANG oleh pengukuran — pelajaran terpenting section
+ini.** Rencana semula: `max(1920, min(screen.width, outerWidth))` per
+resize, dengan keyakinan `screen.width`/`outerWidth` tidak ikut zoom.
+Diukur di **Brave sungguhan** (zoom 50% disuntik ke `Preferences` profil
+uji via `partition.per_host_zoom_levels` — keystroke Cmd± via osascript
+diblokir izin Accessibility):
+
+| Metrik | 100% | Zoom 50% |
+|---|---|---|
+| `innerWidth` | 1200 | 2400 |
+| `outerWidth` | 1204 | **2404 — ikut zoom!** |
+| `screen.width` | 1280 | **2560 — ikut zoom!** |
+| `devicePixelRatio` | 2 | 1 |
+| `screen.width × dpr` | **2560** | **2560 — invarian ✓** |
+
+Chromium modern melaporkan SEMUA metrik itu dalam CSS px — trik klasik
+"deteksi zoom via `outerWidth/innerWidth`" sudah mati. Satu-satunya angka
+zoom-invarian: **piksel fisik panel** (`screen.width × dpr`). Formula
+per-resize apa pun yang berbasis metrik CSS pasti bocor → strateginya
+diganti **capture-and-freeze** (`src/lib/shellMax.ts`, dipanggil dari
+`main.tsx` SEBELUM render supaya frame pertama sudah benar):
+
+1. Saat load: percayai `screen.width` = lebar CSS monitor (mayoritas load
+   terjadi di zoom 100%) → `--shell-max: max(1920px, screen.width)`;
+   `section-shell` memakai `var(--shell-max, 1920px)` (fallback = §4bg).
+2. Simpan tanda-tangan fisik panel (`screen.width × dpr` & tinggi).
+3. `resize`: tanda-tangan tetap (= zoom / geser jendela) → plafon **BEKU**;
+   berubah >2% (= pindah monitor; toleransi drift dpr pecahan 1,33) →
+   capture ulang.
+
+Hasil: QHD/ultrawide full-bleed di 100%; zoom-out terjepit di angka
+capture; zoom-in tidak meracuni capture (beku dua arah). **Degradasi
+sadar:** load SAAT SUDAH zoom-out (zoom Chrome nempel per-origin!) →
+capture menggembung → sesi itu tanpa jepitan, sembuh saat load di 100% —
+relevan buat QC: **Cmd+0 dulu sebelum reload**, jangan lapor "fix-nya
+hilang" dari sesi yang load-nya sudah 50%. `outerWidth` sengaja TIDAK
+dipakai: selain ikut zoom, jendela kecil saat load akan membekukan plafon
+kerdil permanen (plafon > viewport tidak apa-apa, `width:100%` yang
+membatasi). localStorage juga sengaja tidak dipakai (min-over-time bisa
+teracuni permanen oleh sesi zoom-in di monitor >1920).
+
+Di hardware Keano saat ini (MacBook looks-like-1280, AOC looks-like-1920)
+lantai 1920 selalu menang — perilaku identik §4bg, bagian dinamis baru
+hidup di monitor >1920. Verifikasi: unit test 10 kasus (`shellMax.test.ts`
+— skenario memakai angka pengukuran riil di atas, termasuk beku dua arah,
+drift 67%, pindah monitor, degradasi load-saat-zoom); probe CDP 100% AOC
+& QHD → semua shell full-bleed viewport penuh; Brave sungguhan
+load-saat-50% → degradasi persis spec. ⚠️ Emulasi headless TIDAK bisa
+menguji zoom (override `setDeviceMetricsOverride` ikut membesarkan
+`screen`/`outerWidth` — artefak yang justru membongkar asumsi salah di
+atas); semantik freeze diuji unit + Brave headed. Suite **406/58 hijau**.
+
+## 4bi. Careers: Form Lamaran Sendiri, Tiga Lowongan Punya Halaman, Footer Dipakai Bersama ✅ (27 Agu)
+
+Kelanjutan langsung §4bf, menutup dua "📌 belum dikerjakan"-nya sekaligus
+merevisi satu keputusannya: tombol Apply **tidak lagi** mendaratkan pelamar di
+form Contact ber-`prefillMessage`. Halaman lowongan kini punya **form
+lamarannya sendiri** — satu halaman dengan dua form membuat pelamar menebak
+mana yang "benar-benar" mengirim, dan kolom pesan bebas tidak pernah
+menghasilkan lamaran yang bisa dibandingkan antar pelamar. (Prop
+`prefillMessage` di Contact/ContactForm ditinggal terpasang — jinak, dan jalur
+Contact tetap hidup di kelima ruangan.)
+
+### Yang dibangun
+
+- **`ApplyForm.tsx` + `lib/careers/submitApplication.ts`** — form lamaran di
+  `/careers/<slug>`: 6 isian wajib (nama depan/belakang, email, lokasi,
+  motivasi, pengalaman), centang **skills per lowongan** (dari `jobs.ts`), dua
+  tautan opsional (portfolio, LinkedIn), honeypot `botcheck`. Backend
+  **Web3Forms yang sama** dengan inquiry — `ENDPOINT` & `WEB3FORMS_KEY`
+  di-impor dari `submitInquiry.ts`, bukan disalin. Bedanya yang disengaja:
+  **cooldown 60 dtk** (bukan 5 mnt — melamar dua posisi berturut-turut itu
+  sah), key localStorage sendiri (lamaran tidak boleh membungkam form Contact),
+  dan **galat per-isian dua bahasa** (pesannya dirakit di `submitApplication`
+  yang menerima `lang`, bukan di form — aturan validasi cuma tinggal di satu
+  tempat). Tautan opsional kosong dikirim sebagai `"-"` supaya baris email
+  lurus antar pelamar — jangan "dirapikan" jadi string kosong.
+- **Tiga lowongan open semua punya halaman** — `accountant` &
+  `customer-success` ditambahkan ke `jobs.ts` + `slug` di `Careers.tsx`,
+  lewat jalur yang §4bf siapkan (tidak ada tempat ketiga yang disunting).
+  Bullet `id` disalin **verbatim dari poster rekrutmen resmi**, `en`
+  terjemahannya (tetap default). Ejaan judul mengikuti **tabel situs**, bukan
+  poster ("Customer Success", bukan "Customer Success Staff") — satu lowongan
+  tidak boleh punya dua nama di halaman yang saling bertaut. `value`
+  `EXPERIENCE_OPTIONS` selalu Inggris untuk kedua bahasa supaya inbox-nya
+  tetap bisa disortir.
+- **`SiteFooter.tsx`** — kaki halaman (surel + alamat + sosial + hak cipta)
+  diangkat keluar dari `<Contact/>` dan **dipakai bersama**: halaman lowongan
+  mencabut Contact dan sempat jadi satu-satunya halaman tanpa alamat/hak
+  cipta. Isinya tidak bisa diatur pemanggil (cuma `className` jarak) — dua
+  tempat pemakaiannya dijamin identik.
+- **Foto** — `public/careers/accountant.jpg` & `customer-success.jpg` terisi;
+  menutup temuan sampingan §4bc/§4bf: `Careers.tsx` sudah menunjuknya sejak
+  26 Agu padahal berkasnya belum ada → **404 diam-diam** di preview hover.
+- **`scripts/shoot-apply-form.mjs`** — potret tata letak form (desktop, ID,
+  ponsel); `probe-job-page.mjs` dibuat **slug-generic** dan assertion
+  accordion-nya dibalik (lihat di bawah).
+
+### GitHub dicabut dari form — global, dengan catatan
+
+Permintaan Keano ("ngga nyambung"): form yang sama dipakai lowongan
+non-engineering, dan isian GitHub di lamaran Accountant cuma pertanyaan yang
+jelas bukan untuk pelamarnya. Dicabut **global** — label `APPLY_UI`, `EMPTY`,
+`ApplicationPayload`, `APPLICATION_FIELD_ORDER`, loop validasi URL, body
+email — dengan catatan sengaja ditinggal di kode: kalau dikembalikan, harus
+**per lowongan**, bukan tetap untuk semua. Efek samping kecil yang ikut:
+`sm:col-span-2` hard-coded di LinkedIn dibuang, Portfolio & LinkedIn kini
+berdampingan di grid 2 kolom.
+
+### 🐛 Gotcha yang tertangkap
+
+- **Menautkan lowongan open terakhir = nol accordion tersisa di situs.**
+  Cabang `!hasPage` di `CareersRoles.tsx` tetap terjangkau (posting baru yang
+  materinya belum lengkap), jadi test accordion **dipindah ke fixture
+  sintetis** (`ACCORDION_ROLES`), bukan dihapus — malah menghidupkan lagi test
+  "only one role is open at a time" yang sempat pensiun karena butuh dua
+  accordion.
+- **Probe sempat gagal karena meng-hardcode Customer Success sebagai
+  accordion terakhir** — assertion dibalik jadi bentuk yang bertahan: "semua
+  lowongan open jadi tautan halaman, nol accordion" (`#careers
+  a[href^="/careers/"]` vs `#careers button[aria-expanded]`).
+- **Probe dijalankan barengan eslint dalam satu perintah shell = 4 kegagalan
+  palsu** (rebutan CPU mengacaukan timing CDP). Jalankan probe sendirian.
+
+### Verifikasi
+
+`bunx tsc --noEmit` bersih; eslint **0 error** (17 warning
+`react-refresh/only-export-components` lama); suite **407 test / 58 berkas
+hijau**; `probe-job-page.mjs` hijau untuk ketiga slug (16 isian terpasang =
+9 tetap [6 wajib + 2 tautan + honeypot] + 7 skill; **3 tautan lowongan · 0
+accordion**); screenshot `shoot-apply-form.mjs` dicek mata.
+
+> 📌 **Catatan terbuka:** `customer-success.jpg` cuma 640×427 tapi dirender di
+> kotak ~850px CSS → lembek di Retina. Menunggu foto resolusi lebih tinggi
+> dari Keano.
 
 ## 5. Foto Referensi
 
@@ -2878,12 +3164,15 @@ Kode billiard cuma bergantung 3 hal dari `office.glb`: (a) nama node mengandung 
   - Cycles: **GPU Metal** (`prefs.compute_device_type='METAL'` + `cycles.device='GPU'`) — cek tiap sesi, default-nya CPU
 - **Polycam** untuk scanning (GLB)
 - **Vite + bun** (project web ini) — **GLB sudah terintegrasi (§4h)**. Stack: **Vite 6** (dulu Next 16.2, dimigrasikan 29 Jul — §4j), React 19, three 0.185, @react-three/fiber 9 + drei 10 + postprocessing 3, zustand 5, Tailwind 4, **react-router-dom 7** (routing per-ruangan, §4q), **cannon-es 0.20** (billiard, §6d), **motion 12** (animasi teks, §4i), **matter-js 0.20** (`PhysicsHeading`, §4r-3). Jalankan: `bun dev` → `http://localhost:3000`
-- **Vitest 4** — `bun run test`. **348 test di 53 berkas**, semuanya hijau per 26 Agu (322/53 turun ke 308/51 saat PhysicsHeading + AwardsShowcase dicabut §4ba, naik lagi lewat `zoomDpr.test.ts` §4bb, test Careers closed §4bc, dan 29 test `submitInquiry.test.ts` §4bd). Empat di antaranya invariant lintas-wilayah (`INVARIANTS.md` §1, §3, §6, §7). Norma repo: **buktikan test-nya MERAH di kondisi rusak dulu** sebelum dipakai memverifikasi perbaikan
+- **Vitest 4** — `bun run test`. **407 test di 58 berkas**, semuanya hijau per 27 Agu (348/53 turun ke 344/52 saat `roomContent.test.tsx` dicabut bersama `roomHasContact` §4be, naik bertahap lewat batch halaman lowongan §4bf, `shellMax.test.ts` §4bh, dan batch form lamaran §4bi). Empat di antaranya invariant lintas-wilayah (`INVARIANTS.md` §1, §3, §6, §7). Norma repo: **buktikan test-nya MERAH di kondisi rusak dulu** sebelum dipakai memverifikasi perbaikan
 - **Pengukuran performa: CDP langsung, tanpa dependency** (§4r) — `scripts/measure-frames.mjs` (frame time) + `scripts/shoot.mjs` (screenshot) + `scripts/drive.mjs` (klik/eval/tembak berurutan). ⚠️ **Wajib jalankan di dpr 2**; dpr 1 mentok vsync dan semua setelan terlihat sama
   - **Browser verifikasi = Brave**, bukan Chrome. CDP-nya identik, cukup tukar path binary-nya. ⚠️ Kelima skrip di `scripts/` masih **hardcode path Chrome** — ganti manual saat dipakai
   - **`drive.mjs` dapat tiga langkah baru** (10 Agu): `emulate` memasang device metrics **sekaligus** `setTouchEmulationEnabled` — tanpa itu halaman terbaca sebagai desktop sempit, `(pointer: coarse)` tidak cocok, dan gerbang INVARIANTS §6 **tidak ikut teruji padahal itu justru yang sedang diperiksa** saat mengemulasi HP; `scroll` memindahkan halaman ke posisi tertentu sebelum memotret; `media` memaksa `prefers-reduced-motion` (cabang itu dipilih saat komponen **dipasang**, jadi tidak bisa dipalsukan dari `eval`). **Tiga lagi 23 Agu** (§4ay): `down`/`holdmove`/`up` — menahan tombol sambil bergerak/dipotret; `drag` selalu melepas di akhir jadi tidak bisa memotret keadaan tertahan
   - ⚠️ `captureScreenshot` kini `fromSurface: false` dan melempar kalau datanya kosong — dengan device metrics override aktif, potret dari surface kadang balik kosong dan `Buffer.from(undefined)` gagal jauh dari sebabnya
 - **`scripts/probe-zoom-out.mjs <url> <zoom> <outdir>`** (26 Agu, §4bb) — QC browser zoom-out: emulasi zoom via `Emulation.setDeviceMetricsOverride` (viewport CSS membesar + deviceScaleFactor turun, meniru Retina), lalu rekam ukuran fisik canvas 3D + p95 rAF + screenshot tiap ~90% tinggi viewport. Verifikasi "100% tidak berubah" = PSNR antar-run via ffmpeg (inf = bit-identik; shot hero wajar 45–66 dB karena fase animasi)
+- **`scripts/shoot-inquiry-overlay.mjs [url] [outdir]`** (27 Agu, §4be) — probe modal CTA navbar: sampel `transform` pembungkus yang naik + opacity tirai tiap ~80 ms (deret pegas yang meluruh mulus = animasinya betul jalan — pelajaran "ukur dulu, jangan percaya mata"), plus PNG urutan buka/tutup. ⚠️ Timestamp PNG-nya **tidak bisa dipercaya** selagi animasi jalan — `captureScreenshot` headless telat ratusan ms, deret sampel yang jadi wasit
+- **`scripts/probe-job-page.mjs [slug] [dpr]`** (27 Agu, §4bf) — 24 check halaman lowongan: URL bertahan, canvas tidak di-resize, **0 draw call**, deep-link dingin tanpa loader & tanpa `office.glb`, toggle bahasa, pendaratan balik di section Careers. 🔑 Profil browser **dibuang tiap jalan** — kalau tidak, `localStorage["cogniti:job-lang"]` bertahan dan uji toggle-nya lulus tanpa menukar apa pun. ⚠️ `evalJs`-nya membaca `unserializableValue`: tanpa itu tiap angka `-0` pulang sebagai `undefined` (lihat §4bf). Sejak §4bi slug-generic (hijau untuk ketiga slug) dan assertion accordion-nya dibalik: "semua lowongan open = tautan halaman, nol accordion". ⚠️ Jangan dijalankan barengan eslint dalam satu perintah shell — rebutan CPU = kegagalan palsu.
+- **`scripts/shoot-apply-form.mjs [slug] [lebar] [tinggi]`** (27 Agu, §4bi) — potret tata letak form lamaran (dua kolom yang runtuh di ponsel, grid skill, kaki form) ke `/tmp/apply-form/`; pelengkap visual probe-job-page, bukan penggantinya.
 - **`scripts/measure-scroll.mjs`** (10 Agu) — mengukur **kehalusan scroll**, bukan fps diam seperti `measure-frames.mjs`. ⚠️ Batas alatnya ditulis di kepala berkas: **ia mencekik CPU**, sementara yang mahal di HP adalah compositing layer WebGL di **GPU** — untuk keputusan yang menyentuh compositing, ia bukan wasitnya
 - **Generator aset layar** (§6c) — `scripts/make-dvd-video.mjs` (logo mantul TV function; deterministik, jalankan ulang → berkas identik byte demi byte) & `scripts/make-vscode-video.mjs` (sintetis, tidak dipakai). Aset lain hasil `ffmpeg` langsung; resepnya di komentar `screens.ts`
 - **Playwright 1.61.0** untuk verifikasi visual headless — **versi itu spesifik**, lihat §4m. Flag WebGL: `--use-gl=angle --use-angle=metal --enable-unsafe-swiftshader`. (Tidak ada di `package.json`; dipasang terpisah saat dibutuhkan. Untuk mengukur **frame time** pakai skrip CDP di atas, bukan ini.)

@@ -48,11 +48,21 @@ type TouchKey = (typeof FIELD_ORDER)[number];
 
 type Status = "idle" | "sending" | "sent" | "error";
 
-export default function ContactForm({ className = "" }: { className?: string }) {
+export default function ContactForm({
+  className = "",
+  prefillMessage = "",
+}: {
+  className?: string;
+  /* Isi awal kolom pesan. Dipakai halaman lowongan supaya tombol Apply
+     mendaratkan pelamar di form yang sudah menyebut posisinya — sisanya
+     tinggal diketik. Sengaja cuma NILAI AWAL, bukan nilai terkendali: begitu
+     pengunjung mengetik, isian ini miliknya. */
+  prefillMessage?: string;
+}) {
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
   const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(prefillMessage);
   const [interests, setInterests] = useState<readonly string[]>([]);
   /* Honeypot. Dibiarkan kosong oleh manusia — lihat isiannya di dasar form. */
   const [botcheck, setBotcheck] = useState("");

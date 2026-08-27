@@ -97,7 +97,7 @@ export default function Office() {
           transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
         >
           We build the software, AI, and cloud infrastructure that turn
-          scattered operations into decisions your team can act on for
+          complex operations into decisions your team can act on for
           government agencies and enterprises across Indonesia.
         </motion.p>
       </div>

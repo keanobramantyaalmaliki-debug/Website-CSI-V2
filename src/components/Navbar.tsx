@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion, type Variants } from "motion/react";
 import { useSceneStore, pathFor, ROOM_LABELS, type RoomKey } from "@/lib/store/sceneStore";
-import { roomHasContact } from "@/lib/roomContent";
 import { ACTIVE_KEYS } from "@/components/canvas/CameraController";
 import MagneticButton from "@/components/motion/MagneticButton";
-import { scrollToSection, scrollToTop, setScrollLocked } from "@/lib/smoothScroll";
+import { scrollToTop, setScrollLocked } from "@/lib/smoothScroll";
+import { isJobPath } from "@/data/jobs";
 import { SOCIALS } from "@/data/socials";
 import { ID_ZONES, useZoneClocks } from "@/lib/hooks/useZoneClocks";
 import { useNarrowViewport } from "@/lib/hooks/useNarrowViewport";
@@ -123,10 +123,25 @@ export default function Navbar() {
   const currentRoom = useSceneStore((s) => s.currentRoom);
   const goTo        = useSceneStore((s) => s.goTo);
   const requestRoomTransition = useSceneStore((s) => s.requestRoomTransition);
+  const setNavInquiryOpen = useSceneStore((s) => s.setNavInquiryOpen);
   const reduced     = useReducedMotion();
   const navigate    = useNavigate();
   const narrow      = useNarrowViewport();
+  const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
+
+  /*
+   * Halaman lowongan (`/careers/<slug>`) bukan salah satu dari lima ruangan.
+   * Store-nya tetap menyimpan ruangan terakhir yang dilihat — dan memang harus,
+   * karena menekan Back mengembalikan pengunjung ke sana — tapi menyorotinya
+   * oranye di sini berbohong: tautan yang menyala menjanjikan "kamu sedang di
+   * halaman ini", padahal isi layarnya sama sekali lain. Jadi penyorotnya yang
+   * dimatikan, bukan store-nya yang diutak-atik.
+   *
+   * Cuma untuk TAMPILAN. `currentRoom` yang asli tetap dipakai goRoom() di
+   * bawah — ia perlu tahu ruangan mana yang sedang dimuat scene-nya.
+   */
+  const activeRoom = isJobPath(pathname) ? null : currentRoom;
 
   /**
    * "Overlay-nya masih kelihatan" — TIDAK sama dengan `open`.
@@ -264,42 +279,29 @@ export default function Navbar() {
   }
 
   /**
-   * "Talk to us" — SCROLL DI TEMPAT, jangan memindahkan ruangan.
+   * "Talk to us" — BUKA MODAL DI TEMPAT, jangan menggulir, jangan pindah
+   * ruangan (27 Agu).
    *
-   * `<Contact />` sekarang ada di KEEMPAT ruangan berisi — Lounge, Office,
-   * Meeting, Function (lihat roomContent.tsx) — jadi tombol ini selalu cukup
-   * menggulir ke bawah. Memindahkan pengunjung ke ruangan lain hanya karena ia
-   * menekan tombol kontak itu mengagetkan: ia kehilangan tempatnya tanpa
-   * meminta.
+   * Yang dibuka InquiryOverlay (di SiteLayout): di desktop laptop MacBook naik
+   * dari bawah layar lalu membuka, di sentuh/sempit lembar form datar. Form-nya
+   * datang ke pengunjung — ia tidak kehilangan posisi gulirnya, dan menutup
+   * mengembalikannya persis ke tempat ia meninggalkannya.
    *
-   * Versi sebelumnya SELALU melempar ke Lounge dari ruangan mana pun, dengan
-   * alasan yang sempat benar: "#contact cuma ada di Lounge". Alasan itu gugur
-   * dua kali — pertama saat Meeting & Function memuat Contact, lalu saat Office
-   * menyusul (17 Agu) — dan kedua kalinya perilakunya tetap benar tanpa satu
-   * baris pun berubah di berkas ini. Itu buah dari menurunkannya, lihat ⚠️.
+   * Dua generasi sebelumnya sama-sama PERJALANAN, dan keduanya sudah dicabut:
+   * pertama melempar ke Lounge ("#contact cuma ada di Lounge" — gugur saat
+   * keempat ruangan memuat Contact), lalu menggulir di tempat lewat
+   * `roomHasContact` + `scrollToSection`. Bersama generasi kedua itu ikut
+   * pergi: pemakaian `roomHasContact` (kini dihapus dari roomContent.tsx),
+   * cabang `navigate("/#contact")`, dan panggilan `setScrollLocked(false)`
+   * yang dulu perlu karena `lenis.scrollTo()` diabaikan selagi terkunci —
+   * modal tidak menggulirkan apa pun, jadi tidak ada kunci yang menghalangi.
    *
-   * Cabang `navigate` di bawah kini tak terjangkau dari ruangan mana pun yang
-   * bisa dibuka, tapi TETAP ADA: ia yang menanggung ruangan baru (atau Pantry
-   * yang dihidupkan) yang belum diberi Contact. `RoomRouteSync` (Arah 3) yang
-   * menggulirkannya setelah Lounge ter-mount.
-   *
-   * ⚠️ Diturunkan dari ROOM_CONTENT, bukan daftar nama ruangan yang ditulis
-   * ulang di sini — itu sebabnya penambahan Contact di Office tidak menuntut
-   * suntingan di tempat ini.
+   * Kunci gulir menu burger ↔ kunci modal berpindah tangan dengan aman di
+   * commit yang sama; rinciannya di komentar mount `<InquiryOverlay/>`.
    */
-  function goToContact() {
+  function openInquiry() {
     setOpen(false);
-    /* ⚠️ Buka kuncinya DI SINI, jangan menunggu cleanup effect di atas.
-       `setOpen(false)` cuma menjadwalkan render; baris berikutnya jalan selagi
-       kuncinya MASIH terpasang, dan `lenis.scrollTo()` diabaikan mentah-mentah
-       selama Lenis berstatus stop — tombolnya akan terlihat mati. Memanggilnya
-       dua kali aman: cleanup effect-nya idempoten. */
-    setScrollLocked(false);
-    if (roomHasContact(currentRoom)) {
-      scrollToSection("contact");
-      return;
-    }
-    navigate("/#contact");
+    setNavInquiryOpen(true);
   }
 
   /**
@@ -379,12 +381,12 @@ export default function Navbar() {
       <MobileMenu
         open={open}
         clocks={clocks}
-        currentRoom={currentRoom}
+        currentRoom={activeRoom}
         overlayV={OVERLAY_V}
         listV={LIST_V}
         itemV={itemV}
         onRoom={goRoom}
-        onContact={goToContact}
+        onContact={openInquiry}
         onGone={() => setOverlayUp(false)}
       />
 
@@ -449,7 +451,7 @@ export default function Navbar() {
               jadi benda tertinggi seperti yang tertulis di komentar besar
               di atas. */}
           {NAV_KEYS.map((room) => {
-            const active = currentRoom === room;
+            const active = activeRoom === room;
             return (
               <li key={room} className="flex">
                 <button
@@ -469,11 +471,11 @@ export default function Navbar() {
         </ul>
 
         <div className="flex items-center gap-2">
-          {/* CTA — pakai goToContact(), BUKAN scrollIntoView langsung.
-              Versi sebelumnya memanggil scrollIntoView apa adanya di sini,
-              sehingga tombol desktop & mobile berperilaku berbeda: yang mobile
-              tahu harus pindah dulu kalau ruangannya tak punya Contact, yang
-              ini tidak — dari Office ia diam saja tanpa umpan balik. */}
+          {/* CTA — pakai openInquiry(), fungsi yang SAMA dengan tombol di menu
+              seluler. Sejarahnya kenapa itu penting: waktu masih menggulir,
+              versi awal memanggil scrollIntoView langsung di sini sehingga
+              tombol desktop & mobile berperilaku berbeda. Satu handler = satu
+              perilaku. */}
           {/* TEKS TELANJANG, bukan pill putih + panah (17 Agu). Pill-nya dulu
               satu-satunya benda 36px di bilah ini, jadi ia sendiri yang menahan
               tingginya di 60px; tanpa dia yang tertinggi adalah logo (27,83px
@@ -496,7 +498,7 @@ export default function Navbar() {
           <MagneticButton maxDistance={4}>
             <button
               type="button"
-              onClick={goToContact}
+              onClick={openInquiry}
               className="hidden shrink-0 text-[13px] font-medium text-zinc-100 transition-colors hover:text-accent md:block"
             >
               Talk to us
@@ -671,7 +673,8 @@ function MobileMenu({
 }: {
   open: boolean;
   clocks: string[];
-  currentRoom: RoomKey;
+  /** null di halaman lowongan: tidak ada ruangan yang sedang dibuka. */
+  currentRoom: RoomKey | null;
   overlayV: Variants;
   listV: Variants;
   itemV: Variants;

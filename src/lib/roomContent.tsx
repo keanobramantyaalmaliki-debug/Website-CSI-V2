@@ -1,4 +1,4 @@
-import { isValidElement, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import type { RoomKey } from "@/lib/store/sceneStore";
 
 // ── Section imports ──────────────────────────────────────────────────────────
@@ -96,31 +96,11 @@ export const ROOM_KEYS_WITH_CONTENT = (
   Object.keys(ROOM_CONTENT) as RoomKey[]
 ).filter((k) => ROOM_CONTENT[k] !== null);
 
-/**
- * Ruangan yang memuat `<Contact />`, jadi `#contact` benar-benar ada di DOM
- * saat ruangan itu terbuka.
- *
- * Dipakai Navbar untuk memutuskan "Talk to us" cukup menggulir di tempat, atau
- * harus pindah ke Lounge dulu. DITURUNKAN dari ROOM_CONTENT di atas, bukan
- * ditulis ulang sebagai daftar nama — dan 17 Agu itu terbukti berguna: Office
- * diberi <Contact />, dan tombol Navbar ikut benar sendiri tanpa ada yang perlu
- * ingat menyuntingnya. Sekarang KEEMPAT ruangan berisi punya Contact, jadi
- * cabang "pindah ke Lounge dulu" praktis tak terpakai lagi — tapi jangan
- * dihapus: ia yang menjaga tombolnya tetap benar kalau kelak ada ruangan baru
- * (atau Pantry dihidupkan) tanpa Contact di dalamnya.
- *
- * Cara memeriksanya menelusuri pohon React element — `<Contact />` bisa berdiri
- * langsung di bawah fragment ruangan (seperti sekarang) maupun terbungkus
- * elemen lain nanti.
- */
-function containsContact(node: ReactNode): boolean {
-  if (Array.isArray(node)) return node.some(containsContact);
-  if (!isValidElement(node)) return false;
-  if (node.type === Contact) return true;
-  const children = (node.props as { children?: ReactNode }).children;
-  return children === undefined ? false : containsContact(children);
-}
-
-export function roomHasContact(room: RoomKey): boolean {
-  return containsContact(ROOM_CONTENT[room]);
-}
+/* `roomHasContact` pernah hidup di sini — penelusur pohon element yang
+   menjawab "ruangan ini memuat <Contact/>?" untuk CTA navbar "Talk to us"
+   (menggulir di tempat vs pindah ke Lounge dulu). Dihapus 27 Agu bersama
+   test-nya: CTA itu kini membuka modal InquiryOverlay yang jalan di ruangan
+   mana pun, jadi pertanyaannya sendiri sudah tidak ditanyakan siapa-siapa.
+   Kalau kelak ada yang butuh lagi, ambil dari git — jangan tulis ulang dari
+   ingatan, versi lamanya sudah menanggung <Contact/> yang terbungkus elemen
+   lain. */

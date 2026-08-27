@@ -56,6 +56,10 @@ const ROLES: CareerRole[] = [
     title: "Full Stack Engineer",
     type: "Engineering",
     status: "open",
+    /* Punya halaman sendiri → baris ini TAUTAN, bukan accordion. Isinya di
+       data/jobs.ts; keduanya harus memakai slug yang persis sama. Ketiga
+       lowongan open sekarang lewat jalur ini. */
+    slug: "full-stack-engineer",
     overview:
       "Design and develop modern web applications, APIs, backend systems, and intelligent digital products. AI/RAG and cloud experience is a strong plus.",
     skills: [
@@ -72,6 +76,7 @@ const ROLES: CareerRole[] = [
     title: "Accountant",
     type: "Finance",
     status: "open",
+    slug: "accountant",
     overview:
       "Own the books end to end: bookkeeping, tax compliance, payroll, and monthly reporting. You keep the numbers clean enough that the team can make decisions from them.",
     skills: [
@@ -87,6 +92,10 @@ const ROLES: CareerRole[] = [
     title: "Customer Success",
     type: "Customer Success",
     status: "open",
+    slug: "customer-success",
+    /* overview & skills di bawah TIDAK dirender lagi (baris ber-slug tidak
+       punya accordion) — dibiarkan hidup supaya baris ini bisa dikembalikan
+       jadi accordion tanpa menulis ulang isinya, sama seperti baris closed. */
     overview:
       "Be the bridge between our clients and what we build. You onboard, support, and grow accounts, turning feedback into product direction instead of letting it sit in a thread.",
     skills: [

@@ -68,8 +68,8 @@ menengok tetangganya di tabel ini.
 | 40 | tirai sorot `TheCrew` (hover nama/foto) | Keano |
 | 45 | baris + kotak foto yang disorot `TheCrew` | Keano |
 | 50 | `Navbar` | Nico |
-| 54 | tirai gelap form inquiry (`Contact`) | Keano |
-| 55 | lapisan laptop/form inquiry, dan lembar sentuhnya | Keano |
+| 54 | tirai gelap form inquiry (`Contact` & `InquiryOverlay`) | Keano |
+| 55 | lapisan laptop/form inquiry, dan lembar sentuhnya (`Contact` & `InquiryOverlay`) | Keano |
 | 56 | tombol tutup form inquiry | Keano |
 | 60 | `LoadingScreen` | Keano |
 
@@ -154,6 +154,19 @@ Korban sunyi lain dari resolusi konflik yang sama: `<div className="ambient-grid
 hilang dari `App.tsx` padahal `.ambient-grid` masih ada di `index.css`.
 Dikembalikan di PR ini. Keduanya menunjukkan hal yang sama — **resolusi konflik
 adalah tempat fitur menghilang tanpa jejak**, karena tidak ada yang gagal.
+
+**Cabang kedua yang sah (27 Agu, §4bf).** Halaman lowongan `/careers/<slug>`
+sengaja **tidak me-mount Hero** — pelamar yang membuka tautan yang dibagikan
+tidak perlu mengunduh `office.glb`. Aturan di atas tetap dipatuhi lewat sisi
+sebaliknya: kalau `<Scene/>` tidak mount, `LoadingScreen` **juga tidak
+dirender**. Keduanya digerbangi flag yang SAMA di `SiteLayout.tsx`
+(`heroMounted`), dan `siteLayoutHeroGate.invariant.test.ts` menolak keduanya
+dipisah.
+
+> ⚠️ Jadi jangan "membetulkan" `SiteLayout` dengan me-render `<LoadingScreen/>`
+> tanpa syarat. Kelihatannya lebih aman, padahal itu tepat mengembalikan bug
+> §3: halaman lowongan tertutup layar putih permanen, karena tidak ada
+> `useFrame` yang akan pernah menyalakan `sceneReady` di sana.
 
 ---
 

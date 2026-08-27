@@ -68,6 +68,21 @@ export function jumpToTop() {
 
 export function scrollToSection(id: string) {
   if (instance) {
+    /*
+     * `resize()` DULU, baru `scrollTo`. Lenis menyimpan `limit` (= tinggi
+     * dokumen − tinggi viewport) hasil ResizeObserver, dan MENJEPIT setiap
+     * target ke angka itu. Observer-nya baru berbunyi di frame berikutnya,
+     * jadi kalau halaman baru saja berganti route, jepitannya masih memakai
+     * ukuran HALAMAN SEBELUMNYA.
+     *
+     * Terukur di Brave saat "← Back to careers" (/careers/<slug> → /people#careers):
+     *   #careers.offsetTop  = 3875  (tetap segitu sepanjang animasi — anchor
+     *                                 TIDAK bergeser, itu bukan penyebabnya)
+     *   halaman job          = 2396 tinggi dokumen, viewport 763 → limit 1633
+     *   gulir berhenti di    ≈ 1630
+     * Persis di jepitan halaman lama. Sesudah `resize()` ia mendarat di 3875.
+     */
+    instance.resize();
     instance.scrollTo(`#${id}`);
     return;
   }
@@ -101,10 +116,11 @@ export function scrollToSection(id: string) {
  * Dengan hitungan, pelepasan baru benar-benar terjadi saat pemohon TERAKHIR
  * melepas.
  *
- * Dijepit di nol dengan sengaja: `goToContact` di Navbar memanggil
- * `setScrollLocked(false)` lebih dulu lalu membiarkan cleanup effect
- * memanggilnya lagi — pola yang sah dan sudah didokumentasikan di sana. Tanpa
- * jepitan, panggilan berlebih itu membuat hitungannya negatif dan kunci
+ * Dijepit di nol dengan sengaja: unlock berlebih itu pola yang sah — dulu
+ * `goToContact` di Navbar memanggil `setScrollLocked(false)` lebih dulu lalu
+ * membiarkan cleanup effect memanggilnya lagi (pemanggilnya sudah tiada sejak
+ * CTA-nya berhenti menggulir, 27 Agu, tapi polanya boleh muncul lagi). Tanpa
+ * jepitan, panggilan berlebih membuat hitungannya negatif dan kunci
  * berikutnya butuh dua kali unlock untuk lepas.
  */
 export function setScrollLocked(locked: boolean) {

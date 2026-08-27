@@ -8,7 +8,7 @@ import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import { useNarrowViewport } from "@/lib/hooks/useNarrowViewport";
 import { setScrollLocked } from "@/lib/smoothScroll";
 import { useSceneStore } from "@/lib/store/sceneStore";
-import { SOCIALS } from "@/data/socials";
+import SiteFooter from "@/components/SiteFooter";
 import { motion, useReducedMotion, useSpring, useTransform } from "motion/react";
 
 /* Default `config.default` milik react-spring — tension 170, friction 26, mass 1.
@@ -16,8 +16,11 @@ import { motion, useReducedMotion, useSpring, useTransform } from "motion/react"
    floating-laptop; `motion` menamainya stiffness/damping. Rasio redamnya 0,997,
    praktis kritis: tidak ada pantulan lewat pose terbuka.
 
-   ⚠️ Ini SEKARANG hanya menggerakkan ENGSEL. Kameranya punya pegasnya sendiri. */
-const HINGE_SPRING = { stiffness: 170, damping: 26, mass: 1 };
+   ⚠️ Ini SEKARANG hanya menggerakkan ENGSEL. Kameranya punya pegasnya sendiri.
+
+   Di-export (bersama CAMERA_SPRING) karena InquiryOverlay — jalur CTA navbar —
+   membuka laptop yang sama: satu sumber angka, dua jalur mustahil beda rasa. */
+export const HINGE_SPRING = { stiffness: 170, damping: 26, mass: 1 };
 
 /**
  * Pegas KAMERA — sengaja jauh lebih lembut daripada pegas engsel.
@@ -33,7 +36,7 @@ const HINGE_SPRING = { stiffness: 170, damping: 26, mass: 1 };
  * selesai lebih dulu (~0,5 dtk), jadi urutannya jadi "lid membuka, baru kamera
  * mendekat" — bukan dua gerakan yang saling menumpuk.
  */
-const CAMERA_SPRING = { stiffness: 55, damping: 23, mass: 1 };
+export const CAMERA_SPRING = { stiffness: 55, damping: 23, mass: 1 };
 
 /** Di bawah ini nilai pegas kamera dianggap sudah pulang. Bukan `=== 0`: pegas
  *  mendekat secara asimtotis, dan menunggu nol persis berarti lapisan overlay
@@ -210,7 +213,7 @@ function WordmarkSvg({
 
 const FLOAT_WHEN_OPEN = false;
 
-export default function Contact() {
+export default function Contact({ prefillMessage }: { prefillMessage?: string } = {}) {
   /* Laptop mulai TERTUTUP dan hanya membuka kalau diklik — sama seperti
      `useState(false)` + `onClick` di pmndrs. Dulunya digerakkan scroll; yang
      berganti cuma SUMBER nilai 0→1-nya, rig engselnya tidak disentuh. */
@@ -525,7 +528,7 @@ export default function Contact() {
           sengaja full-bleed demi wordmark tepi-ke-tepi ala footer basement,
           tapi SVG `w-full` justru membesar bersama viewport saat browser
           di-zoom-out — satu-satunya blok halaman yang terlihat tidak ikut
-          mengecil. Di viewport ≤1600px (semua layar biasa pada zoom 100%)
+          mengecil. Di viewport ≤1920px (semua layar biasa pada zoom 100%)
           shell tidak mengubah apa pun; wordmark tetap terasa full-bleed. */}
       <div className="section-shell flex min-h-[520px] flex-col [height:calc(100svh-var(--nav-h)-10px)]">
         {/* Kepala section kembali — tapi sebagai TANDA, bukan teks. Yang dihapus
@@ -668,7 +671,7 @@ export default function Contact() {
                       onClick={(e) => e.stopPropagation()}
                       className="h-full w-full overflow-hidden"
                     >
-                      <ContactForm className="h-full w-full" />
+                      <ContactForm className="h-full w-full" prefillMessage={prefillMessage} />
                     </div>
                   ) : undefined
                 }
@@ -795,7 +798,7 @@ export default function Contact() {
                   Close ✕
                 </button>
               </div>
-              <ContactForm />
+              <ContactForm prefillMessage={prefillMessage} />
             </div>
           </motion.div>
         )}
@@ -809,57 +812,7 @@ export default function Contact() {
           itulah gunanya melepas keduanya, bukan menuliskan 12px dua kali.
           Garis pemisah `border-t` dilepas 13 Agu — di posisi mepet begini ia
           jadi sekat yang tidak memisahkan apa-apa. */}
-        <footer className="mt-12 shrink-0 pb-3 text-xs text-zinc-400">
-          {/* Dua baris, dipasangkan per KOLOM bukan per baris: kiri = cara
-            menghubungi (surel di atas alamatnya), kanan = jejak resmi (kanal
-            sosial di atas hak cipta). Susunan ini diketok 18 Agu; sebelumnya
-            hak cipta memimpin baris pertama dan surel terselip di antara
-            tautan sosial. */}
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            {/* Pindahan dari kepala section yang dihapus — di sini ia tidak
-              mengulang isi form, cuma jalur cadangan kalau form-nya gagal. */}
-            {/* Putih penuh, bukan zinc-400 seperti sisa footer (18 Agu):
-              surel dan kanal sosial adalah SATU-SATUNYA yang bisa diklik di
-              sini — kontras itu yang membedakannya dari teks mati di
-              sebelahnya. Hover-nya jadi kebalikan pola biasa: meredup ke
-              zinc-400, bukan menyala.
-
-              `hidden sm:inline` — di HP surel dan alamat DISEMBUNYIKAN, sisa
-              hak cipta + kanal sosial saja (18 Agu). Empat baris teks kecil
-              beruntun di lebar 360px terbaca sebagai tumpukan, bukan kaki
-              halaman; surel juga sudah ada di dalam form tepat di atasnya.
-              `hidden`, bukan dilepas dari DOM: alamat masih terbaca crawler
-              sebagai sinyal lokasi. */}
-            <a
-              href="mailto:hello@cogniti.id"
-              className="hidden text-white transition-colors hover:text-zinc-400 sm:inline"
-            >
-              hello@cogniti.id
-            </a>
-            <div className="flex flex-wrap gap-4">
-              {SOCIALS.map((s) => (
-                <a
-                  key={s.label}
-                  href={s.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-white transition-colors hover:text-zinc-400"
-                >
-                  {s.label}
-                </a>
-              ))}
-            </div>
-          </div>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
-            <span className="hidden sm:inline">
-              Jl. Kediri No.27, Tuban, Badung, Bali 80361
-            </span>
-            <span>
-              © {new Date().getFullYear()} Cognitiva Solusi Indonesia. All
-              rights reserved.
-            </span>
-          </div>
-        </footer>
+        <SiteFooter className="mt-12 shrink-0 pb-3" />
       </div>
     </section>
   );

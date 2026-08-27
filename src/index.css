@@ -142,20 +142,26 @@ body {
 }
 
 /* Kolom konten situs (QC zoom-out 26 Agu). Section teks/grid dulu melar
-   selebar viewport — di monitor lebar & saat browser di-zoom-out (viewport
-   CSS membengkak) kartu dan heading ikut molor dari tepi ke tepi, sementara
-   acuan look-nya (basement.studio) menahan konten di kolom terpusat.
-   1600px = plafon yang SUDAH dipakai teks Vision — di viewport ≤1600px
-   (termasuk 1440 milik Keano di zoom 100%) utility ini tidak mengubah
-   satu piksel pun.
+   selebar viewport — saat browser di-zoom-out (viewport CSS membengkak)
+   kartu dan heading ikut molor dari tepi ke tepi, sementara acuan look-nya
+   (basement.studio) menahan konten di kolom terpusat.
+   Plafonnya DINAMIS (§4bh): `--shell-max` diisi src/lib/shellMax.ts —
+   capture `screen.width` saat load (lantai 1920) lalu DIBEKUKAN selama
+   panel fisiknya sama; detailnya (kenapa bukan formula per-resize: semua
+   metrik CSS ikut membesar saat zoom-out, terukur di Brave) ada di komentar
+   modul itu. Monitor selebar apa pun full-bleed pada zoom 100%; zoom-out
+   tetap terjepit di angka capture. Fallback 1920px di sini = perilaku saat
+   JS belum/tidak jalan, sekaligus riwayat plafon statisnya (semula 1600 =
+   plafon teks Vision; 27 Agu naik ke 1920 karena gap di monitor AOC
+   looks-like-1080; masih 27 Agu juga jadi dinamis).
 
-   SENGAJA tidak dipakai oleh: hero 3D, strip Industries, dan <Contact/>
-   (wordmark COGNITI.ID memang dari tepi ke tepi, seperti wordmark footer
-   basement) — full-bleed di sana adalah desain, bukan kebocoran. */
+   SENGAJA tidak dipakai oleh hero 3D — full-bleed di sana adalah desain,
+   bukan kebocoran. Industries & Contact ikut shell sejak ronde susulan
+   26 Agu. */
 @utility section-shell {
   margin-inline: auto;
   width: 100%;
-  max-width: 1600px;
+  max-width: var(--shell-max, 1920px);
 }
 
 /* Ambient depth layer — ultra-subtle grid, GPU-safe, fixed & non-interactive.

@@ -42,10 +42,29 @@ describe("smoothScroll", () => {
 
     it("scrollToSection() diteruskan ke lenis.scrollTo('#id')", () => {
       const scrollTo = vi.fn();
-      registerLenis({ scrollTo } as never);
+      const resize = vi.fn();
+      registerLenis({ scrollTo, resize } as never);
 
       scrollToSection("contact");
       expect(scrollTo).toHaveBeenCalledWith("#contact");
+    });
+
+    /*
+     * Urutannya yang penting, bukan sekadar "resize pernah dipanggil".
+     * Lenis menjepit target ke `limit` yang ia simpan; kalau `resize()` jalan
+     * SESUDAH `scrollTo()`, jepitannya masih ukuran halaman sebelumnya dan
+     * gulir berhenti di tengah jalan — persis bug "Back to careers" yang
+     * mendarat 2200px di atas section-nya.
+     */
+    it("scrollToSection() menyegarkan limit Lenis SEBELUM menggulir", () => {
+      const order: string[] = [];
+      registerLenis({
+        scrollTo: () => order.push("scrollTo"),
+        resize: () => order.push("resize"),
+      } as never);
+
+      scrollToSection("careers");
+      expect(order).toEqual(["resize", "scrollTo"]);
     });
   });
 });

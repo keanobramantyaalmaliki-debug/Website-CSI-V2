@@ -27,7 +27,7 @@ export default function Industries() {
        putihnya sendiri masih membentang tepi-ke-tepi, jadi saat browser
        di-zoom-out section ini tetap terbaca "tidak ikut mengecil" padahal
        panel ServicesTicker (yang lebarnya ter-cap shell) sudah benar. Di
-       viewport ≤1600px shell tidak mengubah apa pun: strip tetap full-bleed
+       viewport ≤1920px shell tidak mengubah apa pun: strip tetap full-bleed
        tanpa radius, nyatu dengan kartu Process di atasnya. */
     <section id="industries" className="section-shell relative z-10 overflow-x-clip">
       <h2 className="sr-only">Built Across Sectors</h2>

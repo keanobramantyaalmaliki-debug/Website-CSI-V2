@@ -90,10 +90,21 @@ export default function RoomRouteSync() {
     // yang menahan Arah 2 menimpa deep-link (catatannya di bawah).
     if (key && key !== currentRoom && !goTo) return;
 
+    // Path yang sama sekali bukan ruangan (mis. "/careers/<slug>"): bukan
+    // urusan efek ini — dan yang penting, JANGAN ditandai `resolvedPath`.
+    //
+    // Penanda itulah pintu masuk Arah 2. Kalau pathname ini ikut ditandai,
+    // Arah 2 di bawah melihat `pathFor(currentRoom) !== pathname` pada path
+    // yang sudah "terurus", lalu menulis ulang URL-nya jadi path ruangan —
+    // halaman lowongan terlempar balik ke /people sebelum sempat terbaca.
+    // Terukur di peramban: pushState "/careers/full-stack-engineer" langsung
+    // disusul pushState "/people" dari berkas ini. Dijaga jobRoute.test.tsx.
+    if (!key) return;
+
     // Selebihnya pathname ini selesai diurus, apa pun cabang yang diambil.
     resolvedPath.current = pathname;
 
-    if (!key || !goTo) return;
+    if (!goTo) return;
     if (key === currentRoom) return;
     goTo(key);
     // `!hash` — kalau URL-nya membawa anchor (mis. "/#contact"), Arah 3 di

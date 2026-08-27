@@ -19,9 +19,12 @@
  * Tujuan emailnya diganti lewat dashboard Web3Forms, TANPA menyentuh kode.
  * Saat ini: keanobramantyaalmaliki@gmail.com (belum hello@cogniti.id).
  */
-const WEB3FORMS_KEY = "acd27baf-5774-4a1c-8d10-77ea2e860a60";
+/* Di-export karena form lamaran (lib/careers/submitApplication.ts) berangkat
+   ke inbox yang sama. Dua salinan key = satu hari di mana yang satu diganti
+   dan yang lain diam-diam tetap mengirim ke tujuan lama. */
+export const WEB3FORMS_KEY = "acd27baf-5774-4a1c-8d10-77ea2e860a60";
 
-const ENDPOINT = "https://api.web3forms.com/submit";
+export const ENDPOINT = "https://api.web3forms.com/submit";
 
 /**
  * Jarak minimum antar kiriman SUKSES per browser (5 menit). Sengaja bukan blokir

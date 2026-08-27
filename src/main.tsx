@@ -20,6 +20,12 @@ import "@fontsource/geist-mono";
 import "@fontsource-variable/archivo/wdth.css";
 import "./index.css";
 import App from "./App";
+import { initShellMax } from "./lib/shellMax";
+
+/* Sebelum render: isi `--shell-max` (plafon dinamis section-shell, §4bh)
+   supaya frame pertama di monitor >1920px sudah full-bleed, bukan melompat
+   dari fallback 1920. */
+initShellMax();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

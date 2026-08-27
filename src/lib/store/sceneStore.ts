@@ -229,6 +229,11 @@ interface SceneStore {
    * true = form inquiry (MacBook di section Contact) sedang terbuka sebagai
    * modal.
    *
+   * ⚠️ HANYA Contact yang menulisnya. InquiryOverlay (modal kembaran milik
+   * CTA navbar) sengaja TIDAK ikut: lapisannya hidup di luar `<main>`, jadi
+   * pelepasan z-10 di bawah tidak pernah ia butuhkan — dan boolean yang
+   * ditulis dua modal bisa saling clobber di ekor animasi masing-masing.
+   *
    * Dibaca SiteLayout untuk melepas `z-10` dari `<main>` selagi modalnya hidup.
    * Kenapa lewat store dan bukan state lokal Contact: `relative z-10` di `<main>`
    * membikin STACKING CONTEXT, jadi z-index setinggi apa pun di dalamnya tetap
@@ -239,6 +244,18 @@ interface SceneStore {
    */
   inquiryOpen: boolean;
   setInquiryOpen: (open: boolean) => void;
+
+  /**
+   * Perintah "buka form inquiry SEKARANG, dari mana pun" — milik CTA "Talk to
+   * us" di navbar, dibaca InquiryOverlay (di SiteLayout, luar `<main>`).
+   *
+   * Terpisah dari `inquiryOpen`, dan bukan duplikasi: `inquiryOpen` itu AKIBAT
+   * ("sebuah modal sedang hidup", dibaca SiteLayout untuk urusan z-index),
+   * sedangkan flag ini PERINTAH untuk satu jalur tertentu. Laptop di section
+   * Contact tetap punya jalur kliknya sendiri dan tidak menyentuh flag ini.
+   */
+  navInquiryOpen: boolean;
+  setNavInquiryOpen: (open: boolean) => void;
 
   // ── Minigame billiard ────────────────────────────────────────────────────
   /** true = pemain sedang di meja. Dipakai Waypoints untuk MENYEMBUNYIKAN
@@ -324,6 +341,9 @@ export const useSceneStore = create<SceneStore>((set) => ({
 
   inquiryOpen: false,
   setInquiryOpen: (inquiryOpen) => set({ inquiryOpen }),
+
+  navInquiryOpen: false,
+  setNavInquiryOpen: (navInquiryOpen) => set({ navInquiryOpen }),
 
   billiardActive: false,
   billiardPhase: "off",
