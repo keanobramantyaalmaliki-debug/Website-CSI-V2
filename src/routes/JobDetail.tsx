@@ -95,18 +95,21 @@ export default function JobDetail() {
   return (
     <>
       {/*
-        Tanpa `section-shell` — SENGAJA, beda dari section lain. Halaman ini
-        cuma judul + dua kolom teks; menahannya di kolom shell membuat tepinya
-        menganga ~200px di monitor lebar sementara isinya tidak bertambah.
-        `px-3` (12px) jadi satu-satunya jarak ke tepi layar. <ApplyForm/> di
-        bawah TETAP memakai shell + kolomnya sendiri.
+        `section-shell` seperti section lain (QC zoom-out): tanpa jepitan,
+        halaman ini melar dari tepi ke tepi saat browser di-zoom-out — persis
+        bug yang sudah dibereskan di 14 section pada 26 Agu. Alasan lama
+        menolak shell di sini ("tepi menganga ~200px di monitor lebar") gugur
+        sejak plafonnya dinamis via shellMax.ts: pada zoom 100% shell = lebar
+        layar fisik → tetap full-bleed di monitor selebar apa pun; yang
+        terjepit hanya viewport zoom-out. `px-3` (12px) tetap jadi jarak ke
+        tepi kolom. <ApplyForm/> di bawah memakai shell + kolomnya sendiri.
 
         pt-15 = 60px. Bilah navbar terukur 44px (fixed, jadi tidak menyumbang
         tinggi apa pun ke aliran halaman) dan baris teks pertama menggantung 2px
         di bawah tepi atas kotaknya sendiri: 60 − 44 + 2 = 18px jarak yang
         benar-benar terlihat antara bilah dan "Back to careers".
       */}
-      <article className="px-3 pt-15 pb-16 sm:pb-24">
+      <article className="section-shell px-3 pt-15 pb-16 sm:pb-24">
         <Link
           to="/people#careers"
           className="inline-flex items-center gap-2 text-sm font-light text-zinc-400 transition-colors hover:text-zinc-100"
@@ -155,7 +158,20 @@ export default function JobDetail() {
           {...fade}
           transition={{ duration: 0.7, ease: EASE }}
         >
-          <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+          {/*
+            Plafon dalam ala basement (diskusi 27 Agu): kolom fr melebar terus
+            sampai shell 1920 menjepit, dan di layar 1280 jepitan itu baru
+            terasa di zoom <67% (1280/1920). basement mengakalinya bukan lewat
+            shell — KONTEN-nya yang punya ukuran intrinsik (65ch paragraf,
+            846px blok), jadi saat viewport membesar yang tumbuh cuma ruang
+            kosong. Foto dipatok 600px = ukurannya di viewport ±1400: di bawah
+            itu (MacBook 1280, tablet) tak tersentuh, zoom-out mulai ±90%
+            langsung membeku. Konsekuensi sadar: di monitor 1920 foto tampil
+            600px, bukan 830px penuh kolomnya — persis basement yang membiarkan
+            ruang kosong tumbuh di monitor besar. lg-only supaya cabang satu
+            kolom (HP/tablet potret) tetap selebar kolomnya.
+          */}
+          <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] lg:max-w-[600px]">
             <img
               src={job.photo}
               alt=""
@@ -165,7 +181,9 @@ export default function JobDetail() {
               className="aspect-[4/3] w-full object-cover"
             />
           </div>
-          <p className="text-base leading-relaxed font-light text-zinc-300 sm:text-lg">
+          {/* 65ch = ukuran baca; paragraf berhenti melebar jauh sebelum
+              kolomnya, di zoom berapa pun. */}
+          <p className="max-w-[65ch] text-base leading-relaxed font-light text-zinc-300 sm:text-lg">
             {copy.intro}
           </p>
         </motion.div>
@@ -189,8 +207,10 @@ export default function JobDetail() {
           isinya bukan bagian dari lowongannya.
 
           Rata tepi 12px mengikuti <article> di atasnya, bukan kolom form —
-          kaki halaman memang dari tepi ke tepi. */}
-      <SiteFooter className="px-3 pb-6" />
+          kaki halaman memang dari tepi ke tepi KOLOM shell; shell-nya ikut
+          dipasang di sini supaya saat zoom-out footer tidak sendirian melar
+          lebih lebar dari isi halaman di atasnya. */}
+      <SiteFooter className="section-shell px-3 pb-6" />
     </>
   );
 }
@@ -213,7 +233,9 @@ function JobList({
       <h2 className="text-xl font-semibold tracking-tight text-zinc-100 sm:text-2xl">
         {title}
       </h2>
-      <ul className="mt-6 space-y-4">
+      {/* Ukuran baca yang sama dengan paragraf intro — butir list tidak ikut
+          melebar bersama kolom grid-nya (plafon dalam ala basement). */}
+      <ul className="mt-6 max-w-[65ch] space-y-4">
         {items.map((item) => (
           <li
             key={item}

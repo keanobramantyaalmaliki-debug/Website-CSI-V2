@@ -114,10 +114,11 @@ Terakhir diupdate: **27 Agustus 2026**.
 - **Revisi `section-shell`: plafon 1600 → 1920px** (§4bg, 27 Agu) — di monitor AOC U28P2G6B (4K, UI looks-like **1920×1080**) semua section bergap ±160px kiri-kanan pada zoom 100%: efek samping §4bb yang "sadar" ternyata terasa bug begitu kejadian di monitor sungguhan. 🔑 CSS **tidak bisa membedakan zoom-out dari monitor besar** (dua-duanya cuma viewport lebar; dpr juga bukan pembeda) → plafon dipatok di lebar CSS monitor riil terlebar. Satu angka di `index.css`; jepitan vertikal & `max-w` teks Vision sengaja tidak disentuh. Terverifikasi CDP: 1920 → full-bleed pulih, 2880 (≈zoom 50%) → tetap terjepit 1920 terpusat.
 - **Plafon `section-shell` dinamis: capture-and-freeze `screen.width`** (§4bh, 27 Agu) — kelanjutan §4bg: monitor >1920 (QHD/ultrawide) kini **full-bleed** juga, tanpa mengorbankan jepitan zoom-out §4bb. 🔥 Asumsi awal tumbang oleh pengukuran Brave sungguhan: `outerWidth` DAN `screen.width` **ikut membesar saat zoom** (semua CSS px; trik `outerWidth/innerWidth` mati) — satu-satunya invarian = piksel fisik `screen.width × dpr`. Maka `src/lib/shellMax.ts`: capture `screen.width` saat load (lantai 1920) → `--shell-max`, lalu **beku** selama tanda-tangan fisik panel sama; capture ulang hanya saat pindah monitor (fisik berubah >2%). ⚠️ Degradasi sadar: load saat SUDAH zoom-out (zoom nempel per-origin) → sesi itu tanpa jepitan — saat QC, **Cmd+0 dulu sebelum reload**. Unit 10 kasus dari angka pengukuran riil; suite 406/58.
 - **Careers tuntas: form lamaran sendiri + tiga lowongan punya halaman + footer dipakai bersama** (§4bi, 27 Agu) — tombol Apply berhenti mendarat di form Contact; halaman lowongan dapat **`ApplyForm.tsx`** sendiri (Web3Forms yang sama dengan inquiry — key di-impor bukan disalin; cooldown 60 dtk, galat per-isian dua bahasa; **GitHub dicabut global** atas permintaan Keano, catatan "kalau balik harus per-lowongan" ditinggal di kode). `accountant` & `customer-success` masuk `jobs.ts` (bullet ID verbatim dari poster resmi) → **semua lowongan open kini tautan halaman, nol accordion tersisa** — test accordion pindah ke fixture sintetis, bukan dihapus. Footer Contact diangkat jadi **`SiteFooter.tsx`** dipakai bersama. Foto `accountant.jpg` & `customer-success.jpg` terisi (menutup 404 diam-diam preview hover sejak §4bc). 📌 `customer-success.jpg` 640×427 lembek di Retina — placeholder yang disengaja, tinggal ditimpa kapan pun foto finalnya ada.
+- **Zoom-out menengah: JobDetail ikut `section-shell` + plafon dalam ala basement** (§4bj, 27 Agu) — dua ronde. (1) `/careers/:slug` sempat **sengaja tanpa shell** ("tepi menganga di monitor lebar") — alasan itu gugur sejak plafon dinamis §4bh, dan bug melar-saat-zoom-out §4bb muncul lagi persis di halaman termuda; `<article>` + `SiteFooter` di-shell-kan. (2) Keano tes zoom 90/67/30%: jepitan baru terlihat di 30% — **bukan bug, matematika lantai 1920**: di layar 1280 CSS ambangnya 1280/1920 ≈ **67%** (dites 67% = 1910, mepet 10px). Dibedah CSS produksi **basement.studio**: `.grid-layout` mereka plafon statis **120rem = 1920px juga** (ambang 67% mereka alami sama; `.max-w-full` pun dibajak jadi 120rem; monitor >1920 mereka bergap — kita tidak, berkat §4bh) — rasa "adaptif"-nya datang dari **plafon dalam per elemen** (65ch paragraf, 846px blok): yang tumbuh di viewport lebar cuma ruang kosong. Keano pilih resep itu (lantai 1920 dibiarkan): foto JobDetail `lg:max-w-[600px]`, teks/list `65ch`, isi CaseStudySpotlight `1400px`, kutipan Testimonial `1300px`, deskripsi kartu Deployments `65ch`; mosaic flush (CaseGrid/TheCrew/PeopleValues) & section yang sudah ber-plafon bawaan sengaja tidak disentuh. Penjaga `innerCaps.invariant.test.ts`. ⚠️ Temuan sampingan: **`MissionShowcase` yatim** — tidak dirender route mana pun.
 
 **⬅️ Berikutnya:** ~~(a) pasang backend Web3Forms~~ ✅ **selesai 26 Agu** (§4bd) — blocker rilis terakhir; (b) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker (§4n); (c) selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter, §4s); (d) optimasi GLB lanjutan — atlas per ruangan + dedup 29 image kembar (§4s); (e) post-processing PS1 (§4b), pass terakhir untuk look basement.studio; (f) **verifikasi perf Safari oleh Keano sendiri** setelah deploy §4aj — `window.__adaptiveDpr()` di console langsung memberi tahu jatuh di kategori mana (GPU-bound → index naik; tetap `{dpr: 1}` tapi lag → cap OS Low Power Mode). **Optimasi GPU idle:** penundaan "tunggu finalise" (7 Agu) **dicabut sebagian 19 Agu** karena Safari — opsi 1/2/4 terpasang (§4aj); sisa **opsi 3** (gabung pass HueSaturation + BrightnessContrast) tetap menunggu finalise.
 
-> ⚠️ **Test suite: 407 test / 58 berkas, hijau** (27 Agu; 348/53 turun ke 344/52 saat `roomContent.test.tsx` dicabut bersama `roomHasContact` §4be, lalu naik bertahap lewat batch halaman lowongan §4bf, `shellMax.test.ts` §4bh, dan batch form lamaran + accountant/customer-success §4bi). Satu test *pernah* merah pada satu putaran penuh — `TheCrewMobileCarousel.test.tsx` ("auto-advances 30s after going idle") — lalu hijau saat dijalankan sendiri **dan** pada putaran penuh berikutnya. **Flake fake-timer di bawah beban, bukan regresi**; kalau ia muncul lagi, curigai `advanceTimersByTimeAsync` di suite yang berbagi sesi timer, bukan komponennya.
+> ⚠️ **Test suite: 415 test / 59 berkas, hijau** (27 Agu; 348/53 turun ke 344/52 saat `roomContent.test.tsx` dicabut bersama `roomHasContact` §4be, lalu naik bertahap lewat batch halaman lowongan §4bf, `shellMax.test.ts` §4bh, batch form lamaran + accountant/customer-success §4bi, dan batch shell JobDetail + plafon dalam §4bj). Satu test *pernah* merah pada satu putaran penuh — `TheCrewMobileCarousel.test.tsx` ("auto-advances 30s after going idle") — lalu hijau saat dijalankan sendiri **dan** pada putaran penuh berikutnya; **kambuh sekali lagi** dengan pola persis sama di putaran §4bj dan kembali hijau. **Flake fake-timer di bawah beban, bukan regresi**; kalau ia muncul lagi, curigai `advanceTimersByTimeAsync` di suite yang berbagi sesi timer, bukan komponennya.
 
 ## 🎉 MVP 1 SELESAI (27 Jul) — **50-60 FPS di browser**
 
@@ -2652,6 +2653,90 @@ accordion**); screenshot `shoot-apply-form.mjs` dicek mata.
 > — bukan blocker; fotonya tinggal ditimpa di `public/careers/` kapan pun
 > versi finalnya ada, tanpa menyentuh kode.
 
+## 4bj. Zoom-Out Menengah: JobDetail Ikut Shell + Plafon Dalam ala basement ✅ (27 Agu)
+
+Dua ronde dalam satu sesi, dipicu QC zoom Keano di halaman lowongan.
+
+### Ronde 1 — JobDetail ketinggalan `section-shell`
+
+`/careers/:slug` (§4bf) lahir SETELAH sapuan shell §4bb dan sempat **sengaja**
+dibangun tanpa `section-shell` dengan alasan "menahannya di kolom shell membuat
+tepinya menganga ~200px di monitor lebar". Alasan itu **gugur sejak plafon
+dinamis §4bh** (pada zoom 100% shell = lebar layar fisik → tetap full-bleed di
+monitor mana pun), dan bug melar-saat-zoom-out §4bb muncul lagi persis di
+halaman termuda situs. Fix: `section-shell` di `<article>` + `<SiteFooter>`
+(`ApplyForm` sudah ber-shell sejak lahir), komentar lama dikoreksi, dijaga test
+"artikel dan footer terjepit kolom section-shell" di `JobDetail.test.tsx`.
+**Pelajaran: halaman/section baru wajib lahir ber-shell** kecuali sengaja
+full-bleed (kini tinggal hero).
+
+🔥 Gotcha verifikasi CDP: `--shell-max` yang disuntik manual **ditimpa balik
+oleh `shellMax`** — emulasi metrics mengubah tanda-tangan fisik (>2%) →
+capture ulang di angka menggembung (varian dari peringatan §4bh "emulasi tidak
+bisa menguji zoom"). Suntikan harus **satu ekspresi dengan pengukurannya**.
+
+### Ronde 2 — "kok baru menjepit di 30%?" → matematika lantai 1920
+
+Keano tes zoom 90/67/30% di MacBook (layar **1280 CSS px**): padding baru
+menjauh di 30%. **Bukan bug**: jepitan shell aktif saat viewport > 1920, dan
+ambangnya `1280 ÷ 1920 ≈ 67%` — di 67% viewport 1910, **mepet 10px** di bawah
+plafon; era plafon 1600 (§4bb) ambangnya ~80%, makanya terasa mundur.
+
+Diskusi "gimana basement bisa adaptif" dijawab dengan **membedah CSS produksi
+basement.studio** (dua bundle `_next/static`):
+
+- `.grid-layout`: `max-width:120rem` (= **1920px, angka yang sama dengan
+  lantai kita**) + `margin-inline:auto` + `padding-inline:1rem` + grid 12
+  kolom `fr` (4 di mobile). **Nol JavaScript, nol deteksi zoom** — ambang 67%
+  di layar 1280 berlaku persis sama di situs mereka.
+- `.max-w-full` **dibajak** jadi `max-width:120rem` — "full" pun tak boleh
+  melewati kolomnya.
+- Monitor >1920 di basement **bergap terpusat dan mereka terima**; kita malah
+  lebih baik (full-bleed universal via capture §4bh).
+- Rasa "adaptif" mereka datang dari **plafon dalam per elemen**: paragraf
+  `65ch`, blok `846px`/`42rem`, kartu `26.25rem` — konten punya ukuran
+  intrinsik, kolom fr yang melebar hanya menumbuhkan ruang kosong.
+
+**Keputusan Keano: resep basement murni** — lantai 1920 dibiarkan (opsi "buang
+lantai → jepit mulai 90%" dengan risiko sesi load-saat-zoom-in bergap di 100%
+ditawarkan, tidak diambil), kontennya yang diberi disiplin.
+
+### Plafon dalam yang dipasang
+
+Prinsip angka: **patok = ukuran elemen di viewport ±1400–1440** → di bawah itu
+(MacBook 1280, QC 1440) nol perubahan; yang berubah hanya zoom-out & monitor
+1920 (ruang kosong tumbuh, konten diam — persis basement).
+
+| Berkas | Plafon |
+|---|---|
+| `JobDetail.tsx` | foto `lg:max-w-[600px]` (beku mulai zoom ±90%), intro + `<ul>` `max-w-[65ch]` |
+| `CaseStudySpotlight.tsx` | `contentClassName` `max-w-[1400px]` (kotak border tetap selebar shell, isinya berhenti) |
+| `CareersRoles.tsx` | overview accordion `max-w-[65ch]` |
+| `TestimonialSpotlight.tsx` | kutipan `mx-auto max-w-[1300px]` (kolomnya di 1440 ≈ 1288; font sudah beku per breakpoint — yang tadinya molor cuma panjang baris) |
+| `DeploymentCard.tsx` / `DeploymentCta.tsx` | deskripsi `max-w-[65ch]` |
+| `MissionShowcase.tsx` | detail `max-w-[65ch]` — ⚠️ ketahuan **yatim**: tidak dirender route mana pun (kandidat bersih-bersih kode mati §4av jilid 2) |
+
+**Sengaja TIDAK disentuh**: section yang sudah ber-plafon bawaan (CsiHero
+`max-w-5xl/3xl`, Process `min(20rem,68vw)`, Vision 1600/900 §4bb, MeetingLead,
+Office, PeopleIntro, heading Careers, kartu Deployments `max-h-[22rem]`) dan
+mosaic flush yang memang desain ikut-grid (CaseGrid, TheCrew, PeopleValues) —
+jangan "diperbaiki".
+
+### Penjaga & verifikasi
+
+- **`sections/innerCaps.invariant.test.ts`** — tiap berkas dijaga masih
+  membawa kelas cap-nya (regex per berkas; **angka bebas di-tweak, disiplinnya
+  yang dikunci**). Plus test plafon-dalam di `JobDetail.test.tsx`.
+- Terukur CDP Brave (suntik `--shell-max` 1920, viewport 1280/1422/2880):
+  foto JobDetail **544→600→600** (beku), intro/ul menyusul terjepit 65ch;
+  kutipan `/services` **1128→1300** pas; kartu home berhenti 579 (masih
+  cell-bound, aman). `/work` & `/people` nol elemen terukur karena accordion
+  tertutup (kontennya belum di-mount) — mekanisme yang sama sudah terbukti di
+  tiga pengukuran lain.
+- Suite **415 test / 59 berkas hijau**; `tsc --noEmit` bersih. Flake
+  `TheCrewMobileCarousel` kambuh sekali dengan pola §4bi persis, hijau lagi
+  saat diulang.
+
 ## 5. Foto Referensi
 
 | Folder | Isi |
@@ -3165,7 +3250,7 @@ Kode billiard cuma bergantung 3 hal dari `office.glb`: (a) nama node mengandung 
   - Cycles: **GPU Metal** (`prefs.compute_device_type='METAL'` + `cycles.device='GPU'`) — cek tiap sesi, default-nya CPU
 - **Polycam** untuk scanning (GLB)
 - **Vite + bun** (project web ini) — **GLB sudah terintegrasi (§4h)**. Stack: **Vite 6** (dulu Next 16.2, dimigrasikan 29 Jul — §4j), React 19, three 0.185, @react-three/fiber 9 + drei 10 + postprocessing 3, zustand 5, Tailwind 4, **react-router-dom 7** (routing per-ruangan, §4q), **cannon-es 0.20** (billiard, §6d), **motion 12** (animasi teks, §4i), **matter-js 0.20** (`PhysicsHeading`, §4r-3). Jalankan: `bun dev` → `http://localhost:3000`
-- **Vitest 4** — `bun run test`. **407 test di 58 berkas**, semuanya hijau per 27 Agu (348/53 turun ke 344/52 saat `roomContent.test.tsx` dicabut bersama `roomHasContact` §4be, naik bertahap lewat batch halaman lowongan §4bf, `shellMax.test.ts` §4bh, dan batch form lamaran §4bi). Empat di antaranya invariant lintas-wilayah (`INVARIANTS.md` §1, §3, §6, §7). Norma repo: **buktikan test-nya MERAH di kondisi rusak dulu** sebelum dipakai memverifikasi perbaikan
+- **Vitest 4** — `bun run test`. **415 test di 59 berkas**, semuanya hijau per 27 Agu (348/53 turun ke 344/52 saat `roomContent.test.tsx` dicabut bersama `roomHasContact` §4be, naik bertahap lewat batch halaman lowongan §4bf, `shellMax.test.ts` §4bh, batch form lamaran §4bi, dan batch plafon dalam §4bj). Empat di antaranya invariant lintas-wilayah (`INVARIANTS.md` §1, §3, §6, §7). Norma repo: **buktikan test-nya MERAH di kondisi rusak dulu** sebelum dipakai memverifikasi perbaikan
 - **Pengukuran performa: CDP langsung, tanpa dependency** (§4r) — `scripts/measure-frames.mjs` (frame time) + `scripts/shoot.mjs` (screenshot) + `scripts/drive.mjs` (klik/eval/tembak berurutan). ⚠️ **Wajib jalankan di dpr 2**; dpr 1 mentok vsync dan semua setelan terlihat sama
   - **Browser verifikasi = Brave**, bukan Chrome. CDP-nya identik, cukup tukar path binary-nya. ⚠️ Kelima skrip di `scripts/` masih **hardcode path Chrome** — ganti manual saat dipakai
   - **`drive.mjs` dapat tiga langkah baru** (10 Agu): `emulate` memasang device metrics **sekaligus** `setTouchEmulationEnabled` — tanpa itu halaman terbaca sebagai desktop sempit, `(pointer: coarse)` tidak cocok, dan gerbang INVARIANTS §6 **tidak ikut teruji padahal itu justru yang sedang diperiksa** saat mengemulasi HP; `scroll` memindahkan halaman ke posisi tertentu sebelum memotret; `media` memaksa `prefers-reduced-motion` (cabang itu dipilih saat komponen **dipasang**, jadi tidak bisa dipalsukan dari `eval`). **Tiga lagi 23 Agu** (§4ay): `down`/`holdmove`/`up` — menahan tombol sambil bergerak/dipotret; `drag` selalu melepas di akhir jadi tidak bisa memotret keadaan tertahan

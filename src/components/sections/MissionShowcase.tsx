@@ -93,7 +93,9 @@ function DesktopShowcase({
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: reduced ? "auto" : 0 }}
                       transition={{ duration: reduced ? 0 : 0.3, ease: EASE }}
-                      className="text-sm leading-relaxed text-zinc-300"
+                      /* 65ch: plafon dalam ala basement (27 Agu) — detail tidak
+                         ikut kartu aktif melebar saat zoom-out / monitor 1920. */
+                      className="max-w-[65ch] text-sm leading-relaxed text-zinc-300"
                     >
                       {m.detail}
                     </motion.p>
@@ -160,7 +162,7 @@ function MobileAccordionItem({
                 className="h-40 w-full bg-gradient-to-br from-surface-2 to-surface-1 object-cover"
               />
             </div>
-            <p className="pt-4 pb-5 text-sm leading-relaxed text-zinc-400">
+            <p className="max-w-[65ch] pt-4 pb-5 text-sm leading-relaxed text-zinc-400">
               {mission.detail}
             </p>
           </motion.div>

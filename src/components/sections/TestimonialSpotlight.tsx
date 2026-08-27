@@ -62,7 +62,12 @@ function Entry({
       <div className={center ? "flex flex-1 items-center" : undefined}>
         <p
           style={LINE_RULES}
-          className="w-full text-center text-2xl leading-[1.25] font-semibold tracking-tight text-zinc-100 sm:text-4xl lg:text-5xl"
+          /* max-w-[1300px] = plafon dalam ala basement (27 Agu): lebar kolom
+             kutipan di viewport 1440 (shell − tombol panah − gap ≈ 1288).
+             Font-nya sudah beku (px per breakpoint); tanpa plafon ini yang
+             molor saat zoom-out adalah PANJANG BARISNYA. mx-auto karena
+             teksnya center. Berlaku juga di replika sizer (komponen sama). */
+          className="mx-auto w-full max-w-[1300px] text-center text-2xl leading-[1.25] font-semibold tracking-tight text-zinc-100 sm:text-4xl lg:text-5xl"
         >
           &ldquo;{t.quote}&rdquo;
         </p>

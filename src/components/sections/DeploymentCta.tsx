@@ -20,7 +20,7 @@ export default function DeploymentCta() {
           Next
         </span>
         <div className="flex flex-col gap-3">
-          <p className="text-sm leading-relaxed text-zinc-300">
+          <p className="max-w-[65ch] text-sm leading-relaxed text-zinc-300">
             Every deployment started as a conversation. Tell us what&apos;s actually breaking,
             and we&apos;ll tell you whether we&apos;re the right team for it.
           </p>

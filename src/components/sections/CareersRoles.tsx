@@ -463,7 +463,10 @@ function RoleItem({
                   />
                 )}
 
-                <p className="pt-0.5 text-[13px] leading-[1.75] font-light text-zinc-400 md:text-[15px]">
+                {/* 65ch = plafon dalam ala basement (27 Agu): overview berhenti
+                    di ukuran baca, tidak ikut kolom grid melebar saat zoom-out.
+                    Di ≤1440 lebar kolomnya memang ±65ch — tak ada yang berubah. */}
+                <p className="max-w-[65ch] pt-0.5 text-[13px] leading-[1.75] font-light text-zinc-400 md:text-[15px]">
                   {role.overview}
                 </p>
 

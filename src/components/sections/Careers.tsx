@@ -107,6 +107,30 @@ const ROLES: CareerRole[] = [
     ],
     photo: "/careers/customer-success.jpg",
   },
+  {
+    title: "Resource & Development",
+    /* Kolom Type TIDAK boleh mengulang judulnya persis: barisnya akan
+       terbaca "Resource & Development | Resource & Development", dan test
+       closed-role yang mencari judul lewat getByText langsung menemukan dua
+       simpul. "Human Resources" dipakai karena R&D di sini adalah fungsi
+       HRD (Human Resource & Development). */
+    type: "Human Resources",
+    status: "closed",
+    /* Baris closed tidak merender overview/skills/photo sama sekali (lihat
+       ClosedRoleRow). Ketiganya diisi ringkas supaya barisnya bisa dibuka
+       lagi cukup dengan mengganti status → "open"; isinya diganti dengan
+       copy poster resmi saat itu, dan fotonya belum ada di public/careers/. */
+    overview:
+      "Grow the people and the practices behind what we ship: hiring, onboarding, and internal capability building.",
+    skills: [
+      "Recruitment",
+      "Onboarding",
+      "People development",
+      "Process documentation",
+      "Communication",
+    ],
+    photo: "/careers/resource-development.jpg",
+  },
 ];
 
 export default function Careers() {

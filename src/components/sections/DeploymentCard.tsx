@@ -69,7 +69,9 @@ export default function DeploymentCard({ d }: { d: DeploymentData }) {
           {d.num} · {d.region}
         </p>
         <h3 className="text-base font-medium text-zinc-100">{d.sector}</h3>
-        <p className="text-sm leading-relaxed text-zinc-300">{d.desc}</p>
+        {/* 65ch: plafon dalam ala basement (27 Agu) — deskripsi tidak ikut
+            sel grid melebar saat zoom-out; di ≤1500px viewport tak berefek. */}
+        <p className="max-w-[65ch] text-sm leading-relaxed text-zinc-300">{d.desc}</p>
       </div>
     </FadeUpItem>
   );

@@ -69,7 +69,11 @@ function SpotlightItem({ spotlight }: { spotlight: Spotlight }) {
       <Disclosure
         className="border border-white/[0.06] bg-white/[0.01]"
         triggerClassName="group relative block w-full overflow-hidden text-left"
-        contentClassName="flex flex-col gap-6 p-6"
+        contentClassName="flex max-w-[1400px] flex-col gap-6 p-6"
+        /* max-w-[1400px] = plafon dalam ala basement (27 Agu): lebar kolom ini
+           di viewport 1440. Di bawah itu tak tersentuh; saat zoom-out (atau
+           monitor 1920) kotak border tetap selebar shell, isinya berhenti di
+           1400 dan ruang kosonglah yang tumbuh. */
         trigger={(open) => (
           <div ref={imageRef} className="relative overflow-hidden">
             <motion.img

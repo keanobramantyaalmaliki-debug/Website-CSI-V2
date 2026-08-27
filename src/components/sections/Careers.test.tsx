@@ -62,6 +62,7 @@ const CLOSED_TITLES = [
   "Innovation & Growth Manager",
   "Technical Lead",
   "Product Builder",
+  "Resource & Development",
 ];
 
 /** Header accordion sebuah role — button yang accessible name-nya memuat judul. */

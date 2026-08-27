@@ -157,6 +157,39 @@ describe("JobDetail", () => {
     expect(screen.queryByLabelText(/first name/i)).toBeNull();
   });
 
+  /*
+   * QC zoom-out (§4bb/§4bh): tanpa `section-shell`, halaman ini melar dari
+   * tepi ke tepi saat browser di-zoom-out — bug yang sama yang sudah
+   * dibereskan di 14 section pada 26 Agu, tapi halaman ini lahir belakangan
+   * dan sempat sengaja tanpa shell (alasannya gugur sejak plafon dinamis
+   * shellMax.ts). Footer ikut dijaga: ia satu-satunya elemen di luar
+   * <article> selain ApplyForm (yang shell-nya dijaga strukturnya sendiri).
+   */
+  it("artikel dan footer terjepit kolom section-shell (QC zoom-out)", () => {
+    const { container } = renderJob(JOB);
+
+    expect(container.querySelector("article")?.className).toContain("section-shell");
+    expect(container.querySelector("footer")?.className).toContain("section-shell");
+  });
+
+  /*
+   * Plafon dalam ala basement (27 Agu): shell 1920 baru menjepit di zoom
+   * <67% pada layar 1280 — supaya zoom-out menengah tetap terasa "mengecil",
+   * konten diberi ukuran intrinsiknya sendiri: foto dipatok px, teks dipatok
+   * ukuran baca 65ch. Yang dijaga kelasnya, bukan angkanya persis — angka
+   * boleh di-tweak, disiplinnya jangan hilang diam-diam.
+   */
+  it("foto dan teks punya plafon dalam sendiri (ala basement)", () => {
+    const { container } = renderJob(JOB);
+
+    const photoWrap = container.querySelector("article img")?.parentElement;
+    expect(photoWrap?.className).toMatch(/max-w-\[\d+px\]/);
+    for (const ul of container.querySelectorAll("article ul")) {
+      expect(ul.className).toContain("max-w-[65ch]");
+    }
+    expect(container.querySelectorAll("article ul").length).toBeGreaterThan(0);
+  });
+
   it("slug tak dikenal dipulangkan ke daftar lowongan", async () => {
     let url = "";
     renderJob("/careers/ngawur", (u) => (url = u));
