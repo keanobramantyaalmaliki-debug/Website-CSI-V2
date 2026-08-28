@@ -10,7 +10,7 @@ import {
   type MeshBasicMaterial,
   type ShaderMaterial,
 } from "three";
-import { useSceneStore, type RoomKey } from "@/lib/store/sceneStore";
+import { useSceneStore, ROOM_LABELS, type RoomKey } from "@/lib/store/sceneStore";
 import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import { ACTIVE_KEYS } from "./CameraController";
 
@@ -62,11 +62,11 @@ interface WaypointDef {
    */
   floor?: true;
   /**
-   * Teks label kalau nama ruangan tujuan saja kurang jelas.
+   * Teks label kalau default "Go to <nama page>" kurang jelas.
    *
    * Dipakai saat waypoint-nya BUKAN pintu menuju ruangan baru melainkan jalan
-   * balik — "Office" doang terbaca seperti tujuan baru, padahal maksudnya
-   * kembali ke tempat asal.
+   * balik — "Go to People" terbaca seperti tujuan baru, padahal maksudnya
+   * kembali ke tempat asal ("Go back to People").
    */
   label?: string;
 }
@@ -128,7 +128,7 @@ const WAYPOINTS: WaypointDef[] = [
     rotY: 0,
     size: [3.12, 2.43],
     floor: true,
-    label: "Go back to Lounge",
+    label: "Go back to Home",
   },
 
   // ── Dari Lounge ─────────────────────────────────────────────────────────
@@ -170,7 +170,7 @@ const WAYPOINTS: WaypointDef[] = [
   // Maka penanda "kembali ke kantor" ditempel di bidang dinding krem
   // (OP_Wall_Perimeter_NW, three-z −1,60) di sisi timur pilar OP_Pillar_N2 —
   // bagian yang justru terlihat di tepi kanan layar. Ini penanda arah, bukan
-  // bukaan sungguhan, jadi labelnya ditulis eksplisit "Go back to office".
+  // bukaan sungguhan, jadi labelnya ditulis eksplisit "Go back to People".
   //
   // Batas diukur di Blender (29 Jul):
   //   kiri  three-x −17,675 = muka timur pilar OP_Pillar_N2
@@ -190,7 +190,7 @@ const WAYPOINTS: WaypointDef[] = [
     pos: [-16.9875, 1.47, -1.585],
     rotY: 0,
     size: [1.375, 2.94],
-    label: "Go back to office",
+    label: "Go back to People",
   },
 
   // ── Dari Function ───────────────────────────────────────────────────────
@@ -238,7 +238,7 @@ const WAYPOINTS: WaypointDef[] = [
     pos: [1.7775, 1.8, -11.53],
     rotY: 0,
     size: [1.345, 3.6],
-    label: "Go back to Lounge",
+    label: "Go back to Home",
   },
 ];
 
@@ -291,14 +291,6 @@ declare module "@react-three/fiber" {
   }
 }
 
-const LABELS: Record<RoomKey, string> = {
-  Office: "Office",
-  Lounge: "Lounge",
-  Meeting: "Meeting Room",
-  Function: "Function Room",
-  Pantry: "Pantry",
-};
-
 export default function Waypoints() {
   const currentRoom = useSceneStore((s) => s.currentRoom);
   const goTo = useSceneStore((s) => s.goTo);
@@ -350,7 +342,7 @@ function Waypoint({
   const setHoveredLabel = useSceneStore((s) => s.setHoveredLabel);
 
   /** Teks label waypoint ini — dipakai sebagai identitasnya di store. */
-  const text = def.label ?? LABELS[def.to];
+  const text = def.label ?? `Go to ${ROOM_LABELS[def.to]}`;
 
   /**
    * Kekuatan hover 0..1 yang dianimasikan sendiri, BUKAN state React.

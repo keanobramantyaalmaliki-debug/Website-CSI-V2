@@ -33,8 +33,8 @@ export const START_ROOM: RoomKey = "Lounge";
 export const DISABLED_ROOMS = new Set<RoomKey>(["Pantry"]);
 
 /**
- * Nama ruangan itu identitas INTERNAL + metafora dunia 3D (label waypoint
- * tetap "Meeting Room"). Ke luar — navbar dan URL — situs bicara bahasa
+ * Nama ruangan itu identitas INTERNAL + metafora dunia 3D. Ke luar — navbar,
+ * URL, dan label waypoint di scene (sejak 28 Agu) — situs bicara bahasa
  * KONTEN: pengunjung baru tidak tahu "Function" isinya tim & karier, tapi
  * "People" langsung terbaca. Dua peta di bawah adalah SATU-SATUNYA tempat
  * penerjemahan itu; RoomKey tidak berubah di mana pun.

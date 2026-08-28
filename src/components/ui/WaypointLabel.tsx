@@ -120,7 +120,7 @@ export default function WaypointLabel() {
       // waypoint di bawahnya dan hover-nya berkedip-kedip (alasan yang sama
       // dengan label <Html> lama).
       // whitespace-nowrap: elemennya fixed di left-0 lalu digeser transform,
-      // jadi tanpa ini label panjang ("Go back to Lounge") bisa terlipat saat
+      // jadi tanpa ini label panjang ("Go back to Home") bisa terlipat saat
       // kursor mendekati tepi kanan layar.
       // Tanpa padding + leading-none: fill-nya MEMELUK kurung sikunya, bukan
       // kotak longgar di sekelilingnya. leading-none wajib — tanpa itu
