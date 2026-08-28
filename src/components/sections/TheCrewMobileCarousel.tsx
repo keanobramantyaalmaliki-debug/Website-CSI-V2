@@ -24,6 +24,24 @@ const SWIPE_DISTANCE_THRESHOLD = 100;
 const SWIPE_VELOCITY_THRESHOLD = 500;
 const FLY_OUT_DISTANCE = 400;
 const STACK_DEPTH = 3;
+/** Lemparan dan naiknya dek berbagi durasi ini — lihat `deckPose`. */
+const THROW_SECONDS = 0.25;
+
+/**
+ * Pose satu kartu di dek menurut kedalamannya (0 = kartu aktif).
+ *
+ * Dipakai DUA KALI dan itu memang intinya: kartu peek menganimasikan posenya
+ * dari `depth` ke `depth - 1` selama lemparan, jadi saat indeks akhirnya
+ * pindah, kartu pendaratan sudah duduk PERSIS di pose kartu aktif. Elemennya
+ * memang berganti di titik itu (div peek → ActiveCard), tapi posenya sama,
+ * jadi tidak ada frame yang meloncat. Sebelum ini dek diam selama lemparan
+ * lalu melompat dalam satu frame — terukur 28 Agu: lebar 351.4→366, top
+ * 191.9→174.3, opacity 0.75→1, nol frame di antaranya ("flick").
+ */
+function deckPose(depth: number) {
+  const d = Math.max(0, depth);
+  return { y: d * 8, scale: 1 - d * 0.04, opacity: 1 - d * 0.25 };
+}
 
 export function resolveSwipeDirection(
   offsetX: number,
@@ -34,6 +52,39 @@ export function resolveSwipeDirection(
     Math.abs(velocityX) > SWIPE_VELOCITY_THRESHOLD;
   if (!pastThreshold) return null;
   return offsetX < 0 ? "left" : "right";
+}
+
+/**
+ * Swipe RIGHT advances to the card peeking under the deck; swipe LEFT goes
+ * back to the previous person. Keano's spec (27 Agu): the card revealed
+ * behind during the drag must be the card you land on, so the advance
+ * direction is the one that throws the active card off the deck.
+ */
+export function resolveSwipeStep(direction: "left" | "right"): number {
+  return direction === "right" ? 1 : -1;
+}
+
+/**
+ * Kartu yang mengintip di bawah dek — ARAHNYA IKUT GESERAN, bukan selalu
+ * `active + 1`. Peek adalah PREVIEW: yang terlihat saat menggeser wajib sama
+ * dengan yang didarati saat dilepas. Dek yang membeku di `+1` itulah bug
+ * laporan Keano (28 Agu): dari Fahmi, geser kiri memperlihatkan Imam Maliki
+ * (`+1`) tapi mendarat di Roni (`-1`, membungkus ke ujung daftar).
+ *
+ * `dragDir` 0 = diam / lempar otomatis: dek memakai arah maju (+1), sama
+ * seperti sebelum ada geseran.
+ */
+export function resolvePeekIndexes(
+  active: number,
+  length: number,
+  count: number,
+  dragDir: -1 | 0 | 1,
+): number[] {
+  const step = dragDir === -1 ? -1 : 1;
+  return Array.from({ length: count }, (_, i) => {
+    const raw = active + step * (i + 1);
+    return ((raw % length) + length) % length;
+  });
 }
 
 function CrewCard({ member }: { member: TeamMember }) {
@@ -67,8 +118,8 @@ function CrewCard({ member }: { member: TeamMember }) {
 }
 
 export type ActiveCardHandle = {
-  /** Plays the same fly-out-left animation as a manual swipe, for autoplay. */
-  autoSwipeLeft: () => void;
+  /** Plays the same fly-out-right advance animation as a manual swipe, for autoplay. */
+  autoAdvance: () => void;
 };
 
 const ActiveCard = forwardRef<
@@ -79,8 +130,23 @@ const ActiveCard = forwardRef<
     onDragStart: () => void;
     onDragSettle: () => void;
     reduced: boolean;
+    /** Reports which way the drag is heading so the deck can preview it. */
+    onPreviewDirection: (dir: -1 | 0 | 1) => void;
+    /** Fires when the throw starts, so the deck rises alongside it. */
+    onThrowStart: () => void;
   }
->(function ActiveCard({ member, onSwiped, onDragStart, onDragSettle, reduced }, ref) {
+>(function ActiveCard(
+  {
+    member,
+    onSwiped,
+    onDragStart,
+    onDragSettle,
+    reduced,
+    onPreviewDirection,
+    onThrowStart,
+  },
+  ref,
+) {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-12, 12]);
   const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0, 1, 1, 1, 0]);
@@ -90,14 +156,17 @@ const ActiveCard = forwardRef<
       onSwiped(direction);
       return;
     }
+    // Diumumkan di sini, bukan di `handleDragEnd`, supaya lemparan otomatis
+    // (autoplay) ikut menaikkan dek dengan gerakan yang sama.
+    onThrowStart();
     const target = direction === "left" ? -FLY_OUT_DISTANCE : FLY_OUT_DISTANCE;
-    animate(x, target, { duration: 0.25, ease: "easeOut" }).then(() => {
+    animate(x, target, { duration: THROW_SECONDS, ease: "easeOut" }).then(() => {
       onSwiped(direction);
     });
   };
 
   useImperativeHandle(ref, () => ({
-    autoSwipeLeft: () => flyOut("left"),
+    autoAdvance: () => flyOut("right"),
   }));
 
   const handleDragEnd = (
@@ -107,11 +176,19 @@ const ActiveCard = forwardRef<
     const direction = resolveSwipeDirection(info.offset.x, info.velocity.x);
 
     if (!direction) {
+      // Batal: kartu pegas balik, jadi dek harus segera kembali ke arah maju.
+      onPreviewDirection(0);
       onDragSettle();
       animate(x, 0, { type: "spring", stiffness: 400, damping: 30 });
       return;
     }
 
+    // Dua arah diperlakukan SAMA: kartu aktif dilempar keluar dek, menyingkap
+    // peek di bawahnya — dan peek itu memang kartu yang didarati, karena dek
+    // sudah ikut arah geseran sejak `onDrag` pertama. Arah `preview` SENGAJA
+    // tidak di-reset di sini: reset-nya menunggu indeksnya benar-benar pindah
+    // (`handleSwiped`), kalau tidak dek balik ke `+1` di tengah lemparan dan
+    // kartu yang salah tersingkap selama 250ms terakhir.
     onDragSettle();
     flyOut(direction);
   };
@@ -125,6 +202,11 @@ const ActiveCard = forwardRef<
         dragElastic={0.7}
         style={reduced ? undefined : { x, rotate, opacity }}
         onDragStart={onDragStart}
+        onDrag={(_event, info) =>
+          onPreviewDirection(
+            info.offset.x < 0 ? -1 : info.offset.x > 0 ? 1 : 0,
+          )
+        }
         onDragEnd={handleDragEnd}
         className="cursor-grab touch-pan-y active:cursor-grabbing"
       >
@@ -136,21 +218,43 @@ const ActiveCard = forwardRef<
 
 /**
  * Tinder-style draggable card stack, replacing the previous CSS scroll-snap
- * carousel. Swiping left advances (next person), swiping right goes back —
- * same direction convention as flipping through a physical deck.
+ * carousel. Geser KANAN maju satu orang, geser KIRI mundur satu orang; kedua
+ * arah melempar kartu aktif keluar dek dan menyingkap peek di bawahnya.
+ *
+ * Aturan yang mengikat seluruh berkas ini: PEEK ADALAH PREVIEW — kartu yang
+ * tersingkap selama geseran wajib kartu yang didarati. Dek karenanya ikut
+ * arah geseran lewat `dragDir` (lihat `resolvePeekIndexes`), dan tidak ada
+ * lagi sapuan-masuk-dari-kiri untuk gerakan mundur: sapuan itu memaksa kartu
+ * pendaratan bersembunyi dulu di luar layar, jadi mustahil disatukan dengan
+ * peek yang benar.
  */
 export default function TheCrewMobileCarousel({ people }: { people: TeamMember[] }) {
   const [active, setActive] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  // Arah geseran yang sedang berjalan; menentukan siapa yang mengintip di
+  // bawah dek. Disalin ke ref supaya `onDrag` — yang menyala tiap frame
+  // pointer — cuma memicu render saat TANDANYA berubah, bukan tiap pixel.
+  const [dragDir, setDragDir] = useState<-1 | 0 | 1>(0);
+  const dragDirRef = useRef<-1 | 0 | 1>(0);
+  // Kartu aktif sedang terbang keluar: dek naik satu tingkat selama itu.
+  const [throwing, setThrowing] = useState(false);
   const reduced = !!useReducedMotion();
   const activeCardRef = useRef<ActiveCardHandle>(null);
 
+  const setPreviewDirection = (dir: -1 | 0 | 1) => {
+    if (dragDirRef.current === dir) return;
+    dragDirRef.current = dir;
+    setDragDir(dir);
+  };
+
   const goTo = (index: number) => {
+    setPreviewDirection(0);
+    setThrowing(false);
     setActive(((index % people.length) + people.length) % people.length);
   };
 
   const handleSwiped = (direction: "left" | "right") => {
-    goTo(active + (direction === "left" ? 1 : -1));
+    goTo(active + resolveSwipeStep(direction));
   };
 
   // Filter tabs change the `people` array — reset to the first matching
@@ -158,76 +262,76 @@ export default function TheCrewMobileCarousel({ people }: { people: TeamMember[]
   // or at an unrelated person.
   useEffect(() => {
     setActive(0);
+    setPreviewDirection(0);
+    setThrowing(false);
   }, [people]);
 
-  // Idle user (no drag) still gets the swipe-left throw animation, not an
-  // instant index jump — same motion as a manual gesture, just automated.
-  // Re-arms on every `active` change (timer tick, manual swipe, or dot
-  // click) — avoids stale closures, same pattern as CaseGrid's fan slider.
+  // Idle user (no drag) still gets the swipe-right throw animation, not an
+  // instant index jump — same motion as a manual advance, just automated.
+  // Re-arms on every `active` change (timer tick or manual swipe) — avoids
+  // stale closures, same pattern as CaseGrid's fan slider.
   useEffect(() => {
     if (reduced || people.length <= 1 || isDragging) return;
     const id = setInterval(() => {
-      activeCardRef.current?.autoSwipeLeft();
+      activeCardRef.current?.autoAdvance();
     }, AUTO_ADVANCE_MS);
     return () => clearInterval(id);
   }, [active, reduced, people.length, isDragging]);
 
   const activeMember = people[active];
-  const stack = Array.from(
-    { length: Math.min(STACK_DEPTH, people.length) - 1 },
-    (_, i) => people[(active + i + 1) % people.length],
-  );
+  const stack = resolvePeekIndexes(
+    active,
+    people.length,
+    Math.max(0, Math.min(STACK_DEPTH, people.length) - 1),
+    dragDir,
+  ).map((i) => people[i]);
 
   return (
-    <div data-testid="crew-mobile-carousel" className="flex flex-col gap-4">
-      <div className="relative">
-        {/* Peek cards behind the active one, back-to-front so the deck reads correctly */}
-        {stack
-          .slice()
-          .reverse()
-          .map((member, i) => {
-            const depth = stack.length - i;
-            return (
-              <div
-                key={member.name}
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0"
-                style={{
-                  transform: `translateY(${depth * 8}px) scale(${1 - depth * 0.04})`,
-                  opacity: 1 - depth * 0.25,
-                }}
-              >
-                <CrewCard member={member} />
-              </div>
-            );
-          })}
+    <div data-testid="crew-mobile-carousel" className="relative">
+      {/* Peek cards behind the active one, back-to-front so the deck reads
+          correctly. `initial` = pose kedalamannya sendiri supaya kartu yang
+          baru mount tidak ikut beranimasi; `animate` naik satu tingkat
+          selama lemparan, jadi kartu pendaratan sampai di pose kartu aktif
+          tepat saat indeksnya pindah. */}
+      {stack
+        .slice()
+        .reverse()
+        .map((member, i) => {
+          const depth = stack.length - i;
+          return (
+            <motion.div
+              key={member.name}
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0"
+              initial={deckPose(depth)}
+              animate={deckPose(throwing ? depth - 1 : depth)}
+              transition={
+                reduced
+                  ? { duration: 0 }
+                  : { duration: THROW_SECONDS, ease: "easeOut" }
+              }
+            >
+              <CrewCard member={member} />
+            </motion.div>
+          );
+        })}
 
-        {activeMember && (
-          <ActiveCard
-            key={activeMember.name}
-            ref={activeCardRef}
-            member={activeMember}
-            onSwiped={handleSwiped}
-            onDragStart={() => setIsDragging(true)}
-            onDragSettle={() => setIsDragging(false)}
-            reduced={reduced}
-          />
-        )}
-      </div>
-
-      <div className="flex flex-nowrap justify-center gap-1">
-        {people.map((member, index) => (
-          <button
-            key={member.name}
-            type="button"
-            aria-label={`Show ${member.name}`}
-            onClick={() => goTo(index)}
-            className={`h-1 w-4 shrink-0 rounded-full transition-colors duration-300 ${
-              index === active ? "bg-accent" : "bg-white/20"
-            }`}
-          />
-        ))}
-      </div>
+      {activeMember && (
+        <ActiveCard
+          key={activeMember.name}
+          ref={activeCardRef}
+          member={activeMember}
+          onSwiped={handleSwiped}
+          onDragStart={() => {
+            setPreviewDirection(0);
+            setIsDragging(true);
+          }}
+          onDragSettle={() => setIsDragging(false)}
+          reduced={reduced}
+          onPreviewDirection={setPreviewDirection}
+          onThrowStart={() => setThrowing(true)}
+        />
+      )}
     </div>
   );
 }

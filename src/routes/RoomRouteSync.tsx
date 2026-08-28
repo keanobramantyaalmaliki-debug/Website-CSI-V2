@@ -115,7 +115,7 @@ export default function RoomRouteSync() {
 
   // Arah 2: currentRoom → pathname (klik waypoint dalam Canvas)
   //
-  // ⚠️ `search` & `hash` DIBAWA SERTA, jangan kembali ke `pathFor()` telanjang.
+  // ⚠️ `search` DIBAWA SERTA, jangan kembali ke `pathFor()` telanjang.
   // pathFor() cuma tahu soal ruangan, jadi menavigasi ke hasilnya apa adanya
   // MENULIS ULANG seluruh URL — dan membuang query string pengunjung pada
   // perpindahan ruangan pertama.
@@ -191,7 +191,32 @@ export default function RoomRouteSync() {
     // batas. Perpindahan ruangan sungguhan tetap push, supaya Back tetap
     // berarti "ruangan sebelumnya".
     const normalizing = roomFromPath(pathname) === currentRoom;
-    navigate(target + search + hash, { replace: normalizing });
+
+    // ⚠️ `hash` cuma ikut saat NORMALISASI — pada perpindahan ruangan
+    // sungguhan ia WAJIB dibuang.
+    //
+    // Hash menunjuk section di halaman ruangan LAMA, dan Arah 3 di bawah
+    // menyala ulang pada SETIAP pergantian pathname selama hash masih ada.
+    // Dulu hash ikut menumpang di aturan `search` (dibawa apa adanya), dan
+    // gabungan keduanya menghasilkan lemparan gulir yang datang terlambat:
+    //
+    //   "← Back to careers" mendarat di /people#careers → #careers menetap di
+    //   URL → waypoint Meeting membawanya jadi /work#careers (diam, Meeting
+    //   tak punya #careers) → waypoint balik ke People jadi /people#careers →
+    //   Arah 3 menggulirkan pengunjung ke tengah konten, padahal ia baru saja
+    //   memandang scene 3D.
+    //
+    // Dua klik sesudah penyebabnya, tanpa satu pun jejak ke berkas ini.
+    // Jalur navbar (goRoom) sudah membuang hash sejak dulu lewat
+    // `navigate(pathFor(room))` polos — ini menyamakan jalur waypoint.
+    //
+    // Saat normalisasi hash justru HARUS bertahan: deep-link slug lama
+    // ("/office#careers") cuma dieja ulang jadi "/people#careers", section
+    // tujuannya masih halaman yang sama dan Arah 3 memang harus menggulirkan
+    // ke sana.
+    navigate(target + search + (normalizing ? hash : ""), {
+      replace: normalizing,
+    });
   }, [currentRoom, navigate, pathname, search, hash, pendingRoom]);
 
   // Arah 3: hash → scroll. Dipisah dari efek pathname supaya klik "Talk to us"

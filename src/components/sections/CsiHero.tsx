@@ -46,7 +46,10 @@ export default function CsiHero() {
          bergrid — terbaca sebagai balok yang lebih terang dengan garis potong
          tegas tepat di perbatasan Deployments. Section lain (Deployments dst.)
          memang tidak memasang latar sendiri; jangan tambahkan di sini. */
-      className="section-shell relative overflow-hidden px-3 pt-3 pb-16 sm:pb-20"
+      /* pb-20 (80px) di semua lebar = SELURUH celah visual ke Deployments —
+         Deployments meniadakan pt-nya di mobile (aturan satu-angka-satu-tempat
+         28 Agu, penjelasan panjangnya di PeopleIntro.tsx). */
+      className="section-shell relative overflow-hidden px-3 pt-3 pb-20"
     >
       {/* Satu kolom penuh. Dulu `lg:grid-cols-2` dengan CsiParticleField di
           kolom kanan — partikelnya DICABUT 18 Agu, dan kolom kanan ikut
@@ -83,7 +86,9 @@ export default function CsiHero() {
             terlalu panjang untuk dibaca; lebih sempit, paragrafnya memanjang
             jadi enam baris dan mulai terbaca seperti blok teks. */}
         <motion.p
-          className="mt-6 max-w-3xl text-base leading-relaxed text-zinc-400 sm:mt-8 sm:text-lg"
+          /* mt mobile 18px = standar jarak judul→subteks 28 Agu (sama dengan
+             PeopleIntro); ≥sm kembali ke angka desktop lama. */
+          className="mt-[18px] max-w-3xl text-base leading-relaxed text-zinc-400 sm:mt-8 sm:text-lg"
           initial={{ opacity: 0, y: 8 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}

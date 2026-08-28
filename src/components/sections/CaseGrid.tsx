@@ -290,7 +290,11 @@ export default function CaseGrid() {
   return (
     <section
       id="case-grid"
-      className="section-shell relative z-10 px-3 pb-24 sm:pb-32"
+      /* pb mobile 80px = SELURUH celah ke CaseStudySpotlight (pt-0 di sana,
+         garis border-t-nya jadi duduk dekat judul "Case Studies" — sama
+         seperti border-b MeetingLead di atas section ini); aturan 28 Agu,
+         lihat PeopleIntro.tsx. ≥sm kembali pb-32. */
+      className="section-shell relative z-10 px-3 pb-20 sm:pb-32"
     >
       {/* Header */}
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

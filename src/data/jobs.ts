@@ -41,6 +41,14 @@ export type JobPosting = {
    * "React" tidak punya terjemahan.
    */
   skills: string[];
+  /**
+   * Form lamarannya ikut menanyakan tautan GitHub (opsional). PER LOWONGAN
+   * dengan sengaja: pernah tetap untuk semua (sampai 27 Agu) dan di lamaran
+   * Accountant / Customer Success isian itu tidak pernah terisi — yang tersisa
+   * cuma pertanyaan yang jelas bukan untuk pelamarnya. Nyalakan hanya di
+   * lowongan engineering.
+   */
+  askGithub?: boolean;
   en: JobCopy;
   id: JobCopy;
 };
@@ -116,6 +124,7 @@ export const APPLY_UI: Record<JobLang, {
   skills: string;
   portfolio: string;
   linkedin: string;
+  github: string;
   submit: string;
   sending: string;
   sentLabel: string;
@@ -140,6 +149,7 @@ export const APPLY_UI: Record<JobLang, {
     skills: "Skills",
     portfolio: "Portfolio",
     linkedin: "LinkedIn",
+    github: "GitHub",
     submit: "Apply",
     sending: "Sending…",
     sentLabel: "Sent ✓",
@@ -164,6 +174,7 @@ export const APPLY_UI: Record<JobLang, {
     skills: "Keahlian",
     portfolio: "Portofolio",
     linkedin: "LinkedIn",
+    github: "GitHub",
     submit: "Kirim lamaran",
     sending: "Mengirim…",
     sentLabel: "Terkirim ✓",
@@ -177,6 +188,7 @@ export const JOBS: readonly JobPosting[] = [
     slug: "full-stack-engineer",
     title: "Full Stack Engineer",
     photo: "/careers/fullstack-engineer.jpg",
+    askGithub: true,
     /* Diturunkan dari kolom kualifikasi poster + baris Careers-nya, bukan
        daftar teknologi yang enak dipandang: tiap centang harus benar-benar
        mengubah cara lamaran itu dibaca. */

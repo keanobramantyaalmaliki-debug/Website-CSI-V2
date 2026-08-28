@@ -145,6 +145,7 @@ function buildRope(
   vh: number,
   startY: number,
   diveX: number,
+  textClearY: number,
   cards: CardBox[],
 ): RopeGeom | null {
   if (w < 10 || h < 10 || cards.length === 0) return null;
@@ -185,34 +186,36 @@ function buildRope(
   //     bulat + vertikal mati menang di uji visual /tmp/rope-variants.png.
   //     Sudutnya BOLEH mulai di kiri diveX (di ketinggian startY tali masih
   //     di atas zona teks) asal saat turun ke level heading sudah melewati
-  //     diveX — dicek probeX di kedalaman 100px (≈ puncak heading; gap
-  //     eyebrow 70px + tinggi eyebrow ada di atasnya).
+  //     diveX — dicek probeX di kedalaman 70px (≈ puncak heading: gap 70
+  //     dikurangi setengah goresan).
   //
   // (b) LOOP LEBAR — layar sempit, pusat kartu terlalu ke kiri: uji (a)
-  //     gagal (sudut akan menimpa heading/eyebrow). Tali terus ke kanan
-  //     MELEWATI pusat kartu lalu memutar balik diagonal dan menegak tepat
-  //     di pusat — jangan menarik c1 balik ke arah kartu: arah berbalik
-  //     180° dan tali terlihat melipat patah di ujung glide.
+  //     gagal (sudut akan menimpa heading/eyebrow). Tali berbelok turun
+  //     VERTIKAL dulu di kanan teks heading (bx) sampai melewati dasarnya
+  //     (textClearY), baru menyapu diagonal ke pusat kartu. Kurva S tunggal
+  //     glide→kartu TIDAK cukup: sapuan kirinya dimulai di atas garis teks
+  //     dan goresan menyilang "How We Work" (audit mobile 390px, 28 Agu).
   const first = cards[0];
   const dy0 = first.top - startY;
   const rx = Math.min(140, dy0 * 0.45);
   const ry = Math.min(140, dy0 * 0.5);
   const cornerX = first.cx - rx;
-  const probeDepth = Math.min(ry, 100);
+  const probeDepth = Math.min(ry, 70);
   const cosT = 1 - probeDepth / ry;
   const probeX = cornerX + rx * Math.sqrt(Math.max(0, 1 - cosT * cosT));
   // cornerX ≥ 130 menjaga lengkung turun tidak menggantung di atas eyebrow.
   const useCorner = cornerX >= 130 && probeX >= diveX - 12;
 
-  // Masuk horizontal dari luar tepi KIRI, setinggi startY (30px di atas
-  // label eyebrow "Our Process" — koordinat negatif, di atas wrapper; svg
-  // overflow-visible + section hanya meng-clip sumbu x). Glide dengan sag
-  // halus di atas label + heading; tangen ujungnya horizontal supaya
-  // sambungan ke turunan mulus tanpa tekukan.
+  // Masuk horizontal dari luar tepi KIRI, mendarat di startY di atas
+  // heading (koordinat negatif, di atas wrapper; svg overflow-visible +
+  // section hanya meng-clip sumbu x). Glide melorot MONOTON 8px: sag lama
+  // (kontrol +16 lalu balik naik ke startY) membuat garis memuncak persis
+  // sebelum belokan turun — terbaca patahan di samping heading. Tangen
+  // kedua ujung horizontal supaya masuk layar & sambungan turunan mulus.
   const glideEnd = useCorner ? cornerX : diveX;
-  move([-64, startY]);
+  move([-64, startY - 8]);
   curve(
-    [-64 + (glideEnd + 64) * 0.4, startY + 16],
+    [-64 + (glideEnd + 64) * 0.4, startY - 8],
     [glideEnd - (glideEnd + 64) * 0.15, startY],
     [glideEnd, startY],
   );
@@ -233,12 +236,27 @@ function buildRope(
         );
         line(to);
       } else {
-        const dy = to[1] - cur[1];
-        curve(
-          [cur[0] + Math.min(160, dy * 0.3), cur[1]],
-          [to[0], to[1] - dy * 0.45],
-          to,
+        // Turun tegak di bx (kanan heading, clamp tepi layar), tembus
+        // textClearY, lalu S bertangen vertikal ke pusat kartu. Sudutnya
+        // dibuat ≈ lingkaran (ry2 = lebar belokan): ellipse jangkung
+        // (ry2 sampai 120 dengan rx cuma 56) turunannya terbaca diagonal
+        // yang lalu berbalik kiri di S — "patahan" di samping heading
+        // (keluhan Keano 28 Agu); lingkaran menyelesaikan belokan cepat
+        // lalu lurus vertikal di sisi teks.
+        const bx = Math.min(diveX + 56, w - 34);
+        const ry2 = Math.min(bx - cur[0], (to[1] - startY) * 0.4);
+        const clearY = Math.min(
+          Math.max(textClearY, startY + ry2),
+          to[1] - 60,
         );
+        curve(
+          [cur[0] + K * (bx - cur[0]), startY],
+          [bx, startY + (1 - K) * ry2],
+          [bx, startY + ry2],
+        );
+        if (clearY > startY + ry2) line([bx, clearY]);
+        const dy = to[1] - cur[1];
+        curve([cur[0], cur[1] + dy * 0.45], [to[0], to[1] - dy * 0.45], to);
       }
     } else {
       const k = (to[1] - cur[1]) * 0.45;
@@ -360,7 +378,6 @@ function ProcessCard({
 
 export default function Process() {
   const wrapRef = useRef<HTMLDivElement>(null);
-  const eyebrowRef = useRef<HTMLParagraphElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [geom, setGeom] = useState<RopeGeom | null>(null);
@@ -383,24 +400,21 @@ export default function Process() {
         });
       }
       // Titik start tali: celah VISUAL 70px antara sisi bawah goresan dan
-      // puncak label eyebrow, dalam koordinat wrapper (negatif — label ada
-      // di atas wrapper). Path digambar dari garis tengahnya, jadi offset =
-      // 70 + STROKE/2 (tepi bawah goresan) + 7.5 (titik terendah sag glide,
-      // yang jatuh persis di atas label — terukur via probe-rope-gap).
-      // Label cuma beranimasi x + opacity, jadi top dari
+      // puncak heading (label eyebrow dihapus 28 Agu), dalam koordinat
+      // wrapper (negatif — heading ada di atas wrapper). Path digambar dari
+      // garis tengahnya, jadi offset = 70 + STROKE/2 (tepi bawah goresan);
+      // glide kini melorot monoton, titik terendahnya = startY sendiri.
+      // Kotak h2 blok bebas transform LineMask, jadi top dari
       // getBoundingClientRect aman (beda dengan kartu yang wajib offsetTop).
       const wrapRect = wrap.getBoundingClientRect();
-      const eyebrow = eyebrowRef.current;
-      const startY = eyebrow
-        ? eyebrow.getBoundingClientRect().top -
-          wrapRect.top -
-          (70 + STROKE / 2 + 7.5)
+      const h2 = headingRef.current;
+      const startY = h2
+        ? h2.getBoundingClientRect().top - wrapRect.top - (70 + STROKE / 2)
         : (cards[0]?.top ?? 280) - 280;
       // Batas tukik: tepi kanan TEKS heading (h2 block selebar kontainer,
       // jadi ukur teksnya via Range; transform y LineMask tak menggeser
       // right) + margin, dijepit agar tetap di dalam layar.
       let diveX = wrap.clientWidth * 0.5;
-      const h2 = headingRef.current;
       const range = document.createRange();
       // jsdom (vitest) tidak punya Range.getBoundingClientRect — fallback
       // 0.5×lebar di atas sudah cukup untuk lingkungan test.
@@ -416,6 +430,12 @@ export default function Process() {
         }
       }
       diveX = Math.min(Math.max(diveX, 48), wrap.clientWidth - 40);
+      // Dasar teks heading (kotak h2 blok — TANPA transform LineMask, jadi
+      // stabil sejak sebelum animasi) + 10px: di atas garis ini tali cabang
+      // loop wajib tetap di kanan diveX supaya tidak menyilang teks.
+      const textClearY = h2
+        ? h2.getBoundingClientRect().bottom - wrapRect.top + 10
+        : 0;
       setGeom(
         buildRope(
           wrap.clientWidth,
@@ -423,6 +443,7 @@ export default function Process() {
           window.innerHeight,
           startY,
           diveX,
+          textClearY,
           cards,
         ),
       );
@@ -468,23 +489,19 @@ export default function Process() {
   });
 
   return (
-    <section id="process" className="section-shell overflow-x-clip px-3 pt-24 sm:pt-32">
-      {/* T6 — eyebrow; ref = patokan titik start tali (30px di atasnya) */}
-      <motion.p
-        ref={eyebrowRef}
-        className="text-xs tracking-widest text-zinc-400 uppercase"
-        initial={{ opacity: 0, x: -8 }}
-        whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, ease: EASE }}
-      >
-        Our Process
-      </motion.p>
-
-      {/* T1 — line-mask heading; ref = ukur tepi kanan teks utk batas tukik tali */}
+    <section
+      id="process"
+      /* pt mobile 0: celah 80px ke Deployments dijatah di pb-20 sana (aturan
+         28 Agu, lihat PeopleIntro.tsx); ≥sm kembali pt-32. Tetap tanpa pb —
+         plank Industries memang menempel. */
+      className="section-shell overflow-x-clip px-3 pt-0 sm:pt-32"
+    >
+      {/* T1 — line-mask heading (label eyebrow dihapus 28 Agu); ref = patokan
+          titik start tali (70px di atasnya) + ukur tepi kanan teks utk batas
+          tukik tali */}
       <h2
         ref={headingRef}
-        className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl"
+        className="max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl"
       >
         <LineMask>How We Work</LineMask>
       </h2>

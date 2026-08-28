@@ -109,7 +109,10 @@ export default function JobDetail() {
         di bawah tepi atas kotaknya sendiri: 60 − 44 + 2 = 18px jarak yang
         benar-benar terlihat antara bilah dan "Back to careers".
       */}
-      <article className="section-shell px-3 pt-15 pb-16 sm:pb-24">
+      {/* pb mobile 80px = SELURUH celah visual ke ApplyForm (yang memang
+          tanpa pt); aturan antar-section 28 Agu, lihat PeopleIntro.tsx.
+          ≥sm kembali pb-24. */}
+      <article className="section-shell px-3 pt-15 pb-20 sm:pb-24">
         <Link
           to="/people#careers"
           className="inline-flex items-center gap-2 text-sm font-light text-zinc-400 transition-colors hover:text-zinc-100"
@@ -128,7 +131,7 @@ export default function JobDetail() {
           {/* Toggle bahasa. Cuma menukar isi HALAMAN INI — navbar dan form
               Contact tetap Inggris seperti sisa situs. */}
           <div
-            className="flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1"
+            className="flex shrink-0 items-center gap-1 self-end rounded-full border border-white/10 bg-white/[0.03] p-1"
             role="group"
             aria-label={ui.langLabel}
           >

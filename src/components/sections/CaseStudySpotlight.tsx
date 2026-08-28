@@ -162,7 +162,10 @@ export default function CaseStudySpotlight() {
   return (
     <section
       id="case-spotlight"
-      className="section-shell relative z-10 border-t border-white/[0.06] px-3 py-20 sm:py-28"
+      /* Mobile: pt-0 (celah 80px ke CaseGrid dijatah di pb-20 sana) dan
+         pb-20 = 80px ke Contact yang pt-0 (aturan 28 Agu, lihat
+         PeopleIntro.tsx); ≥sm kembali py-28. */
+      className="section-shell relative z-10 border-t border-white/[0.06] px-3 pt-0 pb-20 sm:py-28"
     >
       {/* Section header */}
       <div className="mb-12">

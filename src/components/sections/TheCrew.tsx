@@ -138,7 +138,13 @@ export default function TheCrew() {
   const spotlightOn = activeName !== null;
 
   return (
-    <section id="crew" className="section-shell px-3 py-24">
+    <section
+      id="crew"
+      /* Mobile: pt-0 (celah 80px ke PeopleValues dijatah di pb-20 sana) dan
+         pb-20 = 80px ke Careers yang juga pt-0 (aturan 28 Agu, lihat
+         PeopleIntro.tsx); ≥sm kembali py-24 seperti semula. */
+      className="section-shell px-3 pt-0 pb-20 sm:py-24"
+    >
       {/* Tirai sorot — MENUTUPI SELURUH VIEWPORT, bukan cuma seksi ini, jadi
           hover satu nama menggelapkan seisi halaman.
 

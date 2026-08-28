@@ -102,7 +102,8 @@ function ValuePanel({
  * "What We Stand For" — tiap nilai jadi satu panel selebar layar: judul di
  * kiri, foto di tengah, uraian di kanan. Panel-panelnya `position: sticky`
  * dengan offset yang sama, jadi saat discroll panel berikutnya naik menutupi
- * panel sebelumnya sampai berhenti di nilai terakhir (Long-Term Thinking).
+ * panel sebelumnya; begitu nilai terakhir (Long-Term Thinking) selesai
+ * menutup, seluruh tumpukan langsung mengalir keluar tanpa jeda.
  *
  * Tumpukan aktif di semua lebar, termasuk mobile. Syaratnya panel harus tetap
  * lebih pendek dari viewport — sticky pada elemen yang lebih tinggi dari
@@ -115,7 +116,11 @@ export default function PeopleValues() {
   return (
     <section
       id="people-values"
-      className="section-shell overflow-x-clip py-24"
+      /* pt mobile 0: celah ke PeopleIntro dijatah SATU angka di sana
+         (pb-20 = 80px — dulu komentar ini bilang 40px, basi sejak Keano
+         naikkan bertahap 40→60→80); pb mobile juga 80px ke TheCrew yang
+         pt-0. ≥sm kembali pt-24/pb-24. */
+      className="section-shell overflow-x-clip pt-0 pb-20 sm:pt-24 sm:pb-24"
       aria-label="What We Stand For"
     >
       {/* Pembungkus label + daftar = containing block sticky-nya label, jadi
@@ -127,7 +132,8 @@ export default function PeopleValues() {
             menang. Selama sebuah panel menempel keduanya tidak bersinggungan
             (label 64–106px, panel mulai di 106px); yang menang barulah terasa
             di item TERAKHIR — sticky-nya habis di ujung daftar, ia menggulir
-            naik dan menimbun labelnya, alih-alih saling menabrak. `bg-background`
+            naik dan menimbun labelnya, alih-alih saling menabrak (lihat
+            catatan tanpa-runway di `<ol>`). `bg-background`
             supaya panel yang lewat di baliknya tidak menembus. Tinggi dikunci
             karena dipakai menghitung STICKY_TOP; `pb-[18px]` = jarak label ke
             garis batas item. Menempel di semua lebar — sejalan dengan panelnya,
@@ -144,10 +150,25 @@ export default function PeopleValues() {
           </motion.p>
         </div>
 
-        {/* Runway pendek di ujung daftar: tanpa ini item terakhir tidak pernah
-            benar-benar berhenti — ia anak terakhir, jadi sticky-nya habis
-            persis saat tercapai — dan langsung menggulir menimbun labelnya. */}
-        <ol className="list-none pb-[12vh]">
+        {/* TANPA runway di ujung daftar — sengaja. Dulu ada `after:h-[12vh]`
+            supaya panel terakhir "benar-benar berhenti", tapi terukur (28 Agu,
+            scripts/probe-values-deadzone.mjs) itu menciptakan ~108px scroll
+            di mana ketiga panel + label diam total — terasa NYANGKUT, karena
+            tidak ada yang kelihatan bergerak selama jeda itu (beda dengan
+            jeda panel 1–2, yang diisi panel berikutnya menggeser naik).
+            Tanpa runway, sticky panel terakhir habis persis saat tercapai:
+            selesai menutup Partnership ia langsung ikut mengalir keluar —
+            kontinu, tanpa zona mati. Konsekuensinya ia langsung menimbun
+            label (dulu tertunda 12vh); perilaku menimbunnya sendiri memang
+            by design, lihat komentar label di atas.
+
+            Kalau runway mau dihidupkan lagi, WAJIB berupa KONTEN (`after:`),
+            bukan `padding-bottom`: kotak pembatas sticky itu CONTENT BOX,
+            jadi padding tidak menahan panel sama sekali — sementara ia tetap
+            memanjangkan containing block labelnya (terukur: dengan
+            `pb-[12vh]` label menggantung sendirian 272px di atas The Crew
+            setelah panel terakhir lewat). */}
+        <ol className="list-none">
           {VALUES.map((value) => (
             <ValuePanel key={value.title} value={value} reduced={reduced} />
           ))}

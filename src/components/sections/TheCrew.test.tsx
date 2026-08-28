@@ -120,19 +120,19 @@ describe("TheCrew", () => {
     expect(iDeveloper).toBeLessThan(iRnd);
   });
 
-  it("every person appears in the desktop list and is reachable via the mobile carousel", () => {
+  it("every person appears in the desktop list; the mobile deck starts at the first", () => {
     render(<TheCrew />);
     const mobileCarousel = screen.getByTestId("crew-mobile-carousel");
 
     // Mobile is a swipe deck — only the active card (+ a couple of peek
-    // cards behind it) is in the DOM at once, not the full list. Desktop
-    // still renders every name; on mobile, every person is reachable via
-    // their dot indicator, and the first person's card is visible on mount.
+    // cards behind it) is in the DOM at once, not the full list, dan sejak
+    // 28 Agu tidak ada lagi indikator titik untuk melompat ke orang mana
+    // pun. Desktop tetap merender semua nama; di mobile yang bisa dijamin
+    // di sini cuma kartu orang pertama saat mount — sisanya dicapai dengan
+    // menggeser/autoplay yang memutar penuh (dijamin oleh test loop di
+    // TheCrewMobileCarousel.test.tsx).
     for (const member of TEAM_MEMBERS) {
       expect(screen.getAllByText(member.name).length).toBeGreaterThanOrEqual(1);
-      expect(
-        within(mobileCarousel).getByRole("button", { name: `Show ${member.name}` }),
-      ).toBeInTheDocument();
     }
     expect(
       within(mobileCarousel).getByText(TEAM_MEMBERS[0].name),

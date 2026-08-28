@@ -60,12 +60,13 @@ export interface ApplicationPayload {
   experience: string;
   /** Centang dari `JobPosting.skills`; boleh kosong. */
   skills: readonly string[];
-  /** Dua tautan berikut OPSIONAL — dicek bentuknya hanya kalau diisi.
-   *  (GitHub pernah jadi tautan ketiga; dicabut 27 Agu bersama isiannya —
-   *  form yang sama dipakai lowongan non-engineering, dan di sana isian itu
-   *  tidak pernah terisi.) */
+  /** Tiga tautan berikut OPSIONAL — dicek bentuknya hanya kalau diisi.
+   *  `github` cuma DITANYAKAN di lowongan engineering (`JobPosting.askGithub`);
+   *  di lowongan lain form mengirimnya kosong. Pemeriksa ini sengaja tidak
+   *  tahu-menahu soal itu: string kosong memang selalu lolos. */
   portfolio: string;
   linkedin: string;
+  github: string;
   /** Honeypot. Lihat `submitApplication`. */
   botcheck?: string;
 }
@@ -86,6 +87,7 @@ export const APPLICATION_FIELD_ORDER = [
   "experience",
   "portfolio",
   "linkedin",
+  "github",
 ] as const;
 
 export type ApplicationField = (typeof APPLICATION_FIELD_ORDER)[number];
@@ -217,7 +219,7 @@ export function applicationFieldErrors(
   if (!payload.motivation.trim()) errors.motivation = t.motivation;
   if (!payload.experience) errors.experience = t.experience;
 
-  for (const field of ["portfolio", "linkedin"] as const) {
+  for (const field of ["portfolio", "linkedin", "github"] as const) {
     if (payload[field].trim() && !looksLikeUrl(payload[field]))
       errors[field] = t.badUrl;
   }
@@ -301,6 +303,7 @@ export async function submitApplication(
     skills,
     portfolio: link(payload.portfolio),
     linkedin: link(payload.linkedin),
+    github: link(payload.github),
     /* Web3Forms menampilkan `message` sebagai badan utama email. Isinya jawaban
        "why do you want to join" — satu-satunya isian yang dibaca sebagai
        kalimat, bukan dipindai sebagai baris data. */

@@ -50,13 +50,22 @@ describe("ApplyForm", () => {
   });
 
   /*
-   * GitHub dicabut 27 Agu. Form yang sama dipakai lowongan non-engineering
-   * (Accountant, Customer Success) — di sana isian itu tidak pernah terisi dan
-   * cuma terbaca sebagai pertanyaan yang bukan untuk pelamarnya. Dijaga di
-   * sini supaya tidak diam-diam kembali lewat satu <Field> yang disalin.
+   * GitHub PER LOWONGAN (`askGithub`), bukan tetap untuk semua: di lamaran
+   * Accountant / Customer Success isian itu tidak pernah terisi dan cuma
+   * terbaca sebagai pertanyaan yang bukan untuk pelamarnya, sedangkan di
+   * lowongan engineering justru tautan yang paling dibaca. Dua sisi gerbangnya
+   * dijaga sekaligus — yang pernah rusak justru sisi engineering-nya (dicabut
+   * total 27 Agu, ketahuan karena Full Stack ikut kehilangan isiannya).
    */
-  it("tidak menanyakan GitHub — dua tautan opsional saja", () => {
+  it("menanyakan GitHub di lowongan engineering", () => {
     renderForm();
+    expect(screen.getByLabelText(/github/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/portfolio/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/linkedin/i)).toBeInTheDocument();
+  });
+
+  it("tidak menanyakan GitHub di lowongan non-engineering", () => {
+    render(<ApplyForm job={getJob("customer-success")!} lang="en" />);
     expect(screen.queryByLabelText(/github/i)).toBeNull();
     expect(screen.getByLabelText(/portfolio/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/linkedin/i)).toBeInTheDocument();
@@ -82,6 +91,7 @@ describe("ApplyForm", () => {
       skills: ["Node.js"],
       portfolio: "keano.dev",
       linkedin: "",
+      github: "",
     });
     /* Bahasanya ikut berangkat — pesan galat jaringan harus sebahasa dengan
        halaman yang sedang dibaca. */

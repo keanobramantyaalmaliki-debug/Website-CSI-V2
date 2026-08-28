@@ -32,6 +32,7 @@ const VALID: ApplicationPayload = {
   skills: ["React / Next.js", "Node.js"],
   portfolio: "keano.dev",
   linkedin: "",
+  github: "",
 };
 
 function mockFetchOk() {
@@ -72,13 +73,14 @@ describe("isian wajib & opsional", () => {
     );
   });
 
-  it("skills & kedua tautan boleh kosong — kalau tidak, pelamar tanpa portofolio tertahan", () => {
+  it("skills & ketiga tautan boleh kosong — kalau tidak, pelamar tanpa portofolio tertahan", () => {
     expect(
       validateApplication({
         ...VALID,
         skills: [],
         portfolio: "",
         linkedin: "",
+        github: "",
       }),
     ).toBeNull();
   });
@@ -87,6 +89,7 @@ describe("isian wajib & opsional", () => {
     expect(applicationFieldErrors({ ...VALID, portfolio: "portofolio saya" }).portfolio)
       .toBeTruthy();
     expect(applicationFieldErrors({ ...VALID, linkedin: "linkedin" }).linkedin).toBeTruthy();
+    expect(applicationFieldErrors({ ...VALID, github: "github saya" }).github).toBeTruthy();
   });
 
   it("tautan tanpa https:// tetap diterima — pelamar jarang mengetik skemanya", () => {
@@ -210,8 +213,10 @@ describe("bentuk kiriman ke Web3Forms", () => {
     await submitApplication(VALID);
     expect(sentBody(spy).portfolio).toBe("https://keano.dev");
     /* Tautan kosong tetap mengirim barisnya sebagai "-": baris yang hilang
-       sama sekali membuat kolom email bergeser antar-lamaran. */
+       sama sekali membuat kolom email bergeser antar-lamaran. Termasuk GitHub
+       di lowongan yang tidak menanyakannya — kolom emailnya tetap sejajar. */
     expect(sentBody(spy).linkedin).toBe("-");
+    expect(sentBody(spy).github).toBe("-");
   });
 
   it("tautan yang sudah lengkap tidak diberi awalan dua kali", async () => {

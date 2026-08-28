@@ -476,9 +476,14 @@ export default function Contact({ prefillMessage }: { prefillMessage?: string } 
   /* Padding BAWAH sengaja tidak ada (`pt-*`, bukan `py-*`): ini section
      terakhir di halaman, jadi sisa 128 px di bawah footer cuma pita kosong di
      ujung dokumen. Footer di bawah menambal sendiri gutter kiri-kanannya
-     dengan margin negatif. */
+     dengan margin negatif.
+
+     pt mobile 0: celah 80px ke section sebelumnya dijatah SATU angka di pb-20
+     section itu — Vision, Office/services, CaseStudySpotlight, atau Careers,
+     tergantung ruangan (aturan 28 Agu, lihat PeopleIntro.tsx). Isi DI DALAM
+     section ini tidak diutak-atik, cuma jarak antar-section-nya. */
   return (
-    <section id="contact" className="overflow-x-clip px-3 pt-24 sm:pt-32">
+    <section id="contact" className="overflow-x-clip px-3 pt-0 sm:pt-32">
       {/* ⚠️ Kepala section — eyebrow "CONTACT", judul besar "Let's Start A
           Conversation.", subjudul "We typically respond within one business
           day.", dan sepasang pil CTA — DIHAPUS 13 Agu atas permintaan Keano.

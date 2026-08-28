@@ -115,10 +115,14 @@ Terakhir diupdate: **27 Agustus 2026**.
 - **Plafon `section-shell` dinamis: capture-and-freeze `screen.width`** (§4bh, 27 Agu) — kelanjutan §4bg: monitor >1920 (QHD/ultrawide) kini **full-bleed** juga, tanpa mengorbankan jepitan zoom-out §4bb. 🔥 Asumsi awal tumbang oleh pengukuran Brave sungguhan: `outerWidth` DAN `screen.width` **ikut membesar saat zoom** (semua CSS px; trik `outerWidth/innerWidth` mati) — satu-satunya invarian = piksel fisik `screen.width × dpr`. Maka `src/lib/shellMax.ts`: capture `screen.width` saat load (lantai 1920) → `--shell-max`, lalu **beku** selama tanda-tangan fisik panel sama; capture ulang hanya saat pindah monitor (fisik berubah >2%). ⚠️ Degradasi sadar: load saat SUDAH zoom-out (zoom nempel per-origin) → sesi itu tanpa jepitan — saat QC, **Cmd+0 dulu sebelum reload**. Unit 10 kasus dari angka pengukuran riil; suite 406/58.
 - **Careers tuntas: form lamaran sendiri + tiga lowongan punya halaman + footer dipakai bersama** (§4bi, 27 Agu) — tombol Apply berhenti mendarat di form Contact; halaman lowongan dapat **`ApplyForm.tsx`** sendiri (Web3Forms yang sama dengan inquiry — key di-impor bukan disalin; cooldown 60 dtk, galat per-isian dua bahasa; **GitHub dicabut global** atas permintaan Keano, catatan "kalau balik harus per-lowongan" ditinggal di kode). `accountant` & `customer-success` masuk `jobs.ts` (bullet ID verbatim dari poster resmi) → **semua lowongan open kini tautan halaman, nol accordion tersisa** — test accordion pindah ke fixture sintetis, bukan dihapus. Footer Contact diangkat jadi **`SiteFooter.tsx`** dipakai bersama. Foto `accountant.jpg` & `customer-success.jpg` terisi (menutup 404 diam-diam preview hover sejak §4bc). 📌 `customer-success.jpg` 640×427 lembek di Retina — placeholder yang disengaja, tinggal ditimpa kapan pun foto finalnya ada.
 - **Zoom-out menengah: JobDetail ikut `section-shell` + plafon dalam ala basement** (§4bj, 27 Agu) — dua ronde. (1) `/careers/:slug` sempat **sengaja tanpa shell** ("tepi menganga di monitor lebar") — alasan itu gugur sejak plafon dinamis §4bh, dan bug melar-saat-zoom-out §4bb muncul lagi persis di halaman termuda; `<article>` + `SiteFooter` di-shell-kan. (2) Keano tes zoom 90/67/30%: jepitan baru terlihat di 30% — **bukan bug, matematika lantai 1920**: di layar 1280 CSS ambangnya 1280/1920 ≈ **67%** (dites 67% = 1910, mepet 10px). Dibedah CSS produksi **basement.studio**: `.grid-layout` mereka plafon statis **120rem = 1920px juga** (ambang 67% mereka alami sama; `.max-w-full` pun dibajak jadi 120rem; monitor >1920 mereka bergap — kita tidak, berkat §4bh) — rasa "adaptif"-nya datang dari **plafon dalam per elemen** (65ch paragraf, 846px blok): yang tumbuh di viewport lebar cuma ruang kosong. Keano pilih resep itu (lantai 1920 dibiarkan): foto JobDetail `lg:max-w-[600px]`, teks/list `65ch`, isi CaseStudySpotlight `1400px`, kutipan Testimonial `1300px`, deskripsi kartu Deployments `65ch`; mosaic flush (CaseGrid/TheCrew/PeopleValues) & section yang sudah ber-plafon bawaan sengaja tidak disentuh. Penjaga `innerCaps.invariant.test.ts`. ⚠️ Temuan sampingan: **`MissionShowcase` yatim** — tidak dirender route mana pun.
+- **Audit mobile: standar jarak 80/18 seluruh situs** (§4bk, 28 Agu) — QC HP 390×844 via tiga skrip baru (`shoot-mobile-audit` sweep+overflow, `measure-mobile-spacing` ukur celah RENDERED via union rect text/media, `shoot-boundaries` potret tiap perbatasan). Aturan baru mobile-only: **celah antar-section 80px dijatah SATU angka SATU tempat** (`pb-20` section atas + `pt-0` section bawah; kebalikan tunggal Vision `pt-20` karena Industries tanpa `pb`) + **judul→subteks 18px** (`mt-[18px]`); `sm:` mengembalikan semua angka desktop. 14 section tersapu; Contact cuma `pt-0`, isi dalamnya tidak disentuh. Bonus temuan: tali Process menyilang "How We Work" di 390px → cabang loop kini turun VERTIKAL di kanan teks sampai `textClearY` baru menyapu ke kartu, glide monoton 8px (sag lama = "patahan"), eyebrow "Our Process" dihapus; PeopleValues **runway 12vh dicabut** — terbukti via `probe-values-deadzone.mjs` menciptakan ~108px zona mati "nyangkut" (semua diam), 🔥 dan kalau balik WAJIB konten `after:` bukan `padding-bottom` (kotak pembatas sticky = content box; pb bikin label menggantung 272px).
+- **TheCrew mobile: dek tanpa titik, geser kanan = maju, peek = preview** (§4bl, 28 Agu) — titik indikator dihapus (permintaan Keano); konvensi arah dibalik: geser KANAN = maju ke kartu yang mengintip (`resolveSwipeStep`), autoplay ikut (`autoAdvance`). 🐛 Dek beku di `+1`: geser kiri memperlihatkan tetangga kanan tapi mendarat di ujung daftar — `resolvePeekIndexes` kini ikut arah geseran, dan arahnya sengaja baru di-reset saat indeks pindah. 🐛 "Flick" ujung lemparan (dek melompat satu frame, terukur 351.4→366 tanpa frame antara) — `deckPose`: peek naik satu tingkat SELAMA lemparan, kartu pendaratan tiba di pose kartu aktif tepat saat elemennya berganti.
+- **Hash dibuang saat pindah ruangan, bertahan saat normalisasi** (§4bm, 28 Agu) — `#careers` sisa "Back to careers" menetap di URL, menumpang dua klik waypoint, lalu Arah 3 melempar gulir ke tengah konten People saat pengunjung sedang memandang scene 3D. Fix di Arah 2 `RoomRouteSync`: hash hanya ikut saat normalisasi slug lama (di sana Arah 3 memang harus menggulir); pindah ruangan sungguhan membuangnya, menyamakan jalur waypoint dengan navbar. ⚠️ Test lama justru mengunci bug-nya ("hash ikut bertahan") — dibalik + 2 skenario baru.
+- **GitHub kembali per-lowongan** (§4bn, 28 Agu) — revisi §4bi: `JobPosting.askGithub` (cuma full-stack-engineer) menggerbangi isian GitHub via `LINK_FIELDS[].onlyIf`; validasi & `submitApplication` sengaja buta gerbang (string kosong selalu lolos, `github: "-"` tetap terkirim supaya kolom email Web3Forms sejajar). 🔥 `LINK_FIELDS` lepas dari `satisfies as const` — entri tanpa `onlyIf` tak bisa di-destrukturisasi bersama yang punya.
 
 **⬅️ Berikutnya:** ~~(a) pasang backend Web3Forms~~ ✅ **selesai 26 Agu** (§4bd) — blocker rilis terakhir; (b) uji anti-beku loader di browser sungguhan (DevTools Performance saat kompilasi shader) — inti keputusan Worker (§4n); (c) selidiki p95 33 ms di `/office` & `/meeting` (dugaan: skinning karakter, §4s); (d) optimasi GLB lanjutan — atlas per ruangan + dedup 29 image kembar (§4s); (e) post-processing PS1 (§4b), pass terakhir untuk look basement.studio; (f) **verifikasi perf Safari oleh Keano sendiri** setelah deploy §4aj — `window.__adaptiveDpr()` di console langsung memberi tahu jatuh di kategori mana (GPU-bound → index naik; tetap `{dpr: 1}` tapi lag → cap OS Low Power Mode). **Optimasi GPU idle:** penundaan "tunggu finalise" (7 Agu) **dicabut sebagian 19 Agu** karena Safari — opsi 1/2/4 terpasang (§4aj); sisa **opsi 3** (gabung pass HueSaturation + BrightnessContrast) tetap menunggu finalise.
 
-> ⚠️ **Test suite: 415 test / 59 berkas, hijau** (27 Agu; 348/53 turun ke 344/52 saat `roomContent.test.tsx` dicabut bersama `roomHasContact` §4be, lalu naik bertahap lewat batch halaman lowongan §4bf, `shellMax.test.ts` §4bh, batch form lamaran + accountant/customer-success §4bi, dan batch shell JobDetail + plafon dalam §4bj). Satu test *pernah* merah pada satu putaran penuh — `TheCrewMobileCarousel.test.tsx` ("auto-advances 30s after going idle") — lalu hijau saat dijalankan sendiri **dan** pada putaran penuh berikutnya; **kambuh sekali lagi** dengan pola persis sama di putaran §4bj dan kembali hijau. **Flake fake-timer di bawah beban, bukan regresi**; kalau ia muncul lagi, curigai `advanceTimersByTimeAsync` di suite yang berbagi sesi timer, bukan komponennya.
+> ⚠️ **Test suite: 423 test / 59 berkas, hijau** (28 Agu; 348/53 turun ke 344/52 saat `roomContent.test.tsx` dicabut bersama `roomHasContact` §4be, lalu naik bertahap lewat batch halaman lowongan §4bf, `shellMax.test.ts` §4bh, batch form lamaran + accountant/customer-success §4bi, batch shell JobDetail + plafon dalam §4bj = 415/59, dan 423/59 lewat batch 28 Agu: hash §4bm +2, gerbang GitHub §4bn +1, unit dek carousel §4bl +5). Satu test *pernah* merah pada satu putaran penuh — `TheCrewMobileCarousel.test.tsx` ("auto-advances 30s after going idle") — lalu hijau saat dijalankan sendiri **dan** pada putaran penuh berikutnya; **kambuh sekali lagi** dengan pola persis sama di putaran §4bj dan kembali hijau. **Flake fake-timer di bawah beban, bukan regresi**; kalau ia muncul lagi, curigai `advanceTimersByTimeAsync` di suite yang berbagi sesi timer, bukan komponennya.
 
 ## 🎉 MVP 1 SELESAI (27 Jul) — **50-60 FPS di browser**
 
@@ -2737,6 +2741,165 @@ jangan "diperbaiki".
   `TheCrewMobileCarousel` kambuh sekali dengan pola §4bi persis, hijau lagi
   saat diulang.
 
+## 4bk. Audit Mobile: Standar Jarak 80/18 Seluruh Situs + Perapian Temuan ✅ (28 Agu)
+
+Sesi QC tampilan HP (emulasi 390×844 + touch). Tiga skrip audit lahir dulu,
+temuannya dieksekusi satu-satu.
+
+### Aturan jarak baru — dua angka saja
+
+Permintaan Keano, disetel sambil melihat hasilnya (40 → 60 → 80px):
+
+- **Celah antar-section = 80px**, dijatah **SATU angka di SATU tempat**:
+  `pb-20` milik section di ATAS, section di bawahnya `pt-0`. Satu-satunya
+  kebalikan: **Vision `pt-20`** — tetangga atasnya strip Industries yang
+  memang tanpa `pb`.
+- **Judul → subteks = 18px** (`mt-[18px]`) di section mana pun yang punya
+  pasangan itu.
+- Dua-duanya **mobile saja** — `sm:` mengembalikan semua angka desktop lama
+  (`py-24/32`, `mt-6/8`, dst.); desktop tidak berubah sepiksel pun.
+
+Yang tersapu: CsiHero, Deployments, Process, Office (home); PeopleIntro,
+PeopleValues, TheCrew, Careers (people); CaseGrid, CaseStudySpotlight,
+MeetingLead (work); Vision (services); Contact **`pt-0` saja — isi dalam
+section-nya tidak disentuh**; JobDetail + ApplyForm (`/careers/:slug` —
+celah 80px-nya hidup DI ATAS garis `border-t` "Apply now", judul menempel
+garis dari bawah, pola yang sama dengan border MeetingLead/CaseStudySpotlight).
+Tiap kelas diberi komentar penunjuk balik ke penjelasan panjang di
+`PeopleIntro.tsx`.
+
+### Tiga skrip audit (berpasangan)
+
+- **`shoot-mobile-audit.mjs`** — sweep semua route di 390×844, potret tiap
+  langkah scroll + catat **overflow horizontal** (`scrollWidth > innerWidth`
+  plus daftar elemen pelakunya).
+- **`measure-mobile-spacing.mjs`** — ukur celah antar-section & jarak
+  judul→subteks **RENDERED, bukan baca kelas Tailwind**: sweep dulu ke dasar
+  halaman supaya animasi `whileInView once` selesai (elemen ber-`y: 8` awal
+  bikin angka meleset), lalu "isi" section = union rect semua text node +
+  media → celah = piksel yang benar-benar terlihat mata, berapapun kombinasi
+  padding/margin penyusunnya.
+- **`shoot-boundaries.mjs`** — baca laporan skrip ukur, gulir tiap perbatasan
+  ke tengah viewport, screenshot: union text/media **tidak menghitung border
+  kartu & posisi sticky saat benar-benar digulir**, jadi angka 80 tetap
+  dicek mata.
+
+### Process: eyebrow dihapus + tali dibentuk ulang
+
+Audit 390px menangkap goresan tali **menyilang teks "How We Work"**, plus
+dua permintaan Keano:
+
+- Label eyebrow "Our Process" **dihapus**; patokan titik start tali pindah ke
+  heading (70px di atasnya, tanpa kompensasi sag lagi).
+- Glide masuk kini **melorot monoton 8px** — sag lama (turun +16 lalu naik
+  balik) memuncak persis sebelum belokan turun, terbaca "patahan" di samping
+  heading.
+- Cabang loop-lebar (layar sempit): dulu satu kurva S glide→pusat kartu —
+  sapuan kirinya mulai di atas garis teks dan menyilang heading. Kini belok
+  turun **≈ lingkaran** di `bx` (kanan teks heading, clamp tepi layar),
+  **turun vertikal** sampai melewati dasar teks (`textClearY` = bottom kotak
+  h2 + 10px; kotak blok h2 bebas transform LineMask, jadi stabil), baru S
+  bertangen vertikal ke pusat kartu. Ellipse jangkung ditolak: turunannya
+  terbaca diagonal yang berbalik — "patahan" lagi.
+
+### PeopleValues: runway 12vh dicabut — zona mati ~108px
+
+Keluhan "nyangkut" di What We Stand For. `scripts/probe-values-deadzone.mjs`
+membuktikan: runway `pb-[12vh]` di ujung daftar menciptakan **~108px scroll
+di mana ketiga panel + label diam total** — terasa macet karena tidak ada
+yang terlihat bergerak (beda dengan jeda panel 1–2, yang diisi panel
+berikutnya menggeser naik). Tanpa runway, sticky panel terakhir habis persis
+saat tercapai: selesai menutup Partnership ia langsung ikut mengalir keluar,
+kontinu. Konsekuensi sadar: ia langsung menimbun label — perilaku menimbun
+itu sendiri memang by design.
+
+🔥 Kalau runway mau dihidupkan lagi, **WAJIB berupa KONTEN (`after:`), bukan
+`padding-bottom`**: kotak pembatas sticky adalah CONTENT BOX — padding tidak
+menahan panel sama sekali, tapi tetap memanjangkan containing block label
+(terukur: dengan `pb-[12vh]` label menggantung sendirian **272px** di atas
+The Crew setelah panel terakhir lewat).
+
+### Serpihan
+
+- Toggle EN/ID JobDetail diberi `self-end` — di kolom sempit ia rata kanan,
+  tidak ikut melar.
+
+## 4bl. TheCrew Mobile: Dek Tanpa Titik, Geser Kanan = Maju, Peek = Preview ✅ (28 Agu)
+
+Dek kartu Tinder-style (pengganti korsel scroll-snap, 7 Agu) dirombak tiga
+lapis atas review Keano:
+
+1. **Titik indikator dihapus** — navigasi tinggal geser + autoplay 30 dtk
+   yang memutar penuh. Test yang dulu membaca "siapa aktif" dari titik kini
+   membaca kartu ber-`cursor-grab` (kartu peek juga memuat nama — memeriksa
+   teks seluruh carousel tidak membedakan apa pun); test wrap-around diganti
+   fixture 2 orang (dulu lompat ke ujung daftar lewat klik titik).
+2. **Konvensi arah dibalik** (spec Keano 27 Agu): geser **KANAN = maju** ke
+   kartu yang mengintip di bawah dek, kiri = mundur (`resolveSwipeStep`);
+   lemparan autoplay ikut ke kanan (`autoSwipeLeft` → `autoAdvance`).
+3. **Peek = preview** — kartu yang tersingkap selama geseran WAJIB kartu
+   yang didarati. Dua bug tampilan:
+   - 🐛 Dek beku di `+1`: dari orang pertama geser kiri MEMPERLIHATKAN
+     tetangga kanan tapi MENDARAT di ujung daftar. `resolvePeekIndexes` kini
+     ikut arah geseran (`dragDir` dari `onDrag`, disalin ke ref supaya render
+     cuma terpicu saat TANDA-nya berubah, bukan tiap piksel). Arah **sengaja
+     tidak di-reset di `onDragEnd`** — reset menunggu indeks benar-benar
+     pindah; kalau tidak, dek balik ke `+1` di tengah lemparan dan kartu yang
+     salah tersingkap 250ms terakhir.
+   - 🐛 "Flick" di ujung lemparan: dek diam selama lemparan lalu melompat
+     satu frame — terukur lebar 351.4→366, top 191.9→174.3, opacity 0.75→1,
+     **nol frame di antaranya**. Fix `deckPose(depth)`: kartu peek
+     menganimasikan posenya `depth → depth-1` sepanjang durasi lemparan yang
+     sama (0.25 dtk), jadi saat indeks pindah, kartu pendaratan sudah duduk
+     PERSIS di pose kartu aktif — elemennya berganti (div peek → ActiveCard)
+     tapi posenya sama, tidak ada loncatan.
+   - Sapuan-masuk-dari-kiri untuk gerakan mundur **dihapus**: ia memaksa
+     kartu pendaratan bersembunyi di luar layar dulu — mustahil disatukan
+     dengan peek yang benar.
+
+Penjaga: unit test `resolveSwipeStep` + `resolvePeekIndexes`, termasuk
+kesepakatan "front peek = kartu pendaratan" untuk kedua arah.
+
+## 4bm. Hash Menumpang Antar-Ruangan: Dibuang Saat Pindah, Bertahan Saat Normalisasi ✅ (28 Agu)
+
+Bug dua-klik-sesudah-penyebabnya, tanpa satu pun jejak ke berkas pelakunya:
+buka lowongan → "← Back to careers" mendarat di `/people#careers` →
+`#careers` **menetap** di URL → waypoint Meeting membawanya jadi
+`/work#careers` (diam — Meeting tak punya section itu) → waypoint balik ke
+People jadi `/people#careers` lagi → **Arah 3 melempar gulir ke tengah
+konten** padahal pengunjung baru saja memandang scene 3D.
+
+Akar: Arah 2 `RoomRouteSync` membawa `hash` menyeberang ruangan (menumpang
+aturan `search` yang memang harus dibawa, §4q), sementara Arah 3 menyala
+ulang pada SETIAP pergantian pathname selama hash masih ada. Fix: hash
+**hanya ikut saat normalisasi** — deep-link slug lama (`/office#careers` →
+`/people#careers`) cuma dieja ulang, section tujuannya masih halaman yang
+sama, Arah 3 memang harus menggulir ke sana. Pindah ruangan sungguhan
+membuangnya — menyamakan jalur waypoint dengan jalur navbar (`goRoom` sudah
+membuang hash sejak dulu lewat `navigate(pathFor(room))` polos).
+
+⚠️ Test lama justru **mengunci bug-nya** ("hash ikut bertahan, dan tidak
+terduplikasi") — dibalik jadi "hash DIBUANG saat pindah ruangan", plus dua
+skenario baru: bolak-balik waypoint pasca job detail, dan normalisasi slug
+lama yang TETAP membawa hash.
+
+## 4bn. GitHub Kembali — Kali Ini Per-Lowongan (`askGithub`) ✅ (28 Agu)
+
+Revisi keputusan §4bi ("GitHub dicabut global"): di lowongan engineering ia
+justru tautan yang paling dibaca — yang salah bukan isiannya, tapi
+tetap-untuk-semuanya. `JobPosting.askGithub` (cuma `full-stack-engineer`)
+menggerbangi `<Field>` GitHub lewat `LINK_FIELDS[].onlyIf`. Validasi &
+pengiriman (`submitApplication`) **sengaja tidak tahu-menahu gerbang itu**:
+string kosong selalu lolos, dan baris `github: "-"` tetap dikirim di lowongan
+yang tak menanyakannya — kolom email Web3Forms sejajar antar-lamaran (aturan
+"-" yang sama dengan tautan kosong lain, §4bi). 🔥 `LINK_FIELDS` beralih dari
+`satisfies … as const` ke anotasi tipe biasa: dengan `as const`, entri tanpa
+`onlyIf` tidak bisa di-destrukturisasi bersama yang punya (union literalnya
+tak seragam); salah ketik nama isian tetap gagal compile via
+`field: ApplicationField`. Dua sisi gerbang dijaga test — yang pernah rusak
+justru sisi engineering-nya (dicabut total 27 Agu, Full Stack ikut kehilangan
+isiannya).
+
 ## 5. Foto Referensi
 
 | Folder | Isi |
@@ -3250,7 +3413,7 @@ Kode billiard cuma bergantung 3 hal dari `office.glb`: (a) nama node mengandung 
   - Cycles: **GPU Metal** (`prefs.compute_device_type='METAL'` + `cycles.device='GPU'`) — cek tiap sesi, default-nya CPU
 - **Polycam** untuk scanning (GLB)
 - **Vite + bun** (project web ini) — **GLB sudah terintegrasi (§4h)**. Stack: **Vite 6** (dulu Next 16.2, dimigrasikan 29 Jul — §4j), React 19, three 0.185, @react-three/fiber 9 + drei 10 + postprocessing 3, zustand 5, Tailwind 4, **react-router-dom 7** (routing per-ruangan, §4q), **cannon-es 0.20** (billiard, §6d), **motion 12** (animasi teks, §4i), **matter-js 0.20** (`PhysicsHeading`, §4r-3). Jalankan: `bun dev` → `http://localhost:3000`
-- **Vitest 4** — `bun run test`. **415 test di 59 berkas**, semuanya hijau per 27 Agu (348/53 turun ke 344/52 saat `roomContent.test.tsx` dicabut bersama `roomHasContact` §4be, naik bertahap lewat batch halaman lowongan §4bf, `shellMax.test.ts` §4bh, batch form lamaran §4bi, dan batch plafon dalam §4bj). Empat di antaranya invariant lintas-wilayah (`INVARIANTS.md` §1, §3, §6, §7). Norma repo: **buktikan test-nya MERAH di kondisi rusak dulu** sebelum dipakai memverifikasi perbaikan
+- **Vitest 4** — `bun run test`. **423 test di 59 berkas**, semuanya hijau per 28 Agu (348/53 turun ke 344/52 saat `roomContent.test.tsx` dicabut bersama `roomHasContact` §4be, naik bertahap lewat batch halaman lowongan §4bf, `shellMax.test.ts` §4bh, batch form lamaran §4bi, batch plafon dalam §4bj, dan batch 28 Agu §4bl–§4bn). Empat di antaranya invariant lintas-wilayah (`INVARIANTS.md` §1, §3, §6, §7). Norma repo: **buktikan test-nya MERAH di kondisi rusak dulu** sebelum dipakai memverifikasi perbaikan
 - **Pengukuran performa: CDP langsung, tanpa dependency** (§4r) — `scripts/measure-frames.mjs` (frame time) + `scripts/shoot.mjs` (screenshot) + `scripts/drive.mjs` (klik/eval/tembak berurutan). ⚠️ **Wajib jalankan di dpr 2**; dpr 1 mentok vsync dan semua setelan terlihat sama
   - **Browser verifikasi = Brave**, bukan Chrome. CDP-nya identik, cukup tukar path binary-nya. ⚠️ Kelima skrip di `scripts/` masih **hardcode path Chrome** — ganti manual saat dipakai
   - **`drive.mjs` dapat tiga langkah baru** (10 Agu): `emulate` memasang device metrics **sekaligus** `setTouchEmulationEnabled` — tanpa itu halaman terbaca sebagai desktop sempit, `(pointer: coarse)` tidak cocok, dan gerbang INVARIANTS §6 **tidak ikut teruji padahal itu justru yang sedang diperiksa** saat mengemulasi HP; `scroll` memindahkan halaman ke posisi tertentu sebelum memotret; `media` memaksa `prefers-reduced-motion` (cabang itu dipilih saat komponen **dipasang**, jadi tidak bisa dipalsukan dari `eval`). **Tiga lagi 23 Agu** (§4ay): `down`/`holdmove`/`up` — menahan tombol sambil bergerak/dipotret; `drag` selalu melepas di akhir jadi tidak bisa memotret keadaan tertahan
@@ -3259,6 +3422,8 @@ Kode billiard cuma bergantung 3 hal dari `office.glb`: (a) nama node mengandung 
 - **`scripts/shoot-inquiry-overlay.mjs [url] [outdir]`** (27 Agu, §4be) — probe modal CTA navbar: sampel `transform` pembungkus yang naik + opacity tirai tiap ~80 ms (deret pegas yang meluruh mulus = animasinya betul jalan — pelajaran "ukur dulu, jangan percaya mata"), plus PNG urutan buka/tutup. ⚠️ Timestamp PNG-nya **tidak bisa dipercaya** selagi animasi jalan — `captureScreenshot` headless telat ratusan ms, deret sampel yang jadi wasit
 - **`scripts/probe-job-page.mjs [slug] [dpr]`** (27 Agu, §4bf) — 24 check halaman lowongan: URL bertahan, canvas tidak di-resize, **0 draw call**, deep-link dingin tanpa loader & tanpa `office.glb`, toggle bahasa, pendaratan balik di section Careers. 🔑 Profil browser **dibuang tiap jalan** — kalau tidak, `localStorage["cogniti:job-lang"]` bertahan dan uji toggle-nya lulus tanpa menukar apa pun. ⚠️ `evalJs`-nya membaca `unserializableValue`: tanpa itu tiap angka `-0` pulang sebagai `undefined` (lihat §4bf). Sejak §4bi slug-generic (hijau untuk ketiga slug) dan assertion accordion-nya dibalik: "semua lowongan open = tautan halaman, nol accordion". ⚠️ Jangan dijalankan barengan eslint dalam satu perintah shell — rebutan CPU = kegagalan palsu.
 - **`scripts/shoot-apply-form.mjs [slug] [lebar] [tinggi]`** (27 Agu, §4bi) — potret tata letak form lamaran (dua kolom yang runtuh di ponsel, grid skill, kaki form) ke `/tmp/apply-form/`; pelengkap visual probe-job-page, bukan penggantinya.
+- **Trio audit mobile** (28 Agu, §4bk) — dipakai berurutan: **`scripts/shoot-mobile-audit.mjs [url] [outdir] [w] [h]`** sweep semua route di emulasi 390×844 + touch, potret tiap langkah scroll + catat overflow horizontal beserta elemen pelakunya; **`scripts/measure-mobile-spacing.mjs [url] [out.json]`** ukur celah antar-section & judul→subteks **RENDERED bukan baca kelas** (sweep dulu ke dasar supaya `whileInView once` selesai — elemen ber-`y:8` bikin angka meleset; "isi" section = union rect text node + media); **`scripts/shoot-boundaries.mjs [url] [report.json] [outdir]`** gulir tiap perbatasan dari laporan skrip ukur ke tengah viewport lalu potret (union text/media tak menghitung border kartu & sticky saat digulir). Route bisa dipersempit via env `CSI_ROUTES`; semuanya sudah hormat `CSI_BROWSER` (default Brave).
+- **`scripts/probe-values-deadzone.mjs`** (28 Agu, §4bk) — bukti "nyangkut" di What We Stand For: scroll bertahap sambil mencatat posisi ketiga panel + label + section berikutnya; zona mati = rentang scrollY di mana TIDAK ADA yang bergerak di layar (terukur ~108px sebelum runway 12vh dicabut).
 - **`scripts/measure-scroll.mjs`** (10 Agu) — mengukur **kehalusan scroll**, bukan fps diam seperti `measure-frames.mjs`. ⚠️ Batas alatnya ditulis di kepala berkas: **ia mencekik CPU**, sementara yang mahal di HP adalah compositing layer WebGL di **GPU** — untuk keputusan yang menyentuh compositing, ia bukan wasitnya
 - **Generator aset layar** (§6c) — `scripts/make-dvd-video.mjs` (logo mantul TV function; deterministik, jalankan ulang → berkas identik byte demi byte) & `scripts/make-vscode-video.mjs` (sintetis, tidak dipakai). Aset lain hasil `ffmpeg` langsung; resepnya di komentar `screens.ts`
 - **Playwright 1.61.0** untuk verifikasi visual headless — **versi itu spesifik**, lihat §4m. Flag WebGL: `--use-gl=angle --use-angle=metal --enable-unsafe-swiftshader`. (Tidak ada di `package.json`; dipasang terpisah saat dibutuhkan. Untuk mengukur **frame time** pakai skrip CDP di atas, bukan ini.)

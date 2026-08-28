@@ -72,7 +72,17 @@ describe("RoomRouteSync mempertahankan query string", () => {
     ).toBe("/people?perf=1");
   });
 
-  it("hash ikut bertahan, dan tidak terduplikasi", async () => {
+  /**
+   * ── Hash: DIBUANG saat pindah ruangan, BERTAHAN saat normalisasi ─────────
+   *
+   * Dulu test ini mengunci "hash ikut bertahan" — dan itu persis bug-nya
+   * (28 Agu): hash menunjuk section di halaman ruangan LAMA, sementara Arah 3
+   * menyala ulang tiap pathname berganti selama hash ada. #careers yang
+   * ditinggalkan "← Back to careers" menetap di URL, menumpang dua kali klik
+   * waypoint, lalu melempar pengunjung dari scene 3D ke tengah konten People.
+   * Rantai lengkapnya di komentar Arah 2 RoomRouteSync.tsx.
+   */
+  it("hash DIBUANG saat pindah ruangan (search tetap ikut)", async () => {
     useSceneStore.setState({ currentRoom: "Lounge", goTo: null });
 
     let url = "";
@@ -87,11 +97,68 @@ describe("RoomRouteSync mempertahankan query string", () => {
 
     await waitFor(() => expect(url.startsWith("/work")).toBe(true));
 
-    // `?` dan `#` masing-masing tepat sekali — menggabungkan search/hash
-    // dengan string apa adanya gampang menghasilkan "/work?perf=1?perf=1".
+    // `?` tepat sekali — menggabungkan search dengan string apa adanya
+    // gampang menghasilkan "/work?perf=1?perf=1".
     expect((url.match(/\?/g) || []).length, `URL ganda: ${url}`).toBe(1);
-    expect((url.match(/#/g) || []).length, `hash ganda: ${url}`).toBe(1);
-    expect(url).toBe("/work?perf=1#contact");
+    expect(
+      url,
+      "Arah 2 di RoomRouteSync.tsx masih membawa hash menyeberang antar " +
+        "ruangan. Hash menunjuk section di halaman ruangan LAMA, dan Arah 3 " +
+        "mengeksekusinya ulang tiap pathname berganti — pengunjung yang " +
+        "berpindah ruangan lewat waypoint dilempar ke tengah konten.\n",
+    ).toBe("/work?perf=1");
+  });
+
+  it("skenario job detail: #careers tidak menumpang waypoint bolak-balik", async () => {
+    // "← Back to careers" meninggalkan /people#careers di URL. Arah 1 menandai
+    // pathname ini terurus (key === currentRoom), jadi Arah 2 siaga.
+    useSceneStore.setState({ currentRoom: "Office", goTo: null });
+
+    let url = "";
+    render(
+      <MemoryRouter initialEntries={["/people#careers"]}>
+        <RoomRouteSync />
+        <LocationProbe onChange={(u) => (url = u)} />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(url).toBe("/people#careers"));
+
+    // Klik waypoint Meeting…
+    useSceneStore.setState({ currentRoom: "Meeting" });
+    await waitFor(() => expect(url.startsWith("/work")).toBe(true));
+    expect(url, "hash ruangan lama ikut ke Meeting").toBe("/work");
+
+    // …lalu waypoint balik ke People. Tanpa fix, URL-nya kembali
+    // /people#careers dan Arah 3 melempar gulir ke section careers.
+    useSceneStore.setState({ currentRoom: "Office" });
+    await waitFor(() => expect(url.startsWith("/people")).toBe(true));
+    expect(
+      url,
+      "#careers hidup lagi setelah bolak-balik waypoint — Arah 3 akan " +
+        "menggulirkan pengunjung ke tengah konten padahal ia sedang " +
+        "memandang scene 3D.\n",
+    ).toBe("/people");
+  });
+
+  it("normalisasi slug lama TETAP membawa hash", async () => {
+    // Deep-link era slug lama: /office#careers cuma dieja ulang jadi
+    // /people#careers — section tujuannya masih halaman yang sama, Arah 3
+    // memang harus menggulirkan ke sana.
+    useSceneStore.setState({ currentRoom: "Office", goTo: null });
+
+    let url = "";
+    render(
+      <MemoryRouter initialEntries={["/office#careers"]}>
+        <RoomRouteSync />
+        <LocationProbe onChange={(u) => (url = u)} />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(url.startsWith("/people")).toBe(true));
+    expect(url, "hash hilang saat URL cuma dinormalkan").toBe(
+      "/people#careers",
+    );
   });
 
   it("tanpa query, URL tetap bersih (tidak ada '?' menggantung)", async () => {

@@ -46,18 +46,31 @@ const inputClass = (bad: boolean) =>
 /**
  * Tautan opsional yang diminta form ini, berurutan sesuai tampilnya.
  *
- * GitHub DICABUT 27 Agu: form yang sama dipakai lowongan non-engineering
- * (Accountant, Customer Success), dan di sana isian itu tidak pernah terisi —
- * yang tersisa cuma pertanyaan yang jelas bukan untuk pelamarnya. Kalau suatu
- * saat dikembalikan, ia harus PER LOWONGAN, bukan tetap untuk semua.
+ * GitHub PER LOWONGAN (`onlyIf`), bukan tetap untuk semua: sempat dicabut
+ * total 27 Agu karena form yang sama dipakai lowongan non-engineering
+ * (Accountant, Customer Success) dan di sana isian itu tidak pernah terisi —
+ * padahal di lowongan engineering justru tautan yang paling dibaca. Kembali
+ * di hari yang sama dengan gerbang `JobPosting.askGithub`.
  *
- * `satisfies`, bukan anotasi: kunci placeholder-nya ikut diperiksa terhadap
- * ApplicationField, jadi salah ketik nama isian gagal saat compile.
+ * Anotasi tipe (bukan lagi `satisfies`): salah ketik nama isian tetap gagal
+ * compile lewat `field: ApplicationField`, dan `onlyIf` yang opsional butuh
+ * satu bentuk union — `as const` membuat entri tanpa `onlyIf` tidak bisa
+ * di-destrukturisasi bersama yang punya.
  */
-const LINK_FIELDS = [
+const LINK_FIELDS: readonly {
+  field: ApplicationField;
+  placeholder: string;
+  /** Tanpa `onlyIf` = tampil di semua lowongan. */
+  onlyIf?: (job: JobPosting) => boolean;
+}[] = [
   { field: "portfolio", placeholder: "https://yourwork.com" },
   { field: "linkedin", placeholder: "https://linkedin.com/in/janedoe" },
-] as const satisfies readonly { field: ApplicationField; placeholder: string }[];
+  {
+    field: "github",
+    placeholder: "https://github.com/janedoe",
+    onlyIf: (job) => Boolean(job.askGithub),
+  },
+];
 
 type Status = "idle" | "sending" | "sent" | "error";
 
@@ -73,6 +86,7 @@ const EMPTY: TextValues = {
   experience: "",
   portfolio: "",
   linkedin: "",
+  github: "",
 };
 
 /**
@@ -224,11 +238,20 @@ export default function ApplyForm({
           `mx-auto` menaruh kolomnya di tengah halaman. Isinya sendiri tetap rata
           kiri: label yang ikut ke tengah bikin mata kehilangan garis awal tiap
           turun satu isian. */}
-      <div className="mx-auto max-w-4xl border-t border-white/10 pt-14 sm:pt-20">
+      <div
+        /* pt mobile 0: celah antar-section 80px seluruhnya hidup DI ATAS
+           garis border-t ini (pb-20 milik <article> JobDetail), judul "Apply
+           now" menempel garis dari bawah — pola yang sama dengan border-b
+           MeetingLead & border-t CaseStudySpotlight di /work (28 Agu).
+           ≥sm kembali pt-20. */
+        className="mx-auto max-w-4xl border-t border-white/10 pt-0 sm:pt-20"
+      >
         <h2 className="text-[clamp(2rem,4.5vw,3.5rem)] leading-[0.95] font-semibold tracking-tight text-zinc-100">
           {ui.heading}
         </h2>
-        <p className="mt-4 text-xs font-light text-zinc-500">{ui.requiredNote}</p>
+        {/* mt mobile 18px = standar judul→subteks 28 Agu (PeopleIntro);
+            ≥sm kembali 16px. */}
+        <p className="mt-[18px] text-xs font-light text-zinc-500 sm:mt-4">{ui.requiredNote}</p>
 
         {/* `noValidate` = validasi bawaan peramban DIMATIKAN, dan itu disengaja.
             Dua alasannya nyata, bukan preferensi:
@@ -377,7 +400,9 @@ export default function ApplyForm({
               berdampingan — lalu satu di antaranya (GitHub) harus dicabut satu
               per satu dari lima tempat.
             */}
-            {LINK_FIELDS.map(({ field, placeholder }) => (
+            {LINK_FIELDS.filter(
+              ({ onlyIf }) => !onlyIf || onlyIf(job),
+            ).map(({ field, placeholder }) => (
               <Field
                 key={field}
                 id={`apply-${field}`}

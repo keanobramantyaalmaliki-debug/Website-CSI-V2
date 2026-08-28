@@ -9,7 +9,14 @@ const HEADTEXT =
 
 export default function Vision() {
   return (
-    <section id="vision" className="section-shell relative overflow-hidden px-3 py-24 sm:py-32">
+    <section
+      id="vision"
+      /* Mobile: pt-20 = 80px dari ujung plank Industries (satu-satunya
+         pasangan yang angkanya di pt — Industries tak punya pb) dan pb-20 =
+         80px ke Contact yang pt-0 (aturan 28 Agu, lihat PeopleIntro.tsx);
+         ≥sm kembali py-32. */
+      className="section-shell relative overflow-hidden px-3 pt-20 pb-20 sm:py-32"
+    >
       <div className="relative z-10">
         <p className="max-w-[1600px] text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
           {HEADTEXT}

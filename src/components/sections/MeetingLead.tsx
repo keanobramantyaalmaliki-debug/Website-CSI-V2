@@ -24,7 +24,9 @@ export default function MeetingLead() {
         </h2>
 
         <motion.p
-          className="mt-6 max-w-3xl text-base leading-relaxed text-zinc-400 sm:mt-8 sm:text-lg"
+          /* mt mobile 18px = standar judul→subteks 28 Agu (PeopleIntro);
+             ≥sm kembali ke angka desktop lama. */
+          className="mt-[18px] max-w-3xl text-base leading-relaxed text-zinc-400 sm:mt-8 sm:text-lg"
           initial={{ opacity: 0, y: 8 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}

@@ -76,7 +76,9 @@ export default function Office() {
          section pertama tiap ruangan, lihat CsiHero.tsx). Dulu `pt-6` di HP
          dan `md:pt-32` (128px) di desktop; 128px itu terbaca mengambang jauh
          dari kantor, dicabut 18 Agu. */
-      className="section-shell relative z-10 px-3 pt-3 pb-24 sm:pb-32"
+      /* pb mobile 80px = SELURUH celah visual ke Contact (pt-0 di sana);
+         aturan 28 Agu, lihat PeopleIntro.tsx. ≥sm kembali pb-32. */
+      className="section-shell relative z-10 px-3 pt-3 pb-20 sm:pb-32"
     >
       <div>
         {/* T1 — line-mask heading. Ukuran font & lebar maksimum MENYAMAI h2
@@ -90,7 +92,9 @@ export default function Office() {
 
         {/* Overview — [what we build] + [impact on audience] + [who we serve, X to Y] */}
         <motion.p
-          className="mt-6 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg"
+          /* mt mobile 18px = standar judul→subteks 28 Agu (PeopleIntro);
+             ≥sm kembali 24px. */
+          className="mt-[18px] max-w-2xl text-base leading-relaxed text-zinc-400 sm:mt-6 sm:text-lg"
           initial={{ opacity: 0, y: 8 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}

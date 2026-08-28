@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from "vitest";
-import { render, screen, act, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, act } from "@testing-library/react";
 import TheCrewMobileCarousel, {
+  resolvePeekIndexes,
   resolveSwipeDirection,
+  resolveSwipeStep,
 } from "./TheCrewMobileCarousel";
 import { TEAM_MEMBERS } from "@/data/people";
 
@@ -29,48 +30,36 @@ vi.mock("motion/react", async (importOriginal) => {
   return { ...actual, useReducedMotion: () => mockReduced };
 });
 
+// Tidak ada lagi indikator titik (dihapus atas permintaan Keano, 28 Agu),
+// jadi "siapa yang aktif" dibaca dari kartu yang bisa digeser itu sendiri —
+// kartu peek di belakangnya juga memuat nama, jadi memeriksa teks seluruh
+// carousel tidak membedakan apa pun.
+function activeName(): string {
+  const card = screen
+    .getByTestId("crew-mobile-carousel")
+    .querySelector("article.cursor-grab");
+  return card?.textContent ?? "";
+}
+
 describe("TheCrewMobileCarousel", () => {
   beforeEach(() => {
     mockReduced = false;
   });
 
-  it("marks the first person's dot active on mount", () => {
+  it("shows the first person on mount", () => {
     render(<TheCrewMobileCarousel people={TEAM_MEMBERS} />);
-    const carousel = screen.getByTestId("crew-mobile-carousel");
-    expect(carousel).toHaveTextContent(TEAM_MEMBERS[0].name);
-
-    const firstDot = screen.getByRole("button", {
-      name: `Show ${TEAM_MEMBERS[0].name}`,
-    });
-    const secondDot = screen.getByRole("button", {
-      name: `Show ${TEAM_MEMBERS[1].name}`,
-    });
-    expect(firstDot.className).toMatch(/bg-accent/);
-    expect(secondDot.className).not.toMatch(/bg-accent/);
+    expect(activeName()).toContain(TEAM_MEMBERS[0].name);
+    expect(activeName()).not.toContain(TEAM_MEMBERS[1].name);
   });
 
-  it("renders one dot indicator per person", () => {
+  it("renders no dot indicators", () => {
     render(<TheCrewMobileCarousel people={TEAM_MEMBERS} />);
-    for (const member of TEAM_MEMBERS) {
-      expect(
-        screen.getByRole("button", { name: `Show ${member.name}` }),
-      ).toBeInTheDocument();
-    }
-  });
-
-  it("clicking a dot switches the active profile", async () => {
-    const user = userEvent.setup();
-    render(<TheCrewMobileCarousel people={TEAM_MEMBERS} />);
-    const target = TEAM_MEMBERS[2];
-
-    await user.click(screen.getByRole("button", { name: `Show ${target.name}` }));
-
-    const targetDot = screen.getByRole("button", { name: `Show ${target.name}` });
-    const firstDot = screen.getByRole("button", {
-      name: `Show ${TEAM_MEMBERS[0].name}`,
-    });
-    expect(targetDot.className).toMatch(/bg-accent/);
-    expect(firstDot.className).not.toMatch(/bg-accent/);
+    expect(
+      screen.queryByRole("button", { name: `Show ${TEAM_MEMBERS[0].name}` }),
+    ).toBeNull();
+    expect(
+      screen.getByTestId("crew-mobile-carousel").querySelectorAll("button"),
+    ).toHaveLength(0);
   });
 
   // motion's animate() caches its requestAnimationFrame binding against the
@@ -96,10 +85,7 @@ describe("TheCrewMobileCarousel", () => {
         await vi.advanceTimersByTimeAsync(30300);
       });
 
-      const secondDot = screen.getByRole("button", {
-        name: `Show ${TEAM_MEMBERS[1].name}`,
-      });
-      expect(secondDot.className).toMatch(/bg-accent/);
+      expect(activeName()).toContain(TEAM_MEMBERS[1].name);
     });
 
     it("does not auto-advance when reduced motion is enabled", async () => {
@@ -109,17 +95,10 @@ describe("TheCrewMobileCarousel", () => {
         await vi.advanceTimersByTimeAsync(60000);
       });
 
-      const firstDot = screen.getByRole("button", {
-        name: `Show ${TEAM_MEMBERS[0].name}`,
-      });
-      const secondDot = screen.getByRole("button", {
-        name: `Show ${TEAM_MEMBERS[1].name}`,
-      });
-      expect(firstDot.className).toMatch(/bg-accent/);
-      expect(secondDot.className).not.toMatch(/bg-accent/);
+      expect(activeName()).toContain(TEAM_MEMBERS[0].name);
     });
 
-    it("plays the same left fly-out throw as a manual swipe when idle autoplay fires", async () => {
+    it("plays the same right fly-out throw as a manual advance swipe when idle autoplay fires", async () => {
       render(<TheCrewMobileCarousel people={TEAM_MEMBERS} />);
       const carousel = screen.getByTestId("crew-mobile-carousel");
       // FadeUpItem wraps the draggable motion.article in an outer <article>,
@@ -130,50 +109,49 @@ describe("TheCrewMobileCarousel", () => {
       ) as HTMLElement;
 
       // Right after the 30s tick, the throw animation (250ms) is mid-flight —
-      // the card should already be translated left, not yet swapped. Fake
-      // timers only flush the RAF-driven animation loop reliably across
-      // several smaller advances, not one large jump — so step up to the
-      // interval fire, then nudge forward into the animation.
+      // the card should already be translated right (advance = swipe right,
+      // revealing the peek underneath), not yet swapped. Fake timers only
+      // flush the RAF-driven animation loop reliably across several smaller
+      // advances, not one large jump — so step up to the interval fire, then
+      // nudge forward into the animation.
       await act(async () => {
         await vi.advanceTimersByTimeAsync(30000);
       });
       await act(async () => {
         await vi.advanceTimersByTimeAsync(50);
       });
-      expect(activeCard.style.transform).toMatch(/translateX\(-\d/);
+      expect(activeCard.style.transform).toMatch(/translateX\(\d/);
       expect(carousel).toHaveTextContent(TEAM_MEMBERS[0].name);
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(250);
       });
-      const secondDot = screen.getByRole("button", {
-        name: `Show ${TEAM_MEMBERS[1].name}`,
-      });
-      expect(secondDot.className).toMatch(/bg-accent/);
+      expect(activeName()).toContain(TEAM_MEMBERS[1].name);
     });
 
     it("autoplay wraps from the last person back to the first (loop, no dead-end)", async () => {
-      const lastMember = TEAM_MEMBERS[TEAM_MEMBERS.length - 1];
-      render(<TheCrewMobileCarousel people={TEAM_MEMBERS} />);
+      // Dua orang saja: satu siklus autoplay sampai di orang terakhir, siklus
+      // berikutnya harus membungkus balik ke orang pertama. (Dulu lompat ke
+      // ujung daftar lewat klik titik; titiknya sudah tidak ada.)
+      const pair = TEAM_MEMBERS.slice(0, 2);
+      render(<TheCrewMobileCarousel people={pair} />);
 
-      act(() => {
-        fireEvent.click(
-          screen.getByRole("button", { name: `Show ${lastMember.name}` }),
-        );
-      });
       // See the comment above the fly-out-throw test: fake timers need the
       // total advance split into several smaller steps to reliably flush the
       // RAF-driven animation, not one large jump.
-      for (const step of [30000, 50, 50, 50, 50, 50, 50]) {
-        await act(async () => {
-          await vi.advanceTimersByTimeAsync(step);
-        });
-      }
+      const advanceOnce = async () => {
+        for (const step of [30000, 50, 50, 50, 50, 50, 50]) {
+          await act(async () => {
+            await vi.advanceTimersByTimeAsync(step);
+          });
+        }
+      };
 
-      const firstDot = screen.getByRole("button", {
-        name: `Show ${TEAM_MEMBERS[0].name}`,
-      });
-      expect(firstDot.className).toMatch(/bg-accent/);
+      await advanceOnce();
+      expect(activeName()).toContain(pair[1].name);
+
+      await advanceOnce();
+      expect(activeName()).toContain(pair[0].name);
     });
   });
 
@@ -181,12 +159,11 @@ describe("TheCrewMobileCarousel", () => {
     const managementOnly = TEAM_MEMBERS.filter((m) => m.category === "Management");
     const { rerender } = render(<TheCrewMobileCarousel people={TEAM_MEMBERS} />);
 
-    const carousel = screen.getByTestId("crew-mobile-carousel");
-    expect(carousel).toHaveTextContent(TEAM_MEMBERS[0].name);
+    expect(activeName()).toContain(TEAM_MEMBERS[0].name);
 
     rerender(<TheCrewMobileCarousel people={managementOnly} />);
 
-    expect(carousel).toHaveTextContent(managementOnly[0].name);
+    expect(activeName()).toContain(managementOnly[0].name);
   });
 
   // jsdom has no real layout/pointer capture, so a physical drag gesture
@@ -209,6 +186,49 @@ describe("TheCrewMobileCarousel", () => {
 
     it("returns null when under both the distance and velocity thresholds", () => {
       expect(resolveSwipeDirection(30, 100)).toBeNull();
+    });
+  });
+
+  // Direction convention (Keano, 27 Agu): swipe right advances to the card
+  // peeking under the deck, swipe left goes back to the previous person. The
+  // old left=advance mapping made the drag reveal one person and the landing
+  // show another.
+  describe("resolveSwipeStep", () => {
+    it("advances (+1) on a right swipe — toward the card peeking below", () => {
+      expect(resolveSwipeStep("right")).toBe(1);
+    });
+
+    it("goes back (-1) on a left swipe — to the previous card", () => {
+      expect(resolveSwipeStep("left")).toBe(-1);
+    });
+  });
+
+  // Peek = preview: siapa yang tersingkap saat menggeser HARUS orang yang
+  // didarati. Bug Keano 28 Agu: dek beku di `+1`, jadi dari orang pertama
+  // geser kiri memperlihatkan tetangga kanan tapi mendarat di ujung daftar.
+  describe("resolvePeekIndexes", () => {
+    it("peeks forward while idle", () => {
+      expect(resolvePeekIndexes(0, 13, 2, 0)).toEqual([1, 2]);
+    });
+
+    it("peeks forward while dragging right", () => {
+      expect(resolvePeekIndexes(0, 13, 2, 1)).toEqual([1, 2]);
+    });
+
+    it("peeks BACKWARD while dragging left, wrapping past the start", () => {
+      expect(resolvePeekIndexes(0, 13, 2, -1)).toEqual([12, 11]);
+    });
+
+    it("agrees with resolveSwipeStep: the front peek is the landing card", () => {
+      const active = 4;
+      for (const [dir, dragDir] of [
+        ["right", 1],
+        ["left", -1],
+      ] as const) {
+        const landing =
+          (((active + resolveSwipeStep(dir)) % 13) + 13) % 13;
+        expect(resolvePeekIndexes(active, 13, 2, dragDir)[0]).toBe(landing);
+      }
     });
   });
 

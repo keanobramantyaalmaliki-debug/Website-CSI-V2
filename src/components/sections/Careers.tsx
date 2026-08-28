@@ -135,7 +135,13 @@ const ROLES: CareerRole[] = [
 
 export default function Careers() {
   return (
-    <section id="careers" className="section-shell px-3 py-24 sm:py-32">
+    <section
+      id="careers"
+      /* Mobile: pt-0 (celah 80px ke TheCrew dijatah di pb-20 sana) dan pb-20
+         = 80px ke Contact yang pt-0 (aturan 28 Agu, lihat PeopleIntro.tsx);
+         ≥sm kembali py-32. */
+      className="section-shell px-3 pt-0 pb-20 sm:py-32"
+    >
       {/* Split ala "Open Positions" basement: kiri 35% headline + subtext,
           kanan 65% roles list. Di bawah lg menumpuk seperti biasa. */}
       <div className="lg:grid lg:grid-cols-[35fr_65fr] lg:gap-x-16">
@@ -148,7 +154,9 @@ export default function Careers() {
 
           {/* Subtext dari careers-sub V1 */}
           <motion.p
-            className="mt-5 max-w-lg text-sm leading-relaxed font-light text-zinc-400 sm:text-base"
+            /* mt mobile 18px = standar judul→subteks 28 Agu (PeopleIntro);
+               ≥sm kembali 20px. */
+            className="mt-[18px] max-w-lg text-sm leading-relaxed font-light text-zinc-400 sm:mt-5 sm:text-base"
             initial={{ opacity: 0, y: 14 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
