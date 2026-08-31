@@ -21,11 +21,19 @@ import "@fontsource-variable/archivo/wdth.css";
 import "./index.css";
 import App from "./App";
 import { initShellMax } from "./lib/shellMax";
+import { loadContent } from "./lib/content/store";
 
 /* Sebelum render: isi `--shell-max` (plafon dinamis section-shell, §4bh)
    supaya frame pertama di monitor >1920px sudah full-bleed, bukan melompat
    dari fallback 1920. */
 initShellMax();
+
+/* Konten CMS diambil SEBELUM render, bukan di dalam efek.
+   Beberapa berkas membaca daftar lowongan di module scope (Navbar, SiteLayout),
+   jadi isinya harus sudah ada saat komponen pertama dievaluasi. `loadContent`
+   tidak pernah melempar dan punya batas waktu 1,5 detik — kalau gagal, situs
+   lanjut dengan isi bawaan bundle. */
+await loadContent();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

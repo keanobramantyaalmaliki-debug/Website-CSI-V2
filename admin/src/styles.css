@@ -1,0 +1,401 @@
+/*
+ * Hitam-putih, tanpa animasi. Keduanya permintaan eksplisit, dan keduanya
+ * kebetulan juga keputusan yang tepat untuk panel yang dipakai orang non-teknis:
+ * tidak ada warna yang harus ditafsirkan, dan tidak ada elemen yang bergerak
+ * saat sedang dibaca.
+ *
+ * Tidak ada satu pun `transition`, `animation`, atau `transform` di berkas ini.
+ * Kalau nanti tergoda menambahkannya: jangan.
+ */
+
+:root {
+  --hitam: #000;
+  --putih: #fff;
+  --garis: #d4d4d4;
+  --garis-tegas: #000;
+  --abu: #f4f4f4;
+  --redup: #595959;
+  --sela: 16px;
+  color-scheme: light;
+  /* Radio dan checkbox digambar peramban, dan bawaannya biru. Satu baris ini
+     yang membuat "hitam-putih" benar-benar hitam-putih — tanpanya seluruh
+     grup status memakai warna yang tidak ada di mana pun lagi di panel. */
+  accent-color: var(--hitam);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--putih);
+  color: var(--hitam);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* 16px penuh: panel ini dipakai untuk membaca dan mengetik teks panjang,
+     bukan untuk memuat sebanyak mungkin di satu layar. */
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+a {
+  color: var(--hitam);
+}
+
+.bungkus {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 32px 20px 140px;
+}
+
+/* ── kepala halaman ─────────────────────────────────────────────────── */
+
+.kepala {
+  border-bottom: 2px solid var(--garis-tegas);
+  padding-bottom: 12px;
+  margin-bottom: 28px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.kepala h1 {
+  font-size: 22px;
+  margin: 0;
+}
+
+.kepala .siapa {
+  font-size: 14px;
+  color: var(--redup);
+}
+
+h2 {
+  font-size: 18px;
+  margin: 32px 0 12px;
+}
+
+/* ── tombol ─────────────────────────────────────────────────────────── */
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--garis-tegas);
+  background: var(--putih);
+  color: var(--hitam);
+  padding: 8px 16px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  border-color: var(--garis);
+  color: var(--redup);
+}
+
+button.utama {
+  background: var(--hitam);
+  color: var(--putih);
+}
+
+button.utama:disabled {
+  background: var(--abu);
+  color: var(--redup);
+  border-color: var(--garis);
+}
+
+button.polos {
+  border: 0;
+  padding: 4px 8px;
+  text-decoration: underline;
+}
+
+button.kecil {
+  padding: 4px 10px;
+  font-size: 14px;
+}
+
+/* ── isian ──────────────────────────────────────────────────────────── */
+
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.petunjuk {
+  font-size: 14px;
+  color: var(--redup);
+  margin: 0 0 6px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea,
+select {
+  font: inherit;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--garis-tegas);
+  background: var(--putih);
+  color: var(--hitam);
+  border-radius: 0;
+}
+
+textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.isian {
+  margin-bottom: 24px;
+}
+
+.galat {
+  margin: 6px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  /* Tidak ada merah: temanya hitam-putih. Yang menandai galat adalah garis
+     tebal di sisi kiri, dan itu tetap terbaca oleh siapa pun. */
+  border-left: 4px solid var(--hitam);
+  padding-left: 8px;
+}
+
+.bergalat input[type="text"],
+.bergalat textarea {
+  border-width: 2px;
+}
+
+/* ── pilihan status ─────────────────────────────────────────────────── */
+
+.pilihan {
+  border: 1px solid var(--garis);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.pilihan.terpilih {
+  border: 2px solid var(--garis-tegas);
+  padding: 9px 11px;
+}
+
+.pilihan input {
+  margin-top: 5px;
+}
+
+.pilihan label {
+  margin: 0;
+}
+
+.pilihan .keterangan {
+  font-size: 14px;
+  color: var(--redup);
+  font-weight: 400;
+}
+
+/* ── daftar baris (keahlian, poin) ──────────────────────────────────── */
+
+.baris {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: flex-start;
+}
+
+.baris .nomor {
+  min-width: 22px;
+  padding-top: 9px;
+  font-size: 14px;
+  color: var(--redup);
+}
+
+/* ── tabel ──────────────────────────────────────────────────────────── */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--garis);
+  vertical-align: top;
+}
+
+th {
+  border-bottom: 2px solid var(--garis-tegas);
+  font-size: 14px;
+}
+
+tr.draf td {
+  color: var(--redup);
+}
+
+.penanda {
+  display: inline-block;
+  border: 1px solid var(--garis-tegas);
+  padding: 0 6px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.penanda.tegas {
+  background: var(--hitam);
+  color: var(--putih);
+}
+
+/* ── tab bahasa ─────────────────────────────────────────────────────── */
+
+.tab {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--garis-tegas);
+  margin-bottom: 20px;
+}
+
+.tab button {
+  border: 1px solid var(--garis);
+  border-bottom: 0;
+  margin-bottom: -1px;
+  background: var(--abu);
+}
+
+.tab button.aktif {
+  background: var(--putih);
+  border-color: var(--garis-tegas);
+  border-bottom: 1px solid var(--putih);
+  font-weight: 600;
+}
+
+/* ── pemilih foto ───────────────────────────────────────────────────── */
+
+.foto-daftar {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.foto {
+  border: 1px solid var(--garis);
+  padding: 4px;
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+
+.foto.terpilih {
+  border: 3px solid var(--garis-tegas);
+  padding: 2px;
+}
+
+.foto img {
+  width: 100%;
+  height: 80px;
+  object-fit: cover;
+  display: block;
+  background: var(--abu);
+}
+
+.foto .nama {
+  font-size: 12px;
+  color: var(--redup);
+  word-break: break-all;
+}
+
+/* ── bar publish ────────────────────────────────────────────────────── */
+
+.bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--putih);
+  border-top: 2px solid var(--garis-tegas);
+  padding: 12px 20px;
+}
+
+.bar .dalam {
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ── dialog konfirmasi ──────────────────────────────────────────────── */
+
+dialog {
+  border: 2px solid var(--garis-tegas);
+  padding: 24px;
+  max-width: 480px;
+  color: var(--hitam);
+  background: var(--putih);
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.tombol-baris {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.kabar {
+  border: 1px solid var(--garis-tegas);
+  padding: 10px 12px;
+  margin-bottom: 20px;
+}
+
+.kabar.tegas {
+  border-width: 2px;
+}
+
+.kosong {
+  border: 1px dashed var(--garis);
+  padding: 32px;
+  text-align: center;
+  color: var(--redup);
+}
+
+fieldset {
+  border: 1px solid var(--garis);
+  padding: 16px;
+  margin: 0 0 24px;
+}
+
+legend {
+  font-weight: 600;
+  padding: 0 6px;
+}
+
+details {
+  border: 1px solid var(--garis);
+  padding: 12px;
+  margin-bottom: 24px;
+}
+
+summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+details[open] summary {
+  margin-bottom: 16px;
+}
+
+.masuk {
+  max-width: 380px;
+  margin: 80px auto;
+  padding: 0 20px;
+}

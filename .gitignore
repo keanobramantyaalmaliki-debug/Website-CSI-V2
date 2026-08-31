@@ -88,3 +88,9 @@ matterjs-lab.html
 
 # Keluaran default scripts/shoot.mjs.
 /shot.png
+
+# CMS (Agu 2026)
+!.env.example
+/dist-admin
+# gambar unggahan editor — isinya konten, bukan kode; backup ikut pg_dump + rsync
+/uploads/

@@ -8,32 +8,11 @@ import { scrollToSection } from "@/lib/smoothScroll";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-export type CareerRole = {
-  title: string;
-  /** Kolom "Type" tabel — departemen saja ("Engineering"). Lokasi sengaja
-   *  tidak ditampilkan, jadi jangan gabungkan lagi jadi satu string meta. */
-  type: string;
-  /** "closed" = baris abu-abu statis: bukan <button>, tanpa hover, tanpa
-   *  preview foto, tanpa accordion. Detailnya tidak dirender sama sekali. */
-  status: "open" | "closed";
-  overview: string;
-  skills: string[];
-  /** Foto preview yang mengikuti kursor (desktop) / tampil di body (touch). */
-  photo: string;
-  /**
-   * Slug halaman lowongan (`/careers/<slug>`), kalau materinya sudah lengkap —
-   * isinya di `data/jobs.ts`.
-   *
-   * ADA slug  → barisnya jadi <Link> ke halaman itu; accordion TIDAK dirender.
-   * TANPA slug → perilaku lama: <button aria-expanded> + accordion di tempat.
-   *
-   * Dua bentuk itu hidup berdampingan dengan sengaja: tiga lowongan sedang
-   * dipindahkan ke halaman sendiri satu per satu, dan yang belum kebagian tetap
-   * harus bisa dibaca. Baris `closed` tidak pernah pakai slug — tidak ada yang
-   * bisa dilamar di sana.
-   */
-  slug?: string;
-};
+/* Bentuk datanya tinggal di `data/careerRoles.ts` bersama isinya: skrip
+ * seed CMS dan test node harus bisa membacanya tanpa mengimpor komponen
+ * React ini. Di-re-ekspor supaya pemanggil lama tidak perlu diubah. */
+export type { CareerRole } from "@/data/careerRoles";
+import type { CareerRole } from "@/data/careerRoles";
 
 /**
  * Satu grid dipakai bersama header tabel, baris open, dan baris closed —

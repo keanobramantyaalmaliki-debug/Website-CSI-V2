@@ -406,6 +406,7 @@ async function main() {
         contact: Boolean(document.getElementById('contact')),
         fields: [...document.querySelectorAll('#apply input, #apply select, #apply textarea')].length,
         skillBoxes: [...document.querySelectorAll('#apply input[type="checkbox"]')].length,
+        github: Boolean(document.querySelector('#apply input[name="github"], #apply input[placeholder*="github"]')),
       })`,
     ),
   );
@@ -414,13 +415,17 @@ async function main() {
     "cuma SATU form di halaman lowongan (Contact dicabut)",
     `apply ${forms.apply} · contact ${forms.contact}`,
   );
-  /* 6 wajib + 2 tautan (portfolio & linkedin; GitHub dicabut 27 Agu) +
-     honeypot = 9 isian tetap; centang skill mengikuti lowongannya
-     (data/jobs.ts), jadi yang dikunci angkanya cuma yang tetap. */
+  /* 6 wajib + 2 tautan (portfolio & linkedin) + honeypot = 9 isian tetap.
+     GitHub TIDAK tetap: ia mengikuti `askGithub` per lowongan, jadi dihitung
+     dari ada-tidaknya isiannya, bukan diasumsikan. Angka yang dipatok mati di
+     sini pernah membuat probe ini gagal berbulan-bulan untuk alasan yang tidak
+     ada hubungannya dengan yang sedang diuji. Centang skill juga mengikuti
+     lowongannya, jadi dikurangkan. */
+  const tetap = 9 + (forms.github ? 1 : 0);
   check(
-    forms.skillBoxes > 0 && forms.fields - forms.skillBoxes === 9,
+    forms.skillBoxes > 0 && forms.fields - forms.skillBoxes === tetap,
     "seluruh isian terpasang",
-    `${forms.fields} isian (${forms.skillBoxes} skill)`,
+    `${forms.fields} isian (${forms.skillBoxes} skill${forms.github ? ", + GitHub" : ""})`,
   );
 
   // Kembali ke daftar

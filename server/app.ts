@@ -1,0 +1,75 @@
+/**
+ * Aplikasi API — dirakit di sini, TIDAK dijalankan di sini.
+ *
+ * `index.ts` yang membuka port. Pemisahan ini yang membuat test bisa memanggil
+ * `app.request("/api/jobs")` langsung tanpa menyalakan server sungguhan dan
+ * tanpa berebut port dengan proses dev yang sedang jalan.
+ */
+
+import { serveStatic } from "@hono/node-server/serve-static";
+import { Hono } from "hono";
+
+import type { Actor } from "./audit";
+import { attachActor, requireLogin } from "./auth";
+import authRoute from "./routes/auth";
+import imagesRoute from "./routes/images";
+import jobsRoute from "./routes/jobs";
+import publishRoute from "./routes/publish";
+
+export type Env = { Variables: { actor: Actor } };
+
+export const app = new Hono<Env>();
+
+/* Siapa yang sedang mengirim request — diisi untuk SEMUA route, termasuk yang
+   tidak butuh login, supaya audit log tetap tahu pelakunya. */
+app.use("*", attachActor);
+
+/**
+ * Satu penangkap galat untuk seluruh API.
+ *
+ * Isi galat aslinya masuk log proses, TIDAK ke respons: pesan Postgres bisa
+ * memuat nama tabel dan potongan query, dan itu bukan sesuatu yang perlu
+ * dikirim ke browser. Yang dilihat editor cuma kalimat yang bisa dia tindak
+ * lanjuti.
+ */
+app.onError((error, c) => {
+  console.error("[api]", c.req.method, c.req.path, error);
+  return c.json(
+    { error: "Ada yang salah di server. Coba lagi sebentar lagi." },
+    500,
+  );
+});
+
+app.get("/api/health", (c) => c.json({ ok: true }));
+
+app.route("/api/auth", authRoute);
+
+/**
+ * Semua yang menyentuh konten wajib login.
+ *
+ * Digerbangi di SATU tempat, bukan per route: penjaga yang ditempel satu per
+ * satu akan terlewat pada endpoint berikutnya yang ditambahkan, dan lubang
+ * seperti itu tidak memunculkan error — endpoint-nya justru bekerja dengan
+ * baik, untuk siapa saja.
+ */
+app.use("/api/jobs/*", requireLogin);
+app.use("/api/jobs", requireLogin);
+app.use("/api/images/*", requireLogin);
+app.use("/api/images", requireLogin);
+app.use("/api/publish/*", requireLogin);
+app.use("/api/publish", requireLogin);
+
+app.route("/api/jobs", jobsRoute);
+app.route("/api/images", imagesRoute);
+app.route("/api/publish", publishRoute);
+
+/**
+ * Gambar unggahan.
+ *
+ * TANPA `requireLogin`: berkas ini dirujuk `<img src>` di situs publik, dan
+ * pengunjung tentu tidak punya sesi. Yang dijaga adalah siapa yang boleh
+ * MENGUNGGAH, bukan siapa yang boleh melihat.
+ */
+app.use("/uploads/*", serveStatic({ root: "./" }));
+
+app.notFound((c) => c.json({ error: "Alamat tidak dikenal." }, 404));
