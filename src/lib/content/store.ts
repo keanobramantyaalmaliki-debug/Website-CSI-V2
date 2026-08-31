@@ -1,15 +1,15 @@
 /**
  * Konten dari CMS — diambil sekali, sebelum React merender apa pun.
  *
- * Bentuknya sengaja SINKRON (`getContent()` mengembalikan nilai, bukan
- * Promise). Konten lowongan dibaca di module scope oleh beberapa berkas
- * (`Navbar`, `SiteLayout`), dan mengubahnya jadi asinkron berarti membongkar
- * semuanya jadi state + efek — perombakan besar demi sesuatu yang sudah selesai
- * sebelum frame pertama.
+ * Bentuknya sengaja SINKRON (`contentJobs()` mengembalikan nilai, bukan
+ * Promise). Konten lowongan dibaca lewat pemanggilan biasa di banyak berkas
+ * (`Navbar`, `CareersRoles`, rute `/careers/:slug`), dan mengubahnya jadi
+ * asinkron berarti membongkar semuanya jadi state + efek — perombakan besar
+ * demi sesuatu yang sudah selesai sebelum frame pertama.
  *
- * Caranya: `loadContent()` dipanggil di `main.tsx` dan DITUNGGU sebelum
- * `createRoot().render()`. Sesudah itu store-nya terisi, dan semua pembaca
- * sinkron aman.
+ * Caranya: `main.tsx` memanggil `loadContent()` dan baru `createRoot().render()`
+ * di dalam `.then()`-nya. Sesudah itu store-nya terisi, dan semua pembaca
+ * sinkron aman — tidak ada satu pun yang membacanya saat modul dievaluasi.
  *
  * ⚠️ JARINGAN PENGAMAN — jangan dilepas.
  *

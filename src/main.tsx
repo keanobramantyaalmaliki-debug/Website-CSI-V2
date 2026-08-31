@@ -28,17 +28,21 @@ import { loadContent } from "./lib/content/store";
    dari fallback 1920. */
 initShellMax();
 
-/* Konten CMS diambil SEBELUM render, bukan di dalam efek.
-   Beberapa berkas membaca daftar lowongan di module scope (Navbar, SiteLayout),
-   jadi isinya harus sudah ada saat komponen pertama dievaluasi. `loadContent`
-   tidak pernah melempar dan punya batas waktu 1,5 detik — kalau gagal, situs
-   lanjut dengan isi bawaan bundle. */
-await loadContent();
+/* Konten CMS diambil SEBELUM render, bukan di dalam efek: `jobPostings()` dan
+   kawan-kawannya sinkron, jadi isinya harus sudah ada saat komponen pertama
+   dirender. `loadContent` tidak pernah melempar dan punya batas waktu 1,5
+   detik — kalau gagal, situs lanjut dengan isi bawaan bundle.
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </StrictMode>
-);
+   Sengaja `.then()`, BUKAN top-level await: target build (`chrome87`/`safari14`,
+   bawaan Vite) belum mengenal TLA, dan esbuild menggagalkan `bun run build`
+   dengan "Top-level await is not available". Menaikkan target demi satu baris
+   ini akan melebarkan syarat peramban seluruh bundle. */
+loadContent().then(() => {
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </StrictMode>
+  );
+});
