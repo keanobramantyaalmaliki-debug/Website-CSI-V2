@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion, type Variants } from "motion/react";
-import { useSceneStore, pathFor, ROOM_LABELS, type RoomKey } from "@/lib/store/sceneStore";
+import {
+  useSceneStore,
+  pathFor,
+  roomFromPath,
+  ROOM_LABELS,
+  type RoomKey,
+} from "@/lib/store/sceneStore";
 import { ACTIVE_KEYS } from "@/components/canvas/CameraController";
 import MagneticButton from "@/components/motion/MagneticButton";
 import { scrollToTop, setScrollLocked } from "@/lib/smoothScroll";
@@ -141,7 +147,26 @@ export default function Navbar() {
    * Cuma untuk TAMPILAN. `currentRoom` yang asli tetap dipakai goRoom() di
    * bawah — ia perlu tahu ruangan mana yang sedang dimuat scene-nya.
    */
-  const activeRoom = isJobPath(pathname) ? null : currentRoom;
+  //
+  // ⚠️ Tanpa kamera, penyorotnya ikut URL — bukan `currentRoom` (31 Agu).
+  //
+  // `currentRoom` cuma bergerak kalau ada yang menggerakkannya, dan yang
+  // menggerakkannya CameraController. Begitu Scene gagal dimuat dan
+  // ChunkBoundary melepas Canvas, ia BEKU di ruangan terakhir — selamanya.
+  // Navigasi DOM-nya sendiri masih sehat (goRoom jatuh ke `navigate` polos,
+  // route berganti, konten ruangan baru terbaca), tapi penyorotnya tertinggal
+  // di Home sementara pengunjung sedang membaca /services. Persis bentuk itu
+  // yang dilaporkan sebagai "navbar tidak mau pindah".
+  //
+  // `goTo` di sini dipakai sebagai penanda "ada kamera yang mendengarkan" —
+  // sama seperti yang sudah dipakai goRoom() di bawah dan RoomRouteSync.
+  // Selama Scene sehat cabang ini TIDAK PERNAH diambil, jadi perilaku normal
+  // (termasuk jeda tween 1400 ms dan sapuan GridReveal, yang keduanya memang
+  // sengaja menyorot ruangan tempat KAMERA berada, bukan URL) tidak berubah
+  // sedikit pun.
+  const activeRoom = isJobPath(pathname)
+    ? null
+    : (goTo ? currentRoom : roomFromPath(pathname) ?? currentRoom);
 
   /**
    * "Overlay-nya masih kelihatan" — TIDAK sama dengan `open`.

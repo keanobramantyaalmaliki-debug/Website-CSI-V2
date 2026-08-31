@@ -177,7 +177,9 @@ interface SceneStore {
   setActiveSection: (id: string | null) => void;
   // goTo is registered by CameraController once the R3F canvas is ready
   goTo: GoToFn | null;
-  registerGoTo: (fn: GoToFn) => void;
+  /** `null` = tidak ada kamera yang mendengarkan (CameraController belum
+   *  mount, atau sudah dilepas ChunkBoundary karena Scene gagal). */
+  registerGoTo: (fn: GoToFn | null) => void;
 
   /**
    * Ruangan tujuan sapuan GridReveal yang sedang berjalan, atau null kalau
