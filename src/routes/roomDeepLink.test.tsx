@@ -86,10 +86,11 @@ describe("deep-link ke ruangan bertahan saat mount pertama", () => {
     useSceneStore.setState({
       currentRoom: "Lounge",
       goTo: (room) => {
-        if (animating) return;
+        if (animating) return false;
         animating = true;
         seen.push(room);
         useSceneStore.setState({ currentRoom: room });
+        return true;
       },
     });
 
@@ -119,9 +120,10 @@ describe("deep-link ke ruangan bertahan saat mount pertama", () => {
     useSceneStore.setState({
       currentRoom: "Lounge",
       goTo: (room) => {
-        if (animating) return;
+        if (animating) return false;
         animating = true;
         useSceneStore.setState({ currentRoom: room });
+        return true;
       },
     });
 

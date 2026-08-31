@@ -86,6 +86,12 @@ function mount(from: RoomKey, at: string) {
       // Tiruan setia CameraController: hanya jalur instan yang langsung
       // menyetel currentRoom tanpa menunggu tween.
       if (opts?.instant) useSceneStore.setState({ currentRoom: room });
+      // Kontrak GoToFn: `true` = "currentRoom PASTI menyusul". Tiruan ini cuma
+      // memenuhinya di jalur instan — jalur tween sengaja tidak menggerakkan
+      // currentRoom, jadi jawaban jujurnya `false` dan Arah 2 tetap boleh
+      // menyelaraskan URL. Melaporkan `true` di sini akan membuatnya diam
+      // menunggu sesuatu yang tidak akan pernah datang.
+      return !!opts?.instant;
     },
   });
   return render(

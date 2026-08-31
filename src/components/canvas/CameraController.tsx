@@ -246,8 +246,14 @@ export default function CameraController() {
 
   const goTo = useCallback(
     (name: RoomKey, opts?: GoToOptions) => {
-      if (VIEWS[name]?.disabled) return;
-      if (name === currentRoomRef.current) return;
+      // ⚠️ Nilai baliknya dibaca RoomRouteSync — lihat GoToFn di sceneStore.
+      // `false` = tidak ada yang akan memindahkan `currentRoom` sesudah ini.
+      //
+      // Perhatikan penolakan kedua memakai `currentRoomRef`, BUKAN currentRoom
+      // hasil render: ref-nya selalu satu commit lebih segar. Itu yang membuat
+      // "URL cuma menyusul kamera yang sudah pindah" terjawab jujur `false`.
+      if (VIEWS[name]?.disabled) return false;
+      if (name === currentRoomRef.current) return false;
 
       /**
        * Jalur INSTAN — tirai GridReveal sedang menutupi layar, jadi tidak ada
@@ -269,10 +275,10 @@ export default function CameraController() {
         snapTo(name);
         currentRoomRef.current = name;
         setCurrentRoom(name);
-        return;
+        return true;
       }
 
-      if (animating.current) return;
+      if (animating.current) return false;
 
       // Dari basePos, BUKAN camera.position — lihat catatan di basePos.
       fromPos.current.copy(basePos.current);
@@ -292,6 +298,7 @@ export default function CameraController() {
       currentRoomRef.current = name;
       setCurrentRoom(name);
       // URL diperbarui oleh RoomRouteSync di DOM (punya router context).
+      return true;
     },
     [camera, setCurrentRoom, snapTo],
   );

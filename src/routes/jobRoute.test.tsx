@@ -48,9 +48,10 @@ describe("path non-ruangan bertahan di RoomRouteSync", () => {
       currentRoom: "Office",
       pendingRoom: null,
       goTo: (room) => {
-        if (animating) return;
+        if (animating) return false;
         animating = true;
         useSceneStore.setState({ currentRoom: room });
+        return true;
       },
     });
 
@@ -83,6 +84,7 @@ describe("path non-ruangan bertahan di RoomRouteSync", () => {
       goTo: (room) => {
         seen.push(room);
         useSceneStore.setState({ currentRoom: room });
+        return true;
       },
     });
 

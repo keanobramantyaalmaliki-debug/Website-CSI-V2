@@ -110,7 +110,18 @@ export type Vec3 = readonly [number, number, number];
  * afordansnya.
  */
 export type GoToOptions = { instant?: boolean };
-export type GoToFn = (room: RoomKey, opts?: GoToOptions) => void;
+/**
+ * Mengembalikan `true` kalau permintaannya DITERIMA — kamera bergerak dan
+ * `currentRoom` menyusul di commit berikutnya. `false` = ditolak: ruangan
+ * dinonaktifkan, kamera sudah di sana, atau tween lain masih berjalan.
+ *
+ * Jawabannya BUKAN hiasan. RoomRouteSync Arah 1 memakainya untuk memutuskan
+ * siapa yang memiliki URL sesudah ini: kalau diterima, `currentRoom` yang akan
+ * menyusul dan Arah 2 harus diam; kalau ditolak, tidak ada yang akan
+ * memindahkan kamera dan Arah 2 justru harus menarik URL kembali. Salah
+ * menebaknya = navbar memantul balik ke Home (catatan lengkap di berkas itu).
+ */
+export type GoToFn = (room: RoomKey, opts?: GoToOptions) => boolean;
 
 /** Fase permainan billiard. Dipakai untuk mengunci input di fase yang salah:
  *  cuma boleh membidik saat `aiming`, dan tembakan baru sah kalau bola diam. */
