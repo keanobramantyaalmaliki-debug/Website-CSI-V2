@@ -267,6 +267,7 @@ export default function Office() {
     let emissives = 0;
     let skinned = 0;
     let ledStrips = 0;
+    let uvDiluarJangkauan = 0;
 
     scene.traverse((obj: THREE.Object3D) => {
       if (obj instanceof Light) {
@@ -301,6 +302,28 @@ export default function Office() {
       for (const mat of materials) {
         if (!(mat instanceof MeshStandardMaterial)) continue;
 
+        // ── FIX 1a: buang tekstur ber-UV di luar jangkauan three.js ─────────
+        // three.js cuma mendeklarasikan atribut uv/uv1/uv2/uv3 (WebGLProgram:
+        // `uv${channel}`), dan GLTFLoader cuma memetakan TEXCOORD_0..3 —
+        // TEXCOORD_4 ke atas tidak pernah ikut dimuat. Aset shredder membawa
+        // occlusionTexture di texCoord=4 (8 material OP_Shredder_*), jadi
+        // shader menulis atribut yang tidak pernah ada dan vertex shader-nya
+        // GAGAL COMPILE:
+        //   ERROR: 0:401: 'uv4' : undeclared identifier
+        //   > vAoMapUv = ( aoMapTransform * vec3( AOMAP_UV, 1 ) ).xy;
+        // Efeknya bukan cuma AO hilang: SELURUH material itu tidak punya
+        // program yang sah, jadi tiap frame membanjiri console dengan
+        // INVALID_OPERATION: useProgram (255× sebelum WebGL menyerah).
+        // Tidak ada yang bisa dipetakan ulang — UV-nya memang tidak dimuat —
+        // dan yang hilang cuma AO bawaan aset, bukan lightmap kita (lightmap
+        // selalu texCoord=1). Cek ini WAJIB di atas cabang kaca di bawahnya:
+        // OP_Shredder_Glass alphaMode BLEND, jadi kena `continue` duluan.
+        if (mat.aoMap && mat.aoMap.channel > 3) {
+          mat.aoMap = null;
+          mat.needsUpdate = true;
+          uvDiluarJangkauan++;
+        }
+
         // ── FIX 1: lightmap diselundupkan lewat slot occlusion glTF ──────────
         // glTF tidak punya slot lightmap resmi, jadi saat export lightmap
         // ditaruh di occlusionTexture → three membacanya sebagai aoMap.
@@ -308,8 +331,11 @@ export default function Office() {
         // menerangi.
         //
         // Pembeda yang ANDAL: lightmap kita di-export dengan texCoord=1 (UV2).
-        // AO asli bawaan aset (lamp_01, Oven, ASSET_MAT_MR) ada di channel 0/3
-        // — itu HARUS dibiarkan, kalau ikut dikonversi objeknya salah nyala.
+        // AO asli bawaan aset ada di channel 0/2/3/4 (lamp_01 & M_Palm_* di 0,
+        // deretan MG_MeetingWest di 2, ASSET_MAT_MR & Dyson di 3, OP_Shredder_*
+        // di 4) — itu HARUS dibiarkan, kalau ikut dikonversi objeknya salah
+        // nyala. Yang di channel 4 dibuang lebih dulu di FIX 1a: three.js tidak
+        // punya atribut uv4.
         // Nama texture tidak bisa dipakai sebagai pembeda: glTF hasil export
         // Blender tidak menyimpan texture.name sama sekali.
         //
@@ -438,10 +464,14 @@ export default function Office() {
       //
       // ledStrip HARUS 1. Kalau 0, nama materialnya berubah dan FIX 4 tidak
       // kena sasaran — LED strip akan menjatuhkan garis gelap di lantai.
+      //
+      // uvDiluarJangkauan = 8 untuk GLB per 6 Agu (semua OP_Shredder_*). Kalau
+      // naik, ada aset baru masuk dengan texCoord > 3 — periksa export-nya,
+      // jangan cuma senang karena FIX 1a menelannya diam-diam.
       console.log(
         `[office] lightmap=${lightmaps} aoAsliDijaga=${keptAO} ` +
           `tanpaUV1=${missingUV1} emissive=${emissives} skinned=${skinned} ` +
-          `ledStrip=${ledStrips}`,
+          `ledStrip=${ledStrips} uvDiluarJangkauan=${uvDiluarJangkauan}`,
       );
     }
 
