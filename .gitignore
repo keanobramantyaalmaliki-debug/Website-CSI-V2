@@ -15,6 +15,10 @@
 
 # vite output
 /dist
+# panel admin CMS (hasil build) + gambar unggahan — keduanya artefak runtime,
+# bukan sumber. Isi uploads/ hidup di server, bukan di git.
+/dist-admin
+/uploads
 
 # production
 /build
