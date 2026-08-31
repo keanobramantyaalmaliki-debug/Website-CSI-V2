@@ -139,7 +139,65 @@ function copyLocalModels(): Plugin {
   };
 }
 
+/**
+ * Daftar dependensi yang WAJIB di-prebundle di ronde pertama.
+ *
+ * ── Kenapa ditulis manual ────────────────────────────────────────────────────
+ * Insiden 31 Agu di `bun dev`: konsol penuh "R3F: Hooks can only be used within
+ * the Canvas component!" dari dalam drei, Scene dijatuhkan ChunkBoundary, lalu
+ * "Context Lost" beruntun. Terlihat seperti bug R3F, padahal terukur:
+ *
+ *   - `node_modules/@react-three/fiber` cuma SATU salinan;
+ *   - browser mengeksekusi `chunk-VHHOMNVH.js?v=8f483dc3` (berisi Canvas)
+ *     berdampingan dengan `chunk-7JX4AA75.js?v=8f483dc3` (berisi useThree),
+ *     jadi drei membaca context milik salinan fiber yang LAIN;
+ *   - chunk-VHHOMNVH sudah dijawab 404 oleh server — file itu tidak ada lagi
+ *     di disk. Tab-nya menjalankan sisa ronde optimize yang sudah mati.
+ *
+ * Sebabnya: optimizer dev Vite bekerja INKREMENTAL. Paket ditemukan sambil
+ * jalan mengikuti urutan permintaan browser, dan repo ini menyembunyikan hampir
+ * semua yang berat di balik `lazy()` (Scene, BilliardGame, WaypointLabel,
+ * BilliardHUD) — jadi urutan penemuannya berbeda tiap sesi. Pengelompokan chunk
+ * ikut berbeda, nama chunk ikut berganti. Yang TIDAK ikut berganti: token
+ * `?v=` (browserHash), karena ia dihitung dari lockfile + config, bukan dari isi
+ * chunk. Tab yang tetap terbuka melewati restart dev server karena itu tidak
+ * pernah tahu ia harus membuang modul lamanya, dan mencampur dua ronde.
+ *
+ * Dengan daftar ini, semua paket sudah dikenal SEBELUM permintaan pertama:
+ * prebundle selesai satu tarikan napas, komposisi chunk-nya sama tiap restart,
+ * dan campuran dua ronde itu tidak punya cara terbentuk.
+ *
+ * ── Cara merawatnya ──────────────────────────────────────────────────────────
+ * Ini bukan daftar izin — Vite tetap menemukan paket lain sendiri; efeknya cuma
+ * hilang jaminan determinisme untuk paket yang tak terdaftar. Kalau nanti ada
+ * paket baru yang cuma diimpor dari dalam modul `lazy()`, tambahkan ke sini.
+ * Isinya diambil dari `optimized` di node_modules/.vite/deps/_metadata.json.
+ *
+ * Kalau gejala campur-ronde ini muncul lagi: reload keras sekali menyelesaikan
+ * tab yang telanjur macet — menyentuh berkas ini pun cukup, karena configHash
+ * berubah → browserHash berubah → Vite memaksa reload penuh dengan `?v=` baru.
+ */
+const PREBUNDLE = [
+  "@react-three/drei",
+  "@react-three/fiber",
+  "@react-three/postprocessing",
+  "cannon-es",
+  "clsx",
+  "lenis",
+  "lucide-react",
+  "motion/react",
+  "postprocessing",
+  "react-router-dom",
+  "tailwind-merge",
+  "three",
+  // Subpath dalam: paling rawan ditemukan telat karena cuma diimpor dari
+  // SceneEnvironment.tsx, yang sendirinya di balik lazy() Scene.
+  "three/examples/jsm/environments/RoomEnvironment.js",
+  "zustand",
+];
+
 export default defineConfig({
+  optimizeDeps: { include: PREBUNDLE },
   plugins: [
     react(),
     tailwindcss(),
