@@ -1986,7 +1986,7 @@ Cloudflare secara default hanya meng-cache **daftar ekstensi tertentu** (png, jp
 File 13 MB tiap update model = commit 13 MB + rebuild + restart. Sekarang:
 
 - File tinggal di **`3d/models/office.glb`** (root repo, di-ignore `/3d/`; pengecualian lama `!public/3d/models/office.glb` dicabut). **GLB kecil (billiard ×2, macbook) TETAP di `public/`.**
-- **`vite.config.ts` → plugin `serveLocalModels`**: middleware untuk dev **dan** `vite preview` (= server produksi) yang melayani `/3d/models/*` dari folder root itu — `model/gltf-binary`, dukung **Range 206** (dibutuhkan sambung-ulang `officeModel.ts`). Middleware hanya menangkap file yang **ada** di folder; sisanya jatuh ke `public/`/`dist/`.
+- **`vite.config.ts` → plugin `serveLocalModels`**: middleware untuk dev **dan** `vite preview` yang melayani `/3d/models/*` dari folder root itu (⚠️ **KOREKSI 31 Agu, §4bo:** "`vite preview` = server produksi" di kalimat ini SALAH — produksi menjalankan `serve dist/`, jadi middleware ini **tidak** hidup di sana dan `office.glb` sempat tak pernah sampai ke `dist/`. Penambalnya `copyLocalModels()`.) — `model/gltf-binary`, dukung **Range 206** (dibutuhkan sambung-ulang `officeModel.ts`). Middleware hanya menangkap file yang **ada** di folder; sisanya jatuh ke `public/`/`dist/`.
 - URL publik **tidak berubah** → nol perubahan kode klien, nol urusan CORS, Cache Rule tetap kena.
 - **Dua jalur update yang kini TERPISAH:** kode = commit → push → `bun run deploy` (JS ber-hash, cache beres sendiri); model 3D = ganti file → `scp` ke `<repo-server>/3d/models/` → **purge by URL** (nama file tak ber-hash!) → hangatkan cache. Runbook singkatnya di `xnote.md`.
 
@@ -2900,6 +2900,175 @@ tak seragam); salah ketik nama isian tetap gagal compile via
 justru sisi engineering-nya (dicabut total 27 Agu, Full Stack ikut kehilangan
 isiannya).
 
+## 4bo. Produksi Mati Total: `office.glb` Tak Pernah Sampai ke `dist/` ✅ (31 Agu, commit `466c8a3`)
+
+Laporan dari csi2.wibudev.com: 3D tidak muncul, tombol navbar "mau masuk lalu
+mantul balik ke Home". Dua gejala, satu sebab, dan sebabnya **tidak menunjuk
+balik sama sekali**.
+
+`GET /3d/models/office.glb` dijawab **200 `text/html`** di ORIGIN
+(`cf-cache-status: MISS` — jadi bukan urusan cache Cloudflare, itu jalur
+penyelidikan yang salah dan sempat ditempuh). File 13 MB itu hidup di luar git
+**dan** di luar `public/` (§4ai), jadi `vite build` tidak
+pernah menyalinnya; produksi menjalankan `serve dist/`, **bukan** `vite preview`,
+sehingga middleware `serveLocalModels` yang menambalnya di dev tidak ikut hidup di
+sana. Rewrite SPA di `public/serve.json` lalu menjawab file HILANG dengan
+`index.html` — **200, bukan 404** — dan `officeModel.ts` yang cuma memeriksa
+`res.ok` menelannya bulat-bulat: HTML masuk `Blob`, GLTFLoader membaca `<!doctype`
+→ `Unexpected token '<'`.
+
+🔥 **Pelajaran yang lebih besar dari bug-nya:** SPA rewrite mengubah setiap 404
+jadi 200. Semua pemeriksaan yang bersandar pada `res.ok` buta di server seperti
+itu; yang jujur adalah **magic byte** (`glTF`) atau `Content-Type`.
+
+`copyLocalModels()` (`vite.config.ts`, `closeBundle`) menyalin `3d/models/*.glb`
+ke `dist/3d/models/` dan **MENGGAGALKAN build** kalau `office.glb` tidak ada.
+Penjaga itu disengaja: gagal diam-diam jauh lebih mahal — tanpa dia deploy tetap
+"berhasil", `pm2 restart` bersih, dan rusaknya baru ketahuan dari konsol
+pengunjung. Pelarian darurat `ALLOW_MISSING_OFFICE_GLB=1`. Konsekuensi
+operasionalnya enak: file cukup ditaruh di server **sekali** di
+`<repo-server>/3d/models/` — folder itu di luar jangkauan `git pull` maupun
+`emptyOutDir`, jadi tiap deploy sesudahnya membawanya sendiri.
+
+Diverifikasi lewat `bunx serve dist` (kondisi produksi persis, `serve.json` yang
+sama): 200 `model/gltf-binary` 13.020.916 byte + Range 206; di Brave fallback
+"RELOAD 3D TOUR" hilang, 3D tampil, klik Services → `/services` dan People →
+`/people`. Build memang gagal benar saat file disembunyikan.
+
+📌 **Belum dikerjakan:** validasi magic byte `glTF` di `officeModel.ts`, supaya
+respons HTML gagal jujur alih-alih lolos `res.ok`.
+
+## 4bp. Navbar Memantul ke Home — Dua Sebab yang Berdiri Sendiri ✅ (31 Agu, commit `136c51a` + `670629d`)
+
+§4bo menutup **penyebab** hari itu (`office.glb` tidak sampai ke dist). Dua commit
+ini menutup **mekanismenya**, yang masih utuh dan akan mengulang gejala yang sama
+untuk sebab lain apa pun — chunk basi, WebGL gagal, GLB korup.
+
+**Sebab 1 — `goTo` no-op yang tetap truthy (`136c51a`).** Cleanup
+`CameraController` mendaftarkan `registerGoTo(() => {})`. Seluruh DOM membaca
+"apakah kamera hidup" lewat *truthiness* `goTo` (`!goTo` di `RoomRouteSync`,
+`!heroInView && goTo` di `Navbar`), jadi tiap penjaga lolos, memanggil fungsi
+kosong, dan `currentRoom` **beku selamanya**. Tidak pernah jadi masalah selama
+Canvas cuma dilepas saat halaman ditutup; meledak begitu `ChunkBoundary`
+melepasnya **selagi halaman hidup**. Cleanup-nya jadi `registerGoTo(null)`
+(`GoToFn | null`), dan penyorot navbar diberi jalan mundur: tanpa kamera,
+`activeRoom` ikut `roomFromPath(pathname)` — sebab `currentRoom` yang beku sudah
+bukan sumber kebenaran, URL-lah satu-satunya yang tersisa. Selama Scene sehat
+cabang itu tidak pernah diambil, jadi tween 1400 ms & sapuan `GridReveal` (yang
+memang sengaja menyorot ruangan tempat **kamera** berada, bukan URL) tidak berubah
+sedikit pun.
+
+**Sebab 2 — `resolvedPath` ditandai sebelum jawabannya diketahui (`670629d`).**
+Satu klik navbar meninggalkan **tiga** entri riwayat: `push /services` →
+`push /` → `push /services`. Arah 1 di `RoomRouteSync` menandai
+`resolvedPath.current = pathname` lebih dulu, lalu memanggil `goTo(key)` sebagai
+pernyataan telanjang. 🔥 `goTo` menyetel `currentRoom` lewat zustand, dan **set
+zustand tidak terbaca oleh commit yang sedang berjalan** — jadi Arah 2 menyala di
+commit yang SAMA, masih memegang `currentRoom` lama, menemukan gerbangnya sudah
+telanjur terbuka, dan menavigasi ke `pathFor(lama)` = `/`. Di lokal entri ketiga
+menutupinya (sisanya cuma riwayat kotor); di produksi, saat Scene gagal dimuat dan
+`currentRoom` tidak pernah menyusul, entri ketiga **tidak pernah datang** — itulah
+"mantul balik ke Home" yang dilaporkan. `GoToFn` sekarang melaporkan
+diterima/ditolak (boolean) dan Arah 1 menunda penandaan sampai jawabannya
+diketahui: **diterima** → biarkan belum tertandai supaya Arah 2 diam (Arah 1
+menandainya sendiri di commit berikutnya lewat cabang `key === currentRoom`);
+**ditolak** → tandai, dan biarkan Arah 2 menarik URL kembali ke ruangan kamera.
+Jaring penyelamat yang dulu dikerjakan pantulan itu kini menyala **hanya** saat
+memang tidak ada yang menyusul.
+
+Keduanya diverifikasi di Brave atas `bunx serve dist` dengan `office.glb`
+**sengaja disembunyikan** — kondisi produksi kemarin persis: jejak history
+`push /services` saja, path menetap, penyorot ikut, deep-link tiap ruangan &
+normalisasi `/office`→`/people` benar, tombol Back benar. Lalu model dikembalikan
+dan jalur sehat diukur ulang: tidak ada yang berubah. Dijaga
+`goToRegistration.invariant.test.ts` + 2 invariant di `RoomRouteSync.test.tsx`
+(bentuk `if (goTo(key))` & `GoToFn` mengembalikan boolean), semuanya **dibuktikan
+MERAH** dengan bug dikembalikan lebih dulu.
+
+## 4bq. `bun dev` Rusak: Dua Ronde Prebundle Vite Tercampur ✅ (31 Agu, commit `3ec3b92`)
+
+Gejala: `R3F: Hooks can only be used within the Canvas component!` dari dalam
+drei, `Scene` dijatuhkan `ChunkBoundary`, lalu `THREE.WebGLRenderer: Context Lost`
+beruntun. Terlihat seperti bug R3F/drei — ternyata sama sekali bukan.
+
+Terukur: hanya ada **satu** salinan `@react-three/fiber` di `node_modules`, tapi
+browser menjalankan dua sekaligus — `Canvas` dari `chunk-VHHOMNVH` dan `useThree`
+dari `chunk-7JX4AA75`, keduanya di bawah token `?v=8f483dc3` yang **sama**. Dan
+`chunk-VHHOMNVH` sendiri sudah dijawab **404** oleh dev server: sisa ronde
+optimize yang sudah dihapus.
+
+Sebabnya optimizer dev Vite bekerja **inkremental**. Repo ini menyembunyikan
+hampir semua yang berat di balik `lazy()`, jadi urutan penemuan paket berbeda tiap
+sesi → pengelompokan dan nama chunk ikut berganti, sementara `browserHash` (`?v=`)
+**tidak**, karena ia dihitung dari lockfile + config. Tab yang bertahan melewati
+restart dev server karena itu tidak punya sinyal apa pun untuk membuang modul
+lamanya. `optimizeDeps.include` (konstanta `PREBUNDLE` di `vite.config.ts`)
+membuat seluruh daftar dikenal sebelum permintaan pertama, jadi prebundle selesai
+satu tarikan napas dan komposisinya sama tiap restart. Mengubah config juga
+menggeser `browserHash` → tab yang telanjur nyangkut sembuh sendiri setelah
+hard-reload.
+
+⚠️ **Aturan perawatan:** paket baru yang **hanya** diimpor dari dalam modul di
+balik `lazy()` WAJIB ditambahkan ke `PREBUNDLE`. Yang paling rawan ketahuan telat
+adalah subpath dalam seperti
+`three/examples/jsm/environments/RoomEnvironment.js`.
+
+🔥 Keluhan awalnya berbunyi "cuma menu Services yang error" — itu **ilusi**. Error
+yang sama menyala dari `ContactShadowsRig.tsx` di Scene hero; yang membedakan cuma
+mana yang kebetulan diklik. Verifikasi: Brave profil bersih di dev `:3000` —
+keempat rute navbar tampil dengan canvas hidup, tanpa error R3F, tanpa 404, cuma
+satu navigasi penuh (tidak ada reload akibat re-optimize), dan `_metadata.json`
+**tidak berubah** sesudah semua chunk lazy dimuat.
+
+## 4br. `'uv4' : undeclared identifier` — Shredder Menggagalkan Vertex Shader ✅ (31 Agu, commit `5d96618`)
+
+Konsol di `/people` penuh merah:
+
+```
+THREE.WebGLProgram: Shader Error 1281 - VALIDATE_STATUS false
+Material Name: OP_Shredder_Bin / _Body / _Paper / _Glass
+ERROR: 0:401: 'uv4' : undeclared identifier
+> vAoMapUv = ( aoMapTransform * vec3( AOMAP_UV, 1 ) ).xy;
+```
+
+Audit `office.glb` — parse chunk JSON GLB langsung di node, tanpa Blender —
+memberi angkanya telak:
+
+| slot `occlusionTexture` | jumlah material |
+|---|---|
+| texCoord 0 | 3 |
+| **texCoord 1** (lightmap kita) | **218** |
+| texCoord 2 | 7 |
+| texCoord 3 | 2 |
+| **texCoord 4** | **8 — semuanya `OP_Shredder_*`** |
+
+three.js cuma mendeklarasikan atribut `uv`, `uv1`, `uv2`, `uv3`
+(`WebGLProgram`: `getChannel(n)` → `uv${n}`, dijaga `vertexUv1s/2s/3s`), dan
+`GLTFLoader` cuma memetakan `TEXCOORD_0..3` — `TEXCOORD_4` ke atas **tidak pernah
+ikut dimuat**, termasuk lewat Draco, walaupun primitive-nya jelas membawanya
+(`POSITION,NORMAL,TEXCOORD_0..4`). Jadi shader menulis atribut hantu.
+
+🔥 **Akibatnya jauh lebih besar dari "AO hilang":** vertex shader **gagal compile**,
+material itu tidak punya program yang sah sama sekali, dan tiap frame melempar
+`INVALID_OPERATION: useProgram: program not valid` — 255× sebelum WebGL menyerah
+("too many errors"). Itu ongkos frameloop nyata, bukan sekadar berisik.
+
+**FIX 1a** di `Office.tsx` membuang `aoMap` ber-`channel > 3`. Dibuang, bukan
+dipetakan ulang: UV-nya memang tidak dimuat, jadi tidak ada yang bisa
+diselamatkan; yang hilang cuma AO bawaan aset Sketchfab, sementara lightmap kita
+**selalu** texCoord=1 jadi tak tersentuh. ⚠️ Guard WAJIB berada **di atas** cabang
+kaca: `OP_Shredder_Glass` ber-`alphaMode: BLEND` sehingga kena `continue` duluan
+dan akan lolos kalau ditaruh di bawah.
+
+Log DEV `[office]` dapat kolom baru `uvDiluarJangkauan=` — **8** di traverse
+pertama, **0** di traverse kedua (scene di-cache `useGLTF`, jadi fix-up idempoten).
+`aoAsliDijaga` turun 40 → 33, dan selisih **7** itu justru bukti tambahan: Glass
+memang tak pernah ikut terhitung karena `continue`. Terverifikasi di `/people`
+(Brave headless): 0 shader error, 0 `useProgram` invalid.
+
+📌 Kalau angka `uvDiluarJangkauan` naik, ada aset baru masuk dengan texCoord > 3 —
+periksa export-nya, jangan cuma senang karena FIX 1a menelannya diam-diam.
+
 ## 5. Foto Referensi
 
 | Folder | Isi |
@@ -3413,7 +3582,7 @@ Kode billiard cuma bergantung 3 hal dari `office.glb`: (a) nama node mengandung 
   - Cycles: **GPU Metal** (`prefs.compute_device_type='METAL'` + `cycles.device='GPU'`) — cek tiap sesi, default-nya CPU
 - **Polycam** untuk scanning (GLB)
 - **Vite + bun** (project web ini) — **GLB sudah terintegrasi (§4h)**. Stack: **Vite 6** (dulu Next 16.2, dimigrasikan 29 Jul — §4j), React 19, three 0.185, @react-three/fiber 9 + drei 10 + postprocessing 3, zustand 5, Tailwind 4, **react-router-dom 7** (routing per-ruangan, §4q), **cannon-es 0.20** (billiard, §6d), **motion 12** (animasi teks, §4i), **matter-js 0.20** (`PhysicsHeading`, §4r-3). Jalankan: `bun dev` → `http://localhost:3000`
-- **Vitest 4** — `bun run test`. **423 test di 59 berkas**, semuanya hijau per 28 Agu (348/53 turun ke 344/52 saat `roomContent.test.tsx` dicabut bersama `roomHasContact` §4be, naik bertahap lewat batch halaman lowongan §4bf, `shellMax.test.ts` §4bh, batch form lamaran §4bi, batch plafon dalam §4bj, dan batch 28 Agu §4bl–§4bn). Empat di antaranya invariant lintas-wilayah (`INVARIANTS.md` §1, §3, §6, §7). Norma repo: **buktikan test-nya MERAH di kondisi rusak dulu** sebelum dipakai memverifikasi perbaikan
+- **Vitest 4** — `bun run test`. **427 test di 60 berkas**, semuanya hijau per 31 Agu (348/53 turun ke 344/52 saat `roomContent.test.tsx` dicabut bersama `roomHasContact` §4be, naik bertahap lewat batch halaman lowongan §4bf, `shellMax.test.ts` §4bh, batch form lamaran §4bi, batch plafon dalam §4bj, dan batch 28 Agu §4bl–§4bn; 425 lalu 427 lewat `goToRegistration.invariant.test.ts` + 2 invariant `RoomRouteSync` §4bp). Empat di antaranya invariant lintas-wilayah (`INVARIANTS.md` §1, §3, §6, §7). Norma repo: **buktikan test-nya MERAH di kondisi rusak dulu** sebelum dipakai memverifikasi perbaikan
 - **Pengukuran performa: CDP langsung, tanpa dependency** (§4r) — `scripts/measure-frames.mjs` (frame time) + `scripts/shoot.mjs` (screenshot) + `scripts/drive.mjs` (klik/eval/tembak berurutan). ⚠️ **Wajib jalankan di dpr 2**; dpr 1 mentok vsync dan semua setelan terlihat sama
   - **Browser verifikasi = Brave**, bukan Chrome. CDP-nya identik, cukup tukar path binary-nya. ⚠️ Kelima skrip di `scripts/` masih **hardcode path Chrome** — ganti manual saat dipakai
   - **`drive.mjs` dapat tiga langkah baru** (10 Agu): `emulate` memasang device metrics **sekaligus** `setTouchEmulationEnabled` — tanpa itu halaman terbaca sebagai desktop sempit, `(pointer: coarse)` tidak cocok, dan gerbang INVARIANTS §6 **tidak ikut teruji padahal itu justru yang sedang diperiksa** saat mengemulasi HP; `scroll` memindahkan halaman ke posisi tertentu sebelum memotret; `media` memaksa `prefers-reduced-motion` (cabang itu dipilih saat komponen **dipasang**, jadi tidak bisa dipalsukan dari `eval`). **Tiga lagi 23 Agu** (§4ay): `down`/`holdmove`/`up` — menahan tombol sambil bergerak/dipotret; `drag` selalu melepas di akhir jadi tidak bisa memotret keadaan tertahan
