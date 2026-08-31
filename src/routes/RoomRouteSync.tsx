@@ -101,16 +101,61 @@ export default function RoomRouteSync() {
     // disusul pushState "/people" dari berkas ini. Dijaga jobRoute.test.tsx.
     if (!key) return;
 
-    // Selebihnya pathname ini selesai diurus, apa pun cabang yang diambil.
-    resolvedPath.current = pathname;
+    // Dua cabang yang tidak menyisakan pekerjaan untuk kamera: tidak ada yang
+    // mendengarkan, atau kameranya memang sudah di sana. Pathname-nya selesai
+    // diurus, jadi tandai sekarang — penanda itulah yang mengizinkan Arah 2
+    // menormalkan slug lama ("/office" → "/people").
+    if (!goTo || key === currentRoom) {
+      resolvedPath.current = pathname;
+      return;
+    }
 
-    if (!goTo) return;
-    if (key === currentRoom) return;
-    goTo(key);
-    // `!hash` — kalau URL-nya membawa anchor (mis. "/#contact"), Arah 3 di
-    // bawah yang mengurus scroll-nya. Melompat ke atas dulu di sini membuat
-    // pengunjung melihat halaman tersentak sebelum meluncur ke tujuannya.
-    if (!hash) scrollToTop();
+    // ⚠️ Penandaan `resolvedPath` di cabang ini MENUNGGU jawaban goTo. Itu
+    // bukan kerapian — di situlah pantulan navbar lahir.
+    //
+    // `goTo` menyetel currentRoom lewat zustand, dan commit yang sedang
+    // berjalan tidak ikut membacanya: Arah 2 di bawah menyala di commit yang
+    // SAMA, masih memegang currentRoom yang LAMA. Kalau `resolvedPath` sudah
+    // ditandai di atas sini, gerbang Arah 2 (`resolvedPath.current ===
+    // pathname`) sudah telanjur terbuka, dan ia menavigasi ke
+    // `pathFor(currentRoom lama)` — yaitu "/".
+    //
+    // Terukur di peramban: satu klik navbar Services meninggalkan TIGA entri.
+    //
+    //     push /services  →  push /  →  push /services
+    //
+    // Di lokal ia sembuh sendiri — currentRoom akhirnya menyusul dan Arah 2
+    // mendorong entri ketiga — jadi yang tersisa "cuma" riwayat kotor: sekali
+    // tekan Back mendarat di "/" yang detik itu juga ditulis ulang.
+    //
+    // Tapi kalau goTo tidak pernah benar-benar memindahkan currentRoom (Scene
+    // gagal dimuat, seperti di produksi 31 Agu), entri ketiganya tidak pernah
+    // datang dan pantulan ke "/" jadi FINAL. Gejalanya persis seperti yang
+    // dilaporkan: "navbar mau masuk, lalu mantul balik ke Home".
+    //
+    // Jadi: kalau goTo MENERIMA, currentRoom pasti menyusul di commit
+    // berikutnya. Tinggalkan pathname ini belum tertandai supaya Arah 2 diam,
+    // dan biarkan Arah 1 sendiri yang menandainya nanti — lewat cabang
+    // `key === currentRoom` di atas, saat keadaannya sudah utuh.
+    if (goTo(key)) {
+      // `!hash` — kalau URL-nya membawa anchor (mis. "/#contact"), Arah 3 di
+      // bawah yang mengurus scroll-nya. Melompat ke atas dulu di sini membuat
+      // pengunjung melihat halaman tersentak sebelum meluncur ke tujuannya.
+      if (!hash) scrollToTop();
+      return;
+    }
+
+    // goTo MENOLAK: tween lain masih berjalan, atau kamera sudah di ruangan itu
+    // menurut ref-nya yang satu commit lebih segar. Tidak ada yang akan
+    // memindahkan `currentRoom`, jadi menunggu percuma — tandai, dan biarkan
+    // Arah 2 menarik URL kembali ke ruangan tempat kamera benar-benar berada.
+    // Itu jaring penyelamat yang dulu dikerjakan pantulan di atas, sekarang
+    // menyala HANYA saat memang tidak ada yang menyusul.
+    //
+    // Sengaja tanpa `scrollToTop`: penolakan berarti kamera tidak ke mana-mana,
+    // dan menggulir di tengah tween adalah stutter yang dijelaskan di kepala
+    // efek ini.
+    resolvedPath.current = pathname;
   }, [pathname, goTo, currentRoom, hash, pendingRoom]);
 
   // Arah 2: currentRoom → pathname (klik waypoint dalam Canvas)

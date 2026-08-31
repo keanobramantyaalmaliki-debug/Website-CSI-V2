@@ -49,13 +49,19 @@ const CODE = SRC.replace(/\/\*[\s\S]*?\*\//g, "")
   .replace(/\/\/[^\n]*/g, "")
   .replace(/^import[^\n]*\n/gm, "");
 
+/** Guard "URL cuma menyusul currentRoom yang sudah berubah", bentuk bebas:
+ *  kedua urutan operand, dan boleh berbagi `if` dengan syarat lain. */
+const GUARD_RE =
+  /if\s*\([^)]*(?:key\s*===\s*currentRoom|currentRoom\s*===\s*key)[^)]*\)/;
+
 describe("RoomRouteSync tidak menyela tween kamera", () => {
   it("Arah 1 berhenti lebih dulu kalau room-nya sudah aktif", () => {
     // Bentuk bebas (`key === currentRoom`, `currentRoom === key`, dengan atau
     // tanpa kurung) — yang dijaga maksudnya, bukan gayanya.
-    const hasGuard =
-      /if\s*\(\s*key\s*===\s*currentRoom\s*\)\s*return/.test(CODE) ||
-      /if\s*\(\s*currentRoom\s*===\s*key\s*\)\s*return/.test(CODE);
+    // Kondisinya boleh berbagi satu `if` dengan syarat lain (sejak perbaikan
+    // pantulan ia satu blok dengan `!goTo`) — yang dijaga keberadaannya, bukan
+    // apakah ia berdiri sendiri.
+    const hasGuard = GUARD_RE.test(CODE);
 
     expect(
       hasGuard,
@@ -71,7 +77,7 @@ describe("RoomRouteSync tidak menyela tween kamera", () => {
   });
 
   it("scrollToTop berada SESUDAH guard, bukan sebelumnya", () => {
-    const guard = CODE.search(/if\s*\(\s*(key\s*===\s*currentRoom|currentRoom\s*===\s*key)\s*\)/);
+    const guard = CODE.search(GUARD_RE);
     const scroll = CODE.search(/scrollToTop\s*\(/);
 
     // Tidak ada pemanggilan scrollToTop sama sekali → tidak ada yang perlu diurutkan.
@@ -83,6 +89,58 @@ describe("RoomRouteSync tidak menyela tween kamera", () => {
         "`key === currentRoom`, jadi ia tetap jalan pada perpindahan yang " +
         "dipicu waypoint — persis efek samping yang membuat tween kamera " +
         "tersendat. Pindahkan guard-nya ke atas.\n",
+    ).toBe(true);
+  });
+
+  it("jawaban goTo yang menentukan siapa menandai resolvedPath", () => {
+    // ── Bug yang dijaga (31 Agu) ───────────────────────────────────────────
+    // Arah 1 dulu menandai `resolvedPath.current = pathname` LEBIH DULU, lalu
+    // memanggil `goTo(key)` sebagai pernyataan telanjang. `goTo` menyetel
+    // currentRoom lewat zustand, yang tidak terbaca commit yang sedang
+    // berjalan — jadi Arah 2 menyala di commit yang SAMA, masih memegang
+    // currentRoom LAMA, dan gerbangnya (`resolvedPath.current === pathname`)
+    // sudah telanjur dibuka. Ia menavigasi ke `pathFor(currentRoom lama)`.
+    //
+    // Terukur di peramban, satu klik navbar Services = TIGA entri riwayat:
+    //
+    //     push /services  →  push /  →  push /services
+    //
+    // Di lokal entri ketiga menutupinya. Di produksi, saat Scene gagal dimuat
+    // dan currentRoom tidak pernah menyusul, entri ketiga tidak pernah datang:
+    // navbar "mau masuk lalu mantul balik ke Home".
+    //
+    // Perbaikannya menunda penandaan sampai goTo menjawab. Yang dibaca di sini
+    // adalah bentuk itu — `goTo(key)` dipakai sebagai KONDISI, bukan
+    // pernyataan yang jawabannya dibuang.
+    expect(
+      /if\s*\(\s*goTo\s*\(\s*key\s*\)\s*\)/.test(CODE),
+      "`goTo(key)` di RoomRouteSync.tsx tidak lagi dibaca jawabannya.\n\n" +
+        "Tanpa itu, Arah 1 menandai `resolvedPath` sebelum tahu apakah " +
+        "currentRoom akan menyusul, dan Arah 2 menavigasi balik ke ruangan " +
+        "lama di commit yang sama — navbar memantul ke Home.\n",
+    ).toBe(true);
+
+    expect(
+      /(?<!if\s*\(\s*)\bgoTo\s*\(\s*key\s*\)\s*;/.test(CODE),
+      "Ada `goTo(key);` telanjang di RoomRouteSync.tsx — jawabannya dibuang, " +
+        "dan itu persis bentuk yang melahirkan pantulan navbar.\n",
+    ).toBe(false);
+  });
+
+  it("GoToFn melaporkan diterima/ditolak", () => {
+    // Kontrak lintas berkas: bentuk `if (goTo(key))` di atas cuma berarti
+    // sesuatu kalau GoToFn benar-benar mengembalikan boolean. Dikembalikan ke
+    // `void` dan tsc memang menangkapnya — tapi pesannya menunjuk ke pemanggil,
+    // bukan ke alasannya, jadi alasannya ditulis di sini.
+    const store = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "../lib/store/sceneStore.ts"),
+      "utf8",
+    );
+    expect(
+      /export type GoToFn\s*=[^;]*=>\s*boolean\s*;/.test(store),
+      "GoToFn di sceneStore.ts tidak lagi mengembalikan boolean. " +
+        "RoomRouteSync Arah 1 bergantung padanya untuk tahu apakah " +
+        "currentRoom akan menyusul — lihat penjaga pantulan navbar di atas.\n",
     ).toBe(true);
   });
 

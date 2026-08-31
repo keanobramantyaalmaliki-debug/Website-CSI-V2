@@ -246,8 +246,14 @@ export default function CameraController() {
 
   const goTo = useCallback(
     (name: RoomKey, opts?: GoToOptions) => {
-      if (VIEWS[name]?.disabled) return;
-      if (name === currentRoomRef.current) return;
+      // ⚠️ Nilai baliknya dibaca RoomRouteSync — lihat GoToFn di sceneStore.
+      // `false` = tidak ada yang akan memindahkan `currentRoom` sesudah ini.
+      //
+      // Perhatikan penolakan kedua memakai `currentRoomRef`, BUKAN currentRoom
+      // hasil render: ref-nya selalu satu commit lebih segar. Itu yang membuat
+      // "URL cuma menyusul kamera yang sudah pindah" terjawab jujur `false`.
+      if (VIEWS[name]?.disabled) return false;
+      if (name === currentRoomRef.current) return false;
 
       /**
        * Jalur INSTAN — tirai GridReveal sedang menutupi layar, jadi tidak ada
@@ -269,10 +275,10 @@ export default function CameraController() {
         snapTo(name);
         currentRoomRef.current = name;
         setCurrentRoom(name);
-        return;
+        return true;
       }
 
-      if (animating.current) return;
+      if (animating.current) return false;
 
       // Dari basePos, BUKAN camera.position — lihat catatan di basePos.
       fromPos.current.copy(basePos.current);
@@ -292,14 +298,35 @@ export default function CameraController() {
       currentRoomRef.current = name;
       setCurrentRoom(name);
       // URL diperbarui oleh RoomRouteSync di DOM (punya router context).
+      return true;
     },
     [camera, setCurrentRoom, snapTo],
   );
 
   // register goTo in store so RoomNav (outside Canvas) can call it
+  //
+  // ⚠️ Cleanup-nya `null`, BUKAN `() => {}`. Bedanya kelihatan sepele dan
+  // memakan satu hari untuk dilacak (31 Agu).
+  //
+  // Seluruh DOM membaca "apakah kamera hidup" lewat `goTo` — RoomRouteSync
+  // menjaga `if (... && !goTo) return`, Navbar menjaga `!heroInView && goTo`.
+  // No-op tetap TRUTHY, jadi setiap penjaga itu lolos dan yang dipanggil
+  // fungsi kosong: `currentRoom` tidak pernah bergerak.
+  //
+  // Itu tidak pernah jadi masalah selama Canvas cuma dilepas saat halaman
+  // ditutup. Ia meledak begitu ChunkBoundary melepasnya SELAGI halaman hidup
+  // (office.glb hilang di produksi): RoomRouteSync Arah 1 mengira kamera
+  // hidup, menandai `resolvedPath`, memanggil no-op — lalu Arah 2 membaca
+  // "kamera di Lounge tapi URL di /services" dan menavigasi BALIK. Terukur
+  // menyadap history: `push /services -> push /`. Setiap klik navbar memantul
+  // ke Home, dan tidak ada apa pun di Navbar/RoomRouteSync yang menunjuk ke
+  // berkas ini.
+  //
+  // Dengan `null` penjaga-penjaga itu bekerja seperti yang tertulis: navbar
+  // jatuh ke `navigate()` polos, URL menetap, konten route berganti benar.
   useEffect(() => {
     registerGoTo(goTo);
-    return () => registerGoTo(() => {});
+    return () => registerGoTo(null);
   }, [goTo, registerGoTo]);
 
   /** Tween ke posisi bebas. Beda dari goTo: tidak menyentuh currentRoom / hash

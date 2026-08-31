@@ -15,6 +15,10 @@
 
 # vite output
 /dist
+# panel admin CMS (hasil build) + gambar unggahan — keduanya artefak runtime,
+# bukan sumber. Isi uploads/ hidup di server, bukan di git.
+/dist-admin
+/uploads
 
 # production
 /build
@@ -89,8 +93,6 @@ matterjs-lab.html
 # Keluaran default scripts/shoot.mjs.
 /shot.png
 
-# CMS (Agu 2026)
+# CMS (Agu 2026) — /dist-admin & /uploads sudah diabaikan di blok "vite output"
+# di atas; di sini cuma pengecualian contoh env supaya ikut ter-commit.
 !.env.example
-/dist-admin
-# gambar unggahan editor — isinya konten, bukan kode; backup ikut pg_dump + rsync
-/uploads/
