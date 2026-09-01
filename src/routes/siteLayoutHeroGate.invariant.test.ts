@@ -84,7 +84,7 @@ describe("SiteLayout: loader & Hero berbagi satu gerbang", () => {
    * `hidden`/display:none membuat canvas 0×0, dan R3F menyusul layout ~58 ms di
    * belakang DOM — kembali ke ruangan jadi berkedip (memory
    * r3f-canvas-resize-lag). `h-0 overflow-hidden` memotong habis sementara
-   * <section> di dalamnya tetap h-dvh (relatif viewport, bukan induk).
+   * <section> di dalamnya tetap h-svh (relatif viewport, bukan induk).
    */
   it("Hero disembunyikan dengan clip, bukan display:none", () => {
     expect(

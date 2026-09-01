@@ -63,8 +63,10 @@ export default function CsiHero() {
               1. LEBAR. Di ~360px "intelligence." pada 48px meluber keluar
                  layar, dan itu membuat SELURUH dokumen bisa digeser ke
                  samping (f30614f). `break-words` jaring pengaman terakhirnya.
-              2. TINGGI. Hero 3D mengambil 70dvh, jadi judul ini cuma
-                 kebagian 30dvh. Di layar setinggi 640px itu = 192px, dan
+              2. TINGGI. Hero 3D mengambil 70svh, jadi judul ini cuma
+                 kebagian 30svh (lebih longgar begitu bilah URL sembunyi —
+                 hero-nya svh, tidak ikut memanjang). Di layar setinggi
+                 640px itu = 192px, dan
                  judul 4 baris pada 48px juga persis 192px — "intelligence."
                  terpotong separuh. Pada 36px ia muat dengan sisa napas. */}
           <h2 className="max-w-5xl break-words text-4xl font-semibold tracking-tight text-zinc-100 sm:text-6xl lg:text-7xl">

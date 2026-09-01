@@ -82,7 +82,7 @@ export default function SiteLayout() {
            dan itu UNMOUNT — persis yang dihindari seluruh berkas ini.
 
            `h-0 overflow-hidden`, BUKAN `hidden`/display:none. <section> di
-           dalamnya tetap `h-dvh` — dvh relatif viewport, bukan induk — jadi
+           dalamnya tetap `h-svh` — svh relatif viewport, bukan induk — jadi
            canvas TIDAK berubah ukuran, cuma terpotong habis. display:none
            membuatnya 0×0, dan R3F menyusul layout ~58 ms di belakang DOM, jadi
            kembali ke ruangan akan berkedip (memory r3f-canvas-resize-lag).

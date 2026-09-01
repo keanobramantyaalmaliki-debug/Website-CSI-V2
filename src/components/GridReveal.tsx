@@ -173,9 +173,12 @@ type Session = {
 function openSession(room: RoomKey): Session {
   /**
    * Tinggi pita 3D = tinggi seksi hero yang sebenarnya, DIUKUR, bukan ditebak.
-   * `h-[70dvh] md:h-dvh` bergantung breakpoint DAN pada tinggi viewport
-   * dinamis yang berubah saat bilah URL HP muncul/hilang — dua hal yang tidak
-   * bisa diturunkan dari `window.innerWidth` sendirian.
+   * `h-[70svh] md:h-svh` bergantung breakpoint, dan `svh` sendiri tidak bisa
+   * diturunkan dari `window.innerWidth` maupun `innerHeight` (yang terakhir
+   * melaporkan viewport SEKARANG, sedangkan svh yang TERPENDEK — beda persis
+   * setinggi bilah URL saat ia sedang sembunyi). Sejak unitnya svh angka ini
+   * memang tidak lagi bernapas (lihat Hero.tsx), tapi mengukur tetap jalan
+   * satu-satunya yang benar di kedua breakpoint.
    */
   const vw = window.innerWidth;
   const vh = window.innerHeight;

@@ -82,7 +82,7 @@ export function applyLift(camPos: Vector3, p: number): void {
  * Pasangan id dengan `<section id="office">` di Hero.tsx — elemen yang sama
  * yang dipakai IntersectionObserver heroInView. Progresnya dibaca dari rect
  * elemen itu, bukan dari scrollY / tinggi viewport, supaya tetap benar kalau
- * kelak ada apa pun di atas hero atau tingginya berubah (70dvh vs 100dvh).
+ * kelak ada apa pun di atas hero atau tingginya berubah (70svh vs 100svh).
  */
 const HERO_SECTION_ID = "office";
 

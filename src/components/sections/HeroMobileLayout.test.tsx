@@ -3,12 +3,12 @@ import { render } from "@testing-library/react";
 
 /**
  * Hero MENGALIR bersama halaman di semua lebar layar — satu koreografi, yang
- * beda cuma tingginya (70dvh di HP, setinggi layar di ≥768px).
+ * beda cuma tingginya (70svh di HP, setinggi layar di ≥768px).
  *
  * Bentuk itu lahir dari lima laporan, tiga di HP lalu dua di desktop (10 Agu):
  *
- *   1. "40% layar kosong"    — hero dipaku 70dvh di dalam track 126dvh, jadi
- *                              ada 30dvh badan track yang tak berisi apa pun
+ *   1. "40% layar kosong"    — hero dipaku 70svh di dalam track 126svh, jadi
+ *                              ada 30svh badan track yang tak berisi apa pun
  *                              sebelum konten mulai.
  *   2. "3D kepotong kiri-kanan" — `scale: 0.96` mengecilkan canvas di tempat.
  *   3. "scroll tersendat"    — opacity+scale sebuah layer WebGL seukuran layar
@@ -75,22 +75,64 @@ function canvasWrapper(container: HTMLElement) {
 }
 
 describe("Hero — mengalir, tanpa pin & tanpa surut", () => {
-  it("HP: track 70dvh, desktop setinggi layar — dan tidak ada yang dipaku", async () => {
+  it("HP: track 70svh, desktop setinggi layar — dan tidak ada yang dipaku", async () => {
     width = 400;
     const { container } = await renderHero();
     const track = container.querySelector("section#office") as HTMLElement;
     const viewport = track.firstElementChild as HTMLElement;
 
-    // 70dvh = 70% yang BENAR-BENAR terlihat. Itu hanya benar selama tak ada
+    // 70svh = 70% yang BENAR-BENAR terlihat. Itu hanya benar selama tak ada
     // seam yang menimpa bagian bawah canvas — seam HeroHandoff dulu memakan
     // 40px terakhirnya dan diam-diam mengembalikannya ke 65%.
-    expect(track.className).toContain("h-[70dvh]");
-    expect(track.className).toContain("md:h-dvh");
-    // track 180dvh = landasan pin balik lagi; setinggi layar tidak punya sisa
+    expect(track.className).toContain("h-[70svh]");
+    expect(track.className).toContain("md:h-svh");
+    // track 180svh = landasan pin balik lagi; setinggi layar tidak punya sisa
     // untuk dipaku.
-    expect(track.className).not.toContain("180dvh");
+    expect(track.className).not.toContain("180svh");
     // `sticky` dalam bentuk APA PUN = pin balik lagi, termasuk varian md:
     expect(viewport.className).not.toContain("sticky");
+  });
+
+  /**
+   * `dvh` DI MANA PUN di hero = bug 1 Sep balik lagi: unit itu ikut bernapas
+   * bersama bilah URL HP, jadi hero memanjang/memendek tiap toolbar
+   * sembunyi/muncul dan SELURUH konten di bawahnya bergeser turun lalu balik
+   * (terukur 39px pada napas 56px — alasan panjangnya di Hero.tsx).
+   *
+   * Dijaga di sini karena `dvh` terlihat seperti pilihan yang lebih "benar"
+   * saat dibaca — ia memang unit yang paling akurat menggambarkan viewport
+   * SEKARANG — sehingga menukarnya balik terasa seperti perbaikan. Gejalanya
+   * cuma muncul di HP sungguhan: di responsive mode desktop tidak ada bilah
+   * URL, jadi typecheck, lint, dan mata di layar besar semuanya lolos.
+   *
+   * Dua kelas dicek sekaligus (track + pembungkus canvas saat dipaku) karena
+   * keduanya wajib memakai unit yang SAMA; kalau tidak, canvas melompat
+   * setinggi bilah URL tepat saat sapuan GridReveal memakunya.
+   */
+  it.each([400, 1440])("tidak ada `dvh` di hero — lebar %i", async (w) => {
+    width = w;
+
+    // Dipaku (pendingRoom terisi) supaya cabang `fixed …` di CanvasStage yang
+    // terbaca, bukan `absolute inset-0` yang memang tak bertinggi. Store-nya
+    // di-set SETELAH resetModules & SEBELUM render: Hero mengimpor instance
+    // yang sama dari graf modul segar yang sama.
+    vi.resetModules();
+    const { useSceneStore } = await import("@/lib/store/sceneStore");
+    useSceneStore.setState({ pendingRoom: "Lounge" });
+    const { default: Hero } = await import("./Hero");
+    const { container } = render(<Hero />);
+
+    const track = container.querySelector("section#office") as HTMLElement;
+    const wrapper = canvasWrapper(container);
+
+    expect(wrapper.className).toContain("fixed"); // cabang dipaku memang aktif
+    expect(track.className).not.toContain("dvh");
+    expect(wrapper.className).not.toContain("dvh");
+    // Pasangannya wajib SAMA — kalau tidak, canvas melompat setinggi bilah URL
+    // tepat saat sapuan memakunya.
+    expect(wrapper.className).toContain(w < 768 ? "h-[70svh]" : "md:h-svh");
+
+    useSceneStore.setState({ pendingRoom: null });
   });
 
   it("HP: pembungkus canvas tanpa transform — sumber 'kepotong' & 'tersendat'", async () => {

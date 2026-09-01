@@ -124,15 +124,17 @@ function SceneFailed({ onRetry }: { onRetry: () => void }) {
  * ── Kenapa dipaku ke ukuran ALAMINYA, bukan `inset-0` ───────────────────────
  * Sapuannya menyingkap 3D di atas konten, jadi canvas harus lepas dari aliran
  * halaman (yang sedang tergulir jauh di bawah) dan menempel ke viewport. Tapi
- * `inset-0` akan MEMBESARKAN canvas di HP — dari 70dvh jadi selayar penuh —
+ * `inset-0` akan MEMBESARKAN canvas di HP — dari 70svh jadi selayar penuh —
  * dan canvas R3F menyusul perubahan tata letak ~58 ms di belakang DOM
  * (r3f-canvas-resize-lag, dibayar mahal di InquiryLaptop). Tinggi yang sama
  * persis dengan tinggi seksinya = tidak ada resize = kedipan itu mustahil.
  *
- * Tinggi `h-[70dvh] md:h-dvh` di bawah SENGAJA menggandakan angka di `<section>`
+ * Tinggi `h-[70svh] md:h-svh` di bawah SENGAJA menggandakan angka di `<section>`
  * beberapa baris di bawahnya. Keduanya wajib bergerak bersama; kalau salah satu
  * diubah sendirian, canvas melompat saat dipaku. Diletakkan berdekatan supaya
- * pasangannya terlihat tanpa mencari.
+ * pasangannya terlihat tanpa mencari. Termasuk UNIT-nya: `svh` di sini dan
+ * `dvh` di sana (atau sebaliknya) = pasangan yang cocok saat bilah URL tampil
+ * dan meleset puluhan piksel saat ia sembunyi.
  *
  * z-20: di atas `<main>` (10, yang membentuk stacking context sehingga seluruh
  * isinya — termasuk tirai TheCrew z-40 — tetap kalah), di bawah Navbar (50)
@@ -144,7 +146,7 @@ function CanvasStage({ children }: { children: ReactNode }) {
     <div
       className={
         pinned
-          ? "fixed inset-x-0 top-0 z-20 h-[70dvh] md:h-dvh"
+          ? "fixed inset-x-0 top-0 z-20 h-[70svh] md:h-svh"
           : "absolute inset-0"
       }
       /* Kotak-kotak `<clipPath>`-nya dipasang GridReveal; di sini cuma
@@ -266,7 +268,7 @@ export default function Hero() {
   // Reduced-motion: hero normal-flow setinggi layar, tanpa pin/surut.
   if (reduced) {
     return (
-      <section ref={heroTrackRef} id="office" className="relative h-dvh w-full">
+      <section ref={heroTrackRef} id="office" className="relative h-svh w-full">
         <div className="absolute inset-0">
           <StaticHero />
         </div>
@@ -284,7 +286,7 @@ export default function Hero() {
   return (
     /**
      * SATU KOREOGRAFI untuk semua lebar layar: hero MENGALIR bersama halaman.
-     * Yang beda tinggal TINGGINYA — 70dvh di HP, setinggi layar di ≥768px.
+     * Yang beda tinggal TINGGINYA — 70svh di HP, setinggi layar di ≥768px.
      *
      * Tidak ada pin, tidak ada canvas surut, tidak ada seam yang menimpa: 3D
      * dan konten satu aliran, begitu canvas habis konten langsung menyambung
@@ -299,10 +301,33 @@ export default function Hero() {
      * mau dihidupkan lagi, ia datang bersama TIGA hal sekaligus — tinggi track,
      * `sticky`, dan ref observer yang terpisah — bukan sendirian.
      *
-     * 70dvh di HP itu 70% YANG BENAR-BENAR TERLIHAT, bukan sekadar angka di
-     * kelas. Saat masih 62dvh, seam HeroHandoff menimpa 40px terakhir canvas
+     * 70svh di HP itu 70% YANG BENAR-BENAR TERLIHAT, bukan sekadar angka di
+     * kelas. Saat masih 62svh, seam HeroHandoff menimpa 40px terakhir canvas
      * (`-mt-10 h-10`), jadi kantor yang betul-betul tampak cuma 57%. Ukur dari
      * piksel 3D terakhir yang terlihat, jangan dari tinggi track.
+     *
+     * ⚠️ `svh`, BUKAN `dvh` (1 Sep) — dan bedanya bukan kosmetik. `dvh` ikut
+     * BERNAPAS bersama bilah URL browser HP: gulir turun → toolbar sembunyi →
+     * viewport membesar → hero memanjang → SELURUH konten di bawahnya bergeser
+     * turun; jari balik sedikit → toolbar muncul → konten balik ke tempat
+     * semula. Terukur di Brave 390×844 (scripts/probe-people-intro-shift.mjs):
+     * napas 56px = section pertama melompat 39px (70% dari 56) tanpa scrollY
+     * berubah sedikit pun, dan tinggi dokumen ikut goyang 96px sehingga `limit`
+     * Lenis jadi basi. Itulah "konten ikut geser turun terus balik lagi" yang
+     * dilaporkan di /people; ia kena di SEMUA ruangan, cuma paling kentara di
+     * section pertama yang menempel ke hero.
+     *
+     * `svh` = viewport TERPENDEK, jadi angkanya konstan sepanjang sesi dan
+     * tidak ada reflow sama sekali. Salahnya selalu ke arah yang aman: saat
+     * load toolbar memang tampil, jadi 70svh = persis 70% yang terlihat pada
+     * saat yang paling menentukan; begitu toolbar sembunyi hero tetap di
+     * piksel yang sama dan konten justru mengintip sedikit lebih banyak —
+     * searah tujuan poin 1 di bawah. Idiom yang sama sudah dipakai
+     * Contact.tsx (ekor halaman `100svh`) dengan alasan identik.
+     *
+     * `lvh` DITOLAK: ia mengunci di ukuran toolbar-sembunyi, jadi saat load
+     * hero jadi ~74% dari yang terlihat — konten mengintip lebih sedikit dan
+     * jatah 30svh untuk judul (lihat CsiHero.tsx) makin sempit.
      *
      * Susunan lama (track 126dvh + pin 70dvh) menyisakan 30dvh KOSONG di layar
      * pertama: canvas berhenti di 70dvh sementara konten baru mulai setelah
@@ -310,7 +335,7 @@ export default function Hero() {
      * apa-apa. Di layar lebar celah itu tak pernah terlihat karena canvas-nya
      * setinggi layar penuh — itulah sebab bug ini muncul lebih dulu di HP.
      *
-     * Kenapa di HP 70dvh dan bukan setinggi layar:
+     * Kenapa di HP 70svh dan bukan setinggi layar:
      *
      * 1. KONTEN TERLIHAT. Hero setinggi layar penuh tidak memberi petunjuk
      *    bahwa ada halaman di bawahnya.
@@ -320,12 +345,12 @@ export default function Hero() {
      *    diturunkan dari aspect. Makin jangkung viewport-nya, makin sempit
      *    pandangannya. Terukur di iPhone 15 (393×852):
      *
-     *      100dvh → hFOV 29,8°   ← sepertiga desktop, terasa seperti lensa tele
-     *       70dvh → hFOV 41,7°   ← +40% lebih lebar
+     *      100svh → hFOV 29,8°   ← sepertiga desktop, terasa seperti lensa tele
+     *       70svh → hFOV 41,7°   ← +40% lebih lebar
      *      (desktop 16:9 → 91,5° sebagai pembanding)
      *
      *    Memendekkan hero MELEBARKAN framing-nya, bukan mengecilkan
-     *    pemandangan. Karena itu menaikkan 62dvh → 70dvh ada ONGKOSNYA:
+     *    pemandangan. Karena itu menaikkan 62svh → 70svh ada ONGKOSNYA:
      *    pandangan kiri-kanan menyempit dari 46,5° ke 41,7°. Porsi 70% dibayar
      *    dengan framing yang sedikit lebih tele — bukan makan siang gratis.
      *
@@ -342,7 +367,7 @@ export default function Hero() {
     <section
       ref={heroTrackRef}
       id="office"
-      className="relative h-[70dvh] w-full md:h-dvh"
+      className="relative h-[70svh] w-full md:h-svh"
     >
       {/* Viewport 3D — mengalir bersama halaman di semua lebar layar. */}
       <div className="relative h-full w-full">
@@ -404,7 +429,7 @@ export default function Hero() {
         )}
 
         {/* "see our work" — petunjuk scroll, HANYA di layar lebar.
-            Di HP hero cuma 70dvh sehingga konten sudah mengintip sendiri di
+            Di HP hero cuma 70svh sehingga konten sudah mengintip sendiri di
             bawah canvas; petunjuk "ada halaman di bawah" jadi mubazir, dan ia
             memakan ruang yang justru dibutuhkan konten itu. Di desktop hero
             setinggi layar penuh, jadi di sana petunjuk ini masih bekerja.

@@ -167,8 +167,8 @@ export const CLIP_BLEED_PX = 0.5;
  * Kisi yang dibelah oleh batas bawah hero.
  *
  * ── Kenapa dibelah ─────────────────────────────────────────────────────────
- * Sapuannya menyingkap 3D, dan 3D itu hidup di dalam kotak hero — `h-dvh` di
- * desktop tapi cuma `h-[70dvh]` di HP (lihat alasan panjangnya di Hero.tsx).
+ * Sapuannya menyingkap 3D, dan 3D itu hidup di dalam kotak hero — `h-svh` di
+ * desktop tapi cuma `h-[70svh]` di HP (lihat alasan panjangnya di Hero.tsx).
  * Di HP berarti ada PITA SISA di bawah hero yang tidak akan pernah berisi 3D
  * apa pun.
  *
