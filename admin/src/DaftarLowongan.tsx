@@ -11,10 +11,16 @@ import { useState } from "react";
 import { hapusLowongan, type JobRecord } from "./api";
 import { Kabar, Konfirmasi, tanggal } from "./ui";
 
+/* Bahasa Inggris, sama persis dengan nilai yang tersimpan di database.
+   "Tayang" dulu dipakai untuk `open`, dan itu bertabrakan dengan arti "tayang"
+   yang satunya di panel ini — sudah sampai ke pengunjung atau belum (badge
+   "belum tayang" di bawahnya, dan tombol Publish). Satu lowongan bisa saja
+   Open TAPI belum tayang; dengan kata yang sama untuk keduanya, kalimat itu
+   jadi tidak bisa dibaca. */
 const NAMA_STATUS: Record<JobRecord["state"], string> = {
-  draft: "Draf",
-  open: "Tayang",
-  closed: "Ditutup",
+  draft: "Draft",
+  open: "Open",
+  closed: "Closed",
 };
 
 export function DaftarLowongan({
@@ -86,13 +92,13 @@ export function DaftarLowongan({
           <tbody>
             {daftar.map((job) => (
               <tr key={job.id} className={job.state === "draft" ? "draf" : ""}>
+                {/* Judul saja. Alamat halamannya dulu ikut ditulis di sini,
+                    dan itu memberi setiap baris tinggi dua kali lipat demi
+                    keterangan yang sebenarnya cuma berguna saat sedang
+                    menyunting satu lowongan — di sana ia memang ada, di
+                    "Pengaturan lanjutan" dalam form. */}
                 <td>
                   <strong>{job.title}</strong>
-                  {job.detail ? (
-                    <div className="petunjuk">/careers/{job.slug}</div>
-                  ) : (
-                    <div className="petunjuk">terbuka di tempat</div>
-                  )}
                 </td>
                 <td>{job.department || "—"}</td>
                 <td>

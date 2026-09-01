@@ -49,18 +49,18 @@ const COPY_KOSONG: JobCopy = {
 const STATUS: { nilai: JobInput["state"]; nama: string; jelas: string }[] = [
   {
     nilai: "draft",
-    nama: "Draf",
+    nama: "Draft",
     jelas:
       "Belum terlihat pengunjung. Bisa disimpan meski isinya belum lengkap.",
   },
   {
     nilai: "open",
-    nama: "Tayang",
+    nama: "Open",
     jelas: "Terlihat di halaman Careers dan menerima lamaran.",
   },
   {
     nilai: "closed",
-    nama: "Ditutup",
+    nama: "Closed",
     jelas:
       "Masih terlihat di halaman Careers, tapi barisnya abu-abu dan tidak bisa dilamar.",
   },
@@ -165,6 +165,20 @@ export function FormLowongan({
 
   return (
     <form onSubmit={simpan}>
+      {/* Jalan pulang di ATAS. Tombol "Batal" di kaki form sudah melakukan hal
+          yang sama, tapi form ini panjang: begitu editor menggulir melewati
+          "Ringkasan", satu-satunya jalan keluar ada di ujung yang tidak
+          kelihatan dari mana pun, dan menutup lowongan yang sedang dibuka
+          jadi terasa mustahil. */}
+      <button
+        type="button"
+        className="kembali"
+        onClick={onBatal}
+        disabled={menyimpan}
+      >
+        ‹ Semua lowongan
+      </button>
+
       <h2 style={{ marginTop: 0 }}>
         {id === null ? "Lowongan baru" : `Ubah: ${isi.title || "(tanpa judul)"}`}
       </h2>

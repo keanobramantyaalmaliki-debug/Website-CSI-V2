@@ -99,7 +99,7 @@ function detailError(copy: Job["detail"], lang: JobLang): string | null {
  * Ketatnya IKUT STATUS, dan itu inti gunanya draft: lowongan yang masih
  * disiapkan cuma perlu judul, sehingga editor bisa menyimpan pekerjaan
  * setengah jalan tanpa dimarahi. Pemeriksaan penuh baru berlaku begitu
- * statusnya dijadikan Tayang atau Ditutup — yaitu tepat saat isinya akan
+ * statusnya dijadikan Open atau Closed — yaitu tepat saat isinya akan
  * dibaca pengunjung.
  */
 export function validateJob(input: JobInput): JobFieldErrors {
