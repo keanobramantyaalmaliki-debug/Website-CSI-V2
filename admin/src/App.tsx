@@ -22,6 +22,8 @@ import {
   ambilCrew,
   ambilLowongan,
   ambilNilai,
+  ambilProyek,
+  ambilCaseStudy,
   keluar,
   siapaAku,
   statusPublish,
@@ -29,15 +31,21 @@ import {
   type JobRecord,
   type Pengguna,
   type ValueRecord,
+  type WorkProjectRecord,
+  type CaseStudyRecord,
 } from "./api";
 import { BarPublish } from "./BarPublish";
 import { Beranda } from "./Beranda";
 import { DaftarCrew } from "./DaftarCrew";
 import { DaftarLowongan } from "./DaftarLowongan";
 import { DaftarNilai } from "./DaftarNilai";
+import { DaftarProyek } from "./DaftarProyek";
+import { DaftarCaseStudy } from "./DaftarCaseStudy";
 import { FormCrew } from "./FormCrew";
 import { FormLowongan } from "./FormLowongan";
 import { FormNilai } from "./FormNilai";
+import { FormProyek } from "./FormProyek";
+import { FormCaseStudy } from "./FormCaseStudy";
 import { Masuk } from "./Masuk";
 import { Sidebar } from "./Sidebar";
 import { TombolTema } from "./Tema";
@@ -60,7 +68,8 @@ function bacaRute(): Rute {
   const siap = (key: string) => findEntry(key)?.entry.status === "siap";
 
   const baru = /^\/([a-z-]+)\/baru$/.exec(h);
-  if (baru && siap(baru[1])) return { nama: "form", entitas: baru[1], id: null };
+  if (baru && siap(baru[1]))
+    return { nama: "form", entitas: baru[1], id: null };
 
   const ubah = /^\/([a-z-]+)\/ubah\/(.+)$/.exec(h);
   if (ubah && siap(ubah[1]))
@@ -81,6 +90,8 @@ export function App() {
   const [daftar, setDaftar] = useState<JobRecord[]>([]);
   const [nilai, setNilai] = useState<ValueRecord[]>([]);
   const [crew, setCrew] = useState<CrewRecord[]>([]);
+  const [proyek, setProyek] = useState<WorkProjectRecord[]>([]);
+  const [cerita, setCerita] = useState<CaseStudyRecord[]>([]);
   const [pending, setPending] = useState(0);
   const [pesan, setPesan] = useState<string | null>(null);
   const [galat, setGalat] = useState<string | null>(null);
@@ -105,16 +116,19 @@ export function App() {
        tayang"), jadi mengambil per-halaman berarti beranda memulai hidupnya
        dengan angka kosong yang lalu berubah sendiri. Daftarnya pendek — ini
        beberapa request kecil, bukan tabel raksasa. */
-    const [hJobs, hValues, hCrew, hPending] = await Promise.all([
-      ambilLowongan(),
-      ambilNilai(),
-      ambilCrew(),
-      statusPublish(),
-    ]);
+    const [hJobs, hValues, hCrew, hProyek, hCerita, hPending] =
+      await Promise.all([
+        ambilLowongan(),
+        ambilNilai(),
+        ambilCrew(),
+        ambilProyek(),
+        ambilCaseStudy(),
+        statusPublish(),
+      ]);
 
     /* Sesi kedaluwarsa cukup dilihat dari SATU permintaan mana pun: kalau
        cookie-nya tidak berlaku lagi, semuanya dibalas 401 bersamaan. */
-    const gagal = [hJobs, hValues, hCrew].find((h) => !h.ok);
+    const gagal = [hJobs, hValues, hCrew, hProyek, hCerita].find((h) => !h.ok);
     if (gagal && !gagal.ok) {
       if (gagal.perluMasuk) setUser(null);
       else setGalat(gagal.pesan);
@@ -125,6 +139,8 @@ export function App() {
     if (hJobs.ok) setDaftar(hJobs.data.jobs);
     if (hValues.ok) setNilai(hValues.data.values);
     if (hCrew.ok) setCrew(hCrew.data.crew);
+    if (hProyek.ok) setProyek(hProyek.data.projects);
+    if (hCerita.ok) setCerita(hCerita.data.studies);
     if (hPending.ok) setPending(hPending.data.pending);
   }, []);
 
@@ -185,6 +201,20 @@ export function App() {
       "orang",
       "Belum ada anggota.",
     ),
+    "selected-work": ringkas(
+      proyek.length,
+      proyek.filter((p) => p.state === "draft").length,
+      proyek.filter((p) => p.unpublished).length,
+      "proyek",
+      "Belum ada proyek.",
+    ),
+    "case-study": ringkas(
+      cerita.length,
+      cerita.filter((s) => s.state === "draft").length,
+      cerita.filter((s) => s.unpublished).length,
+      "case study",
+      "Belum ada case study.",
+    ),
   };
 
   if (user === undefined) return <div className="bungkus">Memuat…</div>;
@@ -239,7 +269,33 @@ export function App() {
                vs `ValueRecord[]`) — dan yang hilang begitu semuanya dijejalkan
                ke satu peta adalah pemeriksaan TypeScript yang menangkap
                ketidakcocokan itu. */
-            rute.entitas === "crew" ? (
+            rute.entitas === "case-study" ? (
+              <DaftarCaseStudy
+                daftar={cerita}
+                onBaru={() => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/baru`);
+                }}
+                onUbah={(id) => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/ubah/${id}`);
+                }}
+                onBerubah={selesai}
+              />
+            ) : rute.entitas === "selected-work" ? (
+              <DaftarProyek
+                daftar={proyek}
+                onBaru={() => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/baru`);
+                }}
+                onUbah={(id) => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/ubah/${id}`);
+                }}
+                onBerubah={selesai}
+              />
+            ) : rute.entitas === "crew" ? (
               <DaftarCrew
                 daftar={crew}
                 onBaru={() => {
@@ -279,6 +335,20 @@ export function App() {
                 onBerubah={selesai}
               />
             )
+          ) : rute.entitas === "case-study" ? (
+            <FormCaseStudy
+              key={rute.id ?? "baru"}
+              id={rute.id}
+              onSelesai={selesai}
+              onBatal={() => pergi(`/${rute.entitas}`)}
+            />
+          ) : rute.entitas === "selected-work" ? (
+            <FormProyek
+              key={rute.id ?? "baru"}
+              id={rute.id}
+              onSelesai={selesai}
+              onBatal={() => pergi(`/${rute.entitas}`)}
+            />
           ) : rute.entitas === "crew" ? (
             <FormCrew
               key={rute.id ?? "baru"}

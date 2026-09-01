@@ -39,6 +39,8 @@ const payload = (jobs: Job[]): ContentPayload => ({
   jobs,
   values: [],
   crew: [],
+  projects: [],
+  caseStudies: [],
 });
 
 function mockFetch(impl: () => Promise<Response>) {

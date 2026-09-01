@@ -1,5 +1,5 @@
 /**
- * Skema database CMS — lowongan, nilai, dan crew.
+ * Skema database CMS — lowongan, nilai, crew, proyek, dan case study.
  *
  * Dibaca dua arah: `drizzle-kit` menerjemahkannya jadi migrasi SQL, dan kode
  * server memakainya sebagai tipe query. Jadi berkas ini SATU-SATUNYA tempat
@@ -86,6 +86,31 @@ export const socialPlatformEnum = pgEnum("social_platform", [
  * ikut jadi pilihan sah di form yang lain.
  */
 export const crewStateEnum = pgEnum("crew_state", ["draft", "live"]);
+
+/**
+ * Dua keadaan sebuah proyek, cocok dengan `WorkProjectState` di
+ * `shared/workProject.ts`.
+ *
+ * Enum SENDIRI lagi, dengan alasan yang persis sama seperti `crew_state`:
+ * tiga entitas yang kebetulan berisi dua nilai yang sama hari ini akan
+ * berpisah suatu hari (proyek mungkin butuh "arsip", crew mungkin butuh
+ * "alumni"), dan enum bersama membuat penambahan untuk satu entitas diam-diam
+ * jadi pilihan sah di form entitas yang lain.
+ */
+export const workProjectStateEnum = pgEnum("work_project_state", [
+  "draft",
+  "live",
+]);
+
+/**
+ * Dua keadaan sebuah case study, cocok dengan `CaseStudyState` di
+ * `shared/caseStudy.ts`.
+ *
+ * Enum SENDIRI lagi — keempat kalinya, dan alasannya tidak berubah: yang
+ * kebetulan sama hari ini tidak boleh membuat penambahan untuk satu entitas
+ * diam-diam jadi pilihan sah di form entitas yang lain.
+ */
+export const caseStudyStateEnum = pgEnum("case_study_state", ["draft", "live"]);
 
 /** `static` = berkas yang sudah lama ada di `public/` (hasil grading ffmpeg
  *  manual); `upload` = diunggah lewat panel admin. Dibedakan supaya jelas mana
@@ -344,6 +369,200 @@ export const crewSocials = pgTable(
   (t) => [primaryKey({ columns: [t.memberId, t.position] })],
 );
 
+/* ─────────────────────────── proyek ───────────────────────── */
+
+/**
+ * "Selected Work" di halaman Work — satu baris per kartu di kipas
+ * `CaseGrid.tsx`.
+ *
+ * Namanya `work_projects` dan bukan `projects`: "proyek" adalah kata yang
+ * dipakai di mana-mana di perusahaan ini, dan tabel bernama `projects` akan
+ * jadi tempat pertama yang orang tebak untuk hal-hal yang sama sekali bukan
+ * ini (proyek internal, proyek yang dikerjakan, penagihan). Awalan `work_`
+ * menjawab "proyek yang mana" tanpa membuka berkas ini: yang dipajang di
+ * halaman Work.
+ *
+ * ⚠️ Ini BUKAN "Case Study". Di halaman yang sama ada entitas lain
+ * (`case_studies`, di bawah) yang membahas satu pekerjaan panjang lebar. Yang
+ * ini daftar; yang itu cerita.
+ */
+export const workProjects = pgTable(
+  "work_projects",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    /** Nama klien, dicetak di baris kecil di atas judul. */
+    client: text("client").notNull().default(""),
+    /**
+     * Tahun sebagai TEKS, bukan `integer`.
+     *
+     * Ia tidak pernah dihitung, diurutkan, atau dibandingkan — cuma dicetak
+     * apa adanya di sebelah nama klien. Kolom angka hanya akan melarang bentuk
+     * yang sah dibaca orang, misalnya "2023–2024" untuk pekerjaan yang
+     * melewati pergantian tahun.
+     */
+    year: text("year").notNull().default(""),
+    /** `set null` dan bukan `cascade`, sama seperti tabel lain: menghapus
+     *  sebuah gambar tidak boleh ikut menghapus proyeknya. Bedanya dengan crew,
+     *  proyek yang tayang WAJIB punya gambar (lihat `validateWorkProject.ts`) —
+     *  kolomnya boleh kosong hanya supaya draf bisa disimpan setengah jalan. */
+    photoId: uuid("photo_id").references(() => images.id, {
+      onDelete: "set null",
+    }),
+    /** Satu baris hasil di kaki kartu, misalnya "67% faster turnaround".
+     *  Boleh kosong — situs menggerbangi barisnya berikut garis pemisahnya. */
+    outcome: text("outcome").notNull().default(""),
+    state: workProjectStateEnum("state").notNull().default("draft"),
+    /**
+     * Urutan kartu di kipas, dari depan ke belakang.
+     *
+     * Bukan kenyamanan: kartu pertama adalah yang terbuka saat halaman dibuka,
+     * dan urutan yang sama dipakai putaran otomatis lima detik sekali serta
+     * deretan titik di bawahnya. Postgres tidak menjanjikan urutan baris apa
+     * pun tanpa `ORDER BY`.
+     */
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    /**
+     * Judul unik HANYA untuk baris hidup — alasan yang sama dengan
+     * `jobs_slug_alive`.
+     *
+     * Uniknya dipakai `CaseGrid.tsx` sebagai `key` React di LIMA tempat
+     * (kartu kipas, panel isi yang beranimasi, deretan titik, dan dua lagi di
+     * tumpukan versi ponsel). Dua proyek berjudul sama membuat React memakai
+     * ulang node yang salah; yang terlihat bukan error, melainkan kartu yang
+     * gambarnya milik proyek lain saat kipasnya berputar.
+     */
+    uniqueIndex("work_projects_title_alive")
+      .on(t.title)
+      .where(sql`${t.deletedAt} is null`),
+    index("work_projects_order").on(t.sortOrder),
+  ],
+);
+
+/**
+ * Label kecil di bawah judul kartu ("Web Platform", "Next.js", …).
+ *
+ * Tabel anak dengan `position` eksplisit, sama seperti `job_skills`: urutan
+ * labelnya terlihat di kartu, dan Postgres tidak menjanjikan urutan baris apa
+ * pun tanpa `ORDER BY`.
+ */
+export const workProjectTags = pgTable(
+  "work_project_tags",
+  {
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => workProjects.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    label: text("label").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.position] })],
+);
+
+/* ───────────────────────── case study ─────────────────────── */
+
+/**
+ * "Case Studies" di halaman Work — satu baris per cerita di
+ * `CaseStudySpotlight.tsx`.
+ *
+ * Tetangga `work_projects`, di halaman yang sama, dan sengaja TIDAK disatukan
+ * dengannya. Keduanya memang punya judul, klien, tahun, dan satu baris hasil,
+ * tapi yang satu adalah baris dalam daftar dan yang satu lagi bacaan: kutipan
+ * pembuka, beberapa paragraf uraian, dan lingkup pekerjaan. Satu tabel gabungan
+ * berarti setengah kolomnya selalu kosong pada separuh barisnya, dan form yang
+ * memaksa editor menebak isian mana yang berlaku untuk benda yang sedang dia
+ * tulis.
+ */
+export const caseStudies = pgTable(
+  "case_studies",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    /** Nama klien. Muncul dua kali di situs: baris meta di atas gambar, dan
+     *  kolom "Client" di kaki cerita. */
+    client: text("client").notNull().default(""),
+    /** Tahun sebagai TEKS, bukan `integer` — alasan lengkapnya sudah ditulis
+     *  di `work_projects` di atas. */
+    year: text("year").notNull().default(""),
+    /** Sektor klien, misalnya "Public Sector". */
+    industry: text("industry").notNull().default(""),
+    /** Satu baris hasil, dicetak tebal di atas gambar. Berbeda dengan
+     *  `work_projects.outcome`, yang ini wajib untuk cerita yang tayang —
+     *  lihat `validateCaseStudy.ts`. */
+    outcome: text("outcome").notNull().default(""),
+    /** Kalimat pembuka di dalam tanda kutip. Kutipan MASALAHNYA, bukan pujian
+     *  klien; testimoni bernama tinggal di halaman Services. */
+    quote: text("quote").notNull().default(""),
+    /**
+     * Isi cerita — BEBERAPA PARAGRAF dalam satu kolom, dipisah baris kosong.
+     *
+     * Bukan tabel anak seperti `work_project_tags`, dan itu keputusan sadar:
+     * paragraf tidak pernah diurutkan ulang, ditambah satu per satu, atau
+     * dibaca terpisah dari tetangganya — ia satu tulisan yang kebetulan
+     * punya jeda. Yang menjaga bentuknya `normalizeDesc()` di
+     * `shared/validateCaseStudy.ts`, dipakai form dan server sekaligus.
+     */
+    desc: text("desc").notNull().default(""),
+    /** `set null` dan bukan `cascade`, sama seperti tabel lain. Cerita yang
+     *  tayang WAJIB punya gambar (gambarnya sekaligus tombol pembuka); kolomnya
+     *  boleh kosong hanya supaya draf bisa disimpan setengah jalan. */
+    photoId: uuid("photo_id").references(() => images.id, {
+      onDelete: "set null",
+    }),
+    state: caseStudyStateEnum("state").notNull().default("draft"),
+    /** Urutan blok di halaman, dari atas ke bawah. Tidak sedramatis kipas
+     *  proyek — semua blok terlihat sekaligus — tapi tetap urutan baca, dan
+     *  Postgres tidak menjanjikan urutan apa pun tanpa `ORDER BY`. */
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    /** Judul unik HANYA untuk baris hidup — alasan yang sama dengan
+     *  `work_projects_title_alive`, dan pemakainya juga sama: judul inilah
+     *  `key` React tiap blok (`key={s.title}`). */
+    uniqueIndex("case_studies_title_alive")
+      .on(t.title)
+      .where(sql`${t.deletedAt} is null`),
+    index("case_studies_order").on(t.sortOrder),
+  ],
+);
+
+/**
+ * Lingkup pekerjaan — label kecil di kaki cerita ("Web Platform", "Staff
+ * Training", …).
+ *
+ * Tabel anak dengan `position` eksplisit, sama seperti `work_project_tags`:
+ * urutan labelnya terlihat, dan Postgres tidak menjanjikan urutan baris apa pun
+ * tanpa `ORDER BY`.
+ */
+export const caseStudyScopes = pgTable(
+  "case_study_scopes",
+  {
+    studyId: uuid("study_id")
+      .notNull()
+      .references(() => caseStudies.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    label: text("label").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.studyId, t.position] })],
+);
+
 /* ──────────────────────── akun & sesi ─────────────────────── */
 
 export const users = pgTable("users", {
@@ -437,6 +656,39 @@ export const crewSocialsRelations = relations(crewSocials, ({ one }) => ({
   member: one(crewMembers, {
     fields: [crewSocials.memberId],
     references: [crewMembers.id],
+  }),
+}));
+
+export const workProjectsRelations = relations(
+  workProjects,
+  ({ one, many }) => ({
+    photo: one(images, {
+      fields: [workProjects.photoId],
+      references: [images.id],
+    }),
+    tags: many(workProjectTags),
+  }),
+);
+
+export const workProjectTagsRelations = relations(workProjectTags, ({ one }) => ({
+  project: one(workProjects, {
+    fields: [workProjectTags.projectId],
+    references: [workProjects.id],
+  }),
+}));
+
+export const caseStudiesRelations = relations(caseStudies, ({ one, many }) => ({
+  photo: one(images, {
+    fields: [caseStudies.photoId],
+    references: [images.id],
+  }),
+  scopes: many(caseStudyScopes),
+}));
+
+export const caseStudyScopesRelations = relations(caseStudyScopes, ({ one }) => ({
+  study: one(caseStudies, {
+    fields: [caseStudyScopes.studyId],
+    references: [caseStudies.id],
   }),
 }));
 

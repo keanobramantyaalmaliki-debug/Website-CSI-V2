@@ -114,6 +114,14 @@ export const CONTENT_PAGES: readonly ContentPage[] = [
         status: "belum",
         approxCount: 9,
       },
+      {
+        key: "testimoni",
+        label: "Testimoni",
+        summary:
+          "Kutipan klien di dasar halaman, berganti lewat panah — masing-masing dengan nama dan jabatannya.",
+        status: "belum",
+        approxCount: 3,
+      },
     ],
   },
   {
@@ -121,19 +129,27 @@ export const CONTENT_PAGES: readonly ContentPage[] = [
     label: "Work",
     path: "/work",
     summary: "Bukti kerja — proyek yang sudah selesai.",
+    /* ⚠️ Testimoni TIDAK di sini. Case study punya kutipan juga, tapi itu
+       kutipan MASALAH kliennya (pembuka cerita, tanpa nama siapa pun) —
+       bukan pujian. Kutipan klien sungguhan yang bernama dan berjabatan
+       cuma ada satu di situs ini: TestimonialSpotlight, di dasar halaman
+       Services. Peta ini pernah keliru menaruhnya di Work; kalau ragu,
+       buka /work sampai bawah — tidak ada wajah dan nama di sana. */
     entries: [
       {
-        key: "case-study",
-        label: "Case study",
-        summary: "Proyek pilihan dalam bentuk kartu bergambar.",
-        status: "belum",
+        key: "selected-work",
+        label: "Selected work",
+        summary:
+          "Kartu proyek bertumpuk yang dibuka satu per satu: judul, klien, tahun, dan hasilnya.",
+        status: "siap",
         approxCount: 8,
       },
       {
-        key: "sorotan",
-        label: "Sorotan & testimoni",
-        summary: "Proyek yang dibahas panjang, lengkap dengan kutipan dari kliennya.",
-        status: "belum",
+        key: "case-study",
+        label: "Case study",
+        summary:
+          "Proyek yang dibahas panjang — latar masalah, apa yang dikerjakan, dan lingkup pekerjaannya.",
+        status: "siap",
         approxCount: 2,
       },
     ],

@@ -31,9 +31,28 @@ export function BarPublish({
       return;
     }
 
-    const { jobs, warning } = hasil.data;
+    const { jobs, values, crew, projects, caseStudies, warning } = hasil.data;
+
+    /* Semua entitas disebut, bukan cuma lowongan. Kalimat ini dulu berhenti di
+       "N lowongan" karena lowongan penghuni pertamanya, dan sesudah entitas
+       kelima kalimat itu berhenti jadi ringkasan dan mulai jadi salah — editor
+       yang baru menyunting crew membaca angka yang tidak menyebut suntingannya
+       sama sekali. Yang kosong dilewati supaya kalimatnya tidak jadi daftar
+       nol yang panjang. */
+    const bagian = [
+      [jobs, "lowongan"],
+      [values, "nilai"],
+      [crew, "orang"],
+      [projects, "proyek"],
+      [caseStudies, "case study"],
+    ] as const;
+    const isi = bagian
+      .filter(([n]) => n > 0)
+      .map(([n, nama]) => `${n} ${nama}`)
+      .join(", ");
+
     onSelesai(
-      `Sudah tayang: ${jobs} lowongan sekarang terlihat pengunjung.` +
+      `Sudah tayang: ${isi || "tidak ada apa pun yang"} sekarang terlihat pengunjung.` +
         /* Purge cache yang gagal TIDAK membatalkan publish — berkasnya sudah
            benar di server. Yang perlu diketahui editor cuma kenapa
            perubahannya mungkin belum kelihatan beberapa menit. */

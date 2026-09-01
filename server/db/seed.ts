@@ -1,5 +1,5 @@
 /**
- * Isi database dengan konten lowongan yang SUDAH ADA di repo.
+ * Isi database dengan konten yang SUDAH ADA di repo.
  *
  * Jalankan sekali: `bun run db:seed`. Konten yang sekarang hidup sebagai
  * literal TypeScript (`FALLBACK_ROLES` di `src/data/careerRolesFallback.ts` dan
@@ -26,6 +26,8 @@ import { FALLBACK_ROLES } from "../../src/data/careerRolesFallback";
 import { FALLBACK_JOBS } from "../../src/data/jobsFallback";
 import { FALLBACK_CREW } from "../../src/data/crewFallback";
 import { FALLBACK_VALUES } from "../../src/data/valuesFallback";
+import { FALLBACK_WORK_PROJECTS } from "../../src/data/workProjectsFallback";
+import { FALLBACK_CASE_STUDIES } from "../../src/data/caseStudiesFallback";
 import { db, sql } from "./client";
 import {
   crewMembers,
@@ -36,6 +38,10 @@ import {
   jobSkills,
   jobs,
   peopleValues,
+  workProjects,
+  caseStudies,
+  caseStudyScopes,
+  workProjectTags,
 } from "./schema";
 
 async function seedJobs() {
@@ -298,7 +304,171 @@ async function seedCrew() {
   console.log(`Seed selesai: ${FALLBACK_CREW.length} anggota crew masuk ke database.`);
 }
 
+/**
+ * Proyek "Selected Work" di halaman Work.
+ *
+ * Gerbang isinya sendiri lagi — alasan yang sama dengan `seedValues` dan
+ * `seedCrew`: database yang sudah pernah di-seed entitas lain tidak boleh
+ * membuat proyek dilewati diam-diam.
+ *
+ * Semua masuk sebagai `live` karena kedelapan kartu ini memang sudah tayang
+ * hari ini. Menaruhnya sebagai `draft` akan MENGOSONGKAN kipas di halaman Work
+ * pada publish pertama.
+ */
+async function seedWorkProjects() {
+  const [{ count }] = await db
+    .select({ count: raw<number>`count(*)::int` })
+    .from(workProjects);
+
+  if (count > 0) {
+    console.log(`Tabel work_projects sudah berisi ${count} baris — dilewati.`);
+    return;
+  }
+
+  await db.transaction(async (tx) => {
+    for (const [index, proyek] of FALLBACK_WORK_PROJECTS.entries()) {
+      /* `source: "static"` seperti foto lowongan dan crew, walau berkasnya
+         bukan milik repo melainkan hotlink stok Unsplash. Yang dijaga kolom
+         itu cuma satu hal: CMS boleh MEMILIH gambar ini tapi tidak boleh
+         mencoba menghapusnya dari disk. Untuk alamat yang bahkan tidak ada di
+         disk, itu justru jawaban yang benar. */
+      const [row] = await tx
+        .insert(images)
+        .values({
+          path: proyek.image,
+          source: "static" as const,
+          originalName: proyek.image.split("/").pop() ?? null,
+        })
+        .onConflictDoNothing({ target: images.path })
+        .returning({ id: images.id });
+
+      /* `onConflictDoNothing` tidak mengembalikan baris kalau path-nya sudah
+         terdaftar, jadi baris lamanya dicari — sama seperti di `seedValues`. */
+      const photoId =
+        row?.id ??
+        (
+          await tx
+            .select({ id: images.id })
+            .from(images)
+            .where(eq(images.path, proyek.image))
+        )[0]?.id ??
+        null;
+
+      const [project] = await tx
+        .insert(workProjects)
+        .values({
+          title: proyek.title,
+          client: proyek.client,
+          year: proyek.year,
+          outcome: proyek.outcome ?? "",
+          photoId,
+          state: "live",
+          /* Urutan literal = urutan kipas yang tayang hari ini. Mengurutkan
+             ulang menurut tahun atau judul saat pindah ke CMS akan terbaca
+             sebagai bug. */
+          sortOrder: index,
+          /* Sudah tayang hari ini — lihat alasan yang sama di seed lowongan. */
+          publishedAt: new Date(),
+        })
+        .returning({ id: workProjects.id });
+
+      if (proyek.tags.length) {
+        await tx.insert(workProjectTags).values(
+          proyek.tags.map((label, position) => ({
+            projectId: project.id,
+            position,
+            label,
+          })),
+        );
+      }
+    }
+  });
+
+  console.log(
+    `Seed selesai: ${FALLBACK_WORK_PROJECTS.length} proyek masuk ke database.`,
+  );
+}
+
+/**
+ * Cerita "Case Studies" di halaman Work.
+ *
+ * Gerbang isinya sendiri lagi, dan `live` lagi, dengan alasan yang sama seperti
+ * `seedWorkProjects` di atas: kedua cerita ini sudah tayang hari ini, dan
+ * menaruhnya sebagai `draft` akan menghapus seluruh seksinya dari halaman Work
+ * pada publish pertama.
+ */
+async function seedCaseStudies() {
+  const [{ count }] = await db
+    .select({ count: raw<number>`count(*)::int` })
+    .from(caseStudies);
+
+  if (count > 0) {
+    console.log(`Tabel case_studies sudah berisi ${count} baris — dilewati.`);
+    return;
+  }
+
+  await db.transaction(async (tx) => {
+    for (const [index, cerita] of FALLBACK_CASE_STUDIES.entries()) {
+      /* `source: "static"` untuk hotlink Unsplash — penjelasan lengkapnya ada
+         di `seedWorkProjects` di atas. */
+      const [row] = await tx
+        .insert(images)
+        .values({
+          path: cerita.image,
+          source: "static" as const,
+          originalName: cerita.image.split("/").pop() ?? null,
+        })
+        .onConflictDoNothing({ target: images.path })
+        .returning({ id: images.id });
+
+      const photoId =
+        row?.id ??
+        (
+          await tx
+            .select({ id: images.id })
+            .from(images)
+            .where(eq(images.path, cerita.image))
+        )[0]?.id ??
+        null;
+
+      const [study] = await tx
+        .insert(caseStudies)
+        .values({
+          title: cerita.title,
+          client: cerita.client,
+          year: cerita.year,
+          industry: cerita.industry,
+          outcome: cerita.outcome,
+          quote: cerita.quote,
+          desc: cerita.desc,
+          photoId,
+          state: "live",
+          /* Urutan literal = urutan blok yang tayang hari ini. */
+          sortOrder: index,
+          publishedAt: new Date(),
+        })
+        .returning({ id: caseStudies.id });
+
+      if (cerita.scope.length) {
+        await tx.insert(caseStudyScopes).values(
+          cerita.scope.map((label, position) => ({
+            studyId: study.id,
+            position,
+            label,
+          })),
+        );
+      }
+    }
+  });
+
+  console.log(
+    `Seed selesai: ${FALLBACK_CASE_STUDIES.length} case study masuk ke database.`,
+  );
+}
+
 await seedJobs();
 await seedValues();
 await seedCrew();
+await seedWorkProjects();
+await seedCaseStudies();
 await sql.end();

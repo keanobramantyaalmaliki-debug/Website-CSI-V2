@@ -16,14 +16,24 @@ import { CONTENT_VERSION, type ContentPayload } from "@shared/content";
 import type { CrewMember } from "@shared/crew";
 import type { Job } from "@shared/job";
 import type { Value } from "@shared/value";
+import type { WorkProject } from "@shared/workProject";
+import type { CaseStudy } from "@shared/caseStudy";
 
 import { record, type Actor } from "./audit";
 import { db } from "./db/client";
-import { crewMembers, jobs, peopleValues } from "./db/schema";
+import {
+  caseStudies,
+  crewMembers,
+  jobs,
+  peopleValues,
+  workProjects,
+} from "./db/schema";
 import { env } from "./env";
 import { listCrew } from "./crewRepo";
 import { listJobs } from "./jobsRepo";
 import { listValues } from "./valuesRepo";
+import { listWorkProjects } from "./workProjectsRepo";
+import { listCaseStudies } from "./caseStudiesRepo";
 
 /**
  * `dist/` — hasil build Vite, yang disajikan `serve` di produksi.
@@ -38,11 +48,14 @@ export const CONTENT_PATH = path.resolve(process.cwd(), "dist", "content.json");
 /** Hanya yang tayang. `draft` tidak pernah ikut — itu yang membuat tombol
  *  Publish aman ditekan kapan saja meski ada lowongan lain yang setengah jadi. */
 async function collect(): Promise<ContentPayload> {
-  const [jobRows, valueRows, crewRows] = await Promise.all([
-    listJobs({ includeDrafts: false }),
-    listValues({ includeDrafts: false }),
-    listCrew({ includeDrafts: false }),
-  ]);
+  const [jobRows, valueRows, crewRows, projectRows, studyRows] =
+    await Promise.all([
+      listJobs({ includeDrafts: false }),
+      listValues({ includeDrafts: false }),
+      listCrew({ includeDrafts: false }),
+      listWorkProjects({ includeDrafts: false }),
+      listCaseStudies({ includeDrafts: false }),
+    ]);
 
   const publicJobs: Job[] = jobRows.map(
     ({ updatedAt: _u, publishedAt: _p, unpublished: _n, ...job }) => job,
@@ -60,12 +73,23 @@ async function collect(): Promise<ContentPayload> {
     ({ updatedAt: _u, publishedAt: _p, unpublished: _n, ...member }) => member,
   );
 
+  const publicProjects: WorkProject[] = projectRows.map(
+    ({ updatedAt: _u, publishedAt: _p, unpublished: _n, ...project }) =>
+      project,
+  );
+
+  const publicCaseStudies: CaseStudy[] = studyRows.map(
+    ({ updatedAt: _u, publishedAt: _p, unpublished: _n, ...study }) => study,
+  );
+
   return {
     version: CONTENT_VERSION,
     generatedAt: new Date().toISOString(),
     jobs: publicJobs,
     values: publicValues,
     crew: publicCrew,
+    projects: publicProjects,
+    caseStudies: publicCaseStudies,
   };
 }
 
@@ -128,6 +152,8 @@ export type PublishResult = {
   jobs: number;
   values: number;
   crew: number;
+  projects: number;
+  caseStudies: number;
   generatedAt: string;
   warning: string | null;
 };
@@ -149,6 +175,8 @@ export async function publish(actor: Actor): Promise<PublishResult> {
   await db.update(jobs).set({ publishedAt: now });
   await db.update(peopleValues).set({ publishedAt: now });
   await db.update(crewMembers).set({ publishedAt: now });
+  await db.update(workProjects).set({ publishedAt: now });
+  await db.update(caseStudies).set({ publishedAt: now });
 
   const warning = await purgeCloudflare();
 
@@ -160,6 +188,8 @@ export async function publish(actor: Actor): Promise<PublishResult> {
       jobs: payload.jobs.length,
       values: payload.values.length,
       crew: payload.crew.length,
+      projects: payload.projects.length,
+      caseStudies: payload.caseStudies.length,
       generatedAt: payload.generatedAt,
     },
   });
@@ -168,6 +198,8 @@ export async function publish(actor: Actor): Promise<PublishResult> {
     jobs: payload.jobs.length,
     values: payload.values.length,
     crew: payload.crew.length,
+    projects: payload.projects.length,
+    caseStudies: payload.caseStudies.length,
     generatedAt: payload.generatedAt,
     warning,
   };
@@ -210,29 +242,50 @@ function menunggu(r: Stamps): boolean {
  *  Satu angka untuk SEMUA entitas: yang ditanyakan editor adalah "apa masih
  *  ada yang perlu saya publish", bukan "berapa di tabel mana". */
 export async function pendingCount(): Promise<number> {
-  const [jobRows, valueRows, crewRows] = await Promise.all([
-    db
-      .select({
-        updatedAt: jobs.updatedAt,
-        publishedAt: jobs.publishedAt,
-        deletedAt: jobs.deletedAt,
-      })
-      .from(jobs),
-    db
-      .select({
-        updatedAt: peopleValues.updatedAt,
-        publishedAt: peopleValues.publishedAt,
-        deletedAt: peopleValues.deletedAt,
-      })
-      .from(peopleValues),
-    db
-      .select({
-        updatedAt: crewMembers.updatedAt,
-        publishedAt: crewMembers.publishedAt,
-        deletedAt: crewMembers.deletedAt,
-      })
-      .from(crewMembers),
-  ]);
+  const [jobRows, valueRows, crewRows, projectRows, studyRows] =
+    await Promise.all([
+      db
+        .select({
+          updatedAt: jobs.updatedAt,
+          publishedAt: jobs.publishedAt,
+          deletedAt: jobs.deletedAt,
+        })
+        .from(jobs),
+      db
+        .select({
+          updatedAt: peopleValues.updatedAt,
+          publishedAt: peopleValues.publishedAt,
+          deletedAt: peopleValues.deletedAt,
+        })
+        .from(peopleValues),
+      db
+        .select({
+          updatedAt: crewMembers.updatedAt,
+          publishedAt: crewMembers.publishedAt,
+          deletedAt: crewMembers.deletedAt,
+        })
+        .from(crewMembers),
+      db
+        .select({
+          updatedAt: workProjects.updatedAt,
+          publishedAt: workProjects.publishedAt,
+          deletedAt: workProjects.deletedAt,
+        })
+        .from(workProjects),
+      db
+        .select({
+          updatedAt: caseStudies.updatedAt,
+          publishedAt: caseStudies.publishedAt,
+          deletedAt: caseStudies.deletedAt,
+        })
+        .from(caseStudies),
+    ]);
 
-  return [...jobRows, ...valueRows, ...crewRows].filter(menunggu).length;
+  return [
+    ...jobRows,
+    ...valueRows,
+    ...crewRows,
+    ...projectRows,
+    ...studyRows,
+  ].filter(menunggu).length;
 }

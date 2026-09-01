@@ -6,20 +6,28 @@ terpisah, `Documentations.md` — dua berkas ini sengaja tidak dicampur.
 
 Terakhir diupdate: **1 September 2026**.
 
-**Status ringkas:** **tiga entitas selesai dan terverifikasi di lokal** —
-lowongan, nilai ("What We Stand For"), dan crew ("The Crew"). Delapan entitas
-konten lain belum dikerjakan. Deploy ke VPS belum dikerjakan.
+**Status ringkas:** **lima entitas selesai dan terverifikasi di lokal** —
+lowongan, nilai ("What We Stand For"), dan crew ("The Crew") di halaman People;
+**Selected work** dan **case study** di halaman Work. Tujuh entitas konten lain
+belum dikerjakan. Deploy ke VPS belum dikerjakan.
 
 - Cabang: `feat/cms-lowongan` (`main` 31 Agu sudah di-merge masuk lewat `99937f5`)
-- Kode CMS-nya sendiri: **54 berkas, ~9.500 baris** di `shared/` + `server/` +
-  `admin/src/` — panel adminnya saja ~3.670 baris
-- Test: `bun run test` → **70 berkas, 580 test hijau** (161 di antaranya milik CMS)
-- Lima probe end-to-end lewat Brave: `probe-admin`, `probe-nilai-admin`,
-  `probe-crew-admin`, `probe-tema-admin`, `probe-job-page`
+- Kode CMS-nya sendiri: **69 berkas, ~13.500 baris** di `shared/` + `server/` +
+  `admin/src/` — panel adminnya saja ~4.130 baris
+- Test: `bun run test` → **76 berkas, 702 test hijau** (283 di antaranya milik CMS)
+- Tujuh probe end-to-end lewat Brave: `probe-admin`, `probe-nilai-admin`,
+  `probe-crew-admin`, `probe-proyek-admin`, `probe-case-study-admin`,
+  `probe-tema-admin`, `probe-job-page`
 
-Yang berubah sejak slice pertama, selain dua entitas baru: **masuk kini dengan
+Yang berubah sejak slice pertama, selain empat entitas baru: **masuk kini dengan
 kata sandi saja** (§7), panel punya **beranda dari peta konten situs** dan
 **menu sisi** (§11), dan ada **tema gelap** (§11a).
+
+Dua slice terakhir memindahkan seluruh isi halaman **Work** ke CMS, dan keduanya
+membawa hal yang belum pernah ada di tiga slice People: daftar yang **boleh
+menyusut sampai kosong** di halaman yang sudah terlanjur menganggapnya tetap
+(§14), dan satu kolom teks yang **bentuknya dibawa spasi putih**, bukan struktur
+data (§5c).
 
 ---
 
@@ -97,22 +105,28 @@ Website CSI V2/
 │   ├── data/jobs.ts             baca store  (isi lama → jobsFallback.ts)
 │   ├── data/careerRoles.ts      baca store  (isi lama → careerRolesFallback.ts)
 │   ├── data/people.ts           baca store  (isi lama → crewFallback.ts + valuesFallback.ts)
-│   └── data/{jobs,careerRoles,crew,values}Fallback.ts   isi bundle
+│   ├── data/work.ts             baca store  (isi lama → workProjectsFallback.ts)
+│   ├── data/caseStudies.ts      baca store  (isi lama → caseStudiesFallback.ts)
+│   └── data/{jobs,careerRoles,crew,values,workProjects,caseStudies}Fallback.ts
 ├── shared/             tipe & validasi dipakai bertiga
 │   ├── content.ts               ContentPayload + CONTENT_VERSION
 │   ├── contentMap.ts            peta konten situs → beranda & menu sisi panel
-│   ├── job.ts   · validateJob.ts
-│   ├── value.ts · validateValue.ts
-│   └── crew.ts  · validateCrew.ts
+│   ├── job.ts         · validateJob.ts
+│   ├── value.ts       · validateValue.ts
+│   ├── crew.ts        · validateCrew.ts
+│   ├── workProject.ts · validateWorkProject.ts
+│   └── caseStudy.ts   · validateCaseStudy.ts   (+ normalizeDesc — §5c)
 ├── server/             API + Postgres, proses Node terpisah
 │   ├── app.ts / index.ts        rakit app · buka port
-│   ├── db/schema.ts             11 tabel Drizzle
-│   ├── db/migrations/           SQL hasil drizzle-kit (0000 → 0002)
+│   ├── db/schema.ts             15 tabel Drizzle
+│   ├── db/migrations/           SQL hasil drizzle-kit (0000 → 0004)
 │   ├── db/seed.ts               isi DB dari literal repo, sekali jalan per tabel
 │   ├── jobsRepo.ts              transaksi 4 tabel
 │   ├── valuesRepo.ts            satu baris + reorder
 │   ├── crewRepo.ts              transaksi 2 tabel
-│   ├── routes/{auth,jobs,values,crew,images,publish}.ts
+│   ├── workProjectsRepo.ts      transaksi 2 tabel + reorder
+│   ├── caseStudiesRepo.ts       transaksi 2 tabel + reorder
+│   ├── routes/{auth,jobs,values,crew,workProjects,caseStudies,images,publish}.ts
 │   ├── auth.ts · audit.ts · images.ts · publish.ts · env.ts
 │   ├── createUser.ts            bikin akun editor dari terminal
 │   └── tsconfig.json            WAJIB — lihat §3a
@@ -124,6 +138,8 @@ Website CSI V2/
 │       ├── DaftarLowongan · FormLowongan
 │       ├── DaftarNilai    · FormNilai
 │       ├── DaftarCrew     · FormCrew
+│       ├── DaftarProyek   · FormProyek       (Selected work)
+│       ├── DaftarCaseStudy · FormCaseStudy
 │       ├── PemilihFoto · BarPublish · Tema.tsx
 │       └── ui.tsx · api.ts · styles.css
 └── uploads/            gambar unggahan (di luar git)
@@ -147,7 +163,7 @@ Panel ini tidak butuh satu pun dari itu.
 
 ## §4 Skema database
 
-Sebelas tabel, tiga entitas konten. Yang paling penting di slice pertama:
+Lima belas tabel, lima entitas konten. Yang paling penting di slice pertama:
 **menyatukan dua sumber yang dulu terpisah** — daftar lowongan di `Careers.tsx`
 dan isi halaman di `src/data/jobs.ts` — menjadi satu baris `jobs`. Penyatuan itu
 prasyarat, bukan kerapian: dua tempat untuk satu lowongan mustahil dijelaskan ke
@@ -173,6 +189,19 @@ crew_members
 
 crew_socials        (member_id, position) PK · platform, url
 
+work_projects
+  id, title, client, year, outcome, photo_id → images,
+  state, sort_order, created_at, updated_at, published_at, deleted_at
+
+work_project_tags   (project_id, position) PK · label
+
+case_studies
+  id, title, client, year, industry, outcome, quote, desc,
+  photo_id → images, state, sort_order,
+  created_at, updated_at, published_at, deleted_at
+
+case_study_scopes   (study_id, position) PK · label
+
 images              id, path (unique), source (static|upload),
                     original_name, width, height, bytes
 users               id, email (unique), password_hash, name, deleted_at
@@ -182,11 +211,11 @@ audit_log           id, user_id, entity, entity_id, action, at, snapshot (jsonb)
 
 Enum Postgres sungguhan, bukan `text` + konvensi: `job_state`, `lang`,
 `bullet_kind`, `image_source`, `value_state`, `crew_state`, `crew_category`,
-`social_platform`.
+`social_platform`, `work_project_state`, `case_study_state`.
 
-### §4a Pola yang dipakai ulang ketiga entitas
+### §4a Pola yang dipakai ulang kelima entitas
 
-Ketiganya berbagi lima keputusan yang sama, dan itu yang membuat entitas keempat
+Kelimanya berbagi lima keputusan yang sama, dan itu yang membuat entitas keenam
 nanti tinggal menyalin:
 
 1. **`state` menentukan apa yang tayang.** `draft` tidak pernah ikut masuk
@@ -196,7 +225,8 @@ nanti tinggal menyalin:
 2. **Hapus = isi `deleted_at`, tidak pernah `DELETE`.** Editor non-teknis akan
    menghapus sesuatu yang penting, cepat atau lambat.
 3. **Unique index PARSIAL untuk baris hidup saja** — `jobs_slug_alive`,
-   `people_values_title_alive`, `crew_members_name_alive`, semuanya
+   `people_values_title_alive`, `crew_members_name_alive`,
+   `work_projects_title_alive`, `case_studies_title_alive`, semuanya
    `where deleted_at is null`. Slug/judul/nama milik baris yang sudah dihapus
    tidak boleh terkunci selamanya, dan orang yang kembali bergabung adalah
    kejadian yang wajar.
@@ -213,9 +243,21 @@ sama membuat React memakai ulang node yang salah, dan yang terlihat bukan error
 melainkan satu panel yang isinya tercampur atau satu kartu yang fotonya milik
 orang lain.
 
+Di halaman Work taruhannya lebih besar lagi: judul proyek dipakai sebagai `key`
+di **lima tempat sekaligus** di `CaseGrid.tsx` + `CaseGridMobileStack.tsx`
+(kartu kipas, panel isi yang beranimasi, deretan titik, dan dua di tumpukan versi
+ponsel), dan judul case study jadi `key` tiap blok di `CaseStudySpotlight.tsx`.
+Dua judul kembar di sana bukan panel tercampur melainkan kartu yang gambarnya
+milik proyek lain, muncul cuma saat kipasnya kebetulan berputar ke situ.
+
+Label anaknya ikut dijaga di validasi, bukan di database: `work_project_tags` dan
+`case_study_scopes` sama-sama dirender `key={label}`, jadi dua label kembar di
+SATU baris ditolak validator sebelum tersimpan (§5b).
+
 ### §4b Yang BERBEDA di tiap entitas
 
-**Nilai punya `sort_order`, crew TIDAK — dan itu keputusan, bukan kelupaan.**
+**Empat entitas punya `sort_order`, crew TIDAK — dan itu keputusan, bukan
+kelupaan.**
 
 Panel nilai bertumpuk sticky di `PeopleValues.tsx`: yang terakhir adalah yang
 menutup seluruh tumpukan dan paling lama dilihat, jadi urutannya adalah konten
@@ -228,6 +270,32 @@ editor bisa menekan "Naikkan" di panel lalu melihat situs mengabaikannya
 sepenuhnya: perubahan yang tersimpan, tidak error, dan tidak pernah terlihat.
 Kalau suatu hari urutan manual memang diinginkan, yang harus berubah lebih dulu
 adalah `TheCrew.tsx`, bukan skemanya.
+
+Di `work_projects` urutannya bahkan lebih keras lagi daripada di nilai: kartu
+pertama adalah yang **terbuka saat halaman Work dibuka**, dan urutan yang sama
+dipakai putaran otomatis lima detik sekali serta deretan titik di bawahnya.
+`case_studies` lebih tenang — semua bloknya terlihat sekaligus — tapi tetap
+urutan baca.
+
+**Proyek dan case study tabel TERPISAH, meski tetangga di halaman yang sama.**
+Keduanya memang punya judul, klien, tahun, dan satu baris hasil, jadi godaan
+menyatukannya nyata. Yang menghentikannya: yang satu **baris dalam daftar**, yang
+satu lagi **bacaan** — kutipan pembuka, beberapa paragraf uraian, dan lingkup
+pekerjaan. Satu tabel gabungan berarti setengah kolomnya selalu kosong di separuh
+barisnya, dan satu form yang memaksa editor menebak isian mana yang berlaku untuk
+benda yang sedang dia tulis.
+
+**Tahun disimpan `text`, bukan `integer`.** Ia tidak pernah dihitung, diurutkan,
+atau dibandingkan — cuma dicetak apa adanya di sebelah nama klien. Kolom angka
+hanya akan melarang bentuk yang sah dibaca orang, misalnya `2023–2024` untuk
+pekerjaan yang melewati pergantian tahun. Yang menjaga isinya validasi, bukan
+tipe kolomnya (§5b).
+
+**`case_studies.desc` satu kolom berisi BEBERAPA paragraf, bukan tabel anak** —
+padahal `work_project_tags` dan `case_study_scopes` di sebelahnya justru tabel
+anak. Bedanya: paragraf tidak pernah diurutkan ulang, ditambah satu per satu,
+atau dibaca terpisah dari tetangganya. Ia satu tulisan yang kebetulan punya jeda.
+Konsekuensinya dibayar di tempat lain — lihat §5c.
 
 **Union tertutup vs teks bebas.** `department` di lowongan teks bebas;
 `category` di crew enum tertutup. Bedanya bukan selera: `TheCrew.tsx` memakai
@@ -243,7 +311,10 @@ pengunjung.
 **`crew_state` enum sendiri, bukan menumpang `value_state`** meski isinya
 kebetulan sama hari ini (`draft` | `live`). Enum yang dipakai bersama membuat
 penambahan keadaan untuk salah satu entitas — misal "alumni" untuk crew —
-diam-diam ikut jadi pilihan sah di form yang lain.
+diam-diam ikut jadi pilihan sah di form yang lain. `work_project_state` dan
+`case_study_state` mengulang keputusan yang sama, jadi empat enum berisi
+`draft | live` yang identik hari ini; proyek mungkin butuh "arsip" suatu saat,
+dan saat itu tiba ia tidak boleh muncul sendiri di form crew.
 
 **Kenapa `people_values`, bukan `values`.** `VALUES` kata kunci SQL, dan tabel
 bernama begitu memaksa setiap query menulis tanda kutip yang cepat atau lambat
@@ -259,7 +330,8 @@ unique index parsial, jsonb, dan transaksi.
 ### §4c Seed sekali jalan, digerbangi PER TABEL
 
 `bun run db:seed` membaca `FALLBACK_ROLES`, `FALLBACK_JOBS`, `FALLBACK_VALUES`,
-dan `FALLBACK_CREW` dari repo lalu memasukkannya ke Postgres. Konten yang sudah
+`FALLBACK_CREW`, `FALLBACK_WORK_PROJECTS`, dan `FALLBACK_CASE_STUDIES` dari repo
+lalu memasukkannya ke Postgres. Konten yang sudah
 ditulis tidak perlu diketik ulang, dan tidak ada kesempatan salah ketik saat
 memindahkannya.
 
@@ -271,18 +343,23 @@ MENGHAPUS suntingan editor.
 > sudah pernah di-seed lowongan akan membuat nilai dan crew dilewati diam-diam
 > kalau semuanya bergantung pada satu pemeriksaan: skripnya berhenti di baris
 > pertama sambil melapor "sudah terisi", dan dua tabel lain tetap kosong tanpa
-> ada yang salah kelihatannya.
+> ada yang salah kelihatannya. Aturan yang sama dipatuhi `seedWorkProjects()` dan
+> `seedCaseStudies()` — dan di situlah gerbang per-tabel akhirnya benar-benar
+> terpakai, karena database lokal SUDAH terisi tiga entitas sebelumnya saat
+> keduanya ditambahkan.
 
-Semua baris nilai dan crew masuk sebagai **`live`, bukan `draft`** — tiga belas
-orang dan tiga nilai itu memang sudah tayang hari ini. Menaruhnya sebagai draf
-akan MENGOSONGKAN halaman People pada publish pertama, kerusakan yang tidak
-kelihatan sampai ada yang menekan tombolnya.
+Semua baris nilai, crew, proyek, dan case study masuk sebagai **`live`, bukan
+`draft`** — tiga belas orang, tiga nilai, delapan kartu proyek, dan dua cerita itu
+memang sudah tayang hari ini. Menaruhnya sebagai draf akan MENGOSONGKAN halaman
+People dan Work pada publish pertama, kerusakan yang tidak kelihatan sampai ada
+yang menekan tombolnya.
 
 ---
 
 ## §5 Validasi — ditulis sekali, dipakai dua kali
 
-`shared/validateJob.ts`, `validateValue.ts`, dan `validateCrew.ts` dipanggil
+`shared/validateJob.ts`, `validateValue.ts`, `validateCrew.ts`,
+`validateWorkProject.ts`, dan `validateCaseStudy.ts` dipanggil
 **admin** saat mengisi form dan **server** saat menyimpan. Server tetap memeriksa
 meski admin sudah memeriksa: yang menjaga data bukan antarmuka, melainkan
 endpoint.
@@ -307,11 +384,25 @@ tanpa memberi ruang untuk esai.
 
 **Crew:** nama 80 · jabatan 80 · tautan 300, maksimal satu tautan per platform.
 
+**Selected work:** nama proyek 60 · klien 60 · tahun 20 · baris hasil 60 · label
+30 per item, maksimal 6.
+
+**Case study:** judul 60 · klien 60 · tahun 20 · sektor 40 · baris hasil 60 ·
+kutipan pembuka 240 · cerita 3.000 dan maksimal 8 paragraf · lingkup 30 per item,
+maksimal 6.
+
+Angka-angka Work diambil dari tata letaknya juga, dan dua kelompok yang berbeda
+di dalam satu entitas: yang **di atas gambar** (meta, judul, hasil) ketat karena
+tiap baris tambahan naik menutupi gambarnya, sedangkan yang **di dalam cerita**
+(kutipan, uraian) longgar karena panelnya memang tumbuh mengikuti isi. Di
+kelompok kedua yang dijaga bukan tata letak yang rusak melainkan pembaca yang
+menyerah: satu case study adalah satu halaman bacaan, bukan laporan.
+
 ### §5a Ketatnya IKUT STATUS
 
-Ketiganya memakai aturan yang sama: **draf cuma perlu isian pengenalnya** —
-judul untuk nilai, nama + departemen untuk crew, dan seterusnya — supaya editor
-bisa menyimpan pekerjaan setengah jalan tanpa dimarahi. Pemeriksaan penuh baru
+Kelimanya memakai aturan yang sama: **draf cuma perlu isian pengenalnya** —
+judul untuk nilai, nama + departemen untuk crew, judul saja untuk proyek dan case
+study — supaya editor bisa menyimpan pekerjaan setengah jalan tanpa dimarahi. Pemeriksaan penuh baru
 berlaku begitu statusnya Tayang/Live, yaitu tepat saat isinya akan dibaca
 pengunjung.
 
@@ -321,6 +412,12 @@ pengunjung.
   Panel nilai memang punya keadaan tanpa foto — bingkai bertuliskan "Photo" —
   tapi itu tempat penampung untuk masa isinya belum ada, bukan tampilan yang
   boleh dilihat pengunjung.
+- **Gambar wajib untuk proyek dan case study yang Live, dan ini lebih keras
+  daripada foto nilai.** Kartu di `CaseGrid.tsx` seluruhnya `<img>` yang memenuhi
+  kotaknya — tanpa gambar yang tayang bukan kartu polos melainkan ikon "gambar
+  rusak" bawaan peramban, di kartu terdepan halaman Work. Di case study,
+  gambarnya sekaligus **tombol pembuka cerita**: tanpa gambar tidak ada yang bisa
+  diklik untuk membacanya.
 - **Foto TIDAK wajib untuk crew.** Kotak tanpa foto punya tampilan yang memang
   dirancang (ikon orang di `CrewAvatar`), dan empat dari tiga belas baris yang
   tayang hari ini memang begitu. Mewajibkannya berarti seed dari konten yang
@@ -336,9 +433,54 @@ pengunjung.
   tidak jalan". `"#"` diterima apa adanya karena itu isi hampir semua baris hari
   ini — menolaknya berarti seed dari konten yang sudah tayang gagal seluruhnya.
 
-`JOB_FIELD_ORDER` / `VALUE_FIELD_ORDER` / `CREW_FIELD_ORDER` menetapkan urutan
+- **Tahun harus memuat empat angka.** Kolomnya `text` supaya `2023–2024` boleh
+  (§4b), tapi tanpa penjaga apa pun "tahun lalu" atau isian setengah akan lolos
+  ke situs dan dicetak apa adanya di sebelah nama klien. Yang diperiksa cuma
+  `\d{4}` ada di dalamnya — cukup untuk menahan isian yang bukan tahun, tanpa
+  melarang bentuk yang benar.
+- **Baris hasil WAJIB untuk case study, tapi TIDAK untuk kartu proyek.** Ini satu
+  aturan yang sengaja berbeda di antara dua entitas yang mirip, dan sebabnya ada
+  di komponennya: `CaseGrid.tsx` sudah menggerbangi barisnya berikut garis
+  pemisah di atasnya, jadi kartu tanpa hasil adalah tampilan yang memang
+  dirancang — tidak semua pekerjaan punya satu angka yang pantas dipamerkan.
+  `CaseStudySpotlight.tsx` sebaliknya mencetaknya tebal di antara judul dan
+  ajakan "Read the full story"; kosong di sana berarti ruang menganga di tempat
+  yang paling dilihat.
+- **Label kembar dalam satu baris ditolak, tanpa memperhatikan besar-kecil
+  huruf.** Berlaku untuk label proyek dan lingkup case study: keduanya dirender
+  `key={label}`, dan "Web Platform" + "web platform" adalah dua key berbeda bagi
+  React tapi satu hal yang sama bagi pembaca. Baris kosong dibuang diam-diam
+  (form-nya memang menyediakan baris kosong untuk diketik), yang kembar
+  ditolak dengan kalimat.
+
+`JOB_FIELD_ORDER` / `VALUE_FIELD_ORDER` / `CREW_FIELD_ORDER` /
+`WORK_PROJECT_FIELD_ORDER` / `CASE_STUDY_FIELD_ORDER` menetapkan urutan
 isian, dipakai admin untuk memilih masalah PERTAMA dan melompatkan fokus ke sana
 — bukan menumpahkan sepuluh galat sekaligus.
+
+### §5c Uraian case study: satu-satunya bentuk yang dibawa SPASI PUTIH
+
+`case_studies.desc` menyimpan beberapa paragraf dalam satu kolom, dipisah baris
+kosong, dan situs memecahnya lagi dengan `desc.split("\n\n")`. Artinya bentuk
+tampilannya tidak dijaga struktur data mana pun — ia dijaga **karakter yang tidak
+terlihat**, dan itu satu-satunya tempat seperti itu di seluruh CMS ini.
+
+Yang menjaganya `normalizeDesc()` di `shared/validateCaseStudy.ts`, dipakai
+**form dan server sekaligus** — bukan hanya salah satu. Kalau cuma form yang
+merapikan, teks yang divalidasi bukan teks yang tersimpan, dan uraian sepanjang
+2.998 karakter bisa lolos pemeriksaan lalu mendarat di database sebagai 3.010.
+Tiga hal dirapikan, semuanya karena tidak terlihat saat diketik:
+
+| Ketikan | Jadi | Kenapa |
+|---|---|---|
+| `\r\n` (Windows) | `\n` | `split("\n\n")` tidak mengenali `\r\n\r\n` |
+| Enter tiga kali atau lebih | satu baris kosong | yang menekan Enter empat kali memaksudkan satu jeda, bukan dua paragraf kosong |
+| spasi di ujung baris | dibuang | `"\n \n"` bukan pemisah paragraf, dan spasinya tak terlihat di textarea |
+
+**Satu Enter BUKAN paragraf baru** — itu perilaku yang benar (`\n` tunggal
+memang bukan pemisah), tapi editor tidak punya cara melihat bedanya di kotak
+teks. Karena itu form menampilkan penghitung hidup di bawahnya: *"2 paragraf akan
+tayang."* Angkanya yang memberi tahu, bukan tampilan kotaknya.
 
 ---
 
@@ -374,6 +516,20 @@ GET    /api/crew/:id
 PUT    /api/crew/:id
 DELETE /api/crew/:id
 
+GET    /api/projects            Selected work — daftar admin (TERMASUK draft)
+POST   /api/projects            201
+POST   /api/projects/urutkan    seluruh daftar id dalam urutan barunya
+GET    /api/projects/:id
+PUT    /api/projects/:id
+DELETE /api/projects/:id
+
+GET    /api/case-studies          daftar untuk admin (TERMASUK draft)
+POST   /api/case-studies          201
+POST   /api/case-studies/urutkan  seluruh daftar id dalam urutan barunya
+GET    /api/case-studies/:id
+PUT    /api/case-studies/:id
+DELETE /api/case-studies/:id
+
 GET    /api/images
 POST   /api/images           multipart → resize + WebP
 
@@ -392,8 +548,8 @@ yang tidak ditepati kode ini, dan cara menemukannya adalah lewat halaman yang
 tiba-tiba kosong.
 
 **`requireLogin` dipasang di SATU tempat**, sebagai `app.use()` untuk seluruh
-prefix `/api/jobs`, `/api/values`, `/api/crew`, `/api/images`, `/api/publish` —
-bukan ditempel per handler. Penjaga yang ditempel satu per satu akan terlewat
+prefix `/api/jobs`, `/api/values`, `/api/crew`, `/api/projects`,
+`/api/case-studies`, `/api/images`, `/api/publish` — bukan ditempel per handler. Penjaga yang ditempel satu per satu akan terlewat
 pada endpoint berikutnya yang ditambahkan, dan lubang seperti itu tidak
 memunculkan error: endpoint-nya justru bekerja dengan baik, untuk siapa saja.
 
@@ -432,6 +588,8 @@ Dua perlakuan yang berbeda di dalamnya, dan bedanya disengaja:
 | Lowongan | `jobs` + 3 tabel anak | ya |
 | Nilai | `people_values` saja | tidak perlu |
 | Crew | `crew_members` + `crew_socials` | ya |
+| Selected work | `work_projects` + `work_project_tags` | ya |
+| Case study | `case_studies` + `case_study_scopes` | ya |
 
 Anak-anaknya **dihapus lalu ditulis ulang, bukan di-diff** — jumlah barisnya
 belasan, dan diff yang salah jauh lebih mahal daripada tulis ulang yang benar.
@@ -447,12 +605,21 @@ Dua detail yang gampang terlewat, berlaku untuk semua entitas:
   `sortOrder = min - 1` sehingga muncul di ATAS daftar — editor baru saja
   mengetiknya. Nilai baru justru mendarat di BAWAH, karena di sana urutannya
   adalah tumpukan panel yang terlihat pengunjung: menyisipkan nilai baru ke
-  puncak berarti mengubah panel pembuka halaman tanpa diminta.
+  puncak berarti mengubah panel pembuka halaman tanpa diminta. Proyek dan case
+  study mengikuti nilai, dan untuk proyek alasannya paling kuat dari semuanya:
+  kartu pertama adalah yang terbuka saat halaman Work dibuka. Kalau memang harus
+  di depan, tombol "Naikkan" ada di sebelahnya.
+- **`desc` case study dirapikan `normalizeDesc()` sebelum disimpan, di SETIAP
+  jalur tulis** — saat dibuat maupun saat disimpan ulang. Melewatkannya di salah
+  satunya berarti teks yang lolos validasi bukan teks yang mendarat di database
+  (§5c).
 
 ### §6b Kenapa urutan punya endpoint sendiri
 
-`POST /api/values/urutkan` menerima **seluruh daftar id dalam urutan barunya**,
-bukan satu id + posisi baru. Daftar yang tidak menyebut semua baris hidup ditolak
+`POST /api/values/urutkan` — dan sesudahnya `/api/projects/urutkan` serta
+`/api/case-studies/urutkan`, tiga entitas dengan endpoint yang bentuknya persis
+sama — menerima **seluruh daftar id dalam urutan barunya**, bukan satu id + posisi
+baru. Daftar yang tidak menyebut semua baris hidup ditolak
 bulat-bulat (422): yang tidak disebut akan tertinggal di `sortOrder` lamanya dan
 bertabrakan dengan yang baru — urutan hasilnya tidak sama dengan yang mana pun
 dari kedua versi, dan itu justru bentuk kerusakan yang paling sulit dibaca.
@@ -462,6 +629,10 @@ perubahan yang tayang, jadi badge "belum tayang" harus menyala.
 
 Endpoint terpisah dan bukan isian di form, karena isian berarti meminta editor
 mengarang angka `sortOrder` padahal yang dia lihat adalah tumpukan panel.
+
+Crew **sengaja tidak punya endpoint ini** meski tabelnya mirip: halaman People
+mengurutkan crew A-Z sendiri, jadi tombol Naikkan di sana akan menggerakkan baris
+di panel tanpa menggerakkan apa pun di situs (§4b).
 
 > ⚠️ `POST /urutkan` didaftarkan **sebelum** `/:id`. Hono mencocokkan route sesuai
 > urutan pendaftaran; kalau suatu saat ada `POST /:id` yang didaftarkan lebih
@@ -523,10 +694,23 @@ jadi gambar kecil tidak dipaksa membesar) → **WebP kualitas 82** → simpan ke
 tipe yang diterima JPEG, PNG, WebP, AVIF, HEIC/HEIF (foto dari iPhone masuk apa
 adanya, tidak perlu dikonversi dulu).
 
-`PemilihFoto` dipakai **ketiga form apa adanya** — lowongan, nilai, dan crew.
-Komponennya menampilkan dua sumber sekaligus: foto lama di `public/careers/` dan
-`public/people/` (baris `images` ber-`source: "static"`, dimasukkan saat seed) dan
-foto unggahan baru (`source: "upload"`). Editor tidak perlu tahu bedanya.
+`PemilihFoto` dipakai **kelima form** — lowongan, nilai, crew, Selected work, dan
+case study. Komponennya menampilkan dua sumber sekaligus: foto lama di
+`public/careers/` dan `public/people/` (baris `images` ber-`source: "static"`,
+dimasukkan saat seed) dan foto unggahan baru (`source: "upload"`). Editor tidak
+perlu tahu bedanya.
+
+Yang berubah saat slice Work masuk: **kata-katanya**. Label "Foto" dan petunjuk
+"Foto orangnya" tidak masuk akal untuk kartu proyek, jadi `PemilihFoto` mendapat
+dua prop opsional `label` dan `petunjuk` yang **defaultnya persis kalimat
+lowongan** — form lama tidak perlu disentuh sama sekali, dua form baru mengirim
+kata-katanya sendiri ("Gambar proyek", "Gambar sampul").
+
+Gambar proyek dan case study yang lama semuanya **hotlink Unsplash**, bukan berkas
+di disk. Seed tetap mendaftarkannya ke tabel `images` dengan `source: "static"`,
+dan itu jawaban yang benar meski tidak ada berkasnya: satu-satunya tugas kolom
+`source` adalah "CMS boleh memilih ini, tapi TIDAK BOLEH menghapusnya dari disk"
+— dan URL yang memang tidak ada di disk jelas masuk kategori itu.
 
 Satu berkas statis bisa dipakai lebih dari satu entitas, jadi seed memasangnya
 dengan `onConflictDoNothing` lalu **mencari baris lamanya kalau tidak ada yang
@@ -546,14 +730,14 @@ nilai atau crew tersimpan tanpa `photoId`.
 
 `POST /api/publish`:
 
-1. Query semua baris non-draft non-deleted dari **ketiga entitas sekaligus**
+1. Query semua baris non-draft non-deleted dari **kelima entitas sekaligus**
    (`Promise.all`) → rakit `ContentPayload`
-   (`{ version: 1, generatedAt, jobs, values, crew }`).
+   (`{ version: 1, generatedAt, jobs, values, crew, projects, caseStudies }`).
 2. **Tulis atomik** ke `dist/content.json`: tulis ke `content.json.tmp-<pid>` di
    direktori yang sama, lalu `rename`. `rename` dalam satu filesystem bersifat
    atomik di tingkat OS, jadi pengunjung tidak pernah membaca berkas setengah
    tertulis.
-3. Tandai `published_at` di ketiga tabel — **sesudah** berkasnya benar-benar
+3. Tandai `published_at` di kelima tabel — **sesudah** berkasnya benar-benar
    tertulis. Menandai lebih dulu lalu gagal menulis akan memadamkan badge "belum
    tayang" untuk perubahan yang sebenarnya tidak pernah tayang.
 4. Purge cache Cloudflare (kalau `CF_ZONE_ID` + `CF_PURGE_TOKEN` diisi).
@@ -562,7 +746,7 @@ nilai atau crew tersimpan tanpa `photoId`.
 5. Catat ke `audit_log`, dengan jumlah per entitas di snapshot-nya.
 
 **Kolom admin dibuang dari payload.** `updatedAt`, `publishedAt`, dan
-`unpublished` dilepas di `collect()` untuk ketiga entitas — bukan dibiarkan ikut
+`unpublished` dilepas di `collect()` untuk kelima entitas — bukan dibiarkan ikut
 "karena tidak ada yang membacanya": `content.json` diunduh SETIAP pengunjung, dan
 bocornya jadwal sunting internal ke publik bukan sesuatu yang perlu terjadi demi
 tiga baris yang tidak dipakai.
@@ -578,7 +762,7 @@ ditanyakan editor adalah "apa masih ada yang perlu saya publish", bukan "berapa
 di tabel mana".
 
 Aturannya cukup tiga cap waktu, jadi ia ditulis **sekali** sebagai fungsi
-`menunggu(r)` dan dipakai ketiga entitas. Kalau tiap entitas menyalin aturan ini,
+`menunggu(r)` dan dipakai kelima entitas. Kalau tiap entitas menyalin aturan ini,
 perbaikan seperti yang di bawah akan diperbaiki di satu tempat dan tetap salah di
 tempat lain.
 
@@ -590,6 +774,12 @@ tempat lain.
   berikutnya jalan, baris itu sudah lenyap dari `content.json` dan tidak menunggu
   apa-apa lagi.
 - **Draf tidak dihitung**, kecuali ia pernah tayang lalu diturunkan jadi draf.
+
+Kalimat konfirmasi di `BarPublish` dirakit dari kelima angka, **melewati yang
+nol**: "3 lowongan, 8 proyek" kalau memang cuma itu yang tayang, bukan "3
+lowongan, 0 nilai, 0 orang, 8 proyek, 0 case study". Daftarnya satu array
+`[jumlah, nama]` yang di-`filter` lalu di-`join`, jadi entitas keenam nanti cukup
+menambah satu baris.
 
 ---
 
@@ -617,8 +807,9 @@ disentuh (wilayah kerja Nico, lihat `INVARIANTS.md`).
 
 ### §10a Tiap bagian jatuh ke cadangan SENDIRI-SENDIRI
 
-`contentJobs()`, `contentValues()`, dan `contentCrew()` masing-masing memeriksa
-bagiannya sendiri, dan bagian yang tidak ada TIDAK memvonis seluruh berkas.
+`contentJobs()`, `contentValues()`, `contentCrew()`, `contentWorkProjects()`, dan
+`contentCaseStudies()` masing-masing memeriksa bagiannya sendiri, dan bagian yang
+tidak ada TIDAK memvonis seluruh berkas.
 
 Sebabnya arah kompatibilitas yang satunya: situs versi baru bisa memuat
 `content.json` yang ditulis sebelum nilai dan crew masuk CMS, dan berkas seperti
@@ -638,6 +829,8 @@ sesudah Publish dan tidak punya cara menghapusnya.
 src/data/jobs.ts         jobPostings() · getJob(slug) · isJobPath(path)
 src/data/careerRoles.ts  careerRoles()
 src/data/people.ts       peopleValues() · crew()
+src/data/work.ts         workProjects()
+src/data/caseStudies.ts  caseStudies()
 ```
 
 Semuanya memanggil `content*()`; kalau `null`, mereka mengembalikan
@@ -652,11 +845,15 @@ Semuanya memanggil `content*()`; kalau `null`, mereka mengembalikan
 Terjemahan bentuk dilakukan di `people.ts`, sekali, alih-alih membuat tiap
 komponen memeriksa dua bentuk "kosong": `photo` selalu string di CMS (`""` kalau
 kosong) tapi opsional di situs, dan `social` selalu array di CMS tapi opsional di
-situs.
+situs. `work.ts` melakukan hal yang sama untuk satu field: `outcome: p.outcome ||
+undefined`, karena baris hasil boleh kosong di kartu proyek. `caseStudies.ts`
+justru TIDAK menerjemahkan apa pun — di sana semua field wajib, jadi bentuk CMS
+dan bentuk situs kebetulan sudah sama, dan menambahkan lapisan terjemahan kosong
+cuma menambah tempat yang bisa salah.
 
 ### §10c Yang disentuh di `src/components/sections/`
 
-Tiga berkas, semuanya perubahan kecil dengan satu alasan besar:
+Enam berkas, semuanya perubahan kecil dengan satu alasan besar:
 
 - **`Careers.tsx`** — literal `ROLES` ditukar `import { careerRoles }`.
 - **`PeopleValues.tsx`** — `VALUES` ditukar `peopleValues()`, plus
@@ -670,6 +867,18 @@ Tiga berkas, semuanya perubahan kecil dengan satu alasan besar:
   React merender apa pun, jadi hasilnya tetap sepanjang umur aplikasi — yang
   berubah cuma *kapan* dihitungnya, dari saat impor jadi saat render pertama.
   Itulah seluruh perbaikannya.
+- **`CaseGrid.tsx`** — `PROJECTS` ditukar `useMemo(() => workProjects(), [])`,
+  plus tiga penjaga daftar-menyusut yang dulu mustahil dibutuhkan (§14):
+  `if (total === 0) return null`, pembagian progres dijaga
+  `total > 1 ? offset / (total - 1) : 0`, dan indeks kartu aktif dijepit
+  `Math.min(active, total - 1)`.
+- **`CaseGridMobileStack.tsx`** — sumber datanya sama; yang berubah cuma dari mana
+  arraynya datang.
+- **`CaseStudySpotlight.tsx`** — `CASE_STUDIES` ditukar
+  `useMemo(() => caseStudies(), [])` plus `if (items.length === 0) return null`.
+  Baris hasil dan judul "Scope" tetap digerbangi meski validasi mewajibkan
+  isinya: `content.json` bisa saja ditulis versi server lain, dan gerbang satu
+  baris lebih murah daripada judul menggantung di atas ruang kosong.
 
 **Di dev, `content.json` disajikan plugin `serveContentJson()` di `vite.config.ts`**
 — `dist/` tidak disajikan sama sekali oleh dev server, jadi tanpa plugin ini
@@ -695,7 +904,11 @@ Bahasa Indonesia, hitam-putih, tanpa animasi, tanpa framework UI.
 | `FormNilai` | judul, baris pendek, uraian, foto, status |
 | `DaftarCrew` | Nama · Jabatan · Departemen · Foto · Status · Terakhir diubah |
 | `FormCrew` | nama, jabatan, departemen, foto, tautan sosial (maks satu per platform), status |
-| `PemilihFoto` | grid foto lama + unggah baru — dipakai ketiga form |
+| `DaftarProyek` | # · Nama proyek · Klien · Tahun · Status · Terakhir diubah, plus **Naikkan/Turunkan** |
+| `FormProyek` | nama proyek, klien, tahun, baris hasil (opsional), gambar, label (maks 6), status |
+| `DaftarCaseStudy` | # · Judul · Klien · Tahun · Status · Terakhir diubah, plus **Naikkan/Turunkan** |
+| `FormCaseStudy` | judul, klien, tahun, sektor, baris hasil, kutipan pembuka, cerita (dengan penghitung paragraf hidup), gambar sampul, lingkup kerja (maks 6), status |
+| `PemilihFoto` | grid foto lama + unggah baru — dipakai kelima form, label & petunjuknya bisa diganti per form |
 | `BarPublish` | menetap di bawah: "N perubahan belum tayang" + tombol Publish |
 | `Tema` | tombol terang/gelap di kepala panel (§11a) |
 
@@ -724,8 +937,17 @@ perlu bisa membedakan "tidak ada di panel karena belum dibuat" dari "tidak ada d
 panel karena saya tidak menemukannya"; yang kedua berakhir jadi pertanyaan ke
 developer, yang pertama tidak.
 
-Hari ini **3 dari 11 entri berstatus `siap`**: Nilai, Crew, Lowongan — ketiganya
-di halaman People.
+Hari ini **5 dari 12 entri berstatus `siap`**: Nilai, Crew, dan Lowongan di
+halaman People, plus Selected work dan Case study di halaman Work.
+
+> ⚠️ Peta ini pernah SALAH, dan salahnya cuma ketahuan karena dibaca manusia:
+> "Testimoni" terdaftar di halaman **Work**, padahal di situs ia ada di halaman
+> **Services**. Tidak ada test yang bisa menangkap itu sendiri — nama dan path
+> halamannya sama-sama sah, yang salah cuma penempatannya. Sekarang entri
+> testimoni membawa komentar yang menyebutkan letaknya, dan `contentMap.test.ts`
+> mengunci **daftar key tiap halaman apa adanya** (`keys("services")` harus persis
+> `["layanan", "testimoni"]`) supaya perpindahan berikutnya membuat test merah
+> alih-alih lolos diam-diam.
 
 > ⚠️ Peta ini dijaga `src/lib/contentMap.test.ts`: `path` dan `label` tiap halaman
 > WAJIB sama dengan `ROOM_SLUGS`/`ROOM_LABELS` di sceneStore. Kalau sebuah halaman
@@ -846,21 +1068,27 @@ setelah deploy.
 
 ## §13 Test & verifikasi
 
-**161 test CMS** di dalam `bun run test` (yang totalnya 70 berkas / 580 test):
+**283 test CMS** di dalam `bun run test` (yang totalnya 76 berkas / 702 test):
 
 | Berkas | Test | Menguji |
 |---|---|---|
 | `shared/validateJob.test.ts` | 12 | aturan isi & pesan galat lowongan |
 | `shared/validateValue.test.ts` | 11 | aturan isi nilai, ketat-ikut-status |
 | `shared/validateCrew.test.ts` | 15 | aturan crew, tautan `https://`, `"#"` lolos |
+| `shared/validateWorkProject.test.ts` | 15 | aturan kartu proyek, baris hasil OPSIONAL, label kembar |
+| `shared/validateCaseStudy.test.ts` | 21 | aturan cerita, baris hasil WAJIB, `normalizeDesc` & batas 8 paragraf |
 | `server/routes/jobs.test.ts` | 17 | CRUD, 401 tanpa login, slug bentrok, soft delete |
 | `server/routes/values.test.ts` | 20 | CRUD + reorder, daftar tak lengkap ditolak |
 | `server/routes/crew.test.ts` | 26 | CRUD, tautan sosial, nama bentrok, departemen asing |
+| `server/routes/workProjects.test.ts` | 26 | CRUD + reorder, label ditulis-ulang bukan dibanding, nama bentrok |
+| `server/routes/caseStudies.test.ts` | 29 | CRUD + reorder, lingkup, uraian dirapikan di kedua jalur tulis |
 | `server/routes/auth.test.ts` | 6 | masuk pakai sandi saja, sandi salah, sesi |
-| `server/publish.test.ts` | 18 | draft tidak ikut, tulis atomik, hitungan pending 3 entitas |
+| `server/publish.test.ts` | 29 | draft tidak ikut, tulis atomik, hitungan pending 5 entitas |
 | `src/lib/content/store.test.ts` | 9 | content.json valid dipakai; gagal/timeout/versi salah → fallback |
 | `src/data/people.test.ts` | 17 | CMS menang atas bundle; daftar kosong dihormati; payload lama |
-| `src/lib/contentMap.test.ts` | 10 | peta konten sinkron dengan slug & label situs |
+| `src/data/work.test.ts` | 9 | CMS menang atas bundle; `outcome` kosong jadi `undefined` |
+| `src/data/caseStudies.test.ts` | 10 | CMS menang atas bundle; daftar kosong dihormati |
+| `src/lib/contentMap.test.ts` | 11 | peta konten sinkron dengan slug & label situs, letak entri per halaman |
 
 Test server jalan di **project vitest terpisah** (`environment: "node"`), karena
 `src/test/setup.ts` menyentuh `window` dan akan melempar di sana. Semua berkas
@@ -872,7 +1100,7 @@ tengah test tetangga.
 > terlupa membuat test tetangga saling mewarisi baris, dan gejalanya "kadang
 > gagal" tergantung urutan.
 
-**Lima probe end-to-end lewat Brave** (CDP, nol dependensi), semuanya hijau:
+**Tujuh probe end-to-end lewat Brave** (CDP, nol dependensi), semuanya hijau:
 
 `scripts/probe-admin.mjs` — 13 pemeriksaan: menu sisi (grup membuka/menutup,
 melipat, menandai posisi), CRUD lowongan, draf tidak ikut Publish, Open tanpa foto
@@ -898,6 +1126,33 @@ ditolak, hapus + Publish → hilang dari `content.json`, nol galat konsol.
 ✓ halaman People membaca crew dari content.json, bukan dari bundel
 ✓ dihapus + Publish → hilang dari content.json
 ```
+
+`scripts/probe-proyek-admin.mjs` — 15 pemeriksaan:
+```
+✓ beranda menyebut jumlah proyek tanpa halamannya dibuka
+✓ proyek draf tersimpan (baris label kosong dibuang) dan mendarat paling bawah
+✓ label tersimpan urut & tanpa baris kembar saat form dibuka lagi
+✓ status Live tanpa gambar ditolak, alasannya tampil di form
+✓ urutan kartu ikut berubah di content.json (posisi 8 → 7)
+✓ halaman Work merender kartu dari CMS (judul …px, gambar …px)
+✓ dihapus + Publish → hilang dari content.json
+```
+
+`scripts/probe-case-study-admin.mjs` — 17 pemeriksaan:
+```
+✓ penghitung paragraf membedakan satu Enter dari baris kosong
+✓ case study draf tersimpan (baris lingkup kosong dibuang) dan mendarat paling bawah
+✓ lingkup & paragraf kembali utuh saat form dibuka lagi
+✓ status Live tanpa baris hasil ditolak — beda aturan dengan kartu proyek
+✓ cerita tayang masuk content.json lengkap, jeda paragrafnya selamat
+✓ halaman Work membuka cerita dari CMS (N paragraf, judul …px, gambar …px)
+✓ dihapus + Publish → hilang dari content.json
+```
+
+Dua probe terakhir sengaja **membuka halaman Work yang sungguhan**, bukan berhenti
+di panel. Bagian yang paling gampang salah bukan penyimpanannya, melainkan apakah
+komponen situs benar-benar MEMBACA baris baru itu — dan §14 mencatat satu cara
+kegagalan yang lolos semua test unit tapi ketahuan persis di langkah ini.
 
 `scripts/probe-tema-admin.mjs` — 15 pemeriksaan: kedua tema diukur di daftar,
 form, dialog, dan layar masuk; **semua warna abu-abu murni** (R=G=B) diperiksa ke
@@ -928,6 +1183,17 @@ saat modulnya diimpor — sebelum itu. Fix: ekspor **fungsi**, dan pindahkan
 perhitungan turunannya ke dalam komponen lewat `useMemo`. **Periksa ini PERTAMA
 di entitas berikutnya.**
 
+**🔥 Daftar yang dulu panjangnya TETAP sekarang boleh menyusut sampai kosong.**
+Ini kelas gotcha baru yang lahir bersama slice Work, dan tidak satu pun test unit
+bisa menangkapnya karena kodenya benar sebelum CMS masuk. `CaseGrid.tsx` menghitung
+progres gulir dengan `offset / (total - 1)`: sempurna selama `PROJECTS` adalah
+array delapan literal, **NaN** begitu editor menyisakan satu proyek — dan NaN
+mengalir ke `width` dan `opacity`, jadi yang terlihat bukan pesan galat melainkan
+kartu yang hilang. Saudaranya: indeks kartu aktif yang tertinggal menunjuk baris
+yang barusan dihapus (`projects[7]` → `undefined` → layar putih). Sebelum
+menukar sebuah literal jadi panggilan CMS, cari **tiap** tempat panjang arraynya
+dipakai sebagai angka, bukan cuma tempat isinya dibaca. Fix di §10c.
+
 **🔥 Dua app Vite berbagi satu `node_modules`.** Menjalankan `admin:dev` membuat
 situs di :3000 **putih total** dengan `504 (Outdated Optimize Dep)` untuk
 `react-router-dom.js`. Sebabnya keduanya memakai `node_modules/.vite/deps` yang
@@ -948,6 +1214,14 @@ yang sudah pernah di-seed lowongan membuat `seedValues()`/`seedCrew()` tidak
 pernah jalan kalau gerbangnya menumpang hitungan tabel `jobs`. Tidak ada yang
 terlihat salah: skripnya melapor "sudah terisi" dan berhenti. Fix: satu gerbang
 per tabel (§4c).
+
+**Bentuk yang dibawa spasi putih harus dirapikan di KEDUA sisi.** Uraian case
+study memisah paragraf dengan baris kosong, jadi teks yang dirapikan form (`\r\n`
+jadi `\n`, tiga Enter jadi satu baris kosong) panjangnya BEDA dengan yang diketik.
+Kalau server tidak merapikan dengan fungsi yang sama sebelum memvalidasi, teks
+2.998 karakter lolos di form dan mendarat 3.010 di database — batas yang dijaga
+ketat di satu tempat dan bocor di tempat lain. Fix: `normalizeDesc()` di `shared/`,
+dipanggil form DAN repo, di jalur buat maupun jalur simpan-ulang (§5c).
 
 **Foto yang dipakai dua entitas membuat `onConflictDoNothing` mengembalikan
 kosong.** Baris `images` yang sudah terdaftar lewat lowongan tidak dikembalikan
@@ -985,10 +1259,11 @@ mirip sandi yang masuk git adalah fixture test `"sandi-yang-panjang"` di
 - cron `pg_dump`
 - `CF_ZONE_ID` + `CF_PURGE_TOKEN` diisi supaya purge otomatis jalan
 
-**Delapan entitas konten lain** menyusul dengan pola §16 — semuanya masih
+**Tujuh entitas konten lain** menyusul dengan pola §16 — semuanya masih
 berstatus `belum` di peta konten: deployment, cara kerja, industri, dan visi
-(Home); layanan (Services); case study dan sorotan & testimoni (Work); tautan
-sosial (seluruh situs).
+(Home); layanan dan testimoni (Services); tautan sosial (seluruh situs).
+Halaman **Work sudah selesai seluruhnya** — kedua entitasnya (Selected work dan
+case study) sekarang berasal dari panel.
 
 **Di luar cakupan, permanen:** teks yang terikat tata letak — wordmark
 `COGNITI.ID` dengan lebar `7.342` di `Contact.tsx`, `HEADING_LINES` di
@@ -1000,7 +1275,7 @@ sampai ada yang benar-benar membutuhkannya.
 
 ## §16 Resep menambah entitas berikutnya
 
-Urutan yang sudah terbukti tiga kali, dipakai ulang apa adanya:
+Urutan yang sudah terbukti **lima kali**, dipakai ulang apa adanya:
 
 1. Tipe + validasi di `shared/` (dipakai server & admin sekaligus)
 2. Tabel di `server/db/schema.ts` → `bun run db:generate` → `db:migrate`
@@ -1014,8 +1289,11 @@ Urutan yang sudah terbukti tiga kali, dipakai ulang apa adanya:
    sendiri** dan mengembalikan `null` kalau tidak ada
 7. Pindahkan literal `src/data/<entitas>.ts` → `<entitas>Fallback.ts`, lalu ubah
    berkas aslinya jadi **fungsi** yang membaca store-nya sendiri.
-   **🔥 Lalu periksa setiap pemanggilnya:** apa pun yang dihitung di tingkat modul
-   dari data itu harus pindah ke dalam komponen (§14)
+   **🔥 Lalu periksa setiap pemanggilnya, dua hal sekaligus:** (a) apa pun yang
+   dihitung di tingkat modul dari data itu harus pindah ke dalam komponen, dan
+   (b) tiap tempat yang memakai **panjang** arraynya sebagai angka — pembagian
+   `total - 1`, indeks yang disimpan di state — harus tahan daftar yang menyusut
+   sampai satu atau nol (§14)
 8. Ubah `status` entri di `shared/contentMap.ts` dari `belum` jadi `siap`
 9. Layar di `admin/src/`, pakai `ui.tsx` yang sudah ada (`Isian`, `DaftarTeks`,
    `Konfirmasi`, `Kabar`, `tanggal`) — **dan warnanya lewat token**, tidak pernah
@@ -1028,4 +1306,10 @@ Urutan yang sudah terbukti tiga kali, dipakai ulang apa adanya:
 **Butuh urutan manual?** Ikuti pola nilai: endpoint `POST /urutkan` sendiri yang
 menerima seluruh daftar id, reorder menaikkan `updatedAt`, dan baris baru mendarat
 di bawah (§6b). **Tapi tanyakan dulu apakah situsnya memang membaca urutan itu** —
-kalau tidak, tombolnya cuma akan berbohong ke editor (§4b).
+kalau tidak, tombolnya cuma akan berbohong ke editor (§4b). Daftarkan
+`POST /urutkan` **sebelum** `POST /:id`: Hono mencocokkan rute sesuai urutan
+pendaftaran, dan yang belakangan tidak akan pernah terpanggil.
+
+**Punya kolom teks panjang?** Kalau bentuk tampilnya dibawa spasi putih (paragraf
+dipisah baris kosong), rapikan lewat satu fungsi di `shared/` yang dipanggil form
+DAN server — bukan salah satunya (§5c, §14).

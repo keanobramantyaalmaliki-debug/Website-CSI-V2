@@ -23,6 +23,8 @@
 import type { Job } from "./job";
 import type { CrewMember } from "./crew";
 import type { Value } from "./value";
+import type { WorkProject } from "./workProject";
+import type { CaseStudy } from "./caseStudy";
 
 export type ContentPayload = {
   version: 1;
@@ -35,6 +37,14 @@ export type ContentPayload = {
    *  TIDAK bergantung padanya — `TheCrew.tsx` mengelompokkan dan mengurutkan
    *  A–Z sendiri, karena "A-Z" itu tercetak sebagai judul kolom di halaman. */
   crew: CrewMember[];
+  /** Proyek "Selected Work" yang `live` saja, sudah urut sesuai `sortOrder` —
+   *  dan di sini situs BENAR-BENAR bergantung pada urutannya: yang pertama
+   *  adalah kartu yang terbuka saat halaman Work dibuka. */
+  projects: WorkProject[];
+  /** Cerita "Case Studies" yang `live` saja, sudah urut sesuai `sortOrder`.
+   *  Tetangga `projects` di halaman yang sama, tapi entitas yang berbeda:
+   *  yang itu daftar kartu, yang ini bacaan. */
+  caseStudies: CaseStudy[];
 };
 
 export const CONTENT_VERSION = 1 as const;

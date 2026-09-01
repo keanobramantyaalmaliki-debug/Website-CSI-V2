@@ -24,6 +24,8 @@ import { CONTENT_VERSION } from "@shared/content";
 import type { CrewMember } from "@shared/crew";
 import type { Job } from "@shared/job";
 import type { Value } from "@shared/value";
+import type { WorkProject } from "@shared/workProject";
+import type { CaseStudy } from "@shared/caseStudy";
 
 /**
  * Batas tunggu.
@@ -124,6 +126,40 @@ export function contentValues(): Value[] | null {
  */
 export function contentCrew(): CrewMember[] | null {
   const rows = content?.crew;
+  return Array.isArray(rows) ? rows : null;
+}
+
+/**
+ * Proyek "Selected Work" dari CMS, atau `null` kalau harus memakai isi bundle.
+ *
+ * Diperiksa terpisah dengan alasan yang sama seperti `contentValues()` dan
+ * `contentCrew()`: `content.json` yang ditulis sebelum proyek masuk CMS adalah
+ * berkas sehat yang cuma belum punya bagian ini.
+ *
+ * Daftar KOSONG dihormati apa adanya, bukan jatuh ke cadangan — dan di sini
+ * konsekuensinya lebih besar daripada di crew: seksinya tidak merender apa pun,
+ * jadi "Selected Work" hilang dari halaman Work. Itu memang yang diminta editor
+ * yang menghapus semua proyeknya; yang tidak boleh terjadi adalah delapan kartu
+ * lama hidup kembali sesudah Publish tanpa cara menghapusnya.
+ */
+export function contentWorkProjects(): WorkProject[] | null {
+  const rows = content?.projects;
+  return Array.isArray(rows) ? rows : null;
+}
+
+/**
+ * Cerita "Case Studies" dari CMS, atau `null` kalau harus memakai isi bundle.
+ *
+ * Diperiksa terpisah dengan alasan yang sama seperti pembaca-pembaca di atas:
+ * `content.json` yang ditulis sebelum case study masuk CMS adalah berkas sehat
+ * yang cuma belum punya bagian ini.
+ *
+ * Daftar KOSONG dihormati apa adanya — seksi "Case Studies" lalu tidak dirender
+ * sama sekali di halaman Work, dan itu memang yang diminta editor yang
+ * menghapus semua ceritanya.
+ */
+export function contentCaseStudies(): CaseStudy[] | null {
+  const rows = content?.caseStudies;
   return Array.isArray(rows) ? rows : null;
 }
 

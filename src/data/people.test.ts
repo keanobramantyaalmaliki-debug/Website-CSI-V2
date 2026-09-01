@@ -74,8 +74,10 @@ describe("peopleValues()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      caseStudies: [],
       jobs: [],
       crew: [],
+      projects: [],
       values: [
         {
           id: "a",
@@ -101,9 +103,11 @@ describe("peopleValues()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      caseStudies: [],
       jobs: [],
       crew: [],
       values: [],
+      projects: [],
     });
     expect(peopleValues()).toHaveLength(0);
   });
@@ -114,6 +118,7 @@ describe("peopleValues()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      caseStudies: [],
       jobs: [],
     } as never);
     expect(peopleValues()).toEqual(FALLBACK_VALUES);
@@ -123,8 +128,10 @@ describe("peopleValues()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      caseStudies: [],
       jobs: [],
       crew: [],
+      projects: [],
       values: [
         {
           id: "a",
@@ -153,8 +160,10 @@ describe("crew()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      caseStudies: [],
       jobs: [],
       values: [],
+      projects: [],
       crew: [
         {
           id: "a",
@@ -180,9 +189,11 @@ describe("crew()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      caseStudies: [],
       jobs: [],
       values: [],
       crew: [],
+      projects: [],
     });
     expect(crew()).toHaveLength(0);
   });
@@ -193,8 +204,10 @@ describe("crew()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      caseStudies: [],
       jobs: [],
       values: [],
+      projects: [],
     } as never);
     expect(crew()).toEqual(FALLBACK_CREW);
   });
@@ -207,8 +220,10 @@ describe("crew()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      caseStudies: [],
       jobs: [],
       values: [],
+      projects: [],
       crew: [
         {
           id: "a",

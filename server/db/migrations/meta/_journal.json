@@ -22,6 +22,20 @@
       "when": 1788244487660,
       "tag": "0002_ambiguous_magma",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788250508226,
+      "tag": "0003_brief_nitro",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788252603887,
+      "tag": "0004_right_triathlon",
+      "breakpoints": true
     }
   ]
 }

@@ -26,7 +26,9 @@ export async function resetDb(): Promise<void> {
   await sql.unsafe(`
     truncate table
       audit_log, sessions, job_copy_bullets, job_copy, job_skills, jobs,
-      people_values, crew_socials, crew_members, images, users
+      people_values, crew_socials, crew_members,
+      work_project_tags, work_projects,
+      case_study_scopes, case_studies, images, users
     restart identity cascade
   `);
 }
@@ -96,6 +98,37 @@ export function valueBody(over: Record<string, unknown> = {}) {
     tagline: "Precision over speed",
     description: "Detailnya adalah pekerjaannya.",
     photo: "/people/craft-first.webp",
+    state: "live",
+    ...over,
+  };
+}
+
+/** Bentuk proyek minimal yang lolos validasi `live`. */
+export function projectBody(over: Record<string, unknown> = {}) {
+  return {
+    title: "Citizen Service Portal",
+    client: "Regional Government",
+    year: "2024",
+    tags: ["React", "Node.js"],
+    image: "/work/citizen-portal.webp",
+    outcome: "2.3M citizens served",
+    state: "live",
+    ...over,
+  };
+}
+
+/** Bentuk case study minimal yang lolos validasi "tayang". */
+export function caseStudyBody(over: Record<string, unknown> = {}) {
+  return {
+    title: "Citizen Service Portal",
+    client: "Regional Government",
+    year: "2024",
+    industry: "Public Sector",
+    scope: ["Web Platform", "Staff Training"],
+    outcome: "67% faster turnaround",
+    quote: "Semua permohonan masih diproses manual di loket.",
+    desc: "Paragraf pertama menceritakan masalahnya.\n\nParagraf kedua menceritakan apa yang dikerjakan.",
+    image: "/work/citizen-portal.webp",
     state: "live",
     ...over,
   };

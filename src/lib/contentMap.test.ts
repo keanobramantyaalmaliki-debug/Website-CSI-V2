@@ -76,14 +76,36 @@ describe("bentuk peta konten", () => {
     const siap = CONTENT_GROUPS.flatMap((p) => p.entries)
       .filter((e) => e.status === "siap")
       .map((e) => e.key);
-    /* Urutannya urutan halaman, bukan urutan pengerjaan: nilai dan crew
-       berada di atas lowongan, di halaman People. */
-    expect(siap).toEqual(["nilai", "crew", "lowongan"]);
+    /* Urutannya urutan halaman, bukan urutan pengerjaan: Work datang sebelum
+       People, dan di dalam People nilai dan crew berada di atas lowongan. */
+    expect(siap).toEqual([
+      "selected-work",
+      "case-study",
+      "nilai",
+      "crew",
+      "lowongan",
+    ]);
   });
 
   it("kelompok seluruh-situs ikut terangkut ke CONTENT_GROUPS", () => {
     expect(CONTENT_GROUPS).toContain(SITE_WIDE);
     expect(CONTENT_GROUPS.length).toBe(CONTENT_PAGES.length + 1);
+  });
+
+  /* Peta ini pernah menaruh testimoni di Work (label "Sorotan & testimoni"),
+     padahal kutipan klien bernama cuma ada di TestimonialSpotlight, di dasar
+     halaman Services — yang di Work itu kutipan masalah tanpa nama siapa pun.
+     Salahnya gagal diam-diam: panel tetap tampil rapi, editor cuma tidak
+     pernah menemukan yang dicarinya. Ini yang mengunci letaknya. */
+  it("tiap halaman memuat entri yang memang ada di halaman itu", () => {
+    const keys = (pageKey: string) =>
+      CONTENT_GROUPS.find((p) => p.key === pageKey)!.entries.map((e) => e.key);
+
+    expect(keys("home")).toEqual(["deployment", "proses", "industri", "visi"]);
+    expect(keys("services")).toEqual(["layanan", "testimoni"]);
+    expect(keys("work")).toEqual(["selected-work", "case-study"]);
+    expect(keys("people")).toEqual(["nilai", "crew", "lowongan"]);
+    expect(keys("situs")).toEqual(["sosial"]);
   });
 
   it("findEntry menemukan entri dari kelompok mana pun", () => {

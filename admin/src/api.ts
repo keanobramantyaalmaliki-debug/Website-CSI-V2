@@ -10,9 +10,19 @@
 import type { CrewMember } from "@shared/crew";
 import type { Job } from "@shared/job";
 import type { Value } from "@shared/value";
+import type { WorkProject } from "@shared/workProject";
+import type { CaseStudy } from "@shared/caseStudy";
 import type { CrewFieldErrors, CrewInput } from "@shared/validateCrew";
 import type { JobFieldErrors, JobInput } from "@shared/validateJob";
 import type { ValueFieldErrors, ValueInput } from "@shared/validateValue";
+import type {
+  WorkProjectFieldErrors,
+  WorkProjectInput,
+} from "@shared/validateWorkProject";
+import type {
+  CaseStudyFieldErrors,
+  CaseStudyInput,
+} from "@shared/validateCaseStudy";
 
 export type JobRecord = Job & {
   updatedAt: string;
@@ -29,6 +39,20 @@ export type ValueRecord = Value & {
 };
 
 export type CrewRecord = CrewMember & {
+  updatedAt: string;
+  publishedAt: string | null;
+  /** Ada perubahan yang belum ikut Publish. */
+  unpublished: boolean;
+};
+
+export type WorkProjectRecord = WorkProject & {
+  updatedAt: string;
+  publishedAt: string | null;
+  /** Ada perubahan yang belum ikut Publish. */
+  unpublished: boolean;
+};
+
+export type CaseStudyRecord = CaseStudy & {
   updatedAt: string;
   publishedAt: string | null;
   /** Ada perubahan yang belum ikut Publish. */
@@ -62,7 +86,11 @@ export type Hasil<T> =
  *  `minta()` tidak tahu — dan tidak perlu tahu — entitas apa yang sedang
  *  dipanggil; yang membaca `errors` adalah form yang memang cuma mengenal
  *  isiannya sendiri. */
-export type FieldErrors = JobFieldErrors & ValueFieldErrors & CrewFieldErrors;
+export type FieldErrors = JobFieldErrors &
+  ValueFieldErrors &
+  CrewFieldErrors &
+  WorkProjectFieldErrors &
+  CaseStudyFieldErrors;
 
 async function minta<T>(path: string, init: RequestInit = {}): Promise<Hasil<T>> {
   let res: Response;
@@ -176,6 +204,67 @@ export const simpanCrew = (id: string, input: CrewInput) =>
 export const hapusCrew = (id: string) =>
   minta<{ ok: true; deleted: string }>(`/api/crew/${id}`, { method: "DELETE" });
 
+/* ── proyek (Work → Selected Work) ──────────────────────────────────── */
+
+export const ambilProyek = () =>
+  minta<{ projects: WorkProjectRecord[] }>("/api/projects");
+
+export const ambilSatuProyek = (id: string) =>
+  minta<{ project: WorkProjectRecord }>(`/api/projects/${id}`);
+
+export const buatProyek = (input: WorkProjectInput) =>
+  minta<{ project: WorkProjectRecord }>("/api/projects", kirimJson("POST", input));
+
+export const simpanProyek = (id: string, input: WorkProjectInput) =>
+  minta<{ project: WorkProjectRecord }>(
+    `/api/projects/${id}`,
+    kirimJson("PUT", input),
+  );
+
+export const hapusProyek = (id: string) =>
+  minta<{ ok: true; deleted: string }>(`/api/projects/${id}`, { method: "DELETE" });
+
+/** Kirim SELURUH daftar id dalam urutan barunya. Server menolak daftar yang
+ *  tidak menyebut semua proyek — lihat `reorderWorkProjects` di server. */
+export const urutkanProyek = (ids: string[]) =>
+  minta<{ projects: WorkProjectRecord[] }>(
+    "/api/projects/urutkan",
+    kirimJson("POST", { ids }),
+  );
+
+/* ── case study (Work → Case Studies) ───────────────────────────────── */
+
+export const ambilCaseStudy = () =>
+  minta<{ studies: CaseStudyRecord[] }>("/api/case-studies");
+
+export const ambilSatuCaseStudy = (id: string) =>
+  minta<{ study: CaseStudyRecord }>(`/api/case-studies/${id}`);
+
+export const buatCaseStudy = (input: CaseStudyInput) =>
+  minta<{ study: CaseStudyRecord }>(
+    "/api/case-studies",
+    kirimJson("POST", input),
+  );
+
+export const simpanCaseStudy = (id: string, input: CaseStudyInput) =>
+  minta<{ study: CaseStudyRecord }>(
+    `/api/case-studies/${id}`,
+    kirimJson("PUT", input),
+  );
+
+export const hapusCaseStudy = (id: string) =>
+  minta<{ ok: true; deleted: string }>(`/api/case-studies/${id}`, {
+    method: "DELETE",
+  });
+
+/** Kirim SELURUH daftar id dalam urutan barunya. Server menolak daftar yang
+ *  tidak menyebut semua cerita — lihat `reorderCaseStudies` di server. */
+export const urutkanCaseStudy = (ids: string[]) =>
+  minta<{ studies: CaseStudyRecord[] }>(
+    "/api/case-studies/urutkan",
+    kirimJson("POST", { ids }),
+  );
+
 /* ── gambar ─────────────────────────────────────────────────────────── */
 
 export const ambilGambar = () => minta<{ images: ImageRow[] }>("/api/images");
@@ -199,6 +288,8 @@ export const tayangkan = () =>
     jobs: number;
     values: number;
     crew: number;
+    projects: number;
+    caseStudies: number;
     generatedAt: string;
     warning: string | null;
   }>(

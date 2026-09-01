@@ -16,10 +16,17 @@ export function PemilihFoto({
   nilai,
   ubah,
   galat,
+  label = "Foto",
+  petunjuk = "Tampil sebagai pratinjau di tabel Careers dan di kepala halaman lowongan. Gambar yang diunggah otomatis dikecilkan — tidak perlu diperkecil sendiri dulu.",
 }: {
   nilai: string;
   ubah: (path: string) => void;
   galat?: string;
+  /* Bawaannya kata-kata lowongan, karena di situlah pemilih ini lahir. Entitas
+     lain menimpanya: gambar proyek bukan "foto", dan kalimat yang menyebut
+     halaman Careers akan salah alamat di halaman Work. */
+  label?: string;
+  petunjuk?: string;
 }) {
   const [daftar, setDaftar] = useState<ImageRow[] | null>(null);
   const [pesan, setPesan] = useState<string | null>(null);
@@ -61,12 +68,8 @@ export function PemilihFoto({
 
   return (
     <div className={`isian${galat ? " bergalat" : ""}`}>
-      <label>Foto</label>
-      <p className="petunjuk">
-        Tampil sebagai pratinjau di tabel Careers dan di kepala halaman
-        lowongan. Gambar yang diunggah otomatis dikecilkan — tidak perlu
-        diperkecil sendiri dulu.
-      </p>
+      <label>{label}</label>
+      <p className="petunjuk">{petunjuk}</p>
 
       <div style={{ marginBottom: 12 }}>
         <input

@@ -17,6 +17,8 @@ import crewRoute from "./routes/crew";
 import jobsRoute from "./routes/jobs";
 import publishRoute from "./routes/publish";
 import valuesRoute from "./routes/values";
+import workProjectsRoute from "./routes/workProjects";
+import caseStudiesRoute from "./routes/caseStudies";
 
 export type Env = { Variables: { actor: Actor } };
 
@@ -60,6 +62,10 @@ app.use("/api/values/*", requireLogin);
 app.use("/api/values", requireLogin);
 app.use("/api/crew/*", requireLogin);
 app.use("/api/crew", requireLogin);
+app.use("/api/projects/*", requireLogin);
+app.use("/api/projects", requireLogin);
+app.use("/api/case-studies/*", requireLogin);
+app.use("/api/case-studies", requireLogin);
 app.use("/api/images/*", requireLogin);
 app.use("/api/images", requireLogin);
 app.use("/api/publish/*", requireLogin);
@@ -68,6 +74,8 @@ app.use("/api/publish", requireLogin);
 app.route("/api/jobs", jobsRoute);
 app.route("/api/values", valuesRoute);
 app.route("/api/crew", crewRoute);
+app.route("/api/projects", workProjectsRoute);
+app.route("/api/case-studies", caseStudiesRoute);
 app.route("/api/images", imagesRoute);
 app.route("/api/publish", publishRoute);
 

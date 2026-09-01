@@ -24,9 +24,15 @@ process.chdir(kotakPasir);
 
 const { publish, pendingCount, CONTENT_PATH } = await import("./publish");
 const { sql } = await import("./db/client");
-const { asEditor, jobBody, loginAsEditor, resetDb, valueBody } = await import(
-  "./test/helpers"
-);
+const {
+  asEditor,
+  caseStudyBody,
+  jobBody,
+  loginAsEditor,
+  projectBody,
+  resetDb,
+  valueBody,
+} = await import("./test/helpers");
 
 /* Pastikan chdir-nya benar-benar kena sebelum ada satu pun berkas ditulis. */
 if (!CONTENT_PATH.startsWith(kotakPasir)) {
@@ -67,6 +73,22 @@ const buatNilai = async (over: Record<string, unknown> = {}) => {
     body: JSON.stringify(valueBody(over)),
   });
   return (await json<{ value: { id: string; title: string } }>(res)).value;
+};
+
+const buatProyek = async (over: Record<string, unknown> = {}) => {
+  const res = await api("/api/projects", {
+    method: "POST",
+    body: JSON.stringify(projectBody(over)),
+  });
+  return (await json<{ project: { id: string; title: string } }>(res)).project;
+};
+
+const buatCerita = async (over: Record<string, unknown> = {}) => {
+  const res = await api("/api/case-studies", {
+    method: "POST",
+    body: JSON.stringify(caseStudyBody(over)),
+  });
+  return (await json<{ study: { id: string; title: string } }>(res)).study;
 };
 
 const bacaContent = async () =>
@@ -199,6 +221,168 @@ describe("nilai ikut ke content.json", () => {
   });
 });
 
+describe("proyek ikut ke content.json", () => {
+  it("hanya yang tayang, dan urutannya urutan kartu", async () => {
+    await buatProyek({ title: "Citizen Service Portal" });
+    await buatProyek({ title: "API Gateway" });
+    await buatProyek({ title: "Masih Digodok", state: "draft" });
+
+    const hasil = await publish(aktor);
+    expect(hasil.projects).toBe(2);
+
+    const isi = await bacaContent();
+    /* `.sort()` sengaja TIDAK dipakai: urutannya justru yang sedang diuji —
+       yang pertama adalah kartu yang terbuka saat halaman Work dibuka. */
+    expect(isi.projects.map((p: { title: string }) => p.title)).toEqual([
+      "Citizen Service Portal",
+      "API Gateway",
+    ]);
+  });
+
+  it("label ikut utuh — ia tinggal di tabel lain, jadi paling gampang tertinggal", async () => {
+    await buatProyek({ tags: ["React", "Node.js"] });
+    await publish(aktor);
+
+    const [project] = (await bacaContent()).projects;
+    expect(project.tags).toEqual(["React", "Node.js"]);
+  });
+
+  it("tidak membocorkan kolom yang cuma urusan admin", async () => {
+    await buatProyek();
+    await publish(aktor);
+
+    const [project] = (await bacaContent()).projects;
+    expect(project).not.toHaveProperty("updatedAt");
+    expect(project).not.toHaveProperty("publishedAt");
+    expect(project).not.toHaveProperty("unpublished");
+    expect(Object.keys(project).sort()).toEqual([
+      "client",
+      "id",
+      "image",
+      "outcome",
+      "sortOrder",
+      "state",
+      "tags",
+      "title",
+      "year",
+    ]);
+  });
+
+  it("proyek yang dihapus lenyap di publish berikutnya", async () => {
+    const project = await buatProyek();
+    await publish(aktor);
+    expect((await bacaContent()).projects).toHaveLength(1);
+
+    await api(`/api/projects/${project.id}`, { method: "DELETE" });
+    await publish(aktor);
+    expect((await bacaContent()).projects).toHaveLength(0);
+  });
+
+  it("menyusun ulang urutan mengubah urutan yang tayang", async () => {
+    const a = await buatProyek({ title: "Citizen Service Portal" });
+    const b = await buatProyek({ title: "API Gateway" });
+    await publish(aktor);
+
+    await api("/api/projects/urutkan", {
+      method: "POST",
+      body: JSON.stringify({ ids: [b.id, a.id] }),
+    });
+    await publish(aktor);
+
+    expect(
+      (await bacaContent()).projects.map((p: { title: string }) => p.title),
+    ).toEqual(["API Gateway", "Citizen Service Portal"]);
+  });
+});
+
+describe("case study ikut ke content.json", () => {
+  it("hanya yang tayang, dan urutannya urutan blok cerita", async () => {
+    await buatCerita({ title: "Citizen Service Portal" });
+    await buatCerita({ title: "Field Operations Suite" });
+    await buatCerita({ title: "Masih Digodok", state: "draft" });
+
+    const hasil = await publish(aktor);
+    expect(hasil.caseStudies).toBe(2);
+
+    const isi = await bacaContent();
+    /* `.sort()` sengaja TIDAK dipakai: urutannya justru yang sedang diuji —
+       yang pertama adalah cerita yang pertama dibaca pengunjung. */
+    expect(isi.caseStudies.map((s: { title: string }) => s.title)).toEqual([
+      "Citizen Service Portal",
+      "Field Operations Suite",
+    ]);
+  });
+
+  it("lingkup ikut utuh — ia tinggal di tabel lain, jadi paling gampang tertinggal", async () => {
+    await buatCerita({ scope: ["Web Platform", "Staff Training"] });
+    await publish(aktor);
+
+    const [study] = (await bacaContent()).caseStudies;
+    expect(study.scope).toEqual(["Web Platform", "Staff Training"]);
+  });
+
+  /* Paragraf dibawa oleh spasi putih, bukan oleh struktur data — kalau JSON-nya
+     ditulis dengan cara yang menelan `\n\n`, seluruh cerita tayang sebagai satu
+     blok panjang tanpa satu pun error. */
+  it("jeda paragraf selamat sampai ke berkasnya", async () => {
+    await buatCerita({ desc: "Masalahnya begini.\n\nLalu dikerjakan begitu." });
+    await publish(aktor);
+
+    const [study] = (await bacaContent()).caseStudies;
+    expect(study.desc.split("\n\n")).toHaveLength(2);
+  });
+
+  it("tidak membocorkan kolom yang cuma urusan admin", async () => {
+    await buatCerita();
+    await publish(aktor);
+
+    const [study] = (await bacaContent()).caseStudies;
+    expect(study).not.toHaveProperty("updatedAt");
+    expect(study).not.toHaveProperty("publishedAt");
+    expect(study).not.toHaveProperty("unpublished");
+    expect(Object.keys(study).sort()).toEqual([
+      "client",
+      "desc",
+      "id",
+      "image",
+      "industry",
+      "outcome",
+      "quote",
+      "scope",
+      "sortOrder",
+      "state",
+      "title",
+      "year",
+    ]);
+  });
+
+  it("cerita yang dihapus lenyap di publish berikutnya", async () => {
+    const study = await buatCerita();
+    await publish(aktor);
+    expect((await bacaContent()).caseStudies).toHaveLength(1);
+
+    await api(`/api/case-studies/${study.id}`, { method: "DELETE" });
+    await publish(aktor);
+    expect((await bacaContent()).caseStudies).toHaveLength(0);
+  });
+
+  it("menyusun ulang urutan mengubah urutan yang tayang", async () => {
+    const a = await buatCerita({ title: "Citizen Service Portal" });
+    const b = await buatCerita({ title: "Field Operations Suite" });
+    await publish(aktor);
+
+    await api("/api/case-studies/urutkan", {
+      method: "POST",
+      body: JSON.stringify({ ids: [b.id, a.id] }),
+    });
+    await publish(aktor);
+
+    expect(
+      (await bacaContent()).caseStudies.map((s: { title: string }) => s.title),
+    ).toEqual(["Field Operations Suite", "Citizen Service Portal"]);
+  });
+});
+
 describe("badge perubahan belum tayang", () => {
   it("nol sesudah publish", async () => {
     await buat();
@@ -264,10 +448,12 @@ describe("badge perubahan belum tayang", () => {
   it("angkanya menjumlahkan semua entitas, bukan lowongan saja", async () => {
     await buat();
     await buatNilai();
+    await buatProyek();
+    await buatCerita();
     /* Kalau `pendingCount` lupa satu tabel, angkanya tetap masuk akal di layar
        (cuma lebih kecil) dan tidak ada yang gagal — sampai editor menyunting
        nilai, melihat badge 0, dan menyimpulkan tidak perlu menekan Publish. */
-    expect(await pendingCount()).toBe(2);
+    expect(await pendingCount()).toBe(4);
 
     await publish(aktor);
     expect(await pendingCount()).toBe(0);
@@ -293,11 +479,15 @@ describe("endpoint publish", () => {
   it("POST /api/publish menayangkan dan melaporkan jumlahnya", async () => {
     await buat();
     await buatNilai();
+    await buatProyek();
+    await buatCerita();
 
     const res = await api("/api/publish", { method: "POST" });
     const body = await json<{
       jobs: number;
       values: number;
+      projects: number;
+      caseStudies: number;
       generatedAt: string;
     }>(res);
 
@@ -307,11 +497,15 @@ describe("endpoint publish", () => {
        kalimat yang dilihat editor sesudah menekan Publish menyebut isinya
        ("1 lowongan, 1 nilai"), dan angka total tidak bisa dipecah lagi. */
     expect(body.values).toBe(1);
+    expect(body.projects).toBe(1);
+    expect(body.caseStudies).toBe(1);
     expect(body.generatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 
     const isi = await bacaContent();
     expect(isi.jobs).toHaveLength(1);
     expect(isi.values).toHaveLength(1);
+    expect(isi.projects).toHaveLength(1);
+    expect(isi.caseStudies).toHaveLength(1);
   });
 
   it("GET /api/publish/status memberi angka badge", async () => {
