@@ -5,7 +5,7 @@ import TheCrewMobileCarousel, {
   resolveSwipeDirection,
   resolveSwipeStep,
 } from "./TheCrewMobileCarousel";
-import { TEAM_MEMBERS } from "@/data/people";
+import { FALLBACK_CREW } from "@/data/crewFallback";
 
 // jsdom lacks IntersectionObserver; motion's whileInView needs it.
 class IntersectionObserverStub {
@@ -47,15 +47,15 @@ describe("TheCrewMobileCarousel", () => {
   });
 
   it("shows the first person on mount", () => {
-    render(<TheCrewMobileCarousel people={TEAM_MEMBERS} />);
-    expect(activeName()).toContain(TEAM_MEMBERS[0].name);
-    expect(activeName()).not.toContain(TEAM_MEMBERS[1].name);
+    render(<TheCrewMobileCarousel people={FALLBACK_CREW} />);
+    expect(activeName()).toContain(FALLBACK_CREW[0].name);
+    expect(activeName()).not.toContain(FALLBACK_CREW[1].name);
   });
 
   it("renders no dot indicators", () => {
-    render(<TheCrewMobileCarousel people={TEAM_MEMBERS} />);
+    render(<TheCrewMobileCarousel people={FALLBACK_CREW} />);
     expect(
-      screen.queryByRole("button", { name: `Show ${TEAM_MEMBERS[0].name}` }),
+      screen.queryByRole("button", { name: `Show ${FALLBACK_CREW[0].name}` }),
     ).toBeNull();
     expect(
       screen.getByTestId("crew-mobile-carousel").querySelectorAll("button"),
@@ -78,28 +78,28 @@ describe("TheCrewMobileCarousel", () => {
     });
 
     it("auto-advances to the next person 30s after going idle, unless reduced motion is on", async () => {
-      render(<TheCrewMobileCarousel people={TEAM_MEMBERS} />);
+      render(<TheCrewMobileCarousel people={FALLBACK_CREW} />);
       // Timer fire (30s) + the fly-out throw animation (250ms) both need to
       // elapse before the index actually advances.
       await act(async () => {
         await vi.advanceTimersByTimeAsync(30300);
       });
 
-      expect(activeName()).toContain(TEAM_MEMBERS[1].name);
+      expect(activeName()).toContain(FALLBACK_CREW[1].name);
     });
 
     it("does not auto-advance when reduced motion is enabled", async () => {
       mockReduced = true;
-      render(<TheCrewMobileCarousel people={TEAM_MEMBERS} />);
+      render(<TheCrewMobileCarousel people={FALLBACK_CREW} />);
       await act(async () => {
         await vi.advanceTimersByTimeAsync(60000);
       });
 
-      expect(activeName()).toContain(TEAM_MEMBERS[0].name);
+      expect(activeName()).toContain(FALLBACK_CREW[0].name);
     });
 
     it("plays the same right fly-out throw as a manual advance swipe when idle autoplay fires", async () => {
-      render(<TheCrewMobileCarousel people={TEAM_MEMBERS} />);
+      render(<TheCrewMobileCarousel people={FALLBACK_CREW} />);
       const carousel = screen.getByTestId("crew-mobile-carousel");
       // FadeUpItem wraps the draggable motion.article in an outer <article>,
       // so plain "article" matches the wrong (unstyled) node — the draggable
@@ -121,19 +121,19 @@ describe("TheCrewMobileCarousel", () => {
         await vi.advanceTimersByTimeAsync(50);
       });
       expect(activeCard.style.transform).toMatch(/translateX\(\d/);
-      expect(carousel).toHaveTextContent(TEAM_MEMBERS[0].name);
+      expect(carousel).toHaveTextContent(FALLBACK_CREW[0].name);
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(250);
       });
-      expect(activeName()).toContain(TEAM_MEMBERS[1].name);
+      expect(activeName()).toContain(FALLBACK_CREW[1].name);
     });
 
     it("autoplay wraps from the last person back to the first (loop, no dead-end)", async () => {
       // Dua orang saja: satu siklus autoplay sampai di orang terakhir, siklus
       // berikutnya harus membungkus balik ke orang pertama. (Dulu lompat ke
       // ujung daftar lewat klik titik; titiknya sudah tidak ada.)
-      const pair = TEAM_MEMBERS.slice(0, 2);
+      const pair = FALLBACK_CREW.slice(0, 2);
       render(<TheCrewMobileCarousel people={pair} />);
 
       // See the comment above the fly-out-throw test: fake timers need the
@@ -156,10 +156,10 @@ describe("TheCrewMobileCarousel", () => {
   });
 
   it("resets to the first person when the people list changes (e.g. filter switch)", () => {
-    const managementOnly = TEAM_MEMBERS.filter((m) => m.category === "Management");
-    const { rerender } = render(<TheCrewMobileCarousel people={TEAM_MEMBERS} />);
+    const managementOnly = FALLBACK_CREW.filter((m) => m.category === "Management");
+    const { rerender } = render(<TheCrewMobileCarousel people={FALLBACK_CREW} />);
 
-    expect(activeName()).toContain(TEAM_MEMBERS[0].name);
+    expect(activeName()).toContain(FALLBACK_CREW[0].name);
 
     rerender(<TheCrewMobileCarousel people={managementOnly} />);
 

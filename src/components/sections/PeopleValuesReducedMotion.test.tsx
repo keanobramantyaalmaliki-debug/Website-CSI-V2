@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { VALUES } from "@/data/people";
+import { peopleValues } from "@/data/people";
 import PeopleValues from "./PeopleValues";
 
 // jsdom lacks IntersectionObserver; motion's whileInView + useScroll need it.
@@ -20,12 +20,12 @@ describe("PeopleValues — reduced motion", () => {
   it("renders the eyebrow and one timeline entry per value", () => {
     render(<PeopleValues />);
     expect(screen.getByText("What We Stand For")).toBeInTheDocument();
-    expect(screen.getAllByRole("listitem")).toHaveLength(VALUES.length);
+    expect(screen.getAllByRole("listitem")).toHaveLength(peopleValues().length);
   });
 
   it("shows every value fully (heading + copy visible, no reveal offset left behind)", () => {
     render(<PeopleValues />);
-    for (const value of VALUES) {
+    for (const value of peopleValues()) {
       expect(
         screen.getByRole("heading", { level: 2, name: value.title }),
       ).toBeInTheDocument();

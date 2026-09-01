@@ -1,5 +1,5 @@
 /**
- * Skema database CMS — slice 1: lowongan.
+ * Skema database CMS — lowongan, nilai, dan crew.
  *
  * Dibaca dua arah: `drizzle-kit` menerjemahkannya jadi migrasi SQL, dan kode
  * server memakainya sebagai tipe query. Jadi berkas ini SATU-SATUNYA tempat
@@ -46,6 +46,46 @@ export const bulletKindEnum = pgEnum("bullet_kind", [
   "responsibility",
   "qualification",
 ]);
+
+/**
+ * Dua keadaan sebuah nilai, cocok dengan `ValueState` di `shared/value.ts`.
+ *
+ * Tanpa `closed`: sebuah prinsip kerja tidak pernah "ditutup" — ia dipakai
+ * atau dicabut. Yang dicabut jadi `draft` lagi, dan isinya tetap tersimpan.
+ */
+export const valueStateEnum = pgEnum("value_state", ["draft", "live"]);
+
+/**
+ * Departemen crew, cocok dengan `CrewCategory` di `shared/crew.ts`.
+ *
+ * Daftarnya TERTUTUP, dan itu keputusan sadar: `TheCrew.tsx` memakai daftar
+ * yang sama untuk menentukan urutan tampil kolomnya. Departemen keempat yang
+ * masuk lewat teks bebas akan tersimpan rapi di database lalu TIDAK dirender
+ * sama sekali di situs — tanpa error, tanpa baris kosong, tanpa petunjuk.
+ * Ditutup di sini, penambahannya jadi migrasi yang memaksa situsnya ikut.
+ */
+export const crewCategoryEnum = pgEnum("crew_category", [
+  "Management",
+  "Developer",
+  "R & D",
+]);
+
+/** Tautan sosial yang punya ikon di situs. Tertutup karena nama platformnya
+ *  dicetak apa adanya sebagai teks tautan — platform tak dikenal akan tampil
+ *  sebagai tautan bernama kosong. */
+export const socialPlatformEnum = pgEnum("social_platform", [
+  "linkedin",
+  "github",
+  "x",
+]);
+
+/**
+ * Dua keadaan anggota crew. Enum SENDIRI, bukan menumpang `value_state`
+ * meski isinya kebetulan sama hari ini: dua entitas yang berbagi satu enum
+ * membuat penambahan keadaan untuk salah satunya (misal "alumni") diam-diam
+ * ikut jadi pilihan sah di form yang lain.
+ */
+export const crewStateEnum = pgEnum("crew_state", ["draft", "live"]);
 
 /** `static` = berkas yang sudah lama ada di `public/` (hasil grading ffmpeg
  *  manual); `upload` = diunggah lewat panel admin. Dibedakan supaya jelas mana
@@ -163,6 +203,147 @@ export const jobCopyBullets = pgTable(
   (t) => [primaryKey({ columns: [t.jobId, t.lang, t.kind, t.position] })],
 );
 
+/* ─────────────────────────── nilai ────────────────────────── */
+
+/**
+ * "What We Stand For" di halaman People — satu baris per panel.
+ *
+ * Namanya `people_values`, bukan `values`: VALUES adalah kata kunci SQL, dan
+ * tabel bernama begitu memaksa setiap query menulis tanda kutip yang cepat
+ * atau lambat akan terlupa. Awalan `people_` sekaligus menjawab pertanyaan
+ * "nilai yang mana" tanpa membuka berkas ini.
+ *
+ * Tidak ada tabel anak. Seluruh isi satu nilai muat di satu baris, jadi
+ * menyimpan tidak butuh transaksi lintas tabel seperti lowongan.
+ */
+export const peopleValues = pgTable(
+  "people_values",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    /** Baris kecil huruf besar di bawah judul. */
+    tagline: text("tagline").notNull().default(""),
+    description: text("description").notNull().default(""),
+    /** `set null` dan bukan `cascade`, sama seperti di `jobs`: menghapus
+     *  sebuah gambar tidak boleh ikut menghapus nilainya. */
+    photoId: uuid("photo_id").references(() => images.id, {
+      onDelete: "set null",
+    }),
+    state: valueStateEnum("state").notNull().default("draft"),
+    /**
+     * Urutan panel di halaman, dan di sini ia BUKAN sekadar kenyamanan:
+     * panel-panelnya bertumpuk sticky, jadi yang terakhir adalah yang menutup
+     * seluruh tumpukan dan paling lama dilihat. Postgres tidak menjanjikan
+     * urutan baris apa pun tanpa `ORDER BY`.
+     */
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    /**
+     * Judul unik HANYA untuk baris hidup — alasan yang sama dengan
+     * `jobs_slug_alive`: nilai yang sudah dihapus tidak boleh mengunci
+     * judulnya selamanya.
+     *
+     * Uniknya bukan demi kerapian. `PeopleValues.tsx` memakai judul sebagai
+     * `key` React; dua panel berjudul sama membuat React memakai ulang node
+     * yang salah, dan yang terlihat adalah satu panel yang isinya tercampur.
+     */
+    uniqueIndex("people_values_title_alive")
+      .on(t.title)
+      .where(sql`${t.deletedAt} is null`),
+    index("people_values_order").on(t.sortOrder),
+  ],
+);
+
+/* ──────────────────────────── crew ────────────────────────── */
+
+/**
+ * Anggota tim di halaman People — satu baris per orang.
+ *
+ * ‼️ TIDAK ADA `sortOrder`, dan ini satu-satunya entitas yang begitu.
+ *
+ * `TheCrew.tsx` mengurutkan sendiri A–Z di dalam tiap departemen, dan huruf
+ * "A-Z" itu tercetak sebagai judul kolom di situs — jadi urutannya bukan
+ * preferensi yang bisa dipindah, melainkan janji ke pembaca. Kolom urutan di
+ * sini akan memberi editor tombol "Naikkan" yang tidak mengubah apa pun di
+ * situs: perubahan yang tersimpan, tidak error, dan tidak pernah terlihat.
+ * Kalau suatu hari urutan manual memang diinginkan, yang diubah lebih dulu
+ * adalah situsnya.
+ */
+export const crewMembers = pgTable(
+  "crew_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    role: text("role").notNull().default(""),
+    category: crewCategoryEnum("category").notNull(),
+    /** `set null`, bukan `cascade`, sama seperti di `jobs` dan `people_values`:
+     *  menghapus sebuah gambar tidak boleh ikut menghapus orangnya. Fotonya
+     *  memang boleh kosong — situs menggambar ikon orang abu-abu (`CrewAvatar`)
+     *  sebagai gantinya. */
+    photoId: uuid("photo_id").references(() => images.id, {
+      onDelete: "set null",
+    }),
+    state: crewStateEnum("state").notNull().default("draft"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    /**
+     * Nama unik HANYA untuk baris hidup — alasannya sama dengan
+     * `jobs_slug_alive`: orang yang sudah dihapus tidak boleh mengunci
+     * namanya selamanya, dan orang yang kembali bergabung adalah kejadian
+     * yang wajar.
+     *
+     * Uniknya sendiri dipakai `TheCrew.tsx` sebagai `key` React. Dua orang
+     * dengan nama persis sama membuat React memakai ulang node yang salah:
+     * yang terlihat bukan error, melainkan satu kartu yang foto dan perannya
+     * milik orang lain.
+     */
+    uniqueIndex("crew_members_name_alive")
+      .on(t.name)
+      .where(sql`${t.deletedAt} is null`),
+    index("crew_members_category").on(t.category),
+  ],
+);
+
+/**
+ * Tautan sosial per orang.
+ *
+ * Tabel anak, bukan kolom `linkedin`/`github`/`x` di `crew_members`: platform
+ * keempat lewat tabel anak cuma menambah nilai enum, sedangkan lewat kolom ia
+ * menambah kolom yang kosong untuk hampir semua baris.
+ *
+ * `position` eksplisit karena urutan ikon di kartu terlihat, dan Postgres
+ * tidak menjanjikan urutan baris apa pun tanpa `ORDER BY`.
+ */
+export const crewSocials = pgTable(
+  "crew_socials",
+  {
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => crewMembers.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    platform: socialPlatformEnum("platform").notNull(),
+    url: text("url").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.memberId, t.position] })],
+);
+
 /* ──────────────────────── akun & sesi ─────────────────────── */
 
 export const users = pgTable("users", {
@@ -231,6 +412,10 @@ export const jobsRelations = relations(jobs, ({ one, many }) => ({
   bullets: many(jobCopyBullets),
 }));
 
+export const peopleValuesRelations = relations(peopleValues, ({ one }) => ({
+  photo: one(images, { fields: [peopleValues.photoId], references: [images.id] }),
+}));
+
 export const jobSkillsRelations = relations(jobSkills, ({ one }) => ({
   job: one(jobs, { fields: [jobSkills.jobId], references: [jobs.id] }),
 }));
@@ -241,6 +426,18 @@ export const jobCopyRelations = relations(jobCopy, ({ one }) => ({
 
 export const jobCopyBulletsRelations = relations(jobCopyBullets, ({ one }) => ({
   job: one(jobs, { fields: [jobCopyBullets.jobId], references: [jobs.id] }),
+}));
+
+export const crewMembersRelations = relations(crewMembers, ({ one, many }) => ({
+  photo: one(images, { fields: [crewMembers.photoId], references: [images.id] }),
+  socials: many(crewSocials),
+}));
+
+export const crewSocialsRelations = relations(crewSocials, ({ one }) => ({
+  member: one(crewMembers, {
+    fields: [crewSocials.memberId],
+    references: [crewMembers.id],
+  }),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({

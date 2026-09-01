@@ -19,8 +19,11 @@
  * "halaman kosong".
  */
 
-import type { ContentPayload, Job } from "@shared/job";
-import { CONTENT_VERSION } from "@shared/job";
+import type { ContentPayload } from "@shared/content";
+import { CONTENT_VERSION } from "@shared/content";
+import type { CrewMember } from "@shared/crew";
+import type { Job } from "@shared/job";
+import type { Value } from "@shared/value";
 
 /**
  * Batas tunggu.
@@ -91,6 +94,37 @@ export async function loadContent(): Promise<void> {
 /** Lowongan dari CMS, atau `null` kalau harus memakai isi bundle. */
 export function contentJobs(): Job[] | null {
   return content?.jobs ?? null;
+}
+
+/**
+ * Nilai dari CMS, atau `null` kalau harus memakai isi bundle.
+ *
+ * `values` diperiksa TERPISAH dari `jobs`, tidak ikut memvonis seluruh berkas
+ * di `loadContent()`. Sebabnya arah kompatibilitas yang satunya: situs versi
+ * baru bisa memuat `content.json` yang ditulis sebelum nilai masuk CMS, dan
+ * berkas seperti itu sehat-sehat saja — cuma belum punya bagian ini. Menolak
+ * seluruh berkasnya akan membuat lowongan ikut jatuh ke isi bundle demi satu
+ * field yang belum ada.
+ */
+export function contentValues(): Value[] | null {
+  const rows = content?.values;
+  return Array.isArray(rows) ? rows : null;
+}
+
+/**
+ * Crew dari CMS, atau `null` kalau harus memakai isi bundle.
+ *
+ * Diperiksa terpisah dengan alasan yang sama seperti `contentValues()` di
+ * atas: `content.json` yang ditulis sebelum crew masuk CMS adalah berkas
+ * sehat yang cuma belum punya bagian ini.
+ *
+ * Daftar KOSONG bukan `null` dan tidak jatuh ke cadangan. Editor yang
+ * menghapus semua anggotanya harus melihat halaman yang kosong, bukan tiga
+ * belas nama lama yang hidup kembali sesudah Publish tanpa cara menghapusnya.
+ */
+export function contentCrew(): CrewMember[] | null {
+  const rows = content?.crew;
+  return Array.isArray(rows) ? rows : null;
 }
 
 /** Kapan konten ini dipublish — dipakai test dan pemeriksaan manual. */

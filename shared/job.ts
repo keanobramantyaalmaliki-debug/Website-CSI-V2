@@ -76,21 +76,6 @@ export type Job = {
   detail: Record<JobLang, JobCopy> | null;
 };
 
-/**
- * Isi `content.json` — satu-satunya berkas yang dibaca situs publik.
- *
- * `version` dinaikkan kalau bentuknya berubah tidak kompatibel, supaya situs
- * versi lama yang terlanjur ter-cache tahu harus jatuh ke data bawaannya
- * ketimbang salah membaca.
- */
-export type ContentPayload = {
-  version: 1;
-  /** ISO 8601, untuk ditampilkan di admin sebagai "terakhir dipublish". */
-  generatedAt: string;
-  jobs: Job[];
-};
-
-export const CONTENT_VERSION = 1 as const;
 
 /** Slug dari judul: huruf kecil, tanpa aksen, dipisah tanda hubung. */
 export function slugify(title: string): string {

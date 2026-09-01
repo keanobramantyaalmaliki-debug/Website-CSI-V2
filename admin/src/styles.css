@@ -1,26 +1,69 @@
 /*
- * Hitam-putih, tanpa animasi. Keduanya permintaan eksplisit, dan keduanya
- * kebetulan juga keputusan yang tepat untuk panel yang dipakai orang non-teknis:
- * tidak ada warna yang harus ditafsirkan, dan tidak ada elemen yang bergerak
- * saat sedang dibaca.
+ * Dua tema, keduanya hitam-putih, dan tanpa animasi. "Tanpa animasi" adalah
+ * permintaan eksplisit, dan kebetulan juga keputusan yang tepat untuk panel
+ * yang dipakai orang non-teknis: tidak ada warna yang harus ditafsirkan, dan
+ * tidak ada elemen yang bergerak saat sedang dibaca.
  *
  * Tidak ada satu pun `transition`, `animation`, atau `transform` di berkas ini.
- * Kalau nanti tergoda menambahkannya: jangan.
+ * Kalau nanti tergoda menambahkannya: jangan. Itu termasuk saat mengganti
+ * tema — pergantiannya seketika, bukan melunak selama 200ms.
+ *
+ * SEMUA warna di berkas ini lewat token di bawah. Tidak ada satu pun `#fff`,
+ * `#000`, atau `rgba()` yang ditulis langsung di aturan mana pun, dan itulah
+ * satu-satunya alasan tema gelap cukup ditulis sekali sebagai daftar token
+ * pengganti. Menulis warna langsung di sebuah aturan berarti aturan itu diam-
+ * diam hanya benar di salah satu tema.
+ *
+ * Tokennya dinamai menurut PERANnya (`--teks`, `--dasar`), bukan menurut
+ * warnanya. Dulu namanya `--hitam` dan `--putih`; nama itu berhenti jujur
+ * begitu ada tema yang isinya justru kebalikannya.
  */
 
 :root {
-  --hitam: #000;
-  --putih: #fff;
+  --teks: #000;
+  --dasar: #fff;
   --garis: #d4d4d4;
   --garis-tegas: #000;
   --abu: #f4f4f4;
   --redup: #595959;
+  --tirai: rgba(0, 0, 0, 0.4);
   --sela: 16px;
   color-scheme: light;
   /* Radio dan checkbox digambar peramban, dan bawaannya biru. Satu baris ini
      yang membuat "hitam-putih" benar-benar hitam-putih — tanpanya seluruh
-     grup status memakai warna yang tidak ada di mana pun lagi di panel. */
-  accent-color: var(--hitam);
+     grup status memakai warna yang tidak ada di mana pun lagi di panel.
+     `color-scheme` di atasnya mengurus sisanya: bilah gulir, pemilih di
+     `<select>`, dan warna teks bayangan di isian kosong. */
+  accent-color: var(--teks);
+}
+
+/*
+ * Tema gelap. Atributnya dipasang di <html> oleh skrip kecil di `index.html`
+ * SEBELUM berkas ini dimuat — kalau menunggu React, panel sempat berkedip
+ * putih sepersekian detik setiap kali dimuat ulang.
+ *
+ * Dasarnya hitam penuh, cermin dari putih penuh di tema terang. Yang TIDAK
+ * ikut dibalik cuma teksnya: #fff di atas #000 menyilaukan dan meninggalkan
+ * jejak saat mata berpindah baris di paragraf panjang, jadi ia ditarik satu
+ * langkah ke dalam. Tetap abu-abu murni (R=G=B) seperti seluruh token di
+ * berkas ini — tidak ada satu pun yang punya rona.
+ */
+:root[data-tema="gelap"] {
+  --teks: #ededed;
+  --dasar: #000;
+  /* Garis tipis terang di atas dasar gelap terbaca lebih lemah daripada garis
+     tipis gelap di atas putih pada kontras yang sama persis, jadi angkanya
+     sedikit di atas padanan terangnya (1,8:1 lawan 1,5:1) — supaya pemisah
+     baris tabel sama-sama terlihat di kedua tema. */
+  --garis: #3a3a3a;
+  --garis-tegas: #ededed;
+  --abu: #1c1c1c;
+  --redup: #9a9a9a;
+  /* Lebih pekat daripada di tema terang: hitam 40% di atas dasar yang sudah
+     nyaris hitam nyaris tidak mengubah apa pun, dan latar di belakang dialog
+     berhenti terbaca sebagai "sedang tidak aktif". */
+  --tirai: rgba(0, 0, 0, 0.7);
+  color-scheme: dark;
 }
 
 * {
@@ -29,8 +72,8 @@
 
 body {
   margin: 0;
-  background: var(--putih);
-  color: var(--hitam);
+  background: var(--dasar);
+  color: var(--teks);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   /* 16px penuh: panel ini dipakai untuk membaca dan mengetik teks panjang,
      bukan untuk memuat sebanyak mungkin di satu layar. */
@@ -39,7 +82,26 @@ body {
 }
 
 a {
-  color: var(--hitam);
+  color: var(--teks);
+}
+
+/*
+ * Cincin fokus keyboard. Alasannya sama persis dengan `accent-color` di atas:
+ * peramban menggambarnya sendiri, dan bawaannya biru — rgb(0,95,204) di tema
+ * terang, rgb(153,200,255) di tema gelap. Itu satu-satunya warna berona yang
+ * tersisa di panel, dan ia justru muncul di tempat yang paling terlihat:
+ * mengelilingi apa pun yang sedang dipakai.
+ *
+ * `:focus-visible`, bukan `:focus` — kalau tidak, cincinnya ikut muncul
+ * setiap kali sebuah tombol DIKLIK, dan orang yang memakai tetikus melihat
+ * bingkai yang tidak pernah dia minta.
+ *
+ * 2px, bukan 1px seperti bawaannya: tanpa warna, ketebalan yang membedakan
+ * "sedang di sini" dari garis tepi biasa.
+ */
+:focus-visible {
+  outline: 2px solid var(--teks);
+  outline-offset: 2px;
 }
 
 .bungkus {
@@ -69,6 +131,48 @@ a {
   color: var(--redup);
 }
 
+/*
+ * Tombol tema. Menumpang di baris nama, bukan di menu sisi: menu sisi adalah
+ * peta konten situs, dan tema bukan salah satu halamannya.
+ *
+ * `inline-flex` + `vertical-align: middle`, BUKAN flexbox di `.siapa`.
+ * `.kepala` menyejajarkan anak-anaknya pada garis alas huruf, dan garis alas
+ * sebuah flex container diambil dari anak pertamanya — yang di sini cuma
+ * sebuah ikon tanpa huruf. Menjadikan `.siapa` flex berarti seluruh baris
+ * nama ikut bergeser terhadap judul di sebelahnya.
+ */
+.tombol-tema {
+  display: inline-flex;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  margin-right: 8px;
+  border: 1px solid var(--garis);
+  background: var(--dasar);
+  color: var(--redup);
+}
+
+.tombol-tema:hover {
+  background: var(--abu);
+  color: var(--teks);
+}
+
+/* Ikonnya digambar dengan garis, bukan bidang penuh: pada 16px bulan sabit
+   yang diisi penuh berubah jadi gumpalan tanpa bentuk di tema terang. */
+.tombol-tema svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 h2 {
   font-size: 18px;
   margin: 32px 0 12px;
@@ -80,8 +184,8 @@ button {
   font: inherit;
   cursor: pointer;
   border: 1px solid var(--garis-tegas);
-  background: var(--putih);
-  color: var(--hitam);
+  background: var(--dasar);
+  color: var(--teks);
   padding: 8px 16px;
 }
 
@@ -92,8 +196,8 @@ button:disabled {
 }
 
 button.utama {
-  background: var(--hitam);
-  color: var(--putih);
+  background: var(--teks);
+  color: var(--dasar);
 }
 
 button.utama:disabled {
@@ -125,7 +229,7 @@ button.kembali {
 }
 
 button.kembali:hover:not(:disabled) {
-  color: var(--hitam);
+  color: var(--teks);
 }
 
 /* ── isian ──────────────────────────────────────────────────────────── */
@@ -151,8 +255,8 @@ select {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid var(--garis-tegas);
-  background: var(--putih);
-  color: var(--hitam);
+  background: var(--dasar);
+  color: var(--teks);
   border-radius: 0;
 }
 
@@ -171,7 +275,7 @@ textarea {
   font-weight: 600;
   /* Tidak ada merah: temanya hitam-putih. Yang menandai galat adalah garis
      tebal di sisi kiri, dan itu tetap terbaca oleh siapa pun. */
-  border-left: 4px solid var(--hitam);
+  border-left: 4px solid var(--teks);
   padding-left: 8px;
 }
 
@@ -262,8 +366,8 @@ tr.draf td {
 }
 
 .penanda.tegas {
-  background: var(--hitam);
-  color: var(--putih);
+  background: var(--teks);
+  color: var(--dasar);
 }
 
 /* ── tab bahasa ─────────────────────────────────────────────────────── */
@@ -283,9 +387,9 @@ tr.draf td {
 }
 
 .tab button.aktif {
-  background: var(--putih);
+  background: var(--dasar);
   border-color: var(--garis-tegas);
-  border-bottom: 1px solid var(--putih);
+  border-bottom: 1px solid var(--dasar);
   font-weight: 600;
 }
 
@@ -331,7 +435,7 @@ tr.draf td {
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--putih);
+  background: var(--dasar);
   border-top: 2px solid var(--garis-tegas);
   padding: 12px 18px;
 }
@@ -350,12 +454,12 @@ dialog {
   border: 2px solid var(--garis-tegas);
   padding: 24px;
   max-width: 480px;
-  color: var(--hitam);
-  background: var(--putih);
+  color: var(--teks);
+  background: var(--dasar);
 }
 
 dialog::backdrop {
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--tirai);
 }
 
 .tombol-baris {
@@ -460,6 +564,14 @@ details[open] summary {
 
 .sisi-daftar {
   margin-top: 2px;
+  /* Ruang untuk cincin fokus (2px tebal + 2px offset). `overflow-y: auto` di
+     bawah membuat peramban menghitung `overflow-x` jadi `auto` juga, jadi
+     cincin di tombol yang selebar kolom akan memunculkan bilah gulir mendatar
+     setiap kali menu ini dijelajahi dengan Tab. Margin negatifnya persis
+     membatalkan bantalannya: anak-anaknya tetap di tempat dan tetap selebar
+     kolom, yang bertambah cuma ruang di dalam wadah yang bisa bergulir. */
+  padding-inline: 4px;
+  margin-inline: -4px;
   /* Yang bergulir daftarnya, bukan `.sisi`: `overflow` di pembungkus akan ikut
      memotong tombol lipat yang justru sengaja menjorok keluar tepinya. */
   max-height: calc(100vh - 96px);
@@ -478,7 +590,7 @@ details[open] summary {
   padding: 8px 10px;
   text-align: left;
   background: none;
-  color: var(--hitam);
+  color: var(--teks);
 }
 
 .sisi button:hover {
@@ -508,12 +620,12 @@ details[open] summary {
 }
 
 .sisi button.aktif {
-  background: var(--hitam);
-  color: var(--putih);
+  background: var(--teks);
+  color: var(--dasar);
 }
 
 .sisi button.aktif:hover {
-  background: var(--hitam);
+  background: var(--teks);
 }
 
 .sisi-item.mati {
@@ -542,7 +654,7 @@ details[open] summary {
   padding: 0;
   justify-content: center;
   border: 1px solid var(--garis);
-  background: var(--putih);
+  background: var(--dasar);
   font-size: 15px;
   line-height: 1;
   color: var(--redup);
@@ -550,7 +662,7 @@ details[open] summary {
 
 .sisi .sisi-lipat:hover {
   background: var(--abu);
-  color: var(--hitam);
+  color: var(--teks);
 }
 
 @media (max-width: 860px) {

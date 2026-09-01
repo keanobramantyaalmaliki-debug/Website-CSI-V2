@@ -25,7 +25,8 @@ if (!env.databaseUrl.includes("cogniti_test")) {
 export async function resetDb(): Promise<void> {
   await sql.unsafe(`
     truncate table
-      audit_log, sessions, job_copy_bullets, job_copy, job_skills, jobs, images, users
+      audit_log, sessions, job_copy_bullets, job_copy, job_skills, jobs,
+      people_values, crew_socials, crew_members, images, users
     restart identity cascade
   `);
 }
@@ -49,10 +50,7 @@ export async function loginAsEditor(): Promise<Login> {
   const res = await app.request("/api/auth/login", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      email: "editor@cogniti.id",
-      password: "sandi-yang-panjang",
-    }),
+    body: JSON.stringify({ password: "sandi-yang-panjang" }),
   });
   if (res.status !== 200) {
     throw new Error(`Login test gagal (${res.status}): ${await res.text()}`);
@@ -87,6 +85,31 @@ export function jobBody(over: Record<string, unknown> = {}) {
     skills: ["SQL", "Python"],
     askGithub: true,
     detail: null,
+    ...over,
+  };
+}
+
+/** Bentuk nilai minimal yang lolos validasi `live`. */
+export function valueBody(over: Record<string, unknown> = {}) {
+  return {
+    title: "Craft First",
+    tagline: "Precision over speed",
+    description: "Detailnya adalah pekerjaannya.",
+    photo: "/people/craft-first.webp",
+    state: "live",
+    ...over,
+  };
+}
+
+/** Bentuk anggota crew minimal yang lolos validasi `live`. */
+export function crewBody(over: Record<string, unknown> = {}) {
+  return {
+    name: "Bagas Nusantara Nabillah",
+    role: "Senior Developer",
+    category: "Developer",
+    photo: "/people/bagas.webp",
+    social: [{ platform: "linkedin", url: "https://linkedin.com/in/bagas" }],
+    state: "live",
     ...over,
   };
 }

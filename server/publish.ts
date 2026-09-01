@@ -12,13 +12,18 @@
 
 import { mkdir, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { CONTENT_VERSION, type ContentPayload, type Job } from "@shared/job";
+import { CONTENT_VERSION, type ContentPayload } from "@shared/content";
+import type { CrewMember } from "@shared/crew";
+import type { Job } from "@shared/job";
+import type { Value } from "@shared/value";
 
 import { record, type Actor } from "./audit";
 import { db } from "./db/client";
-import { jobs } from "./db/schema";
+import { crewMembers, jobs, peopleValues } from "./db/schema";
 import { env } from "./env";
+import { listCrew } from "./crewRepo";
 import { listJobs } from "./jobsRepo";
+import { listValues } from "./valuesRepo";
 
 /**
  * `dist/` — hasil build Vite, yang disajikan `serve` di produksi.
@@ -33,16 +38,34 @@ export const CONTENT_PATH = path.resolve(process.cwd(), "dist", "content.json");
 /** Hanya yang tayang. `draft` tidak pernah ikut — itu yang membuat tombol
  *  Publish aman ditekan kapan saja meski ada lowongan lain yang setengah jadi. */
 async function collect(): Promise<ContentPayload> {
-  const rows = await listJobs({ includeDrafts: false });
+  const [jobRows, valueRows, crewRows] = await Promise.all([
+    listJobs({ includeDrafts: false }),
+    listValues({ includeDrafts: false }),
+    listCrew({ includeDrafts: false }),
+  ]);
 
-  const publicJobs: Job[] = rows.map(
+  const publicJobs: Job[] = jobRows.map(
     ({ updatedAt: _u, publishedAt: _p, unpublished: _n, ...job }) => job,
+  );
+
+  /* Kolom admin (`updatedAt`, `publishedAt`, `unpublished`) dibuang di sini,
+     bukan dibiarkan ikut "karena tidak ada yang membacanya": `content.json`
+     diunduh SETIAP pengunjung, dan bocornya jadwal sunting internal ke publik
+     bukan sesuatu yang perlu terjadi demi tiga baris yang tidak dipakai. */
+  const publicValues: Value[] = valueRows.map(
+    ({ updatedAt: _u, publishedAt: _p, unpublished: _n, ...value }) => value,
+  );
+
+  const publicCrew: CrewMember[] = crewRows.map(
+    ({ updatedAt: _u, publishedAt: _p, unpublished: _n, ...member }) => member,
   );
 
   return {
     version: CONTENT_VERSION,
     generatedAt: new Date().toISOString(),
     jobs: publicJobs,
+    values: publicValues,
+    crew: publicCrew,
   };
 }
 
@@ -103,6 +126,8 @@ async function purgeCloudflare(): Promise<string | null> {
 
 export type PublishResult = {
   jobs: number;
+  values: number;
+  crew: number;
   generatedAt: string;
   warning: string | null;
 };
@@ -120,7 +145,10 @@ export async function publish(actor: Actor): Promise<PublishResult> {
      ditulis sudah tidak memuatnya lagi. Dulu klausa `isNull(deletedAt)` di sini
      membuat baris terhapus tidak pernah bisa ditandai — badge-nya menghitung
      penghapusan yang sudah lama tayang, selamanya, dan angkanya cuma bisa naik. */
-  await db.update(jobs).set({ publishedAt: new Date() });
+  const now = new Date();
+  await db.update(jobs).set({ publishedAt: now });
+  await db.update(peopleValues).set({ publishedAt: now });
+  await db.update(crewMembers).set({ publishedAt: now });
 
   const warning = await purgeCloudflare();
 
@@ -128,43 +156,83 @@ export async function publish(actor: Actor): Promise<PublishResult> {
     actor,
     entity: "content",
     action: "publish",
-    snapshot: { jobs: payload.jobs.length, generatedAt: payload.generatedAt },
+    snapshot: {
+      jobs: payload.jobs.length,
+      values: payload.values.length,
+      crew: payload.crew.length,
+      generatedAt: payload.generatedAt,
+    },
   });
 
   return {
     jobs: payload.jobs.length,
+    values: payload.values.length,
+    crew: payload.crew.length,
     generatedAt: payload.generatedAt,
     warning,
   };
 }
 
-/** Berapa banyak perubahan yang belum tayang — angka di badge bar publish. */
+/**
+ * Apakah satu baris punya perubahan yang belum tayang?
+ *
+ * Cukup tiga cap waktu, jadi aturannya sama untuk semua entitas dan ditulis
+ * sekali di sini. Kalau tiap entitas menyalin aturan ini, perbaikan seperti
+ * yang di bawah — penghapusan yang ikut dihitung — akan diperbaiki di satu
+ * tempat dan tetap salah di tempat lain.
+ */
+type Stamps = {
+  updatedAt: Date;
+  publishedAt: Date | null;
+  deletedAt: Date | null;
+};
+
+function menunggu(r: Stamps): boolean {
+  /**
+   * Baris yang DIHAPUS ikut dihitung selama penghapusannya sendiri belum
+   * tayang: isinya masih terlihat pengunjung sampai publish berikutnya. Tanpa
+   * ini editor menghapus sesuatu, melihat badge tetap nol, dan menyimpulkan
+   * tidak perlu menekan Publish — sementara yang dihapus masih tayang.
+   *
+   * Yang dibandingkan `deletedAt`, bukan sekadar "pernah tayang": begitu
+   * publish berikutnya jalan, baris ini sudah lenyap dari `content.json` dan
+   * tidak menunggu apa-apa lagi.
+   */
+  if (r.deletedAt) return r.publishedAt !== null && r.deletedAt > r.publishedAt;
+
+  /* Draft tidak pernah ikut ke content.json, jadi mengubahnya bukan perubahan
+     yang menunggu tayang — kecuali ia PERNAH tayang lalu dikembalikan jadi
+     draft, dan itu tertangkap oleh `publishedAt`. */
+  return !r.publishedAt || r.updatedAt > r.publishedAt;
+}
+
+/** Berapa banyak perubahan yang belum tayang — angka di badge bar publish.
+ *  Satu angka untuk SEMUA entitas: yang ditanyakan editor adalah "apa masih
+ *  ada yang perlu saya publish", bukan "berapa di tabel mana". */
 export async function pendingCount(): Promise<number> {
-  const rows = await db
-    .select({
-      updatedAt: jobs.updatedAt,
-      publishedAt: jobs.publishedAt,
-      deletedAt: jobs.deletedAt,
-    })
-    .from(jobs);
+  const [jobRows, valueRows, crewRows] = await Promise.all([
+    db
+      .select({
+        updatedAt: jobs.updatedAt,
+        publishedAt: jobs.publishedAt,
+        deletedAt: jobs.deletedAt,
+      })
+      .from(jobs),
+    db
+      .select({
+        updatedAt: peopleValues.updatedAt,
+        publishedAt: peopleValues.publishedAt,
+        deletedAt: peopleValues.deletedAt,
+      })
+      .from(peopleValues),
+    db
+      .select({
+        updatedAt: crewMembers.updatedAt,
+        publishedAt: crewMembers.publishedAt,
+        deletedAt: crewMembers.deletedAt,
+      })
+      .from(crewMembers),
+  ]);
 
-  return rows.filter((r) => {
-    /**
-     * Lowongan yang DIHAPUS ikut dihitung selama penghapusannya sendiri belum
-     * tayang: barisnya masih terlihat pengunjung sampai publish berikutnya.
-     * Tanpa ini editor menghapus lowongan, melihat badge tetap nol, dan
-     * menyimpulkan tidak perlu menekan Publish — sementara lowongan yang sudah
-     * ditutup masih menerima lamaran.
-     *
-     * Yang dibandingkan adalah `deletedAt`, bukan sekadar "pernah tayang":
-     * begitu publish berikutnya jalan, baris ini sudah lenyap dari
-     * `content.json` dan tidak menunggu apa-apa lagi.
-     */
-    if (r.deletedAt) return r.publishedAt !== null && r.deletedAt > r.publishedAt;
-
-    /* Draft tidak pernah ikut ke content.json, jadi mengubahnya bukan
-       perubahan yang menunggu tayang — kecuali ia PERNAH tayang lalu
-       dikembalikan jadi draft, dan itu tertangkap oleh `publishedAt`. */
-    return !r.publishedAt || r.updatedAt > r.publishedAt;
-  }).length;
+  return [...jobRows, ...valueRows, ...crewRows].filter(menunggu).length;
 }

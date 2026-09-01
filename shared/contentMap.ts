@@ -148,14 +148,14 @@ export const CONTENT_PAGES: readonly ContentPage[] = [
         key: "nilai",
         label: "Nilai",
         summary: "Prinsip kerja tim, masing-masing dengan foto dan penjelasannya.",
-        status: "belum",
+        status: "siap",
         approxCount: 3,
       },
       {
         key: "crew",
         label: "Crew",
         summary: "Anggota tim: nama, peran, foto, dan tautan sosialnya.",
-        status: "belum",
+        status: "siap",
         approxCount: 13,
       },
       {

@@ -1,7 +1,11 @@
 /**
  * Layar masuk.
  *
- * Tidak ada tautan "daftar akun" — dan itu disengaja. Akun dibuat developer
+ * Kata sandi saja, tanpa email. Tiap orang tetap punya akun sendiri — sandinya
+ * yang mengenali dia — jadi yang hilang cuma satu isian yang harus diketik,
+ * bukan jejak siapa mengubah apa.
+ *
+ * Tidak ada tautan "daftar akun", dan itu disengaja. Akun dibuat developer
  * lewat `bun run user:create`, jadi tidak ada cara siapa pun dari internet
  * memberi dirinya sendiri hak mengedit konten situs.
  */
@@ -12,7 +16,6 @@ import { masuk, type Pengguna } from "./api";
 import { Isian, Kabar } from "./ui";
 
 export function Masuk({ onMasuk }: { onMasuk: (user: Pengguna) => void }) {
-  const [email, setEmail] = useState("");
   const [sandi, setSandi] = useState("");
   const [pesan, setPesan] = useState<string | null>(null);
   const [sedang, setSedang] = useState(false);
@@ -21,7 +24,7 @@ export function Masuk({ onMasuk }: { onMasuk: (user: Pengguna) => void }) {
     e.preventDefault();
     setSedang(true);
     setPesan(null);
-    const hasil = await masuk(email, sandi);
+    const hasil = await masuk(sandi);
     setSedang(false);
 
     if (!hasil.ok) {
@@ -37,20 +40,13 @@ export function Masuk({ onMasuk }: { onMasuk: (user: Pengguna) => void }) {
       <form onSubmit={kirim}>
         {pesan ? <Kabar tegas anak={pesan} /> : null}
 
-        <Isian label="Email">
-          <input
-            type="email"
-            autoComplete="username"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </Isian>
-
         <Isian label="Kata sandi">
           <input
             type="password"
             autoComplete="current-password"
+            /* Fokus otomatis: ini satu-satunya isian di halaman, jadi tidak
+               ada yang bisa terganggu olehnya. */
+            autoFocus
             value={sandi}
             onChange={(e) => setSandi(e.target.value)}
             required

@@ -13,6 +13,30 @@
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23000'/%3E%3Crect x='3' y='3' width='10' height='2' fill='%23fff'/%3E%3Crect x='3' y='7' width='10' height='2' fill='%23fff'/%3E%3Crect x='3' y='11' width='6' height='2' fill='%23fff'/%3E%3C/svg%3E"
     />
     <title>Kelola Konten — Cogniti</title>
+    <!-- Tema dipasang SEBELUM stylesheet mana pun sempat melukis. Kalau
+         menunggu React, panel berkedip putih sepersekian detik setiap kali
+         dimuat ulang di tema gelap — dan kedipannya persis di layar masuk,
+         tempat orang paling sering menekan reload.
+
+         Sengaja inline dan sengaja tanpa `defer`: skrip modul (`main.tsx`)
+         dieksekusi setelah HTML selesai diurai, yaitu tepat setelah kedipan
+         yang mau dihindari ini terjadi.
+
+         Nama kuncinya kembar dengan `KUNCI_TEMA` di `src/Tema.tsx`. Kalau
+         salah satunya berubah, tidak ada yang galat — cuma kedipannya
+         kembali. -->
+    <script>
+      try {
+        var t = localStorage.getItem("cogniti-tema");
+        if (t !== "terang" && t !== "gelap") {
+          t = matchMedia("(prefers-color-scheme: dark)").matches ? "gelap" : "terang";
+        }
+        document.documentElement.dataset.tema = t;
+      } catch (e) {
+        /* localStorage diblokir (mode privat). Terang saja. */
+        document.documentElement.dataset.tema = "terang";
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

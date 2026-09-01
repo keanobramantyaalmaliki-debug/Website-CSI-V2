@@ -13,8 +13,10 @@ import type { Actor } from "./audit";
 import { attachActor, requireLogin } from "./auth";
 import authRoute from "./routes/auth";
 import imagesRoute from "./routes/images";
+import crewRoute from "./routes/crew";
 import jobsRoute from "./routes/jobs";
 import publishRoute from "./routes/publish";
+import valuesRoute from "./routes/values";
 
 export type Env = { Variables: { actor: Actor } };
 
@@ -54,12 +56,18 @@ app.route("/api/auth", authRoute);
  */
 app.use("/api/jobs/*", requireLogin);
 app.use("/api/jobs", requireLogin);
+app.use("/api/values/*", requireLogin);
+app.use("/api/values", requireLogin);
+app.use("/api/crew/*", requireLogin);
+app.use("/api/crew", requireLogin);
 app.use("/api/images/*", requireLogin);
 app.use("/api/images", requireLogin);
 app.use("/api/publish/*", requireLogin);
 app.use("/api/publish", requireLogin);
 
 app.route("/api/jobs", jobsRoute);
+app.route("/api/values", valuesRoute);
+app.route("/api/crew", crewRoute);
 app.route("/api/images", imagesRoute);
 app.route("/api/publish", publishRoute);
 

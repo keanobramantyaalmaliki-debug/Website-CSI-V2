@@ -72,11 +72,13 @@ describe("bentuk peta konten", () => {
 
   /* Ini yang menjaga beranda tetap jujur saat entitas berikutnya dikerjakan:
      satu-satunya yang boleh "siap" adalah yang panelnya benar-benar ada. */
-  it("hanya lowongan yang berstatus siap", () => {
+  it("hanya entitas yang panelnya sudah ada yang berstatus siap", () => {
     const siap = CONTENT_GROUPS.flatMap((p) => p.entries)
       .filter((e) => e.status === "siap")
       .map((e) => e.key);
-    expect(siap).toEqual(["lowongan"]);
+    /* Urutannya urutan halaman, bukan urutan pengerjaan: nilai dan crew
+       berada di atas lowongan, di halaman People. */
+    expect(siap).toEqual(["nilai", "crew", "lowongan"]);
   });
 
   it("kelompok seluruh-situs ikut terangkut ke CONTENT_GROUPS", () => {

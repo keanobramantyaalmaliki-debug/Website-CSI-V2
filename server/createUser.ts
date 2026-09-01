@@ -8,9 +8,9 @@
  * menambah pintu yang harus dijaga tanpa menyelesaikan masalah apa pun.
  */
 
-import { eq } from "drizzle-orm";
+import { eq, isNull, ne, and } from "drizzle-orm";
 
-import { hashPassword } from "./auth";
+import { hashPassword, verifyPassword } from "./auth";
 import { db, sql } from "./db/client";
 import { users } from "./db/schema";
 
@@ -29,12 +29,40 @@ if (password.length < 10) {
 }
 
 const normalized = email.trim().toLowerCase();
-const passwordHash = await hashPassword(password);
 
 const [existing] = await db
   .select({ id: users.id })
   .from(users)
   .where(eq(users.email, normalized));
+
+/**
+ * Sandi kembar ditolak.
+ *
+ * Panel ini masuk dengan kata sandi saja, jadi sandi bukan cuma bukti — ia
+ * PENGENAL. Dua akun bersandi sama berarti salah satunya tidak akan pernah
+ * kebagian: yang satu masuk sebagai yang lain, tanpa galat, dan `audit_log`
+ * menuliskan nama yang keliru. Lebih baik ketahuan di sini.
+ */
+const lain = await db
+  .select({ name: users.name, passwordHash: users.passwordHash })
+  .from(users)
+  .where(
+    existing
+      ? and(isNull(users.deletedAt), ne(users.id, existing.id))
+      : isNull(users.deletedAt),
+  );
+
+for (const orang of lain) {
+  if (await verifyPassword(password, orang.passwordHash)) {
+    console.error(
+      `Kata sandi itu sudah dipakai akun lain (${orang.name}). Panel ini masuk dengan sandi saja, jadi tiap orang harus punya sandi yang berbeda.`,
+    );
+    await sql.end();
+    process.exit(1);
+  }
+}
+
+const passwordHash = await hashPassword(password);
 
 if (existing) {
   /* Email sama = GANTI SANDI, bukan akun kedua. Dua akun beremail sama akan

@@ -19,8 +19,7 @@ const BROWSER =
   process.env.CSI_BROWSER ??
   "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser";
 const PORT = 9231;
-const EMAIL = process.env.ADMIN_EMAIL ?? "rnd@cogniti.id";
-const SANDI = process.env.ADMIN_PASSWORD ?? "sandiUjiLokal123";
+const SANDI = process.env.ADMIN_PASSWORD ?? "wibujosjis12345";
 const JUDUL = "Probe Engineer";
 
 /* Profil dibuang tiap kali: cookie sesi yang tertinggal dari jalan-jalan
@@ -176,7 +175,6 @@ async function main() {
   /* 1 — masuk */
   await tunggu(`!!document.querySelector('input[type="password"]')`, "layar masuk");
   await potret("1-masuk");
-  await jalan(`__isi("Email", ${JSON.stringify(EMAIL)})`);
   await jalan(`__isi("Kata sandi", ${JSON.stringify(SANDI)})`);
   await jalan(`document.querySelector("form").requestSubmit()`);
   await tunggu(`!!document.querySelector(".sisi")`, "menu sisi");

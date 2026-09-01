@@ -7,10 +7,28 @@
  * mati di server, dan bedanya baru ketahuan setelah deploy.
  */
 
+import type { CrewMember } from "@shared/crew";
 import type { Job } from "@shared/job";
+import type { Value } from "@shared/value";
+import type { CrewFieldErrors, CrewInput } from "@shared/validateCrew";
 import type { JobFieldErrors, JobInput } from "@shared/validateJob";
+import type { ValueFieldErrors, ValueInput } from "@shared/validateValue";
 
 export type JobRecord = Job & {
+  updatedAt: string;
+  publishedAt: string | null;
+  /** Ada perubahan yang belum ikut Publish. */
+  unpublished: boolean;
+};
+
+export type ValueRecord = Value & {
+  updatedAt: string;
+  publishedAt: string | null;
+  /** Ada perubahan yang belum ikut Publish. */
+  unpublished: boolean;
+};
+
+export type CrewRecord = CrewMember & {
   updatedAt: string;
   publishedAt: string | null;
   /** Ada perubahan yang belum ikut Publish. */
@@ -38,7 +56,13 @@ export type Pengguna = { id: string; name: string } | null;
  */
 export type Hasil<T> =
   | { ok: true; data: T }
-  | { ok: false; pesan: string; errors?: JobFieldErrors; perluMasuk?: boolean };
+  | { ok: false; pesan: string; errors?: FieldErrors; perluMasuk?: boolean };
+
+/** Galat per-isian dari entitas mana pun. Digabung jadi satu tipe karena
+ *  `minta()` tidak tahu — dan tidak perlu tahu — entitas apa yang sedang
+ *  dipanggil; yang membaca `errors` adalah form yang memang cuma mengenal
+ *  isiannya sendiri. */
+export type FieldErrors = JobFieldErrors & ValueFieldErrors & CrewFieldErrors;
 
 async function minta<T>(path: string, init: RequestInit = {}): Promise<Hasil<T>> {
   let res: Response;
@@ -71,7 +95,7 @@ async function minta<T>(path: string, init: RequestInit = {}): Promise<Hasil<T>>
     };
   }
 
-  const badan = (isi ?? {}) as { error?: string; errors?: JobFieldErrors };
+  const badan = (isi ?? {}) as { error?: string; errors?: FieldErrors };
   return {
     ok: false,
     pesan: badan.error ?? "Ada yang salah. Coba lagi sebentar lagi.",
@@ -90,11 +114,8 @@ const kirimJson = (metode: string, body: unknown): RequestInit => ({
 
 export const siapaAku = () => minta<{ user: Pengguna }>("/api/auth/me");
 
-export const masuk = (email: string, password: string) =>
-  minta<{ user: Pengguna }>(
-    "/api/auth/login",
-    kirimJson("POST", { email, password }),
-  );
+export const masuk = (password: string) =>
+  minta<{ user: Pengguna }>("/api/auth/login", kirimJson("POST", { password }));
 
 export const keluar = () => minta<{ ok: true }>("/api/auth/logout", { method: "POST" });
 
@@ -113,6 +134,47 @@ export const simpanLowongan = (id: string, input: JobInput) =>
 
 export const hapusLowongan = (id: string) =>
   minta<{ ok: true; deleted: string }>(`/api/jobs/${id}`, { method: "DELETE" });
+
+/* ── nilai (People → What We Stand For) ─────────────────────────────── */
+
+export const ambilNilai = () => minta<{ values: ValueRecord[] }>("/api/values");
+
+export const ambilSatuNilai = (id: string) =>
+  minta<{ value: ValueRecord }>(`/api/values/${id}`);
+
+export const buatNilai = (input: ValueInput) =>
+  minta<{ value: ValueRecord }>("/api/values", kirimJson("POST", input));
+
+export const simpanNilai = (id: string, input: ValueInput) =>
+  minta<{ value: ValueRecord }>(`/api/values/${id}`, kirimJson("PUT", input));
+
+export const hapusNilai = (id: string) =>
+  minta<{ ok: true; deleted: string }>(`/api/values/${id}`, { method: "DELETE" });
+
+/** Kirim SELURUH daftar id dalam urutan barunya. Server menolak daftar yang
+ *  tidak menyebut semua nilai — lihat `reorderValues` di server. */
+export const urutkanNilai = (ids: string[]) =>
+  minta<{ values: ValueRecord[] }>("/api/values/urutkan", kirimJson("POST", { ids }));
+
+/* ── crew (People → The Crew) ───────────────────────────────────────── */
+
+/* Tanpa `urutkanCrew`: situs mengurutkan crew A–Z sendiri di dalam tiap
+   departemen, jadi endpoint mengurutkan cuma akan memberi editor tombol yang
+   tidak mengubah apa pun. Alasan lengkapnya di `server/db/schema.ts`. */
+
+export const ambilCrew = () => minta<{ crew: CrewRecord[] }>("/api/crew");
+
+export const ambilSatuCrew = (id: string) =>
+  minta<{ member: CrewRecord }>(`/api/crew/${id}`);
+
+export const buatCrew = (input: CrewInput) =>
+  minta<{ member: CrewRecord }>("/api/crew", kirimJson("POST", input));
+
+export const simpanCrew = (id: string, input: CrewInput) =>
+  minta<{ member: CrewRecord }>(`/api/crew/${id}`, kirimJson("PUT", input));
+
+export const hapusCrew = (id: string) =>
+  minta<{ ok: true; deleted: string }>(`/api/crew/${id}`, { method: "DELETE" });
 
 /* ── gambar ─────────────────────────────────────────────────────────── */
 
@@ -133,7 +195,13 @@ export const statusPublish = () =>
   minta<{ pending: number }>("/api/publish/status");
 
 export const tayangkan = () =>
-  minta<{ jobs: number; generatedAt: string; warning: string | null }>(
+  minta<{
+    jobs: number;
+    values: number;
+    crew: number;
+    generatedAt: string;
+    warning: string | null;
+  }>(
     "/api/publish",
     { method: "POST" },
   );

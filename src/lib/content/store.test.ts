@@ -8,7 +8,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ContentPayload, Job } from "@shared/job";
+import type { Job } from "@shared/job";
+import type { ContentPayload } from "@shared/content";
 
 import { __resetContent, contentJobs, loadContent } from "./store";
 import { careerRoles, FALLBACK_ROLES } from "@/data/careerRoles";
@@ -36,6 +37,8 @@ const payload = (jobs: Job[]): ContentPayload => ({
   version: 1,
   generatedAt: "2026-08-31T00:00:00.000Z",
   jobs,
+  values: [],
+  crew: [],
 });
 
 function mockFetch(impl: () => Promise<Response>) {

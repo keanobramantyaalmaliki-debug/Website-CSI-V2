@@ -24,7 +24,7 @@ process.chdir(kotakPasir);
 
 const { publish, pendingCount, CONTENT_PATH } = await import("./publish");
 const { sql } = await import("./db/client");
-const { asEditor, jobBody, loginAsEditor, resetDb } = await import(
+const { asEditor, jobBody, loginAsEditor, resetDb, valueBody } = await import(
   "./test/helpers"
 );
 
@@ -59,6 +59,14 @@ const buat = async (over: Record<string, unknown> = {}) => {
     body: JSON.stringify(jobBody(over)),
   });
   return (await json<{ job: { id: string; slug: string } }>(res)).job;
+};
+
+const buatNilai = async (over: Record<string, unknown> = {}) => {
+  const res = await api("/api/values", {
+    method: "POST",
+    body: JSON.stringify(valueBody(over)),
+  });
+  return (await json<{ value: { id: string; title: string } }>(res)).value;
 };
 
 const bacaContent = async () =>
@@ -125,6 +133,72 @@ describe("isi content.json", () => {
   });
 });
 
+describe("nilai ikut ke content.json", () => {
+  it("hanya yang tayang, dan urutannya urutan panel", async () => {
+    /* Dibuat berurutan; `createValue` menaruh yang baru di bawah, jadi urutan
+       pembuatan = urutan panel di halaman People. */
+    await buatNilai({ title: "Craft First" });
+    await buatNilai({ title: "Partnership" });
+    await buatNilai({ title: "Masih Digodok", state: "draft" });
+
+    const hasil = await publish(aktor);
+    expect(hasil.values).toBe(2);
+
+    const isi = await bacaContent();
+    /* `.sort()` sengaja TIDAK dipakai di sini, tidak seperti pemeriksaan
+       lowongan di atas: urutannya justru yang sedang diuji. */
+    expect(isi.values.map((v: { title: string }) => v.title)).toEqual([
+      "Craft First",
+      "Partnership",
+    ]);
+  });
+
+  it("tidak membocorkan kolom yang cuma urusan admin", async () => {
+    await buatNilai();
+    await publish(aktor);
+
+    const [value] = (await bacaContent()).values;
+    expect(value).not.toHaveProperty("updatedAt");
+    expect(value).not.toHaveProperty("publishedAt");
+    expect(value).not.toHaveProperty("unpublished");
+    expect(Object.keys(value).sort()).toEqual([
+      "description",
+      "id",
+      "photo",
+      "sortOrder",
+      "state",
+      "tagline",
+      "title",
+    ]);
+  });
+
+  it("nilai yang dihapus lenyap di publish berikutnya", async () => {
+    const value = await buatNilai();
+    await publish(aktor);
+    expect((await bacaContent()).values).toHaveLength(1);
+
+    await api(`/api/values/${value.id}`, { method: "DELETE" });
+    await publish(aktor);
+    expect((await bacaContent()).values).toHaveLength(0);
+  });
+
+  it("menyusun ulang urutan mengubah urutan yang tayang", async () => {
+    const a = await buatNilai({ title: "Craft First" });
+    const b = await buatNilai({ title: "Partnership" });
+    await publish(aktor);
+
+    await api("/api/values/urutkan", {
+      method: "POST",
+      body: JSON.stringify({ ids: [b.id, a.id] }),
+    });
+    await publish(aktor);
+
+    expect(
+      (await bacaContent()).values.map((v: { title: string }) => v.title),
+    ).toEqual(["Partnership", "Craft First"]);
+  });
+});
+
 describe("badge perubahan belum tayang", () => {
   it("nol sesudah publish", async () => {
     await buat();
@@ -186,18 +260,58 @@ describe("badge perubahan belum tayang", () => {
        angkanya tidak ikut naik untuk lowongan lain yang tidak disentuh. */
     expect(await pendingCount()).toBe(1);
   });
+
+  it("angkanya menjumlahkan semua entitas, bukan lowongan saja", async () => {
+    await buat();
+    await buatNilai();
+    /* Kalau `pendingCount` lupa satu tabel, angkanya tetap masuk akal di layar
+       (cuma lebih kecil) dan tidak ada yang gagal — sampai editor menyunting
+       nilai, melihat badge 0, dan menyimpulkan tidak perlu menekan Publish. */
+    expect(await pendingCount()).toBe(2);
+
+    await publish(aktor);
+    expect(await pendingCount()).toBe(0);
+  });
+
+  it("mengubah urutan nilai adalah perubahan yang menunggu Publish", async () => {
+    const a = await buatNilai({ title: "Craft First" });
+    const b = await buatNilai({ title: "Partnership" });
+    await publish(aktor);
+    expect(await pendingCount()).toBe(0);
+
+    await api("/api/values/urutkan", {
+      method: "POST",
+      body: JSON.stringify({ ids: [b.id, a.id] }),
+    });
+    /* Dua-duanya `updatedAt`-nya maju: urutan itu isi bersama, bukan properti
+       satu baris. */
+    expect(await pendingCount()).toBe(2);
+  });
 });
 
 describe("endpoint publish", () => {
   it("POST /api/publish menayangkan dan melaporkan jumlahnya", async () => {
     await buat();
+    await buatNilai();
+
     const res = await api("/api/publish", { method: "POST" });
-    const body = await json<{ jobs: number; generatedAt: string }>(res);
+    const body = await json<{
+      jobs: number;
+      values: number;
+      generatedAt: string;
+    }>(res);
 
     expect(res.status).toBe(200);
     expect(body.jobs).toBe(1);
+    /* Jumlah per entitas dilaporkan terpisah, bukan satu angka total:
+       kalimat yang dilihat editor sesudah menekan Publish menyebut isinya
+       ("1 lowongan, 1 nilai"), dan angka total tidak bisa dipecah lagi. */
+    expect(body.values).toBe(1);
     expect(body.generatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-    expect((await bacaContent()).jobs).toHaveLength(1);
+
+    const isi = await bacaContent();
+    expect(isi.jobs).toHaveLength(1);
+    expect(isi.values).toHaveLength(1);
   });
 
   it("GET /api/publish/status memberi angka badge", async () => {

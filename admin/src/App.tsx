@@ -18,13 +18,29 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { ambilLowongan, keluar, siapaAku, statusPublish, type JobRecord, type Pengguna } from "./api";
+import {
+  ambilCrew,
+  ambilLowongan,
+  ambilNilai,
+  keluar,
+  siapaAku,
+  statusPublish,
+  type CrewRecord,
+  type JobRecord,
+  type Pengguna,
+  type ValueRecord,
+} from "./api";
 import { BarPublish } from "./BarPublish";
 import { Beranda } from "./Beranda";
+import { DaftarCrew } from "./DaftarCrew";
 import { DaftarLowongan } from "./DaftarLowongan";
+import { DaftarNilai } from "./DaftarNilai";
+import { FormCrew } from "./FormCrew";
 import { FormLowongan } from "./FormLowongan";
+import { FormNilai } from "./FormNilai";
 import { Masuk } from "./Masuk";
 import { Sidebar } from "./Sidebar";
+import { TombolTema } from "./Tema";
 import { Kabar } from "./ui";
 import { findEntry } from "@shared/contentMap";
 
@@ -36,19 +52,22 @@ type Rute =
 function bacaRute(): Rute {
   const h = window.location.hash.replace(/^#/, "");
 
-  const baru = /^\/([a-z-]+)\/baru$/.exec(h);
-  if (baru) return { nama: "form", entitas: baru[1], id: null };
-
-  const ubah = /^\/([a-z-]+)\/ubah\/(.+)$/.exec(h);
-  if (ubah) return { nama: "form", entitas: ubah[1], id: ubah[2] };
-
-  const daftar = /^\/([a-z-]+)$/.exec(h);
   /* Entitas yang tidak dikenal peta konten jatuh ke beranda alih-alih layar
      kosong — hash diketik tangan atau tertinggal dari versi panel sebelumnya
-     tidak boleh berakhir di halaman buntu. */
-  if (daftar && findEntry(daftar[1])?.entry.status === "siap") {
-    return { nama: "daftar", entitas: daftar[1] };
-  }
+     tidak boleh berakhir di halaman buntu. Diperiksa untuk SEMUA bentuk rute,
+     termasuk form: sejak ada entitas kedua, `#/apa-saja/baru` yang lolos akan
+     membuka form lowongan dengan alamat yang menjanjikan hal lain. */
+  const siap = (key: string) => findEntry(key)?.entry.status === "siap";
+
+  const baru = /^\/([a-z-]+)\/baru$/.exec(h);
+  if (baru && siap(baru[1])) return { nama: "form", entitas: baru[1], id: null };
+
+  const ubah = /^\/([a-z-]+)\/ubah\/(.+)$/.exec(h);
+  if (ubah && siap(ubah[1]))
+    return { nama: "form", entitas: ubah[1], id: ubah[2] };
+
+  const daftar = /^\/([a-z-]+)$/.exec(h);
+  if (daftar && siap(daftar[1])) return { nama: "daftar", entitas: daftar[1] };
 
   return { nama: "beranda" };
 }
@@ -60,6 +79,8 @@ export function App() {
   const [user, setUser] = useState<Pengguna | undefined>(undefined);
   const [rute, setRute] = useState<Rute>(bacaRute);
   const [daftar, setDaftar] = useState<JobRecord[]>([]);
+  const [nilai, setNilai] = useState<ValueRecord[]>([]);
+  const [crew, setCrew] = useState<CrewRecord[]>([]);
   const [pending, setPending] = useState(0);
   const [pesan, setPesan] = useState<string | null>(null);
   const [galat, setGalat] = useState<string | null>(null);
@@ -79,18 +100,31 @@ export function App() {
    *  perbandingan waktu di database, dan tebakan lokal akan meleset begitu ada
    *  orang kedua yang ikut mengedit. */
   const muat = useCallback(async () => {
-    const [hJobs, hPending] = await Promise.all([ambilLowongan(), statusPublish()]);
+    /* SEMUA entitas diambil sekaligus, bukan hanya yang sedang dibuka.
+       Berandanya menampilkan kalimat status tiap entitas ("3 nilai, 1 belum
+       tayang"), jadi mengambil per-halaman berarti beranda memulai hidupnya
+       dengan angka kosong yang lalu berubah sendiri. Daftarnya pendek — ini
+       beberapa request kecil, bukan tabel raksasa. */
+    const [hJobs, hValues, hCrew, hPending] = await Promise.all([
+      ambilLowongan(),
+      ambilNilai(),
+      ambilCrew(),
+      statusPublish(),
+    ]);
 
-    if (!hJobs.ok) {
-      if (hJobs.perluMasuk) {
-        setUser(null);
-        return;
-      }
-      setGalat(hJobs.pesan);
+    /* Sesi kedaluwarsa cukup dilihat dari SATU permintaan mana pun: kalau
+       cookie-nya tidak berlaku lagi, semuanya dibalas 401 bersamaan. */
+    const gagal = [hJobs, hValues, hCrew].find((h) => !h.ok);
+    if (gagal && !gagal.ok) {
+      if (gagal.perluMasuk) setUser(null);
+      else setGalat(gagal.pesan);
       return;
     }
+
     setGalat(null);
-    setDaftar(hJobs.data.jobs);
+    if (hJobs.ok) setDaftar(hJobs.data.jobs);
+    if (hValues.ok) setNilai(hValues.data.values);
+    if (hCrew.ok) setCrew(hCrew.data.crew);
     if (hPending.ok) setPending(hPending.data.pending);
   }, []);
 
@@ -116,15 +150,41 @@ export function App() {
   /* Kalimat status hidup untuk beranda. Dihitung di sini, bukan di Beranda,
      karena di sinilah data lowongan sudah ada — beranda tidak perlu ikut tahu
      bentuk `JobRecord`. */
-  const draf = daftar.filter((j) => j.state === "draft").length;
-  const belumTayang = daftar.filter((j) => j.unpublished).length;
+  const ringkas = (
+    jumlah: number,
+    draf: number,
+    belumTayang: number,
+    satuan: string,
+    kosong: string,
+  ) =>
+    jumlah === 0
+      ? kosong
+      : `${jumlah} ${satuan}` +
+        (draf > 0 ? `, ${draf} masih draf` : "") +
+        (belumTayang > 0 ? `, ${belumTayang} belum tayang` : "");
+
   const keterangan: Record<string, string> = {
-    lowongan:
-      daftar.length === 0
-        ? "Belum ada lowongan."
-        : `${daftar.length} lowongan` +
-          (draf > 0 ? `, ${draf} masih draf` : "") +
-          (belumTayang > 0 ? `, ${belumTayang} belum tayang` : ""),
+    lowongan: ringkas(
+      daftar.length,
+      daftar.filter((j) => j.state === "draft").length,
+      daftar.filter((j) => j.unpublished).length,
+      "lowongan",
+      "Belum ada lowongan.",
+    ),
+    nilai: ringkas(
+      nilai.length,
+      nilai.filter((v) => v.state === "draft").length,
+      nilai.filter((v) => v.unpublished).length,
+      "nilai",
+      "Belum ada nilai.",
+    ),
+    crew: ringkas(
+      crew.length,
+      crew.filter((m) => m.state === "draft").length,
+      crew.filter((m) => m.unpublished).length,
+      "orang",
+      "Belum ada anggota.",
+    ),
   };
 
   if (user === undefined) return <div className="bungkus">Memuat…</div>;
@@ -135,6 +195,7 @@ export function App() {
       <div className="kepala">
         <h1>Kelola Konten Cogniti</h1>
         <span className="siapa">
+          <TombolTema />
           {user.name}{" "}
           <button
             type="button"
@@ -172,17 +233,65 @@ export function App() {
               }}
             />
           ) : rute.nama === "daftar" ? (
-            <DaftarLowongan
-              daftar={daftar}
-              onBaru={() => {
-                setPesan(null);
-                pergi(`/${rute.entitas}/baru`);
-              }}
-              onUbah={(id) => {
-                setPesan(null);
-                pergi(`/${rute.entitas}/ubah/${id}`);
-              }}
-              onBerubah={selesai}
+            /* Pemilihan komponen per entitas ditulis apa adanya, bukan lewat
+               peta `{lowongan: [Daftar, Form], …}`. Peta seperti itu memang
+               lebih pendek, tapi prop tiap entitas berbeda tipe (`JobRecord[]`
+               vs `ValueRecord[]`) — dan yang hilang begitu semuanya dijejalkan
+               ke satu peta adalah pemeriksaan TypeScript yang menangkap
+               ketidakcocokan itu. */
+            rute.entitas === "crew" ? (
+              <DaftarCrew
+                daftar={crew}
+                onBaru={() => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/baru`);
+                }}
+                onUbah={(id) => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/ubah/${id}`);
+                }}
+                onBerubah={selesai}
+              />
+            ) : rute.entitas === "nilai" ? (
+              <DaftarNilai
+                daftar={nilai}
+                onBaru={() => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/baru`);
+                }}
+                onUbah={(id) => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/ubah/${id}`);
+                }}
+                onBerubah={selesai}
+              />
+            ) : (
+              <DaftarLowongan
+                daftar={daftar}
+                onBaru={() => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/baru`);
+                }}
+                onUbah={(id) => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/ubah/${id}`);
+                }}
+                onBerubah={selesai}
+              />
+            )
+          ) : rute.entitas === "crew" ? (
+            <FormCrew
+              key={rute.id ?? "baru"}
+              id={rute.id}
+              onSelesai={selesai}
+              onBatal={() => pergi(`/${rute.entitas}`)}
+            />
+          ) : rute.entitas === "nilai" ? (
+            <FormNilai
+              key={rute.id ?? "baru"}
+              id={rute.id}
+              onSelesai={selesai}
+              onBatal={() => pergi(`/${rute.entitas}`)}
             />
           ) : (
             <FormLowongan
