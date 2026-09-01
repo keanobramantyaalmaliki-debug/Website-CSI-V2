@@ -1988,7 +1988,7 @@ File 13 MB tiap update model = commit 13 MB + rebuild + restart. Sekarang:
 - File tinggal di **`3d/models/office.glb`** (root repo, di-ignore `/3d/`; pengecualian lama `!public/3d/models/office.glb` dicabut). **GLB kecil (billiard ×2, macbook) TETAP di `public/`.**
 - **`vite.config.ts` → plugin `serveLocalModels`**: middleware untuk dev **dan** `vite preview` yang melayani `/3d/models/*` dari folder root itu (⚠️ **KOREKSI 31 Agu, §4bo:** "`vite preview` = server produksi" di kalimat ini SALAH — produksi menjalankan `serve dist/`, jadi middleware ini **tidak** hidup di sana dan `office.glb` sempat tak pernah sampai ke `dist/`. Penambalnya `copyLocalModels()`.) — `model/gltf-binary`, dukung **Range 206** (dibutuhkan sambung-ulang `officeModel.ts`). Middleware hanya menangkap file yang **ada** di folder; sisanya jatuh ke `public/`/`dist/`.
 - URL publik **tidak berubah** → nol perubahan kode klien, nol urusan CORS, Cache Rule tetap kena.
-- **Dua jalur update yang kini TERPISAH:** kode = commit → push → `bun run deploy` (JS ber-hash, cache beres sendiri); model 3D = ganti file → `scp` ke `<repo-server>/3d/models/` → **purge by URL** (nama file tak ber-hash!) → hangatkan cache. Runbook singkatnya di `xnote.md`.
+- **Dua jalur update yang kini TERPISAH:** kode = commit → push → `bun run deploy` (JS ber-hash, cache beres sendiri); model 3D = ganti file → `scp` ke `<repo-server>/3d/models/` → **purge by URL** (nama file tak ber-hash!) → hangatkan cache. Runbook singkatnya di `xnote.md`. (⚠️ **REVISI 31 Agu, §4bs:** "kode tanpa purge" ternyata TIDAK cukup aman — jendela kosong saat deploy bisa meracuni cache `/3d/*` dengan HTML; kini purge tiap HABIS deploy juga.)
 
 ### 🐛 Insiden deploy pertama: origin 404, pengunjung tak melihat apa-apa
 
@@ -3068,6 +3068,57 @@ memang tak pernah ikut terhitung karena `continue`. Terverifikasi di `/people`
 
 📌 Kalau angka `uvDiluarJangkauan` naik, ada aset baru masuk dengan texCoord > 3 —
 periksa export-nya, jangan cuma senang karena FIX 1a menelannya diam-diam.
+
+## 4bs. Produksi Mati LAGI — Kali Ini Cache Cloudflare yang Keracunan HTML ✅ (31 Agu, tanpa commit)
+
+Sesudah fix §4bo di-deploy, laporan yang sama datang lagi dari csi2.wibudev.com:
+3D tidak muncul. Refleksnya "berarti §4bo belum menutup", padahal kali ini
+**origin sehat** — file di server utuh (13.020.916 byte, terverifikasi magic
+byte `glTF` + total length di header GLB) dan menjawab `model/gltf-binary`
+dengan benar. Yang sakit justru **edge**: URL polos `office.glb` dijawab
+`200 text/html` dengan `cf-cache-status: HIT`, `age: 28163` (~7,8 jam).
+
+Kronologinya: di **jendela kosong saat deploy** (`dist/` sedang ditukar, GLB
+belum tersalin) Cloudflare kebetulan fetch, disambut HTML fallback dari rewrite
+SPA `serve.json` — **200, bukan 404** (§4bo) — dan Cache Rule `/3d/*` (§4ai)
+patuh menyimpannya berjam-jam. Insiden ini terjadi **tanpa GLB berubah sama
+sekali**; pemicunya deploy kode biasa.
+
+**Diagnosis pembeda** — HTML 200 di URL GLB kini punya DUA kemungkinan sumber:
+
+- `curl -I …/office.glb` → HTML + `HIT` = **cache keracunan** (kasus ini; cukup purge);
+- tambah query pembeda (`?nocache=x` — cache key berubah, edge terpaksa tanya
+  origin): origin jawab `model/gltf-binary` = file ada; jawab HTML `MISS` =
+  file memang hilang di server (kasus §4bo; perlu scp).
+- ⚠️ Probe origin tanpa cache bisa kena timeout CF → respons 16 byte
+  `text/plain` `error code: 522` — bukan masalah baru, origin MISS memang
+  ~4 menit @ ~50 KB/s.
+
+Fix: **purge by URL** oleh rekan pemegang zone (runbook `xnote.md`) + panaskan
+cache. Diverifikasi probe Brave headless ke URL publik: GLB 13 MB selesai di
+detik ke-6, loader lepas detik ke-9, canvas hidup, nol console error.
+
+🔥 **Cache Cloudflare itu PER DATA CENTER, purge-nya global tapi pemanasannya
+tidak.** Terukur langsung: SIN sudah `HIT` sementara koneksi lain dilempar ke
+HKG dan di sana `MISS` — request satu klien pun mental-mentul antar colo
+(`cf-ray` JS = SIN, `cf-ray` GLB = HKG di menit yang sama). Satu curl pemanas
+hanya mengisi colo yang kebetulan dilewatinya; colo lain membayar tarikan origin
+~4 menit **sekali** lewat pengunjung pertamanya. Ini yang membuat "di HP-ku
+cepat, di tempat rekan lambat" dua-duanya benar. Bonus temuan: origin sempat
+menjawab **502 transien** — masuk akal ketika beberapa colo dingin menarik 13 MB
+serentak dari origin ~50 KB/s. Dan `^C` di tengah curl pemanas tidak apa-apa:
+begitu CF mulai menarik dari origin, ia menyelesaikannya sendiri.
+
+**Rutinitas baru: minta purge `/3d/*` tiap HABIS DEPLOY** — bukan cuma tiap
+ganti GLB seperti aturan lama §4ai; jendela kosong deploy pun cukup untuk
+meracuni cache. (Catatan lama §4ai "jangan purge saat origin sakit" tetap
+berlaku — kali ini origin dicek sehat dulu sebelum minta purge.)
+
+📌 **Pencegahan struktural (belum dikerjakan):** `serve.json` jangan me-rewrite
+`/3d/*` ke `index.html` — 404 jujur tidak akan disimpan 4 jam oleh CF, dan
+insiden kelas ini mati di akarnya. Plus PR lama §4bo yang makin relevan:
+validasi magic byte `glTF` di `officeModel.ts`, supaya HTML apa pun gagal jujur
+di sisi klien.
 
 ## 5. Foto Referensi
 
