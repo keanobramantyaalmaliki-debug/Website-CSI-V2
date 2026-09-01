@@ -12,7 +12,6 @@
 
 import { mkdir, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { eq, isNull } from "drizzle-orm";
 import { CONTENT_VERSION, type ContentPayload, type Job } from "@shared/job";
 
 import { record, type Actor } from "./audit";
@@ -114,11 +113,14 @@ export async function publish(actor: Actor): Promise<PublishResult> {
 
   /* Tandai SESUDAH berkasnya benar-benar tertulis. Menandai lebih dulu lalu
      gagal menulis akan membuat badge "belum tayang" padam untuk perubahan yang
-     sebenarnya tidak pernah tayang. */
-  await db
-    .update(jobs)
-    .set({ publishedAt: new Date() })
-    .where(isNull(jobs.deletedAt));
+     sebenarnya tidak pernah tayang.
+
+     TERMASUK baris yang sudah dihapus, dan itu bukan kelalaian: penghapusan
+     JUGA sebuah perubahan yang menunggu tayang, dan `content.json` yang barusan
+     ditulis sudah tidak memuatnya lagi. Dulu klausa `isNull(deletedAt)` di sini
+     membuat baris terhapus tidak pernah bisa ditandai — badge-nya menghitung
+     penghapusan yang sudah lama tayang, selamanya, dan angkanya cuma bisa naik. */
+  await db.update(jobs).set({ publishedAt: new Date() });
 
   const warning = await purgeCloudflare();
 
@@ -148,13 +150,17 @@ export async function pendingCount(): Promise<number> {
 
   return rows.filter((r) => {
     /**
-     * Lowongan yang DIHAPUS ikut dihitung selama ia pernah tayang: barisnya
-     * masih terlihat pengunjung sampai publish berikutnya. Tanpa ini editor
-     * menghapus lowongan, melihat badge tetap nol, dan menyimpulkan tidak
-     * perlu menekan Publish — sementara lowongan yang sudah ditutup masih
-     * menerima lamaran.
+     * Lowongan yang DIHAPUS ikut dihitung selama penghapusannya sendiri belum
+     * tayang: barisnya masih terlihat pengunjung sampai publish berikutnya.
+     * Tanpa ini editor menghapus lowongan, melihat badge tetap nol, dan
+     * menyimpulkan tidak perlu menekan Publish — sementara lowongan yang sudah
+     * ditutup masih menerima lamaran.
+     *
+     * Yang dibandingkan adalah `deletedAt`, bukan sekadar "pernah tayang":
+     * begitu publish berikutnya jalan, baris ini sudah lenyap dari
+     * `content.json` dan tidak menunggu apa-apa lagi.
      */
-    if (r.deletedAt) return r.publishedAt !== null;
+    if (r.deletedAt) return r.publishedAt !== null && r.deletedAt > r.publishedAt;
 
     /* Draft tidak pernah ikut ke content.json, jadi mengubahnya bukan
        perubahan yang menunggu tayang — kecuali ia PERNAH tayang lalu

@@ -155,6 +155,27 @@ describe("badge perubahan belum tayang", () => {
     expect(await pendingCount()).toBe(1);
   });
 
+  it("berhenti menghitung yang dihapus sesudah penghapusannya tayang", async () => {
+    const job = await buat();
+    await publish(aktor);
+    await api(`/api/jobs/${job.id}`, { method: "DELETE" });
+    await publish(aktor);
+
+    /* Baris terhapus dulu tidak pernah ikut ditandai `publishedAt`, jadi ia
+       tetap dihitung selamanya: setiap lowongan yang pernah dihapus menambah
+       satu ke badge, permanen, dan angkanya cuma bisa naik. Editor melihat
+       "10 perubahan belum tayang" tanpa pernah menyentuh apa pun — dan begitu
+       angka itu berbohong sekali, ia tidak berguna lagi untuk seterusnya. */
+    expect(await pendingCount()).toBe(0);
+  });
+
+  it("angkanya tetap nol sesudah publish beruntun tanpa suntingan", async () => {
+    await buat();
+    await publish(aktor);
+    await publish(aktor);
+    expect(await pendingCount()).toBe(0);
+  });
+
   it("draft yang belum pernah tayang tidak dihitung dua kali", async () => {
     await buat({ state: "open" });
     await publish(aktor);
