@@ -113,6 +113,21 @@ button.kecil {
   font-size: 14px;
 }
 
+/* Jalan pulang di kepala form. Sengaja tanpa bingkai: kalau ia seberat
+   "Simpan", ia ikut terbaca sebagai salah satu tindakan atas isi form —
+   padahal ia justru meninggalkannya. */
+button.kembali {
+  border: 0;
+  padding: 4px 8px 4px 0;
+  margin-bottom: 4px;
+  font-size: 14px;
+  color: var(--redup);
+}
+
+button.kembali:hover:not(:disabled) {
+  color: var(--hitam);
+}
+
 /* ── isian ──────────────────────────────────────────────────────────── */
 
 label {
@@ -221,9 +236,12 @@ table {
 th,
 td {
   text-align: left;
-  padding: 10px 12px;
+  /* Rapat. Barisnya tinggal satu baris teks, dan tombolnya (.kecil, 14px)
+     yang menentukan tinggi minimumnya — bantalan setebal baris teks lagi
+     cuma menjauhkan garis pemisahnya tanpa menambah apa pun yang terbaca. */
+  padding: 6px 12px;
   border-bottom: 1px solid var(--garis);
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 th {
@@ -394,4 +412,247 @@ details[open] summary {
   max-width: 380px;
   margin: 80px auto;
   padding: 0 18px;
+}
+
+/* ── rangka: menu sisi + isi ────────────────────────────────────────── */
+
+/*
+ * `align-items: start` bukan hiasan: tanpanya kolom menu diregangkan setinggi
+ * kolom isi, dan `position: sticky` di dalamnya tidak akan pernah menempel
+ * karena elemennya sudah setinggi wadahnya.
+ */
+.rangka {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.isi {
+  min-width: 0;
+}
+
+.sisi {
+  width: 232px;
+  position: sticky;
+  top: 24px;
+  border-right: 1px solid var(--garis);
+  padding-right: 14px;
+  /* Garisnya tetap punya panjang saat menu terlipat — kalau tidak, tombol
+     lipatnya menggantung di ruang kosong tanpa apa pun yang menjelaskan bahwa
+     ada kolom yang sedang disembunyikan. */
+  min-height: 220px;
+}
+
+/* Tersisa garis dan tombolnya saja. Bukan `width: 0`: kolom grid selebar nol
+   membuat tombol yang menumpang di tepinya ikut bergeser ke dalam isi. */
+.sisi.ringkas {
+  width: 1px;
+  padding-right: 0;
+}
+
+.sisi-daftar,
+.sisi-anak {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sisi-daftar {
+  margin-top: 2px;
+  /* Yang bergulir daftarnya, bukan `.sisi`: `overflow` di pembungkus akan ikut
+     memotong tombol lipat yang justru sengaja menjorok keluar tepinya. */
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+}
+
+/* Semua tombol di menu ini melawan gaya tombol umum (kotak bergaris, rata
+   tengah). Di sini yang dibutuhkan justru baris teks selebar kolom. */
+.sisi button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 0;
+  padding: 8px 10px;
+  text-align: left;
+  background: none;
+  color: var(--hitam);
+}
+
+.sisi button:hover {
+  background: var(--abu);
+}
+
+.sisi-judul {
+  font-weight: 600;
+}
+
+.sisi-tanda {
+  font-size: 13px;
+}
+
+.sisi .sisi-item {
+  display: block;
+  padding: 7px 10px 7px 22px;
+  font-size: 15px;
+}
+
+/* Anak-anaknya menjorok DAN bergaris di tepi kiri. Menjorok saja sudah cukup
+   untuk mata yang sabar, tapi garisnya yang membuat "ini isi dari grup di
+   atas" terbaca sekilas, tanpa perlu membandingkan lekukan. */
+.sisi-anak {
+  border-left: 1px solid var(--garis);
+  margin: 2px 0 6px 10px;
+}
+
+.sisi button.aktif {
+  background: var(--hitam);
+  color: var(--putih);
+}
+
+.sisi button.aktif:hover {
+  background: var(--hitam);
+}
+
+.sisi-item.mati {
+  color: var(--redup);
+  cursor: default;
+}
+
+.sisi-catatan {
+  display: block;
+  font-size: 12px;
+  font-style: normal;
+}
+
+/* Menumpang tepat di garis pemisah: lebar 28px dengan tepi kanan −14px
+   membuat titik tengahnya jatuh persis di garis. Tegaknya dipusatkan lewat
+   `top/bottom: 0` + `margin-block: auto`, bukan `transform` — berkas ini tidak
+   memakai transform sama sekali (lihat catatan di kepala). */
+.sisi .sisi-lipat {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -14px;
+  margin-block: auto;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  justify-content: center;
+  border: 1px solid var(--garis);
+  background: var(--putih);
+  font-size: 15px;
+  line-height: 1;
+  color: var(--redup);
+}
+
+.sisi .sisi-lipat:hover {
+  background: var(--abu);
+  color: var(--hitam);
+}
+
+@media (max-width: 860px) {
+  .rangka {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  /* `relative`, bukan `static`: tombol lipatnya tetap butuh sesuatu untuk
+     ditempeli. Garisnya sekarang di bawah, jadi tombolnya ikut pindah ke sana
+     — idenya sama, tepinya saja yang beda. */
+  .sisi,
+  .sisi.ringkas {
+    width: auto;
+    position: relative;
+    top: auto;
+    min-height: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--garis);
+    padding: 0 0 12px;
+  }
+
+  .sisi-daftar {
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .sisi .sisi-lipat {
+    top: auto;
+    bottom: -14px;
+    right: 10px;
+    margin-block: 0;
+  }
+}
+
+/* ── layar depan ────────────────────────────────────────────────────── */
+
+.pengantar {
+  margin: 0 0 12px;
+  max-width: 62ch;
+}
+
+.pengantar:first-of-type {
+  margin-bottom: 24px;
+}
+
+.kotak {
+  border: 1px solid var(--garis-tegas);
+  padding: 16px 18px 18px;
+  margin-bottom: 24px;
+}
+
+.kotak-kepala {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.kotak-kepala h2 {
+  margin: 0;
+}
+
+/* Halaman situs tempat konten ini tinggal. Teks, bukan tautan: di lokal panel
+   hidup di port lain dan sebagian besar path ini tidak diteruskan ke sana,
+   jadi tautannya akan mati justru di tempat ia paling sering diklik. */
+.alamat {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 14px;
+  color: var(--redup);
+}
+
+.entri-daftar {
+  border-top: 1px solid var(--garis);
+  margin-top: 14px;
+}
+
+.entri {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--garis);
+}
+
+.entri:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.entri-teks {
+  flex: 1 1 320px;
+}
+
+.entri-teks .petunjuk {
+  margin: 2px 0 0;
+}
+
+.entri-aksi {
+  flex: 0 0 auto;
+  padding-top: 2px;
 }

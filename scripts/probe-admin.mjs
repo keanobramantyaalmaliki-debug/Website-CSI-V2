@@ -80,6 +80,23 @@ const BEKAL = `
     l.click();
   };
   window.__teks = () => document.body.innerText;
+  window.__grup = (label) => {
+    const li = [...document.querySelectorAll(".sisi-daftar > li")].find(
+      (el) => el.querySelector(".sisi-judul > span")?.textContent.trim() === label,
+    );
+    if (!li) throw new Error("grup menu tidak ada: " + label);
+    return li;
+  };
+  window.__anak = (label) =>
+    [...__grup(label).querySelectorAll(".sisi-anak > li")].map((x) => x.innerText.trim());
+  window.__bukaGrup = (label) => __grup(label).querySelector(".sisi-judul").click();
+  window.__klikAnak = (grup, label) => {
+    const b = [...__grup(grup).querySelectorAll(".sisi-anak button")].find(
+      (x) => x.textContent.trim() === label,
+    );
+    if (!b) throw new Error("isi menu tidak ada: " + label);
+    b.click();
+  };
 `;
 
 async function main() {
@@ -162,10 +179,75 @@ async function main() {
   await jalan(`__isi("Email", ${JSON.stringify(EMAIL)})`);
   await jalan(`__isi("Kata sandi", ${JSON.stringify(SANDI)})`);
   await jalan(`document.querySelector("form").requestSubmit()`);
-  await tunggu(`!!document.querySelector("table")`, "daftar lowongan");
-  lapor("masuk sebagai editor, daftar lowongan muncul");
+  await tunggu(`!!document.querySelector(".sisi")`, "menu sisi");
+  lapor("masuk sebagai editor, menu sisi muncul");
   await jalan(BEKAL);
-  await potret("2-daftar");
+  await potret("2-beranda");
+
+  /* 1b — menu menaruh lowongan di halaman yang benar.
+     Yang diuji bukan CSS-nya melainkan janji menunya: kalau di situs lowongan
+     ada di halaman People, di panel juga. Peta yang menyimpang bikin editor
+     mencari di grup yang salah, dan tidak ada yang meneriakkannya. */
+  const anakPeople = await jalan(`__anak("People").join(" | ")`);
+  if (!anakPeople.includes("Lowongan")) {
+    throw new Error(`Lowongan tidak ada di dalam grup People: ${anakPeople}`);
+  }
+  lapor("menu sisi menaruh Lowongan di dalam People");
+
+  /* 1c — grup dibuka/ditutup, dan hanya satu terbuka pada satu waktu.
+     Diuji lewat perilakunya, bukan lewat kelas CSS: yang dijanjikan ke Keano
+     adalah "diklik → turunannya muncul", dan itu yang diperiksa. */
+  const homeSebelum = await jalan(`__anak("Home").length`);
+  if (homeSebelum !== 0) throw new Error("grup Home sudah terbuka sebelum diklik");
+  await jalan(`__bukaGrup("Home")`);
+  const homeSesudah = await jalan(`__anak("Home").join(" | ")`);
+  if (!homeSesudah.includes("Industri")) {
+    throw new Error(`grup Home tidak memunculkan turunannya: ${homeSesudah}`);
+  }
+  if ((await jalan(`__anak("People").length`)) !== 0) {
+    throw new Error("dua grup terbuka sekaligus — People tidak ikut menutup");
+  }
+  lapor("grup diklik → turunannya muncul, grup sebelumnya menutup");
+
+  /* 1d — konten yang belum bisa diubah tetap terdaftar, dengan penandanya.
+     Disembunyikan = editor mencari sesuatu yang memang belum ada. */
+  await jalan(`__bukaGrup("People")`);
+  const jumlahBelum = await jalan(
+    `[...document.querySelectorAll(".sisi-item.mati")]
+       .filter((el) => el.textContent.includes("Belum tersedia")).length`,
+  );
+  if (jumlahBelum < 1) throw new Error("tidak ada penanda 'Belum tersedia' di menu sisi");
+  lapor(`menu sisi mendaftar ${jumlahBelum} konten yang belum bisa diubah (grup People)`);
+
+  /* 1e — tombol lipat yang menumpang di garis pemisah.
+     Diperiksa karena satu-satunya jalan kembali dari keadaan terlipat adalah
+     tombol itu sendiri: kalau ia ikut hilang saat menu disembunyikan, editor
+     terkunci tanpa menu sampai halaman dimuat ulang. */
+  await jalan(`document.querySelector(".sisi-lipat").click()`);
+  await potret("2b-menu-terlipat");
+  if (await jalan(`!!document.querySelector(".sisi-daftar")`)) {
+    throw new Error("menu tidak ikut tersembunyi saat tombol lipat ditekan");
+  }
+  if (!(await jalan(`!!document.querySelector(".sisi-lipat")`))) {
+    throw new Error("tombol lipat ikut hilang — tidak ada jalan kembali");
+  }
+  await jalan(`document.querySelector(".sisi-lipat").click()`);
+  await tunggu(`!!document.querySelector(".sisi-daftar")`, "menu kembali");
+  lapor("tombol di garis pemisah melipat menu dan membukanya lagi");
+
+  /* 1f — turun ke lowongan lewat menunya, seperti editor sungguhan. */
+  await jalan(`__klikAnak("People", "Lowongan")`);
+  await tunggu(`!!document.querySelector("table")`, "daftar lowongan");
+  await jalan(BEKAL);
+  const tandaAktif = await jalan(
+    `document.querySelector(".sisi button.aktif")?.textContent.trim() ?? ""`,
+  );
+  if (tandaAktif !== "Lowongan") {
+    throw new Error(`menu sisi tidak menandai posisi sekarang: ${JSON.stringify(tandaAktif)}`);
+  }
+  lapor("menu sisi membuka daftar lowongan dan menandai posisinya");
+
+  await potret("3-daftar");
 
   /* Sisa jalan-jalan yang gagal di tengah akan menempati slug yang sama.
      Dibersihkan lewat panel, bukan lewat SQL — sekalian membuktikan tombol
@@ -198,11 +280,24 @@ async function main() {
   await jalan(`__klik("+ Tambah lowongan")`);
   await tunggu(`!!document.querySelector('textarea')`, "form lowongan");
   await jalan(BEKAL);
+
+  /* Jalan pulang dari form, diperiksa sebelum isiannya diisi. "Batal" di kaki
+     form sudah melakukan hal yang sama, tapi ia berada di ujung halaman yang
+     panjang; tombol di kepala inilah yang membuat lowongan yang terlanjur
+     dibuka bisa ditutup tanpa menggulir sampai habis dulu. */
+  await jalan(`__klik("\u2039 Semua lowongan")`);
+  await tunggu(`!!document.querySelector("table")`, "kembali ke daftar lewat kepala form");
+  lapor("tombol kembali di kepala form mengantar ke daftar lowongan");
+  await jalan(BEKAL);
+  await jalan(`__klik("+ Tambah lowongan")`);
+  await tunggu(`!!document.querySelector('textarea')`, "form lowongan (dibuka lagi)");
+  await jalan(BEKAL);
+
   await jalan(`__isi("Judul lowongan", ${JSON.stringify(JUDUL)})`);
   await jalan(`__isi("Departemen", "Engineering")`);
   await jalan(`__isi("Ringkasan", "Lowongan uji coba dari probe-admin.mjs.")`);
   await jalan(`__isi("Keahlian", "Probing")`);
-  await potret("3-form");
+  await potret("4-form");
   await jalan(`__klik("Simpan")`);
   await tunggu(`!!document.querySelector("table")`, "kembali ke daftar");
   await jalan(BEKAL);
@@ -211,11 +306,11 @@ async function main() {
   if (sesudah !== sebelum + 1) throw new Error(`baris ${sebelum} → ${sesudah}, harusnya +1`);
   const adaDraf = await jalan(
     `[...document.querySelectorAll("tbody tr")].some((r) =>
-       r.innerText.includes(${JSON.stringify(JUDUL)}) && r.innerText.includes("Draf"))`,
+       r.innerText.includes(${JSON.stringify(JUDUL)}) && r.innerText.includes("Draft"))`,
   );
   if (!adaDraf) throw new Error("baris draf tidak ditemukan di tabel");
   lapor("lowongan draf tersimpan dan tampil di daftar");
-  await potret("4-draf");
+  await potret("5-draf");
 
   /* 3 — publish selagi masih draf: tidak boleh ikut terangkut */
   await jalan(`__klik("Publish")`);
@@ -226,7 +321,7 @@ async function main() {
   }
   lapor("draf TIDAK ikut ke content.json setelah Publish");
 
-  /* 4 — ubah jadi Tayang lalu publish */
+  /* 4 — ubah jadi Open lalu publish */
   await jalan(BEKAL);
   await jalan(
     `[...document.querySelectorAll("tbody tr")]
@@ -235,7 +330,7 @@ async function main() {
   );
   await tunggu(`!!document.querySelector('textarea')`, "form lowongan (ubah)");
   await jalan(BEKAL);
-  await jalan(`__radio("Tayang")`);
+  await jalan(`__radio("Open")`);
 
   /* Sengaja menekan Simpan SEBELUM memilih foto: lowongan tayang wajib
      berfoto, dan yang diperiksa di sini bukan aturannya (itu urusan unit test
@@ -243,7 +338,7 @@ async function main() {
      alih-alih hilang diam-diam. */
   await jalan(`__klik("Simpan")`);
   await tunggu(`__teks().includes("Foto belum dipilih")`, "galat foto muncul");
-  lapor("status Tayang tanpa foto ditolak, alasannya tampil di form");
+  lapor("status Open tanpa foto ditolak, alasannya tampil di form");
 
   await jalan(`document.querySelector(".foto").click()`);
   await jalan(BEKAL);
@@ -259,7 +354,7 @@ async function main() {
   if (!terbit) throw new Error("lowongan tayang tidak ada di content.json");
   if (terbit.skills[0] !== "Probing") throw new Error("skill tidak ikut terbawa");
   lapor(`lowongan tayang masuk content.json (slug: ${terbit.slug})`);
-  await potret("5-tayang");
+  await potret("6-tayang");
 
   /* 5 — hapus, publish, hilang */
   await jalan(
@@ -270,7 +365,7 @@ async function main() {
   await tunggu(`!!document.querySelector("dialog[open]")`, "dialog konfirmasi");
   const isiDialog = await jalan(`document.querySelector("dialog").innerText`);
   if (!isiDialog.includes(JUDUL)) throw new Error("dialog tidak menyebut judulnya");
-  await potret("6-konfirmasi");
+  await potret("7-konfirmasi");
   await jalan(BEKAL);
   await jalan(`__klik("Ya, hapus")`);
   await tunggu(

@@ -1,0 +1,205 @@
+/**
+ * Peta konten situs: empat halaman navbar, dan konten apa saja yang tinggal di
+ * masing-masingnya.
+ *
+ * Inilah yang menjadi beranda panel admin. Alasannya satu: teman R&D yang
+ * memakai panel ini tidak tahu — dan tidak perlu tahu — bahwa lowongan
+ * disimpan di tabel `jobs`. Yang dia tahu adalah "lowongan itu ada di halaman
+ * People", karena itulah yang dia lihat waktu membuka situsnya. Panel yang
+ * mendarat di daftar entitas database memaksa dia menghafal pemetaan yang
+ * sebenarnya sudah terpampang di navbar.
+ *
+ * Urutan halaman dan urutan isinya MENGIKUTI URUTAN DI SITUS, diambil dari
+ * `src/lib/roomContent.tsx` — bukan urutan pengerjaan, bukan abjad. Editor
+ * mencari sesuatu dengan cara menyusuri halaman dari atas ke bawah dalam
+ * ingatannya, jadi daftar yang urutannya lain memaksa dia membaca semuanya.
+ *
+ * ⚠️ Peta ini dijaga `src/lib/contentMap.test.ts`: `path` dan `label` tiap
+ * halaman WAJIB sama dengan `ROOM_SLUGS`/`ROOM_LABELS` di sceneStore. Kalau
+ * sebuah halaman situs berganti slug dan berkas ini tidak ikut, panel akan
+ * menunjukkan alamat yang tidak ada — dan tidak ada yang meneriakkannya.
+ *
+ * ⚠️ Sama seperti `shared/job.ts`: TIDAK BOLEH mengimpor apa pun dari
+ * `server/`. Berkas ini ikut ter-bundle ke browser.
+ */
+
+/**
+ * `siap`  — sudah bisa diubah lewat panel.
+ * `belum` — masih hardcoded di kode; butuh developer.
+ *
+ * Yang `belum` tetap DITAMPILKAN di beranda, tidak disembunyikan. Editor perlu
+ * tahu bedanya "tidak ada di panel karena belum dibuat" dan "tidak ada di
+ * panel karena saya tidak menemukannya" — yang kedua berakhir jadi pertanyaan
+ * ke developer, yang pertama tidak.
+ */
+export type ContentStatus = "siap" | "belum";
+
+export type ContentEntry = {
+  /** Dipakai di rute panel (`#/lowongan`) dan sebagai key React. */
+  key: string;
+  /** Nama yang dilihat editor. Bahasa Indonesia, bukan nama tabel. */
+  label: string;
+  /** Satu kalimat: benda apa ini, dan di mana ia muncul di halamannya. */
+  summary: string;
+  status: ContentStatus;
+  /** Berapa banyak yang ada sekarang — untuk yang `belum`, dihitung dari
+   *  literal di kode saat berkas ini ditulis. Bukan angka hidup: ia cuma
+   *  memberi editor gambaran ukurannya sebelum membuka apa pun. */
+  approxCount: number;
+};
+
+export type ContentPage = {
+  /** Slug ruangan di sceneStore — `home` | `people` | `work` | `services`. */
+  key: string;
+  /** Label persis seperti di navbar situs. */
+  label: string;
+  /** Alamat halamannya di situs, untuk ditautkan dari panel. */
+  path: string;
+  /** Untuk apa halaman ini, dari sudut pandang pengunjung. */
+  summary: string;
+  entries: ContentEntry[];
+};
+
+/**
+ * Empat halaman navbar, dalam urutan navbar (`NAV_CONTENT_ORDER` di
+ * `src/components/Navbar.tsx`): Home → Services → Work → People.
+ */
+export const CONTENT_PAGES: readonly ContentPage[] = [
+  {
+    key: "home",
+    label: "Home",
+    path: "/",
+    summary: "Halaman depan — yang dilihat pengunjung paling pertama.",
+    entries: [
+      {
+        key: "deployment",
+        label: "Deployment",
+        summary: "Sistem yang sudah berjalan, dikelompokkan per sektor dan wilayah.",
+        status: "belum",
+        approxCount: 5,
+      },
+      {
+        key: "proses",
+        label: "Cara kerja",
+        summary: "Langkah dari obrolan pertama sampai serah terima.",
+        status: "belum",
+        approxCount: 6,
+      },
+      {
+        key: "industri",
+        label: "Industri",
+        summary: "Sektor yang dilayani cogniti, beserta foto dan penjelasannya.",
+        status: "belum",
+        approxCount: 13,
+      },
+      {
+        key: "visi",
+        label: "Visi",
+        summary: "Paragraf penutup sebelum bagian kontak.",
+        status: "belum",
+        approxCount: 1,
+      },
+    ],
+  },
+  {
+    key: "services",
+    label: "Services",
+    path: "/services",
+    summary: "Bedah layanan — satu-satunya tempat rincian layanan ditulis.",
+    entries: [
+      {
+        key: "layanan",
+        label: "Layanan",
+        summary: "Daftar layanan yang bisa dibuka satu per satu, beserta rinciannya.",
+        status: "belum",
+        approxCount: 9,
+      },
+    ],
+  },
+  {
+    key: "work",
+    label: "Work",
+    path: "/work",
+    summary: "Bukti kerja — proyek yang sudah selesai.",
+    entries: [
+      {
+        key: "case-study",
+        label: "Case study",
+        summary: "Proyek pilihan dalam bentuk kartu bergambar.",
+        status: "belum",
+        approxCount: 8,
+      },
+      {
+        key: "sorotan",
+        label: "Sorotan & testimoni",
+        summary: "Proyek yang dibahas panjang, lengkap dengan kutipan dari kliennya.",
+        status: "belum",
+        approxCount: 2,
+      },
+    ],
+  },
+  {
+    key: "people",
+    label: "People",
+    path: "/people",
+    summary: "Orang-orangnya — tim, nilai yang dipegang, dan lowongan yang dibuka.",
+    entries: [
+      {
+        key: "nilai",
+        label: "Nilai",
+        summary: "Prinsip kerja tim, masing-masing dengan foto dan penjelasannya.",
+        status: "belum",
+        approxCount: 3,
+      },
+      {
+        key: "crew",
+        label: "Crew",
+        summary: "Anggota tim: nama, peran, foto, dan tautan sosialnya.",
+        status: "belum",
+        approxCount: 13,
+      },
+      {
+        key: "lowongan",
+        label: "Lowongan",
+        summary: "Posisi yang sedang dibuka, beserta halaman detail dan form lamarannya.",
+        status: "siap",
+        approxCount: 0,
+      },
+    ],
+  },
+];
+
+/**
+ * Konten yang tidak tinggal di satu halaman mana pun.
+ *
+ * Dipisah alih-alih dititipkan ke Home supaya editor tidak mengira mengubahnya
+ * hanya berdampak di halaman depan — tautan sosial muncul di navbar, footer,
+ * DAN bagian kontak di keempat halaman sekaligus.
+ */
+export const SITE_WIDE: ContentPage = {
+  key: "situs",
+  label: "Seluruh situs",
+  path: "/",
+  summary: "Muncul di semua halaman sekaligus, bukan cuma di satu.",
+  entries: [
+    {
+      key: "sosial",
+      label: "Tautan sosial",
+      summary: "Instagram, LinkedIn, dan kawan-kawan — dipakai navbar, footer, dan bagian kontak.",
+      status: "belum",
+      approxCount: 4,
+    },
+  ],
+};
+
+/** Semua kelompok yang tampil di beranda, dalam urutan tampil. */
+export const CONTENT_GROUPS: readonly ContentPage[] = [...CONTENT_PAGES, SITE_WIDE];
+
+/** Cari satu entri lewat key-nya, dari kelompok mana pun. */
+export function findEntry(key: string): { page: ContentPage; entry: ContentEntry } | null {
+  for (const page of CONTENT_GROUPS) {
+    const entry = page.entries.find((e) => e.key === key);
+    if (entry) return { page, entry };
+  }
+  return null;
+}
