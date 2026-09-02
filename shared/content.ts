@@ -27,6 +27,7 @@ import type { WorkProject } from "./workProject";
 import type { CaseStudy } from "./caseStudy";
 import type { Testimonial } from "./testimonial";
 import type { Service } from "./service";
+import type { Industry } from "./industry";
 import type { Vision } from "./vision";
 
 export type ContentPayload = {
@@ -59,6 +60,20 @@ export type ContentPayload = {
    *  adalah kutipan yang TERLIHAT saat halaman dibuka, sisanya baru muncul
    *  kalau pengunjung menekan panah. */
   testimonials: Testimonial[];
+  /**
+   * Sektor "Built Across Sectors" di halaman depan yang `live` saja, sudah
+   * urut sesuai `sortOrder`.
+   *
+   * Situs bergantung pada urutannya lewat DUA jalur sekaligus, dan itu bukan
+   * kebetulan: urutan menentukan anak tangga spiral mana yang ditempati sebuah
+   * sektor, sekaligus nomor "01"–"13" yang tercetak di HUD, navigasi sentuh,
+   * dan kepala kartu fokus.
+   *
+   * Panjangnya PALING BANYAK 13 (`MAX_LIVE_INDUSTRIES`) — batas geometri
+   * tumpukan 3D-nya, ditegakkan `routes/industries.ts` jauh sebelum sampai ke
+   * sini. Kurang dari itu aman berapa pun, sampai kosong.
+   */
+  industries: Industry[];
   /**
    * Seksi Visi di halaman depan. SATU objek, bukan larik — dan satu-satunya
    * field di sini yang bisa bernilai `null`.

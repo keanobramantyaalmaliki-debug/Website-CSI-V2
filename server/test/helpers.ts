@@ -29,7 +29,7 @@ export async function resetDb(): Promise<void> {
       people_values, crew_socials, crew_members,
       work_project_tags, work_projects,
       case_study_scopes, case_studies, service_subs, services,
-      testimonials, vision, images, users
+      testimonials, industries, vision, images, users
     restart identity cascade
   `);
 }
@@ -154,6 +154,18 @@ export function serviceBody(over: Record<string, unknown> = {}) {
     title: "Cloud Solutions",
     desc: "Infrastruktur cloud yang aman dan skalabel.",
     subs: ["Cloud Migration", "Serverless"],
+    state: "live",
+    ...over,
+  };
+}
+
+/** Bentuk sektor industri minimal yang lolos validasi `live`. */
+export function industryBody(over: Record<string, unknown> = {}) {
+  return {
+    name: "Healthcare",
+    desc: "Sistem rekam medis dan alur kerja klinis.",
+    tier: "also",
+    image: "/industries/healthcare.webp",
     state: "live",
     ...over,
   };

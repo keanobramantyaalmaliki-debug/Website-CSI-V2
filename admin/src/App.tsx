@@ -20,6 +20,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import {
   ambilCrew,
+  ambilIndustri,
   ambilLowongan,
   ambilNilai,
   ambilProyek,
@@ -31,6 +32,7 @@ import {
   siapaAku,
   statusPublish,
   type CrewRecord,
+  type IndustryRecord,
   type JobRecord,
   type Pengguna,
   type ValueRecord,
@@ -43,6 +45,7 @@ import {
 import { BarPublish } from "./BarPublish";
 import { Beranda } from "./Beranda";
 import { DaftarCrew } from "./DaftarCrew";
+import { DaftarIndustri } from "./DaftarIndustri";
 import { DaftarLowongan } from "./DaftarLowongan";
 import { DaftarNilai } from "./DaftarNilai";
 import { DaftarProyek } from "./DaftarProyek";
@@ -50,6 +53,7 @@ import { DaftarCaseStudy } from "./DaftarCaseStudy";
 import { DaftarLayanan } from "./DaftarLayanan";
 import { DaftarTestimoni } from "./DaftarTestimoni";
 import { FormCrew } from "./FormCrew";
+import { FormIndustri } from "./FormIndustri";
 import { FormLowongan } from "./FormLowongan";
 import { FormNilai } from "./FormNilai";
 import { FormProyek } from "./FormProyek";
@@ -121,6 +125,7 @@ export function App() {
   const [cerita, setCerita] = useState<CaseStudyRecord[]>([]);
   const [layanan, setLayanan] = useState<ServiceRecord[]>([]);
   const [testimoni, setTestimoni] = useState<TestimonialRecord[]>([]);
+  const [industri, setIndustri] = useState<IndustryRecord[]>([]);
   /* `null` di sini berarti dua hal sekaligus — belum diambil, atau barisnya
      memang belum ada di database. Keduanya ditampilkan sama di beranda
      ("belum terisi"), jadi tidak perlu dibedakan. */
@@ -157,6 +162,7 @@ export function App() {
       hCerita,
       hLayanan,
       hTestimoni,
+      hIndustri,
       hVisi,
       hPending,
     ] = await Promise.all([
@@ -167,6 +173,7 @@ export function App() {
       ambilCaseStudy(),
       ambilLayanan(),
       ambilTestimoni(),
+      ambilIndustri(),
       ambilVisi(),
       statusPublish(),
     ]);
@@ -181,6 +188,7 @@ export function App() {
       hCerita,
       hLayanan,
       hTestimoni,
+      hIndustri,
       hVisi,
     ].find((h) => !h.ok);
     if (gagal && !gagal.ok) {
@@ -197,6 +205,7 @@ export function App() {
     if (hCerita.ok) setCerita(hCerita.data.studies);
     if (hLayanan.ok) setLayanan(hLayanan.data.services);
     if (hTestimoni.ok) setTestimoni(hTestimoni.data.testimonials);
+    if (hIndustri.ok) setIndustri(hIndustri.data.industries);
     if (hVisi.ok) setVisi(hVisi.data.vision);
     if (hPending.ok) setPending(hPending.data.pending);
   }, []);
@@ -286,6 +295,13 @@ export function App() {
       "testimoni",
       "Belum ada testimoni.",
     ),
+    industri: ringkas(
+      industri.length,
+      industri.filter((i) => i.state === "draft").length,
+      industri.filter((i) => i.unpublished).length,
+      "sektor",
+      "Belum ada sektor.",
+    ),
     /* Tidak lewat `ringkas()`: yang itu menghitung baris dan menyebut draf,
        dan visi tidak punya keduanya — jumlahnya selalu satu, dan tidak ada
        keadaan draft. Yang berguna diketahui editor cuma dua: sudah terisi
@@ -354,6 +370,19 @@ export function App() {
                `#/visi/ubah/<id>` yang bisa dituju. */
             rute.entitas === "visi" ? (
               <FormVisi onSelesai={selesai} />
+            ) : rute.entitas === "industri" ? (
+              <DaftarIndustri
+                daftar={industri}
+                onBaru={() => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/baru`);
+                }}
+                onUbah={(id) => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/ubah/${id}`);
+                }}
+                onBerubah={selesai}
+              />
             ) : rute.entitas === "layanan" ? (
               <DaftarLayanan
                 daftar={layanan}
@@ -446,6 +475,13 @@ export function App() {
                 onBerubah={selesai}
               />
             )
+          ) : rute.entitas === "industri" ? (
+            <FormIndustri
+              key={rute.id ?? "baru"}
+              id={rute.id}
+              onSelesai={selesai}
+              onBatal={() => pergi(`/${rute.entitas}`)}
+            />
           ) : rute.entitas === "layanan" ? (
             <FormLayanan
               key={rute.id ?? "baru"}

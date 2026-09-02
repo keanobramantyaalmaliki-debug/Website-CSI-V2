@@ -34,7 +34,14 @@ vi.mock("@/lib/smoothScroll", () => ({
  * `overflow-x-clip`, not `overflow-hidden`, because Industries contains a
  * `lg:sticky` child that `overflow: hidden` would break.
  */
-const SECTIONS: { name: string; id: string; Component: () => React.JSX.Element }[] = [
+/* `| null` sejak Industries pindah ke CMS: section itu merender null saat
+   daftarnya kosong. Test di bawah tetap merender data sungguhan, jadi
+   cabang null-nya tidak pernah kena di sini — ini semata bentuk tipenya. */
+const SECTIONS: {
+  name: string;
+  id: string;
+  Component: () => React.JSX.Element | null;
+}[] = [
   { name: "Industries", id: "industries", Component: Industries },
   { name: "Deployments", id: "deployments", Component: Deployments },
   { name: "Process", id: "process", Component: Process },

@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
+
 import IndustriesStack from "@/components/canvas/IndustriesStack";
-import { INDUSTRIES } from "@/data/industries";
+import { industries } from "@/data/industries";
 
 /**
  * Sejak 23 Agu galeri kolom expanding diganti tumpukan plank 3D
@@ -19,8 +21,22 @@ import { INDUSTRIES } from "@/data/industries";
  * cuma tap/klik, jadi stack yang sama tampil di SEMUA perangkat. Adaptasi
  * sentuh + layar potret (framing kamera, layout fokus, hint) hidup di dalam
  * IndustriesStack; IndustriesMobile pensiun.
+ *
+ * Isinya pindah ke CMS 2 Sep: `INDUSTRIES` yang dulu literal jadi `industries()`.
  */
 export default function Industries() {
+  /* `useMemo` berdaftar-kebergantungan KOSONG, dan pemanggilannya HARUS di
+     dalam komponen — bukan di ruang modul. Jebakan yang sama sudah menggigit
+     dua slice CMS sebelumnya: `industries()` yang dievaluasi saat modul dimuat
+     membeku sebelum `loadContent()` selesai, jadi halaman menampilkan daftar
+     cadangan tanpa satu pun galat yang memberitahu. */
+  const daftar = useMemo(() => industries(), []);
+
+  /* Daftar boleh kosong — editor berhak mendraftkan semuanya. Tanpa gerbang
+     ini yang tayang adalah strip putih setinggi layar berisi tumpukan nol
+     plank, lengkap dengan heading yang menjanjikan sesuatu. */
+  if (daftar.length === 0) return null;
+
   return (
     /* `section-shell` menyusul 26 Agu (QC zoom-out, ronde 3): jepitan tinggi
        + kamera mundur di IndustriesStack ternyata belum cukup — kanvas
@@ -31,13 +47,13 @@ export default function Industries() {
        tanpa radius, nyatu dengan kartu Process di atasnya. */
     <section id="industries" className="section-shell relative z-10 overflow-x-clip">
       <h2 className="sr-only">Built Across Sectors</h2>
-      <IndustriesStack industries={INDUSTRIES} />
+      <IndustriesStack industries={daftar} />
       {/* Plank di canvas bukan DOM (strip-nya aria-hidden) — daftar sektor
           yang terbaca mesin & AT hidup di sini, pola sr-only yang sama
           dengan daftar layanan di Office.tsx. */}
       <ul className="sr-only">
-        {INDUSTRIES.map((s) => (
-          <li key={s.num}>
+        {daftar.map((s) => (
+          <li key={s.name}>
             {s.name}: {s.desc}
             {s.tier === "core" ? " (Core Focus)" : ""}
           </li>

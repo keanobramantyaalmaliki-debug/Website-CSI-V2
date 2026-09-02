@@ -28,6 +28,7 @@ import type { WorkProject } from "@shared/workProject";
 import type { CaseStudy } from "@shared/caseStudy";
 import type { Testimonial } from "@shared/testimonial";
 import type { Service } from "@shared/service";
+import type { Industry } from "@shared/industry";
 import type { Vision } from "@shared/vision";
 
 /**
@@ -198,6 +199,24 @@ export function contentServices(): Service[] | null {
  */
 export function contentTestimonials(): Testimonial[] | null {
   const rows = content?.testimonials;
+  return Array.isArray(rows) ? rows : null;
+}
+
+/**
+ * Sektor "Built Across Sectors" halaman depan dari CMS, atau `null` kalau harus
+ * memakai isi bundle.
+ *
+ * Diperiksa terpisah dengan alasan yang sama seperti pembaca-pembaca di atas:
+ * `content.json` yang ditulis sebelum sektor masuk CMS adalah berkas sehat yang
+ * cuma belum punya bagian ini.
+ *
+ * Daftar KOSONG dihormati apa adanya — strip industri lalu tidak dirender sama
+ * sekali. Yang menanganinya `Industries.tsx`, dan itu bukan sekadar `if` sopan:
+ * tumpukan 3D-nya menghitung posisi dari `industries.length`, dan nol plank
+ * membuat navigasi sentuhnya membaca `industries[navIndex]` yang tidak ada.
+ */
+export function contentIndustries(): Industry[] | null {
+  const rows = content?.industries;
   return Array.isArray(rows) ? rows : null;
 }
 

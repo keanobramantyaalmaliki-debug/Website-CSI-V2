@@ -89,7 +89,10 @@ export const CONTENT_PAGES: readonly ContentPage[] = [
         key: "industri",
         label: "Industri",
         summary: "Sektor yang dilayani cogniti, beserta foto dan penjelasannya.",
-        status: "belum",
+        status: "siap",
+        /* Satu-satunya angka di peta ini yang sekaligus BATAS, bukan cuma
+           perkiraan: tumpukan spiral 3D-nya dikalibrasi untuk 13 plank, dan
+           panel menolak yang ke-14 (`MAX_LIVE_INDUSTRIES`). Ke bawah bebas. */
         approxCount: 13,
       },
       {

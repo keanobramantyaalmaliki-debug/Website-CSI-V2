@@ -18,7 +18,7 @@ import {
   type ShadowMaterial,
   type Texture,
 } from "three";
-import type { Industry } from "@/data/industries";
+import type { IndustryContent } from "@/data/industries";
 import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import { useZoomAwareDpr } from "./zoomDpr";
 import { cn } from "@/lib/utils";
@@ -74,6 +74,28 @@ import { cn } from "@/lib/utils";
  *  dicoba didekatkan + dibidik ulang (23 Agu) — hasilnya ekor spiral yang
  *  memang mengayun ke arah kamera jadi terpotong; angka aslinya ternyata
  *  framing terbaik untuk strip lebar juga. */
+/**
+ * Nomor cetak sebuah sektor — "01", "02", … diturunkan dari POSISI, tidak
+ * pernah disimpan.
+ *
+ * Dulu ia kolom `num` di literal `INDUSTRIES`. Sejak isinya datang dari CMS,
+ * menyimpannya berarti dua sumber kebenaran untuk satu hal, dan keduanya pasti
+ * melenceng begitu editor memindahkan satu baris — nomor cetak lalu tidak
+ * cocok dengan anak tangga tempat plank-nya benar-benar duduk. Lihat catatan
+ * lengkapnya di `shared/industry.ts`.
+ */
+const nomor = (i: number) => String(i + 1).padStart(2, "0");
+
+/**
+ * Titik tengah busur spiral yang framing kameranya dikalibrasi — anak tangga
+ * ke-6 dari rentang 0…12 yang ditempati 13 plank.
+ *
+ * Dipakai `bases` sebagai PUSAT rentang, bukan sebagai awal, supaya tumpukan
+ * yang isinya kurang dari 13 tetap parkir di ruang yang sama. Rinciannya di
+ * komentar `bases`.
+ */
+const K_TENGAH = 6;
+
 const CAM_POS: [number, number, number] = [-10, 10, 5];
 const CAM_FOV = 50;
 /** Framing demo pas untuk strip lebar; di kanvas sempit (portrait) spiral
@@ -265,7 +287,7 @@ function StairSpiral({
   onSelect,
   shadowMatRef,
 }: {
-  industries: Industry[];
+  industries: IndustryContent[];
   reduced: boolean;
   coarse: boolean;
   hover: number | null;
@@ -288,14 +310,35 @@ function StairSpiral({
   const photoMatRefs = useRef<(MeshBasicMaterial | null)[]>([]);
   useCursor(hover !== null);
 
-  /* Pose spiral tiap plank, dihitung sekali — sumber kebenaran untuk ujung
-     "0" interpolasi. Rumus demo dipertahankan, tapi indeks pose DIBALIK
-     (k = n-1-i): sektor 01 menempati anak tangga TERATAS, 13 paling bawah
-     (permintaan Keano 23 Agu — urutan naratif dibaca dari atas). */
+  /**
+   * Pose spiral tiap plank, dihitung sekali — sumber kebenaran untuk ujung "0"
+   * interpolasi. Rumus demo dipertahankan, dengan dua penyimpangan:
+   *
+   * 1. indeks pose DIBALIK — sektor 01 menempati anak tangga TERATAS, 13
+   *    paling bawah (permintaan Keano 23 Agu, urutan naratif dibaca dari atas);
+   * 2. rentangnya DIPUSATKAN pada `K_TENGAH`, bukan dimulai dari nol.
+   *
+   * Nomor 2 itu yang membuat daftar CMS boleh menyusut. Rumus lamanya
+   * `k = n-1-i` selalu berakhir di k=0, jadi tumpukan yang isinya berkurang
+   * tidak sekadar memendek: ia MELOROT sambil merambat mengelilingi spiral —
+   * di 13 sektor pusatnya (−1,46; 0,65) di bidang xz, di 5 sektor pindah ke
+   * (0,13; −2,42) — sementara kamera tetap membidik titik yang sama.
+   * Memusatkannya membuat pusat tumpukan diam di tempat yang dibidik kamera
+   * berapa pun isinya, jadi framing kamera DAN animasi plank-ke-kartu-fokus
+   * tidak perlu dikalibrasi ulang untuk tiap jumlah.
+   *
+   * Di 13 sektor rumusnya menghasilkan pose yang PERSIS SAMA dengan yang lama
+   * (k = 12…0) — jadi tampilan hari ini tidak berubah sedikit pun; yang berubah
+   * cuma nasib daftar yang lebih pendek. Jaraknya tetap 0,5 per plank, jadi
+   * tumpukan pendek tetap terbaca sebagai tumpukan, bukan renggang melebar.
+   *
+   * Ke ATAS tidak ada penyelamat serupa dan memang tidak perlu ada: batas 13
+   * ditegakkan di `routes/industries.ts` (lihat `MAX_LIVE_INDUSTRIES`).
+   */
   const bases = useMemo(
     () =>
       industries.map((_, i) => {
-        const k = industries.length - 1 - i;
+        const k = K_TENGAH + (industries.length - 1) / 2 - i;
         return {
           pos: new Vector3(
             2 - Math.sin(k / 5) * 5,
@@ -311,6 +354,11 @@ function StairSpiral({
   );
 
   const progRef = useRef<Float32Array>(new Float32Array(n));
+  /* Panjangnya diikutkan kalau jumlah sektor berubah (cadangan bundle → isi
+     CMS). Bukan kerapian: penulisan di luar batas sebuah TypedArray diabaikan
+     DIAM-DIAM oleh JavaScript, jadi larik yang kependekan tidak melempar apa
+     pun — plank yang indeksnya lewat batas cuma berhenti beranimasi. */
+  if (progRef.current.length !== n) progRef.current = new Float32Array(n);
 
   /* Perubahan target (hover / navigasi / klik / tutup) harus membangunkan
      frameloop demand — tanpa ini animasi baru jalan saat pointer kebetulan
@@ -464,7 +512,7 @@ function StairSpiral({
     <group>
       {industries.map((industry, i) => (
         <mesh
-          key={industry.num}
+          key={industry.name}
           ref={(el) => {
             meshRefs.current[i] = el;
           }}
@@ -532,7 +580,7 @@ export default function IndustriesStack({
   industries,
   className,
 }: {
-  industries: Industry[];
+  industries: IndustryContent[];
   className?: string;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -560,9 +608,20 @@ export default function IndustriesStack({
     if (index !== null) setNavIndex(index);
   };
 
-  const hovered = hover !== null ? industries[hover] : null;
-  const focused = selected !== null ? industries[selected] : null;
-  const nav = industries[navIndex];
+  /* `?? null` bukan kehati-hatian berlebih: `hover`/`selected` menyimpan
+     INDEKS, dan daftarnya bisa berganti di bawah kaki mereka — cadangan bundle
+     lebih dulu dirender, lalu `content.json` mendarat membawa daftar yang lebih
+     pendek. Tanpa ini `hovered.name` meledak di daftar yang menyusut. */
+  const hovered = hover !== null ? (industries[hover] ?? null) : null;
+  const focused = selected !== null ? (industries[selected] ?? null) : null;
+
+  /* Indeks navigasi dijepit ke daftar yang berlaku SEKARANG, dengan alasan
+     yang sama — dan di sini bukan cuma soal ledakan: `% 0` di daftar kosong
+     menghasilkan NaN, yang mengunci kedua arrow tanpa satu pun galat. Strip
+     kosong sendiri sudah tidak dirender (lihat `Industries.tsx`), ini pagar
+     lapis kedua. */
+  const navSafe = industries.length ? navIndex % industries.length : 0;
+  const nav = industries[navSafe] ?? null;
 
   return (
     /* aria-hidden: plank di canvas bukan DOM — heading sr-only + daftar
@@ -662,7 +721,9 @@ export default function IndustriesStack({
             <button
               type="button"
               tabIndex={-1}
-              onClick={() => setNavIndex((i) => (i + 1) % industries.length)}
+              onClick={() =>
+                setNavIndex((i) => (i + 1) % industries.length)
+              }
               className="pointer-events-auto touch-manipulation p-3 text-zinc-400 transition-colors active:text-zinc-900"
             >
               <svg
@@ -684,11 +745,13 @@ export default function IndustriesStack({
             <button
               type="button"
               tabIndex={-1}
-              onClick={() => selectAndSync(navIndex)}
+              onClick={() => selectAndSync(navSafe)}
               className="pointer-events-auto w-[15.5rem] max-w-[70vw] truncate px-2 py-3 text-center text-sm font-semibold tracking-tight text-zinc-900 underline decoration-zinc-300 underline-offset-4"
             >
-              <span className="mr-2 tabular-nums text-accent">{nav.num}</span>
-              {nav.name}
+              <span className="mr-2 tabular-nums text-accent">
+                {nomor(navSafe)}
+              </span>
+              {nav?.name}
             </button>
             <button
               type="button"
@@ -719,7 +782,9 @@ export default function IndustriesStack({
               {hovered && (
                 <>
                   <p className="text-sm font-semibold tracking-tight text-zinc-900">
-                    <span className="mr-2 tabular-nums text-accent">{hovered.num}</span>
+                        <span className="mr-2 tabular-nums text-accent">
+                      {nomor(hover ?? 0)}
+                    </span>
                     {hovered.name}
                     {hovered.tier === "core" && (
                       <span className="ml-2 text-[10px] tracking-widest text-accent uppercase">
@@ -745,7 +810,7 @@ export default function IndustriesStack({
       <AnimatePresence>
         {focused && (
           <motion.div
-            key={focused.num}
+            key={focused.name}
             className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end p-6 pb-8 md:inset-y-0 md:left-auto md:w-1/2 md:items-center md:p-12"
             initial={{ opacity: 0, x: 24 }}
             animate={{ opacity: 1, x: 0 }}
@@ -758,7 +823,9 @@ export default function IndustriesStack({
                 cukup tap kartu / area kosong (onPointerMissed). */}
             <div className="max-w-md">
               <p className="text-[10px] tracking-widest text-zinc-400 uppercase md:text-xs">
-                <span className="mr-2 tabular-nums text-accent">{focused.num}</span>
+                <span className="mr-2 tabular-nums text-accent">
+                  {nomor(selected ?? 0)}
+                </span>
                 {focused.tier === "core" ? "Core Focus" : "Sector"}
               </p>
               <h3 className="mt-2 text-lg font-semibold tracking-tight text-zinc-900 md:mt-3 md:text-3xl">

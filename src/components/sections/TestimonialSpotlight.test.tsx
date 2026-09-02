@@ -84,6 +84,7 @@ const payload = (testimonials: unknown[]): ContentPayload =>
     projects: [],
     services: [],
     caseStudies: [],
+    industries: [],
     testimonials,
   }) as ContentPayload;
 

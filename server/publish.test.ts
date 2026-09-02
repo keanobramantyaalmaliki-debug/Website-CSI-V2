@@ -31,6 +31,7 @@ const {
   loginAsEditor,
   projectBody,
   resetDb,
+  industryBody,
   testimonialBody,
   valueBody,
   visionBody,
@@ -100,6 +101,14 @@ const buatTestimoni = async (over: Record<string, unknown> = {}) => {
   });
   return (await json<{ testimonial: { id: string; name: string } }>(res))
     .testimonial;
+};
+
+const buatIndustri = async (over: Record<string, unknown> = {}) => {
+  const res = await api("/api/industries", {
+    method: "POST",
+    body: JSON.stringify(industryBody(over)),
+  });
+  return (await json<{ industry: { id: string; name: string } }>(res)).industry;
 };
 
 /* `PUT`, bukan `POST`: barisnya tidak dibuat lewat panel — ia satu, selalu,
@@ -468,6 +477,71 @@ describe("testimoni ikut ke content.json", () => {
   });
 });
 
+describe("industri ikut ke content.json", () => {
+  it("hanya yang tayang, dan urutannya urutan plank", async () => {
+    await buatIndustri({ name: "Healthcare" });
+    await buatIndustri({ name: "Logistics" });
+    await buatIndustri({ name: "Masih Digodok", state: "draft" });
+
+    const hasil = await publish(aktor);
+    expect(hasil.industries).toBe(2);
+
+    const isi = await bacaContent();
+    /* Urutannya yang diuji, jadi tanpa `.sort()`: ia menentukan anak tangga
+       spiral yang ditempati tiap plank SEKALIGUS nomor "01", "02", … yang
+       tercetak di HUD-nya. */
+    expect(isi.industries.map((i: { name: string }) => i.name)).toEqual([
+      "Healthcare",
+      "Logistics",
+    ]);
+  });
+
+  it("tidak membocorkan kolom yang cuma urusan admin", async () => {
+    await buatIndustri();
+    await publish(aktor);
+
+    const [industry] = (await bacaContent()).industries;
+    expect(industry).not.toHaveProperty("updatedAt");
+    expect(industry).not.toHaveProperty("publishedAt");
+    expect(industry).not.toHaveProperty("unpublished");
+    expect(Object.keys(industry).sort()).toEqual([
+      "desc",
+      "id",
+      "image",
+      "name",
+      "sortOrder",
+      "state",
+      "tier",
+    ]);
+  });
+
+  it("sektor yang dihapus lenyap di publish berikutnya", async () => {
+    const industry = await buatIndustri();
+    await publish(aktor);
+    expect((await bacaContent()).industries).toHaveLength(1);
+
+    await api(`/api/industries/${industry.id}`, { method: "DELETE" });
+    await publish(aktor);
+    expect((await bacaContent()).industries).toHaveLength(0);
+  });
+
+  it("menyusun ulang urutan ikut mengganti nomor yang tercetak", async () => {
+    const a = await buatIndustri({ name: "Healthcare" });
+    const b = await buatIndustri({ name: "Logistics" });
+    await publish(aktor);
+
+    await api("/api/industries/urutkan", {
+      method: "POST",
+      body: JSON.stringify({ ids: [b.id, a.id] }),
+    });
+    await publish(aktor);
+
+    expect(
+      (await bacaContent()).industries.map((i: { name: string }) => i.name),
+    ).toEqual(["Logistics", "Healthcare"]);
+  });
+});
+
 describe("visi ikut ke content.json", () => {
   /* Satu-satunya isian `content.json` yang bukan daftar, dan satu-satunya
      yang boleh `null`. `null` di sini berarti "barisnya belum ada di
@@ -627,6 +701,7 @@ describe("endpoint publish", () => {
     await buatProyek();
     await buatCerita();
     await buatTestimoni();
+    await buatIndustri();
 
     const res = await api("/api/publish", { method: "POST" });
     const body = await json<{
@@ -635,6 +710,7 @@ describe("endpoint publish", () => {
       projects: number;
       caseStudies: number;
       testimonials: number;
+      industries: number;
       generatedAt: string;
     }>(res);
 
@@ -647,6 +723,7 @@ describe("endpoint publish", () => {
     expect(body.projects).toBe(1);
     expect(body.caseStudies).toBe(1);
     expect(body.testimonials).toBe(1);
+    expect(body.industries).toBe(1);
     expect(body.generatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 
     const isi = await bacaContent();
@@ -655,6 +732,7 @@ describe("endpoint publish", () => {
     expect(isi.projects).toHaveLength(1);
     expect(isi.caseStudies).toHaveLength(1);
     expect(isi.testimonials).toHaveLength(1);
+    expect(isi.industries).toHaveLength(1);
   });
 
   it("GET /api/publish/status memberi angka badge", async () => {

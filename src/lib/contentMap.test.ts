@@ -80,6 +80,7 @@ describe("bentuk peta konten", () => {
        sebelum Services, Services sebelum Work, Work sebelum People, dan di
        dalam People nilai dan crew berada di atas lowongan. */
     expect(siap).toEqual([
+      "industri",
       "visi",
       "layanan",
       "testimoni",

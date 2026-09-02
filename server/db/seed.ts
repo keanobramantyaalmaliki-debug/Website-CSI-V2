@@ -30,12 +30,14 @@ import { FALLBACK_WORK_PROJECTS } from "../../src/data/workProjectsFallback";
 import { FALLBACK_CASE_STUDIES } from "../../src/data/caseStudiesFallback";
 import { FALLBACK_TESTIMONIALS } from "../../src/data/testimonialsFallback";
 import { FALLBACK_SERVICES } from "../../src/data/servicesFallback";
+import { FALLBACK_INDUSTRIES } from "../../src/data/industriesFallback";
 import { FALLBACK_VISION } from "../../src/data/visionFallback";
 import { db, sql } from "./client";
 import {
   crewMembers,
   crewSocials,
   images,
+  industries,
   jobCopy,
   jobCopyBullets,
   jobSkills,
@@ -572,6 +574,76 @@ async function seedTestimonials() {
 }
 
 /**
+ * Sektor industri di strip halaman depan.
+ *
+ * Gerbang isinya sendiri, alasan yang sama dengan `seedValues`.
+ *
+ * Semua masuk sebagai `live`: ketiga belasnya memang sudah tayang hari ini —
+ * dan angka 13 itu persis `MAX_LIVE_INDUSTRIES`, jadi seed ini mengisi
+ * tumpukan sampai penuh. Sektor ke-14 yang ditambahkan lewat panel akan
+ * ditolak `routes/industries.ts` sampai ada yang dijadikan draft atau dihapus;
+ * itu memang yang diinginkan, bukan kecelakaan.
+ */
+async function seedIndustries() {
+  const [{ count }] = await db
+    .select({ count: raw<number>`count(*)::int` })
+    .from(industries);
+
+  if (count > 0) {
+    console.log(`Tabel industries sudah berisi ${count} baris — dilewati.`);
+    return;
+  }
+
+  await db.transaction(async (tx) => {
+    for (const [index, industry] of FALLBACK_INDUSTRIES.entries()) {
+      /* Beda dari foto entitas lain: ketiga belasnya URL Unsplash, bukan
+         berkas di `public/`. Tetap `source: "static"` — arti kolom itu "bukan
+         unggahan panel, jadi CMS tidak berhak menghapusnya", dan itu justru
+         lebih benar lagi untuk berkas yang bahkan tidak ada di server ini. */
+      let photoId: string | null = null;
+      if (industry.image) {
+        const [row] = await tx
+          .insert(images)
+          .values({
+            path: industry.image,
+            source: "static" as const,
+            originalName: null,
+          })
+          .onConflictDoNothing({ target: images.path })
+          .returning({ id: images.id });
+
+        /* `onConflictDoNothing` tidak mengembalikan baris kalau path-nya sudah
+           terdaftar, jadi baris lamanya dicari — sama seperti di `seedValues`. */
+        photoId =
+          row?.id ??
+          (
+            await tx
+              .select({ id: images.id })
+              .from(images)
+              .where(eq(images.path, industry.image))
+          )[0]?.id ??
+          null;
+      }
+
+      await tx.insert(industries).values({
+        name: industry.name,
+        desc: industry.desc,
+        tier: industry.tier,
+        photoId,
+        state: "live",
+        sortOrder: index,
+        /* Sudah tayang hari ini — lihat alasan yang sama di seed lowongan. */
+        publishedAt: new Date(),
+      });
+    }
+  });
+
+  console.log(
+    `Seed selesai: ${FALLBACK_INDUSTRIES.length} sektor masuk ke database.`,
+  );
+}
+
+/**
  * Seksi Visi di halaman depan.
  *
  * Satu baris, bukan daftar — jadi gerbangnya tetap `count > 0` seperti yang
@@ -643,5 +715,6 @@ await seedWorkProjects();
 await seedCaseStudies();
 await seedServices();
 await seedTestimonials();
+await seedIndustries();
 await seedVision();
 await sql.end();

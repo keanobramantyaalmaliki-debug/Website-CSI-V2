@@ -9,6 +9,7 @@
 
 import type { CrewMember } from "@shared/crew";
 import type { Job } from "@shared/job";
+import type { Industry } from "@shared/industry";
 import type { Value } from "@shared/value";
 import type { WorkProject } from "@shared/workProject";
 import type { CaseStudy } from "@shared/caseStudy";
@@ -18,6 +19,10 @@ import type { Vision } from "@shared/vision";
 import type { CrewFieldErrors, CrewInput } from "@shared/validateCrew";
 import type { JobFieldErrors, JobInput } from "@shared/validateJob";
 import type { ValueFieldErrors, ValueInput } from "@shared/validateValue";
+import type {
+  IndustryFieldErrors,
+  IndustryInput,
+} from "@shared/validateIndustry";
 import type {
   WorkProjectFieldErrors,
   WorkProjectInput,
@@ -41,6 +46,13 @@ export type JobRecord = Job & {
 };
 
 export type ValueRecord = Value & {
+  updatedAt: string;
+  publishedAt: string | null;
+  /** Ada perubahan yang belum ikut Publish. */
+  unpublished: boolean;
+};
+
+export type IndustryRecord = Industry & {
   updatedAt: string;
   publishedAt: string | null;
   /** Ada perubahan yang belum ikut Publish. */
@@ -125,6 +137,7 @@ export type FieldErrors = JobFieldErrors &
   CaseStudyFieldErrors &
   ServiceFieldErrors &
   TestimonialFieldErrors &
+  IndustryFieldErrors &
   VisionFieldErrors;
 
 async function minta<T>(path: string, init: RequestInit = {}): Promise<Hasil<T>> {
@@ -218,6 +231,37 @@ export const hapusNilai = (id: string) =>
  *  tidak menyebut semua nilai — lihat `reorderValues` di server. */
 export const urutkanNilai = (ids: string[]) =>
   minta<{ values: ValueRecord[] }>("/api/values/urutkan", kirimJson("POST", { ids }));
+
+/* ── industri (Home → Built Across Sectors) ─────────────────────────── */
+
+export const ambilIndustri = () =>
+  minta<{ industries: IndustryRecord[] }>("/api/industries");
+
+export const ambilSatuIndustri = (id: string) =>
+  minta<{ industry: IndustryRecord }>(`/api/industries/${id}`);
+
+export const buatIndustri = (input: IndustryInput) =>
+  minta<{ industry: IndustryRecord }>("/api/industries", kirimJson("POST", input));
+
+export const simpanIndustri = (id: string, input: IndustryInput) =>
+  minta<{ industry: IndustryRecord }>(
+    `/api/industries/${id}`,
+    kirimJson("PUT", input),
+  );
+
+export const hapusIndustri = (id: string) =>
+  minta<{ ok: true; deleted: string }>(`/api/industries/${id}`, {
+    method: "DELETE",
+  });
+
+/** Sama seperti nilai: SELURUH daftar id dalam urutan barunya. Urutan ini
+ *  menentukan anak tangga spiral yang ditempati tiap sektor SEKALIGUS nomor
+ *  "01"–"13" yang tercetak di HUD-nya. */
+export const urutkanIndustri = (ids: string[]) =>
+  minta<{ industries: IndustryRecord[] }>(
+    "/api/industries/urutkan",
+    kirimJson("POST", { ids }),
+  );
 
 /* ── crew (People → The Crew) ───────────────────────────────────────── */
 

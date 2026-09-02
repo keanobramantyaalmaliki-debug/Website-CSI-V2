@@ -139,6 +139,31 @@ export const testimonialStateEnum = pgEnum("testimonial_state", [
   "live",
 ]);
 
+/**
+ * Dua keadaan sebuah sektor industri, cocok dengan `IndustryState` di
+ * `shared/industry.ts`.
+ *
+ * Enum SENDIRI lagi — ketujuh, dan alasannya masih yang itu-itu juga: yang
+ * kebetulan sama hari ini tidak boleh membuat penambahan untuk satu entitas
+ * diam-diam jadi pilihan sah di form entitas yang lain.
+ */
+export const industryStateEnum = pgEnum("industry_state", ["draft", "live"]);
+
+/**
+ * Bobot sebuah sektor, cocok dengan `IndustryTier` di `shared/industry.ts`.
+ *
+ * `core` mencetak label "Core Focus" di HUD, kartu fokus, dan daftar sr-only;
+ * `also` mencetak "Sector". Enum dan bukan boolean `is_core` karena yang
+ * dicetak memang dua kata yang berbeda, bukan ada/tidak ada label — dan kalau
+ * suatu hari ada tingkat ketiga, enum tinggal ditambah sedangkan boolean harus
+ * dibongkar.
+ *
+ * ⚠️ Ini BUKAN urutan dengan nama lain. Tiga sektor `core` hari ini kebetulan
+ * juga tiga teratas; `sort_order` di bawah yang mengurus posisi, dan keduanya
+ * bergerak sendiri-sendiri.
+ */
+export const industryTierEnum = pgEnum("industry_tier", ["core", "also"]);
+
 /** `static` = berkas yang sudah lama ada di `public/` (hasil grading ffmpeg
  *  manual); `upload` = diunggah lewat panel admin. Dibedakan supaya jelas mana
  *  yang tidak boleh dihapus dari disk oleh CMS. */
@@ -733,6 +758,95 @@ export const testimonials = pgTable(
   ],
 );
 
+/* ─────────────────────────── industri ─────────────────────── */
+
+/**
+ * Sektor industri — strip "Built Across Sectors" di halaman depan.
+ *
+ * Satu baris = satu lempeng (plank) di tumpukan spiral 3D
+ * `IndustriesStack.tsx`, sekaligus satu `<li>` di daftar `sr-only` di
+ * bawahnya. Tumpukannya `aria-hidden`, jadi daftar itulah satu-satunya bentuk
+ * strip ini yang sampai ke pembaca layar dan mesin pencari — sebabnya `desc`
+ * wajib untuk baris yang tayang (lihat `shared/validateIndustry.ts`).
+ *
+ * ‼️ TABEL DENGAN BATAS JUMLAH, satu-satunya di CMS ini: maksimal
+ * `MAX_LIVE_INDUSTRIES` (13) baris boleh `live` bersamaan. Alasannya geometri
+ * dan ditulis lengkap di `shared/industry.ts`; ringkasnya, framing kamera dan
+ * animasi plank-ke-kartu-fokus dikalibrasi untuk busur sepanjang 13 plank, dan
+ * plank ke-14 memanjat keluar bingkai.
+ *
+ * Batas itu SENGAJA tidak dipaksakan lewat `check` seperti baris tunggal di
+ * `vision`. Bedanya nyata: "cuma boleh satu" bisa ditulis sebagai aturan satu
+ * baris, sedangkan "paling banyak 13 baris hidup" butuh menghitung baris lain
+ * — di Postgres itu berarti trigger, dan sebuah trigger yang menolak simpan
+ * akan sampai ke editor sebagai galat database mentah tanpa kalimat yang bisa
+ * dibaca. Penjaganya ada di `routes/industries.ts`, yang menjawab 422 berikut
+ * kalimat penjelas.
+ *
+ * TIDAK ADA kolom nomor — "01"–"13" yang tercetak di HUD, navigasi sentuh, dan
+ * kepala kartu fokus diturunkan dari posisi baris, dengan alasan yang sama
+ * persis seperti `services`.
+ *
+ * TIDAK ADA kolom teks alternatif foto, dan itu juga bukan kelupaan. Data lama
+ * menyimpannya untuk ketiga belas sektor, tapi tidak ada satu pun `<img>` di
+ * sini yang bisa memakainya: fotonya tekstur WebGL di dalam pembungkus
+ * `aria-hidden`. Kolomnya akan tersimpan rapi lalu tidak pernah dibaca siapa
+ * pun, sekaligus meminta editor menulis kalimat yang tidak sampai ke telinga
+ * mana pun.
+ */
+export const industries = pgTable(
+  "industries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    /** Satu kalimat penjelas, tampil di HUD hover, di badan kartu fokus, dan
+     *  di daftar `sr-only`. Boleh kosong hanya supaya draf bisa disimpan
+     *  setengah jalan. */
+    desc: text("desc").notNull().default(""),
+    tier: industryTierEnum("tier").notNull().default("also"),
+    /** `set null` dan bukan `cascade`, sama seperti tabel lain: menghapus
+     *  sebuah gambar tidak boleh ikut menghapus sektornya. Sektor yang tayang
+     *  WAJIB punya foto (lihat `validateIndustry.ts`) — kolomnya boleh kosong
+     *  hanya supaya draf bisa disimpan setengah jalan. */
+    photoId: uuid("photo_id").references(() => images.id, {
+      onDelete: "set null",
+    }),
+    state: industryStateEnum("state").notNull().default("draft"),
+    /**
+     * Urutan sektor di tumpukan, dari puncak ke dasar.
+     *
+     * Bukan kenyamanan panel: urutan ini menentukan DUA hal yang tayang
+     * sekaligus — anak tangga spiral mana yang ditempati sebuah sektor, dan
+     * nomor "01"–"13" yang tercetak di tiga tempat. Postgres tidak menjanjikan
+     * urutan baris apa pun tanpa `ORDER BY`.
+     */
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    /**
+     * Nama unik HANYA untuk baris hidup — alasan yang sama dengan
+     * `jobs_slug_alive`.
+     *
+     * Bedanya dengan `services_title_alive`: di sini nama BUKAN `key` React
+     * (plank-nya berkunci `id`), jadi yang dijaga bukan React melainkan
+     * orangnya. Dua plank bernama "Healthcare" tidak bisa dibedakan pengunjung
+     * di navigasi sentuh, dan tidak bisa dibedakan editor di daftar panel.
+     */
+    uniqueIndex("industries_name_alive")
+      .on(t.name)
+      .where(sql`${t.deletedAt} is null`),
+    index("industries_order").on(t.sortOrder),
+  ],
+);
+
 /* ──────────────────────────── visi ────────────────────────── */
 
 /**
@@ -937,6 +1051,10 @@ export const serviceSubsRelations = relations(serviceSubs, ({ one }) => ({
     fields: [serviceSubs.serviceId],
     references: [services.id],
   }),
+}));
+
+export const industriesRelations = relations(industries, ({ one }) => ({
+  photo: one(images, { fields: [industries.photoId], references: [images.id] }),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
