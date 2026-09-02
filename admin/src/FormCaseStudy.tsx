@@ -136,7 +136,7 @@ export function FormCaseStudy({
     const masalah = validateCaseStudy(bersih);
     if (Object.keys(masalah).length) {
       setGalat(masalah);
-      setPesan("Ada isian yang belum benar — lihat keterangan di bawah isiannya.");
+      setPesan("Ada isian yang belum benar, lihat keterangan di bawah isiannya.");
       return;
     }
 
@@ -239,7 +239,7 @@ export function FormCaseStudy({
         ubah={(path) => ubah("image", path)}
         galat={galat.image}
         label="Gambar cerita"
-        petunjuk="Gambar besar yang sekaligus jadi tombol pembuka cerita, jadi wajib ada untuk cerita Live. Gambar yang diunggah otomatis dikecilkan — tidak perlu diperkecil sendiri dulu."
+        petunjuk="Gambar besar yang sekaligus jadi tombol pembuka cerita, jadi wajib ada untuk cerita Live. Gambar yang diunggah otomatis dikecilkan, tidak perlu diperkecil sendiri dulu."
       />
 
       <Isian
@@ -263,7 +263,7 @@ export function FormCaseStudy({
         /* ⚠️ Ini bukan testimoni. Kalimat petunjuknya sengaja menyebut itu:
            isian bernama "kutipan" akan menarik pujian klien kalau tidak
            dijelaskan, dan testimoni bernama tempatnya di halaman Services. */
-        petunjuk="Satu kalimat MASALAH yang dihadapi klien, tanpa nama siapa pun — bukan pujian untuk Cogniti. Muncul paling atas begitu cerita dibuka."
+        petunjuk="Satu kalimat MASALAH yang dihadapi klien, tanpa nama siapa pun, bukan pujian untuk Cogniti. Muncul paling atas begitu cerita dibuka."
         galat={galat.quote}
       >
         <textarea
@@ -275,7 +275,7 @@ export function FormCaseStudy({
 
       <Isian
         label="Cerita"
-        petunjuk="Uraian lengkapnya. Pisahkan paragraf dengan satu baris kosong — biasanya dua paragraf: latar masalahnya, lalu apa yang dikerjakan dan hasilnya."
+        petunjuk="Uraian lengkapnya. Pisahkan paragraf dengan satu baris kosong, biasanya dua paragraf: latar masalahnya, lalu apa yang dikerjakan dan hasilnya."
         galat={galat.desc}
       >
         <textarea
@@ -295,7 +295,7 @@ export function FormCaseStudy({
 
       <DaftarTeks
         label="Lingkup pekerjaan"
-        petunjuk="Label kecil di kaki cerita — bagian apa saja yang dikerjakan. Tiga sudah cukup."
+        petunjuk="Label kecil di kaki cerita, bagian apa saja yang dikerjakan. Tiga sudah cukup."
         galat={galat.scope}
         nilai={isi.scope}
         ubah={(baru) => ubah("scope", baru)}

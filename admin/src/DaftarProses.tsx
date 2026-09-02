@@ -108,7 +108,7 @@ export function DaftarProses({
       return;
     }
     onBerubah(
-      "Urutan langkah diubah — nomornya ikut berganti. Belum terlihat pengunjung sampai kamu menekan Publish.",
+      "Urutan langkah diubah, nomornya ikut berganti. Belum terlihat pengunjung sampai kamu menekan Publish.",
     );
   }
 
@@ -135,7 +135,7 @@ export function DaftarProses({
              kursor. */
           title={
             penuh
-              ? `Sudah ada ${MAX_LIVE_PROCESS_STEPS} langkah yang tampil — itu batasnya.`
+              ? `Sudah ada ${MAX_LIVE_PROCESS_STEPS} langkah yang tampil, itu batasnya.`
               : undefined
           }
         >
@@ -157,7 +157,7 @@ export function DaftarProses({
       <p className="petunjuk">
         Langkah yang tampil: <strong>{tayang}</strong> dari maksimal{" "}
         <strong>{MAX_LIVE_PROCESS_STEPS}</strong>. Batasnya soal panjang
-        halaman — seksi ini sudah jadi bagian terpanjang di halaman depan — dan
+        halaman, seksi ini sudah jadi bagian terpanjang di halaman depan, dan
         soal ilustrasi: gambar yang tersedia memang {MAX_LIVE_PROCESS_STEPS}.
         Menguranginya aman: talinya digambar ulang mengikuti kartu yang ada.
       </p>
@@ -193,7 +193,7 @@ export function DaftarProses({
                 <td>
                   <strong>{langkah.title}</strong>
                   <div className="petunjuk">
-                    {langkah.kicker ? `${langkah.kicker} — ` : ""}
+                    {langkah.kicker ? `${langkah.kicker}, ` : ""}
                     {langkah.desc || "—"}
                   </div>
                 </td>
@@ -261,7 +261,7 @@ export function DaftarProses({
               Kartu <strong>“{akanDihapus.title}”</strong> akan dihapus dari
               seksi “How We Work”, dan langkah di bawahnya naik satu nomor.
               Isinya tetap tersimpan di database dan bisa dikembalikan oleh
-              developer kalau ternyata keliru — tapi tidak lewat panel ini.
+              developer kalau ternyata keliru, tapi tidak lewat panel ini.
             </p>
           }
           tombolYa="Ya, hapus"

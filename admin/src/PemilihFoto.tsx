@@ -17,7 +17,7 @@ export function PemilihFoto({
   ubah,
   galat,
   label = "Foto",
-  petunjuk = "Tampil sebagai pratinjau di tabel Careers dan di kepala halaman lowongan. Gambar yang diunggah otomatis dikecilkan — tidak perlu diperkecil sendiri dulu.",
+  petunjuk = "Tampil sebagai pratinjau di tabel Careers dan di kepala halaman lowongan. Gambar yang diunggah otomatis dikecilkan, tidak perlu diperkecil sendiri dulu.",
 }: {
   nilai: string;
   ubah: (path: string) => void;

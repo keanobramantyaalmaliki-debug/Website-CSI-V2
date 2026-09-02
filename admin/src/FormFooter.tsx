@@ -123,7 +123,7 @@ export function FormFooter({ onSelesai }: { onSelesai: (pesan: string) => void }
     const masalah = validateFooter(bersih);
     if (Object.keys(masalah).length) {
       setGalat(masalah);
-      setPesan("Ada isian yang belum benar — lihat keterangan di bawah isiannya.");
+      setPesan("Ada isian yang belum benar, lihat keterangan di bawah isiannya.");
       return;
     }
 
@@ -160,14 +160,14 @@ export function FormFooter({ onSelesai }: { onSelesai: (pesan: string) => void }
 
       <p className="petunjuk">
         Baris paling bawah di SEMUA halaman situs, termasuk halaman detail
-        lowongan. Tidak bisa ditambah atau dihapus — yang bisa diubah isinya.
+        lowongan. Tidak bisa ditambah atau dihapus, yang bisa diubah isinya.
         Di layar HP surel dan alamat sengaja disembunyikan, jadi yang terlihat
         di sana cuma tautan sosial dan hak cipta.
       </p>
 
       <Isian
         label="Surel"
-        petunjuk="Alamatnya saja, tanpa mailto: — situs yang membuatnya bisa diklik."
+        petunjuk="Alamatnya saja, tanpa mailto:, situs yang membuatnya bisa diklik."
         galat={galat.email}
       >
         <input
@@ -193,7 +193,7 @@ export function FormFooter({ onSelesai }: { onSelesai: (pesan: string) => void }
 
       <Isian
         label="Baris hak cipta"
-        petunjuk="Tanpa tahun dan tanpa lambang © — situs menambahkan “© tahun berjalan” sendiri di depannya, supaya tidak basi tiap 1 Januari."
+        petunjuk="Tanpa tahun dan tanpa lambang ©, situs menambahkan “© tahun berjalan” sendiri di depannya, supaya tidak basi tiap 1 Januari."
         galat={galat.copyright}
       >
         <input
@@ -212,7 +212,7 @@ export function FormFooter({ onSelesai }: { onSelesai: (pesan: string) => void }
         <label>Tautan sosial</label>
         <p className="petunjuk">
           Urutannya urutan tampil, dari kiri ke kanan. Tulisannya dicetak apa
-          adanya — isi <code>Instagram</code>, bukan alamatnya. Alamatnya harus
+          adanya, isi <code>Instagram</code>, bukan alamatnya. Alamatnya harus
           diawali <code>https://</code>; tanpa itu tautannya mengarah ke dalam
           situs ini, bukan ke luar.
         </p>

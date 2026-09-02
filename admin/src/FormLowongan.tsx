@@ -137,7 +137,7 @@ export function FormLowongan({
       setGalat(masalah);
       /* Pesannya sengaja tidak menyebut jumlah: yang berguna adalah tahu harus
          menggulir ke atas, bukan tahu angkanya. */
-      setPesan("Ada isian yang belum benar — lihat keterangan di bawah isiannya.");
+      setPesan("Ada isian yang belum benar, lihat keterangan di bawah isiannya.");
       return;
     }
 
@@ -362,7 +362,7 @@ export function FormLowongan({
         <summary>Pengaturan lanjutan</summary>
         <Isian
           label="Alamat halaman"
-          petunjuk={`Bagian akhir alamat: cogniti.id/careers/${isi.slug || "…"}. Terisi otomatis dari judul — ubah hanya kalau memang perlu, karena tautan lama ke alamat sebelumnya akan mati.`}
+          petunjuk={`Bagian akhir alamat: cogniti.id/careers/${isi.slug || "…"}. Terisi otomatis dari judul, ubah hanya kalau memang perlu, karena tautan lama ke alamat sebelumnya akan mati.`}
           galat={galat.slug}
         >
           <input

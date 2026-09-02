@@ -40,7 +40,7 @@ const STATUS: { nilai: CrewInput["state"]; nama: string; jelas: string }[] = [
     nilai: "draft",
     nama: "Draft",
     jelas:
-      "Belum terlihat pengunjung. Berguna untuk orang yang sudah tanda tangan tapi belum mulai — bisa disimpan meski isinya belum lengkap.",
+      "Belum terlihat pengunjung. Berguna untuk orang yang sudah tanda tangan tapi belum mulai, bisa disimpan meski isinya belum lengkap.",
   },
   {
     nilai: "live",
@@ -133,7 +133,7 @@ export function FormCrew({
     const masalah = validateCrew(bersih);
     if (Object.keys(masalah).length) {
       setGalat(masalah);
-      setPesan("Ada isian yang belum benar — lihat keterangan di bawah isiannya.");
+      setPesan("Ada isian yang belum benar, lihat keterangan di bawah isiannya.");
       return;
     }
 

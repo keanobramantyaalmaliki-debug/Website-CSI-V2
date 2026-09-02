@@ -112,7 +112,7 @@ export function FormNilai({
     const masalah = validateValue(bersih);
     if (Object.keys(masalah).length) {
       setGalat(masalah);
-      setPesan("Ada isian yang belum benar — lihat keterangan di bawah isiannya.");
+      setPesan("Ada isian yang belum benar, lihat keterangan di bawah isiannya.");
       return;
     }
 

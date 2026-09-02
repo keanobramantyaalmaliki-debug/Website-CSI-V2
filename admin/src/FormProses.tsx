@@ -161,7 +161,7 @@ export function FormProses({
     const masalah = validateProcessStep(bersih);
     if (Object.keys(masalah).length) {
       setGalat(masalah);
-      setPesan("Ada isian yang belum benar — lihat keterangan di bawah isiannya.");
+      setPesan("Ada isian yang belum benar, lihat keterangan di bawah isiannya.");
       return;
     }
 
@@ -204,7 +204,7 @@ export function FormProses({
 
       <Isian
         label="Judul langkah"
-        petunjuk="Tulisan besar di tengah kartu. Contoh: Discovery, Testing & QA. Pendek lebih baik — judul panjang membungkus dan mendorong penjelasan keluar kartu."
+        petunjuk="Tulisan besar di tengah kartu. Contoh: Discovery, Testing & QA. Pendek lebih baik, judul panjang membungkus dan mendorong penjelasan keluar kartu."
         galat={galat.title}
       >
         <input
@@ -216,7 +216,7 @@ export function FormProses({
 
       <Isian
         label="Kicker"
-        petunjuk="Satu kata di atas judul, dicetak kapital berjarak lebar. Contoh: UNDERSTAND, BUILD. Satu kata saja — dua kata sudah membungkus jadi dua baris."
+        petunjuk="Satu kata di atas judul, dicetak kapital berjarak lebar. Contoh: UNDERSTAND, BUILD. Satu kata saja, dua kata sudah membungkus jadi dua baris."
         galat={galat.kicker}
       >
         <input
@@ -228,7 +228,7 @@ export function FormProses({
 
       <Isian
         label="Penjelasan"
-        petunjuk="Satu sampai dua kalimat pendek di bawah judul. Bukan paragraf — kartunya sempit."
+        petunjuk="Satu sampai dua kalimat pendek di bawah judul. Bukan paragraf, kartunya sempit."
         galat={galat.desc}
       >
         <textarea
@@ -269,7 +269,7 @@ export function FormProses({
           satunya di gambar ketiga dulu. */}
       <p className="petunjuk">
         Gambarnya digambar langsung oleh situs (garis yang menggores sendiri
-        saat kartunya masuk layar), jadi pilihannya tetap enam ini — tidak ada
+        saat kartunya masuk layar), jadi pilihannya tetap enam ini, tidak ada
         unggah gambar di sini. Dua langkah boleh memakai ilustrasi yang sama.
       </p>
 
@@ -302,7 +302,7 @@ export function FormProses({
           hubungan antar langkah — "yang mana lebih dulu" — dan di form satu
           langkah tidak ada pembandingnya. */}
       <p className="petunjuk">
-        Urutan langkah — beserta nomor 01, 02, … yang tercetak di kartunya —
+        Urutan langkah, beserta nomor 01, 02, … yang tercetak di kartunya,
         diatur dari daftar langkah, lewat tombol Naikkan/Turunkan.
       </p>
 

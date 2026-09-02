@@ -33,7 +33,7 @@ export function Beranda({
     <>
       <p className="pengantar">
         Pilih halaman di menu sebelah kiri, lalu konten yang mau diubah.
-        Susunannya sama persis dengan menu di situs — kalau di situs sesuatu ada
+        Susunannya sama persis dengan menu di situs, kalau di situs sesuatu ada
         di halaman People, di sini juga.
       </p>
 
@@ -72,7 +72,7 @@ export function Beranda({
 
       <p className="pengantar">
         {JUMLAH_BELUM} konten lain di menu kiri bertanda{" "}
-        <span className="penanda">Belum tersedia</span> — masih ditulis di dalam
+        <span className="penanda">Belum tersedia</span>, masih ditulis di dalam
         kode dan belum bisa diubah dari sini. Kabari developer kalau salah
         satunya perlu diganti.
       </p>

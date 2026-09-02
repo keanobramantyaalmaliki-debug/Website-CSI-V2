@@ -155,7 +155,7 @@ export function DaftarCrew({
               <strong>“{akanDihapus.name}”</strong> akan dihapus dari daftar nama
               dan dinding foto di halaman People. Datanya tetap tersimpan di
               database dan bisa dikembalikan oleh developer kalau ternyata
-              keliru — tapi tidak lewat panel ini.
+              keliru, tapi tidak lewat panel ini.
             </p>
           }
           tombolYa="Ya, hapus"

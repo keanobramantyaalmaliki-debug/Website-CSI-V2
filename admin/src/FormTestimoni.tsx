@@ -39,7 +39,7 @@ const STATUS: { nilai: TestimonialInput["state"]; nama: string; jelas: string }[
       nilai: "draft",
       nama: "Draft",
       jelas:
-        "Belum terlihat pengunjung. Bisa disimpan meski kutipannya belum lengkap — cukup namanya.",
+        "Belum terlihat pengunjung. Bisa disimpan meski kutipannya belum lengkap, cukup namanya.",
     },
     {
       nilai: "live",
@@ -118,7 +118,7 @@ export function FormTestimoni({
     const masalah = validateTestimonial(bersih);
     if (Object.keys(masalah).length) {
       setGalat(masalah);
-      setPesan("Ada isian yang belum benar — lihat keterangan di bawah isiannya.");
+      setPesan("Ada isian yang belum benar, lihat keterangan di bawah isiannya.");
       return;
     }
 
@@ -165,7 +165,7 @@ export function FormTestimoni({
            muncul: tinggi blok di situs dikunci oleh kutipan TERPANJANG, jadi
            satu kutipan yang kepanjangan menambah ruang kosong di bawah semua
            kutipan lain — akibat yang tidak kelihatan dari dalam form ini. */
-        petunjuk="Kalimat kliennya, tanpa tanda kutip — situs menambahkannya sendiri. Maksimal 280 karakter: kutipan terpanjang menentukan tinggi blok untuk semua yang lain."
+        petunjuk="Kalimat kliennya, tanpa tanda kutip, situs menambahkannya sendiri. Maksimal 280 karakter: kutipan terpanjang menentukan tinggi blok untuk semua yang lain."
         galat={galat.quote}
       >
         <textarea

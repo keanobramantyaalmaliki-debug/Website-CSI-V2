@@ -195,7 +195,7 @@ export function DaftarCaseStudy({
               Cerita <strong>“{akanDihapus.title}”</strong> akan dihapus dari
               halaman Work berikut seluruh uraiannya. Isinya tetap tersimpan di
               database dan bisa dikembalikan oleh developer kalau ternyata
-              keliru — tapi tidak lewat panel ini.
+              keliru, tapi tidak lewat panel ini.
             </p>
           }
           tombolYa="Ya, hapus"

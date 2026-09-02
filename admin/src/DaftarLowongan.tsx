@@ -141,7 +141,7 @@ export function DaftarLowongan({
             <p>
               Lowongan <strong>“{akanDihapus.title}”</strong> akan dihapus dari
               daftar. Isinya tetap tersimpan di database dan bisa dikembalikan
-              oleh developer kalau ternyata keliru — tapi tidak lewat panel ini.
+              oleh developer kalau ternyata keliru, tapi tidak lewat panel ini.
             </p>
           }
           tombolYa="Ya, hapus"

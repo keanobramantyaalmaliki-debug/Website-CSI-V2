@@ -129,7 +129,7 @@ export function FormDeployment({
     const masalah = validateDeployment(bersih);
     if (Object.keys(masalah).length) {
       setGalat(masalah);
-      setPesan("Ada isian yang belum benar — lihat keterangan di bawah isiannya.");
+      setPesan("Ada isian yang belum benar, lihat keterangan di bawah isiannya.");
       return;
     }
 
@@ -174,7 +174,7 @@ export function FormDeployment({
 
       <Isian
         label="Sektor"
-        petunjuk="Tulisan besar di kartu. Contoh: Logistics. Pendek lebih baik — lebih dari dua baris mendorong isi kartu keluar kotaknya."
+        petunjuk="Tulisan besar di kartu. Contoh: Logistics. Pendek lebih baik, lebih dari dua baris mendorong isi kartu keluar kotaknya."
         galat={galat.sector}
       >
         <input
@@ -208,7 +208,7 @@ export function FormDeployment({
 
       <Isian
         label="Keterangan"
-        petunjuk="Satu-dua kalimat di badan kartu, di bawah sektornya. Bukan paragraf — kartunya tidak ikut memanjang, teks yang berlebih mendorong judulnya keluar."
+        petunjuk="Satu-dua kalimat di badan kartu, di bawah sektornya. Bukan paragraf, kartunya tidak ikut memanjang, teks yang berlebih mendorong judulnya keluar."
         galat={galat.desc}
       >
         <textarea
@@ -222,7 +222,7 @@ export function FormDeployment({
         ubah={(path) => ubah("image", path)}
         galat={galat.image}
         label="Foto kartu"
-        petunjuk="Foto latar kartu — abu-abu saat diam, berwarna saat disorot kursor (di HP: saat kartunya masuk layar). Ambil yang lanskap. Gambar yang diunggah otomatis dikecilkan."
+        petunjuk="Foto latar kartu, abu-abu saat diam, berwarna saat disorot kursor (di HP: saat kartunya masuk layar). Ambil yang lanskap. Gambar yang diunggah otomatis dikecilkan."
       />
 
       <fieldset>
@@ -254,7 +254,7 @@ export function FormDeployment({
           hubungan antar kartu — "yang mana lebih dulu" — dan di form satu
           kartu tidak ada pembandingnya. */}
       <p className="petunjuk">
-        Urutan kartu — beserta nomor 01, 02, … yang tercetak di situs — diatur
+        Urutan kartu, beserta nomor 01, 02, … yang tercetak di situs, diatur
         dari daftar deployment, lewat tombol Naikkan/Turunkan.
       </p>
 

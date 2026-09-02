@@ -124,7 +124,7 @@ export function FormProyek({
     const masalah = validateWorkProject(bersih);
     if (Object.keys(masalah).length) {
       setGalat(masalah);
-      setPesan("Ada isian yang belum benar — lihat keterangan di bawah isiannya.");
+      setPesan("Ada isian yang belum benar, lihat keterangan di bawah isiannya.");
       return;
     }
 
@@ -205,7 +205,7 @@ export function FormProyek({
 
       <DaftarTeks
         label="Label"
-        petunjuk="Kata kunci kecil di bawah kartu — teknologi atau jenis pekerjaannya. Tiga sudah cukup."
+        petunjuk="Kata kunci kecil di bawah kartu, teknologi atau jenis pekerjaannya. Tiga sudah cukup."
         galat={galat.tags}
         nilai={isi.tags}
         ubah={(baru) => ubah("tags", baru)}
@@ -217,7 +217,7 @@ export function FormProyek({
         ubah={(path) => ubah("image", path)}
         galat={galat.image}
         label="Gambar proyek"
-        petunjuk="Mengisi seluruh kartu di halaman Work, jadi wajib ada untuk proyek Live. Gambar yang diunggah otomatis dikecilkan — tidak perlu diperkecil sendiri dulu."
+        petunjuk="Mengisi seluruh kartu di halaman Work, jadi wajib ada untuk proyek Live. Gambar yang diunggah otomatis dikecilkan, tidak perlu diperkecil sendiri dulu."
       />
 
       <Isian

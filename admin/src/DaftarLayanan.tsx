@@ -207,7 +207,7 @@ export function DaftarLayanan({
               <strong>{akanDihapus.title}</strong> akan hilang dari sabuk di
               halaman Services, berikut penjelasan dan rinciannya. Isinya tetap
               tersimpan di database dan bisa dikembalikan oleh developer kalau
-              ternyata keliru — tapi tidak lewat panel ini.
+              ternyata keliru, tapi tidak lewat panel ini.
             </p>
           }
           tombolYa="Ya, hapus"

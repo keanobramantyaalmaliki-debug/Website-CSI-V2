@@ -141,7 +141,7 @@ export function FormIndustri({
     const masalah = validateIndustry(bersih);
     if (Object.keys(masalah).length) {
       setGalat(masalah);
-      setPesan("Ada isian yang belum benar — lihat keterangan di bawah isiannya.");
+      setPesan("Ada isian yang belum benar, lihat keterangan di bawah isiannya.");
       return;
     }
 
@@ -184,7 +184,7 @@ export function FormIndustri({
 
       <Isian
         label="Nama sektor"
-        petunjuk="Tulisan besar di kartu, dan nama yang tampil di navigasi versi HP. Contoh: Healthcare. Pendek lebih baik — nama panjang terpotong di navigasi HP."
+        petunjuk="Tulisan besar di kartu, dan nama yang tampil di navigasi versi HP. Contoh: Healthcare. Pendek lebih baik, nama panjang terpotong di navigasi HP."
         galat={galat.name}
       >
         <input
@@ -210,7 +210,7 @@ export function FormIndustri({
         ubah={(path) => ubah("image", path)}
         galat={galat.image}
         label="Foto plank"
-        petunjuk="Foto yang menempel di plank dan terlihat saat kartunya dibuka. Ambil yang lanskap — plank-nya lebar, bukan tegak. Gambar yang diunggah otomatis dikecilkan."
+        petunjuk="Foto yang menempel di plank dan terlihat saat kartunya dibuka. Ambil yang lanskap, plank-nya lebar, bukan tegak. Gambar yang diunggah otomatis dikecilkan."
       />
 
       <fieldset>
@@ -243,7 +243,7 @@ export function FormIndustri({
           kalimat ini mudah disangka keduanya satu hal. */}
       <p className="petunjuk">
         Bobot tidak memindahkan sektor ke atas. Sektor Core Focus boleh berada
-        di posisi mana pun — urutannya diatur terpisah, dari daftar sektor.
+        di posisi mana pun, urutannya diatur terpisah, dari daftar sektor.
       </p>
 
       <fieldset>
@@ -275,7 +275,7 @@ export function FormIndustri({
           hubungan antar sektor — "yang mana lebih dulu" — dan di form satu
           sektor tidak ada pembandingnya. */}
       <p className="petunjuk">
-        Urutan sektor — beserta nomor 01, 02, … yang tercetak di situs — diatur
+        Urutan sektor, beserta nomor 01, 02, … yang tercetak di situs, diatur
         dari daftar sektor, lewat tombol Naikkan/Turunkan.
       </p>
 

@@ -113,7 +113,7 @@ export function DaftarIndustri({
       return;
     }
     onBerubah(
-      "Urutan sektor diubah — nomornya ikut berganti. Belum terlihat pengunjung sampai kamu menekan Publish.",
+      "Urutan sektor diubah, nomornya ikut berganti. Belum terlihat pengunjung sampai kamu menekan Publish.",
     );
   }
 
@@ -140,7 +140,7 @@ export function DaftarIndustri({
              memakai kursor. */
           title={
             penuh
-              ? `Sudah ada ${MAX_LIVE_INDUSTRIES} sektor yang tampil — itu batasnya.`
+              ? `Sudah ada ${MAX_LIVE_INDUSTRIES} sektor yang tampil, itu batasnya.`
               : undefined
           }
         >
@@ -161,7 +161,7 @@ export function DaftarIndustri({
       <p className="petunjuk">
         Sektor yang tampil: <strong>{tayang}</strong> dari maksimal{" "}
         <strong>{MAX_LIVE_INDUSTRIES}</strong>. Batas ini bukan aturan
-        administratif — tumpukan 3D-nya dibuat pas untuk {MAX_LIVE_INDUSTRIES}{" "}
+        administratif, tumpukan 3D-nya dibuat pas untuk {MAX_LIVE_INDUSTRIES}{" "}
         plank, dan yang ke-{MAX_LIVE_INDUSTRIES + 1} akan memanjat keluar
         layar. Menguranginya aman: tumpukan yang lebih pendek tetap terpasang
         rapi di tengah.
@@ -262,7 +262,7 @@ export function DaftarIndustri({
               Plank <strong>“{akanDihapus.name}”</strong> akan dihapus dari
               tumpukan di halaman Home, dan sektor di bawahnya naik satu nomor.
               Isinya tetap tersimpan di database dan bisa dikembalikan oleh
-              developer kalau ternyata keliru — tapi tidak lewat panel ini.
+              developer kalau ternyata keliru, tapi tidak lewat panel ini.
             </p>
           }
           tombolYa="Ya, hapus"

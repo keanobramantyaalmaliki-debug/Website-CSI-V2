@@ -40,7 +40,7 @@ const STATUS: { nilai: ServiceInput["state"]; nama: string; jelas: string }[] = 
     nilai: "draft",
     nama: "Draft",
     jelas:
-      "Belum terlihat pengunjung. Bisa disimpan meski penjelasannya belum ditulis — cukup namanya.",
+      "Belum terlihat pengunjung. Bisa disimpan meski penjelasannya belum ditulis, cukup namanya.",
   },
   {
     nilai: "live",
@@ -119,7 +119,7 @@ export function FormLayanan({
     const masalah = validateService(bersih);
     if (Object.keys(masalah).length) {
       setGalat(masalah);
-      setPesan("Ada isian yang belum benar — lihat keterangan di bawah isiannya.");
+      setPesan("Ada isian yang belum benar, lihat keterangan di bawah isiannya.");
       return;
     }
 
@@ -166,7 +166,7 @@ export function FormLayanan({
            muncul: judulnya dirender sebesar mungkin di sabuk 3D, jadi nama
            yang kepanjangan melipat sampai menyentuh label "Our Service" di
            celah tengah — akibat yang tidak kelihatan dari dalam form ini. */
-        petunjuk="Nama yang tampil besar di sabuk berputar. Maksimal 60 karakter — nama yang panjang melipat jadi beberapa baris. Contoh: Cloud Solutions."
+        petunjuk="Nama yang tampil besar di sabuk berputar. Maksimal 60 karakter, nama yang panjang melipat jadi beberapa baris. Contoh: Cloud Solutions."
         galat={galat.title}
       >
         <input
@@ -178,7 +178,7 @@ export function FormLayanan({
 
       <Isian
         label="Penjelasan"
-        petunjuk="Satu kalimat tentang layanan ini. Tidak tampil di layar, tapi inilah teks yang dibaca pembaca layar dan mesin pencari — jadi ia wajib diisi sebelum layanannya bisa Live."
+        petunjuk="Satu kalimat tentang layanan ini. Tidak tampil di layar, tapi inilah teks yang dibaca pembaca layar dan mesin pencari, jadi ia wajib diisi sebelum layanannya bisa Live."
         galat={galat.desc}
       >
         <textarea

@@ -205,7 +205,7 @@ export function DaftarTestimoni({
             <p>
               Kutipan dari <strong>{akanDihapus.name}</strong> akan dihapus dari
               halaman Services. Isinya tetap tersimpan di database dan bisa
-              dikembalikan oleh developer kalau ternyata keliru — tapi tidak
+              dikembalikan oleh developer kalau ternyata keliru, tapi tidak
               lewat panel ini.
             </p>
           }

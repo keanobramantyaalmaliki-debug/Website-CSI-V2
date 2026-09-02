@@ -82,7 +82,7 @@ export function FormVisi({ onSelesai }: { onSelesai: (pesan: string) => void }) 
     const masalah = validateVision(bersih);
     if (Object.keys(masalah).length) {
       setGalat(masalah);
-      setPesan("Ada isian yang belum benar — lihat keterangan di bawah isiannya.");
+      setPesan("Ada isian yang belum benar, lihat keterangan di bawah isiannya.");
       return;
     }
 
@@ -115,7 +115,7 @@ export function FormVisi({ onSelesai }: { onSelesai: (pesan: string) => void }) 
 
       <p className="petunjuk">
         Satu paragraf besar berikut satu foto, tepat sebelum bagian kontak di
-        halaman depan. Tidak bisa ditambah atau dihapus — yang bisa diubah
+        halaman depan. Tidak bisa ditambah atau dihapus, yang bisa diubah
         isinya.
       </p>
 
@@ -139,7 +139,7 @@ export function FormVisi({ onSelesai }: { onSelesai: (pesan: string) => void }) 
         ubah={(path) => ubah("photo", path)}
         galat={galat.photo}
         label="Foto"
-        petunjuk="Foto lebar di bawah kalimatnya, menutup halaman depan sebelum bagian kontak. Melintang (16:9) — foto tegak akan terpotong atas-bawah."
+        petunjuk="Foto lebar di bawah kalimatnya, menutup halaman depan sebelum bagian kontak. Melintang (16:9), foto tegak akan terpotong atas-bawah."
       />
 
       <div className="tombol-baris">

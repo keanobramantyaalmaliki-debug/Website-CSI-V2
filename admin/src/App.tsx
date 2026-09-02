@@ -349,14 +349,14 @@ export function App() {
        atau belum, dan apakah masih menunggu Publish. */
     visi:
       visi === null
-        ? "Belum terisi — situs memakai kalimat bawaan."
+        ? "Belum terisi, situs memakai kalimat bawaan."
         : "Terisi" + (visi.unpublished ? ", belum tayang" : ""),
     /* Alasan sama seperti visi — satu baris, tanpa draf. Bedanya jumlah
        tautan sosialnya disebut: itu satu-satunya bagian footer yang bisa
        bertambah dan berkurang, jadi angkanya memberi tahu sesuatu. */
     footer:
       footer === null
-        ? "Belum terisi — situs memakai isi bawaan."
+        ? "Belum terisi, situs memakai isi bawaan."
         : `Terisi, ${footer.socials.length} tautan sosial` +
           (footer.unpublished ? ", belum tayang" : ""),
   };

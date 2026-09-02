@@ -59,7 +59,7 @@ export function Masuk({ onMasuk }: { onMasuk: (user: Pengguna) => void }) {
       </form>
 
       <p className="petunjuk" style={{ marginTop: 24 }}>
-        Lupa kata sandi? Hubungi developer — akun diatur langsung di server.
+        Lupa kata sandi? Hubungi developer, akun diatur langsung di server.
       </p>
     </div>
   );

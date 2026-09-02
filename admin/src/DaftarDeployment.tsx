@@ -114,7 +114,7 @@ export function DaftarDeployment({
       return;
     }
     onBerubah(
-      "Urutan kartu diubah — nomornya ikut berganti. Belum terlihat pengunjung sampai kamu menekan Publish.",
+      "Urutan kartu diubah, nomornya ikut berganti. Belum terlihat pengunjung sampai kamu menekan Publish.",
     );
   }
 
@@ -146,7 +146,7 @@ export function DaftarDeployment({
         berstatus Draft tidak ikut bernomor karena kartunya belum ada.
       </p>
       <p className="petunjuk">
-        Tidak ada batas jumlah — grid-nya cuma menambah baris ke bawah. Kalau
+        Tidak ada batas jumlah, grid-nya cuma menambah baris ke bawah. Kalau
         semua kartu berstatus Draft, seluruh bagian ini hilang dari halaman
         Home berikut judulnya, dan itu memang yang diminta: judul yang
         menggantung di atas grid kosong lebih buruk daripada tidak ada apa-apa.
@@ -243,7 +243,7 @@ export function DaftarDeployment({
               Kartu <strong>“{sebut(akanDihapus)}”</strong> akan dihapus dari
               halaman Home, dan kartu di bawahnya naik satu nomor. Isinya tetap
               tersimpan di database dan bisa dikembalikan oleh developer kalau
-              ternyata keliru — tapi tidak lewat panel ini.
+              ternyata keliru, tapi tidak lewat panel ini.
             </p>
           }
           tombolYa="Ya, hapus"

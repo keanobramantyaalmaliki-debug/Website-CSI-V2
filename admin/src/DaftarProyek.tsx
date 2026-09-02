@@ -198,7 +198,7 @@ export function DaftarProyek({
             <p>
               Kartu <strong>“{akanDihapus.title}”</strong> akan dihapus dari
               halaman Work. Isinya tetap tersimpan di database dan bisa
-              dikembalikan oleh developer kalau ternyata keliru — tapi tidak
+              dikembalikan oleh developer kalau ternyata keliru, tapi tidak
               lewat panel ini.
             </p>
           }
