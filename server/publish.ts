@@ -24,6 +24,7 @@ import type { Industry } from "@shared/industry";
 import type { Deployment } from "@shared/deployment";
 import type { ProcessStep } from "@shared/processStep";
 import type { Vision } from "@shared/vision";
+import type { Footer } from "@shared/footer";
 
 import { record, type Actor } from "./audit";
 import { db } from "./db/client";
@@ -31,6 +32,7 @@ import {
   caseStudies,
   crewMembers,
   deployments,
+  footer,
   industries,
   processSteps,
   jobs,
@@ -52,6 +54,7 @@ import { listIndustries } from "./industriesRepo";
 import { listDeployments } from "./deploymentsRepo";
 import { listProcessSteps } from "./processStepsRepo";
 import { getVision } from "./visionRepo";
+import { getFooter } from "./footerRepo";
 
 /**
  * `dist/` — hasil build Vite, yang disajikan `serve` di produksi.
@@ -78,6 +81,7 @@ async function collect(): Promise<ContentPayload> {
     deploymentRows,
     processStepRows,
     visionRow,
+    footerRow,
   ] = await Promise.all([
     listJobs({ includeDrafts: false }),
     listValues({ includeDrafts: false }),
@@ -92,6 +96,10 @@ async function collect(): Promise<ContentPayload> {
     /* Tanpa `includeDrafts`: visi tidak punya keadaan draft/live sama
        sekali. Satu-satunya isi yang ada adalah isi yang tayang. */
     getVision(),
+    /* Tanpa `includeDrafts` juga: kaki halaman tidak punya keadaan
+       draft/live. Ia ikut setiap halaman, jadi satu-satunya isi yang ada
+       adalah isi yang tayang. */
+    getFooter(),
   ]);
 
   const publicJobs: Job[] = jobRows.map(
@@ -149,6 +157,17 @@ async function collect(): Promise<ContentPayload> {
     ? { statement: visionRow.statement, photo: visionRow.photo }
     : null;
 
+  /* `null` diteruskan apa adanya kalau barisnya belum ada, sama seperti visi —
+     situs tahu artinya "pakai isi bundle". */
+  const publicFooter: Footer | null = footerRow
+    ? {
+        email: footerRow.email,
+        address: footerRow.address,
+        copyright: footerRow.copyright,
+        socials: footerRow.socials,
+      }
+    : null;
+
   return {
     version: CONTENT_VERSION,
     generatedAt: new Date().toISOString(),
@@ -163,6 +182,7 @@ async function collect(): Promise<ContentPayload> {
     deployments: publicDeployments,
     processSteps: publicProcessSteps,
     vision: publicVision,
+    footer: publicFooter,
   };
 }
 
@@ -236,6 +256,10 @@ export type PublishResult = {
    *  dilaporkan: apakah isinya datang dari CMS, atau situs masih memakai
    *  cadangan bundle karena barisnya belum ada. */
   vision: boolean;
+  /** Sama seperti `vision`, dan bukan cacah baris: kaki halaman selalu tepat
+   *  satu. Yang dilaporkan apakah isinya datang dari CMS, atau situs masih
+   *  memakai cadangan bundle karena barisnya belum ada. */
+  footer: boolean;
   generatedAt: string;
   warning: string | null;
 };
@@ -268,6 +292,8 @@ export async function publish(actor: Actor): Promise<PublishResult> {
      CHECK `vision_satu_baris`. Kalau barisnya belum ada, ini tidak
      menyentuh apa pun dan itu jawaban yang benar. */
   await db.update(vision).set({ publishedAt: now });
+  /* Tanpa `where` juga, alasan sama: dijaga CHECK `footer_satu_baris`. */
+  await db.update(footer).set({ publishedAt: now });
 
   const warning = await purgeCloudflare();
 
@@ -287,6 +313,7 @@ export async function publish(actor: Actor): Promise<PublishResult> {
       deployments: payload.deployments.length,
       processSteps: payload.processSteps.length,
       vision: payload.vision !== null,
+      footer: payload.footer !== null,
       generatedAt: payload.generatedAt,
     },
   });
@@ -303,6 +330,7 @@ export async function publish(actor: Actor): Promise<PublishResult> {
     deployments: payload.deployments.length,
     processSteps: payload.processSteps.length,
     vision: payload.vision !== null,
+    footer: payload.footer !== null,
     generatedAt: payload.generatedAt,
     warning,
   };
@@ -357,6 +385,7 @@ export async function pendingCount(): Promise<number> {
     deploymentRows,
     processStepRows,
     visionRows,
+    footerRows,
   ] = await Promise.all([
     db
       .select({
@@ -446,6 +475,21 @@ export async function pendingCount(): Promise<number> {
       })
       .from(vision)
       .then((rows) => rows.map((r) => ({ ...r, deletedAt: null }))),
+    /* `deletedAt: null` dipetakan tetap juga — kaki halaman tidak punya
+       kolomnya, dengan alasan yang sama seperti visi: tidak ada jalur hapus.
+
+       ⚠️ Tautan sosialnya TIDAK ikut dihitung terpisah, dan itu bukan lubang:
+       `saveFooter()` menaikkan `updatedAt` baris induk di dalam transaksi yang
+       sama, jadi menambah atau menghapus tautan sudah tercermin di satu cap
+       waktu ini. Tabel `footer_socials` sendiri memang tidak punya cap
+       waktu. */
+    db
+      .select({
+        updatedAt: footer.updatedAt,
+        publishedAt: footer.publishedAt,
+      })
+      .from(footer)
+      .then((rows) => rows.map((r) => ({ ...r, deletedAt: null }))),
   ]);
 
   return [
@@ -460,5 +504,6 @@ export async function pendingCount(): Promise<number> {
     ...deploymentRows,
     ...processStepRows,
     ...visionRows,
+    ...footerRows,
   ].filter(menunggu).length;
 }

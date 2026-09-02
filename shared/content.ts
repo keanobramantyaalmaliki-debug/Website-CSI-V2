@@ -31,6 +31,7 @@ import type { Industry } from "./industry";
 import type { Deployment } from "./deployment";
 import type { ProcessStep } from "./processStep";
 import type { Vision } from "./vision";
+import type { Footer } from "./footer";
 
 export type ContentPayload = {
   version: 1;
@@ -118,6 +119,22 @@ export type ContentPayload = {
    * ke isi bundle-nya.
    */
   vision: Vision | null;
+  /**
+   * Isi kaki halaman. SATU objek seperti `vision`, dan field kedua yang bisa
+   * bernilai `null`.
+   *
+   * `null` artinya "belum ada barisnya di database", bukan "editor
+   * mengosongkannya". Kaki halaman ikut SETIAP halaman situs, jadi ia tidak
+   * punya keadaan menghilang — situs memperlakukan `null` persis seperti
+   * bagian yang belum ada di `content.json` lama: jatuh ke isi bundle-nya.
+   *
+   * ⚠️ `socials` di dalamnya BOLEH larik kosong, dan itu BEDA dari `null`.
+   * Kosong berarti editor benar-benar menghapus semua tautannya dan kaki
+   * halaman tayang tanpa baris tautan; `null` berarti CMS-nya belum bicara.
+   * Menyamakan keduanya membuat tautan yang sengaja dihapus hidup lagi dari
+   * cadangan bundle.
+   */
+  footer: Footer | null;
 };
 
 export const CONTENT_VERSION = 1 as const;

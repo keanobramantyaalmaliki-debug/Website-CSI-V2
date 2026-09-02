@@ -23,6 +23,7 @@ const kosong = {
   version: 1 as const,
   generatedAt: new Date().toISOString(),
   vision: null,
+  footer: null,
   jobs: [],
   values: [],
   crew: [],
@@ -120,6 +121,7 @@ describe("caseStudies()", () => {
       version: 1,
       generatedAt: new Date().toISOString(),
       vision: null,
+      footer: null,
       jobs: [],
     } as never);
     expect(caseStudies()).toEqual(FALLBACK_CASE_STUDIES);

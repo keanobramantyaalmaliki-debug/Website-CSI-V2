@@ -6,18 +6,19 @@ terpisah, `Documentations.md` — dua berkas ini sengaja tidak dicampur.
 
 Terakhir diupdate: **2 September 2026**.
 
-**Status ringkas:** **sebelas entitas selesai dan terverifikasi di lokal** —
-lowongan, nilai ("What We Stand For"), dan crew ("The Crew") di halaman People;
-**Selected work** dan **case study** di halaman Work; **layanan** dan
-**testimoni** di halaman Services; **deployment**, **cara kerja** ("How We
-Work"), **industri** ("Built Across Sectors"), dan **visi** di halaman depan.
-Tinggal SATU entitas konten yang belum dikerjakan (tautan sosial).
-Deploy ke VPS belum dikerjakan.
+**Status ringkas:** **KONTEN SELESAI SELURUHNYA — dua belas entitas, semuanya
+terverifikasi di lokal.** Lowongan, nilai ("What We Stand For"), dan crew ("The
+Crew") di halaman People; **Selected work** dan **case study** di halaman Work;
+**layanan** dan **testimoni** di halaman Services; **deployment**, **cara
+kerja** ("How We Work"), **industri** ("Built Across Sectors"), dan **visi** di
+halaman depan; dan yang terakhir **footer** — kaki halaman yang ikut SEMUA
+halaman sekaligus. Tidak ada lagi entri berstatus `belum` di panel.
+Yang tersisa cuma deploy ke VPS.
 
 - Cabang: `feat/cms-lowongan` (`main` 31 Agu sudah di-merge masuk lewat `99937f5`)
-- Kode CMS-nya sendiri: **116 berkas, ~25.000 baris** di `shared/` + `server/` +
-  `admin/src/` (di luar SQL & snapshot migrasi) — panel adminnya saja ~7.400 baris
-- Test: `bun run test` → **94 berkas, 996 test hijau** (577 di antaranya milik CMS)
+- Kode CMS-nya sendiri: **123 berkas, ~26.700 baris** di `shared/` + `server/` +
+  `admin/src/` (di luar SQL & snapshot migrasi) — panel adminnya saja ~7.800 baris
+- Test: `bun run test` → **98 berkas, 1.051 test hijau** (632 di antaranya milik CMS)
 - Tiga belas probe end-to-end lewat Brave: `probe-admin`, `probe-nilai-admin`,
   `probe-crew-admin`, `probe-proyek-admin`, `probe-case-study-admin`,
   `probe-layanan-admin`, `probe-testimoni-admin`, `probe-industri-admin`,
@@ -46,7 +47,12 @@ dua kolom** (sektor + wilayah — unique index dua kolom pertama di CMS ini,
 alasannya panjang halaman, bukan geometri seperti batas 13 industri, §4b); dan
 ilustrasinya satu-satunya "gambar" CMS yang **bukan berkas** — enum `glyph`
 yang menunjuk komponen SVG, milik langkahnya sendiri dan bukan posisi barisnya
-(§4b).
+(§4b). Slice penutup — **footer** — adalah entitas tunggal KEDUA sesudah visi,
+tapi yang pertama membawa **tabel anak** (tautan sosialnya), jadi upsert dan
+hapus-lalu-sisipnya bergabung dalam satu transaksi (§6a); ia juga slice
+pertama yang MENGHAPUS sebuah berkas data situs (`src/data/socials.ts` — menu
+HP navbar kini membaca daftar sosial yang sama dari CMS, §10c), dan yang
+mengganti nama kelompok panel: "Seluruh situs" jadi "Footer" (§11a).
 
 ---
 
@@ -132,9 +138,11 @@ Website CSI V2/
 │   ├── data/deployments.ts      baca store  (isi lama → deploymentsFallback.ts)
 │   ├── data/processSteps.ts     baca store  (isi lama → processStepsFallback.ts)
 │   ├── data/vision.ts           baca store, cadangan PER ISIAN (§10a)
+│   ├── data/footer.ts           baca store, cadangan PER ISIAN — dipakai
+│   │                            SiteFooter DAN menu HP navbar (§10c)
 │   └── data/{jobs,careerRoles,crew,values,workProjects,caseStudies,
 │             services,testimonials,industries,deployments,processSteps,
-│             vision}Fallback.ts
+│             vision,footer}Fallback.ts
 ├── shared/             tipe & validasi dipakai bertiga
 │   ├── content.ts               ContentPayload + CONTENT_VERSION
 │   ├── contentMap.ts            peta konten situs → beranda & menu sisi panel
@@ -148,11 +156,12 @@ Website CSI V2/
 │   ├── industry.ts    · validateIndustry.ts   (+ MAX_LIVE_INDUSTRIES — §4b)
 │   ├── deployment.ts  · validateDeployment.ts
 │   ├── processStep.ts · validateProcessStep.ts (+ MAX_LIVE_PROCESS_STEPS — §4b)
-│   └── vision.ts      · validateVision.ts
+│   ├── vision.ts      · validateVision.ts
+│   └── footer.ts      · validateFooter.ts
 ├── server/             API + Postgres, proses Node terpisah
 │   ├── app.ts / index.ts        rakit app · buka port
-│   ├── db/schema.ts             22 tabel Drizzle
-│   ├── db/migrations/           SQL hasil drizzle-kit (0000 → 0011)
+│   ├── db/schema.ts             24 tabel Drizzle
+│   ├── db/migrations/           SQL hasil drizzle-kit (0000 → 0012)
 │   ├── db/seed.ts               isi DB dari literal repo, sekali jalan per tabel
 │   ├── jobsRepo.ts              transaksi 4 tabel
 │   ├── valuesRepo.ts            satu baris + reorder
@@ -165,9 +174,10 @@ Website CSI V2/
 │   ├── deploymentsRepo.ts       satu baris + reorder
 │   ├── processStepsRepo.ts      satu baris + reorder + hitung batas 6
 │   ├── visionRepo.ts            SATU BARIS HARFIAH — upsert, tanpa daftar (§4b)
+│   ├── footerRepo.ts            satu baris + tabel anak sosial, SATU transaksi (§6a)
 │   ├── routes/{auth,jobs,values,crew,workProjects,caseStudies,
 │   │           services,testimonials,industries,deployments,processSteps,
-│   │           vision,images,publish}.ts
+│   │           vision,footer,images,publish}.ts
 │   ├── auth.ts · audit.ts · images.ts · publish.ts · env.ts
 │   ├── createUser.ts            bikin akun editor dari terminal
 │   └── tsconfig.json            WAJIB — lihat §3a
@@ -187,6 +197,7 @@ Website CSI V2/
 │       ├── DaftarDeployment · FormDeployment
 │       ├── DaftarProses   · FormProses       (Cara kerja)
 │       ├── FormVisi                          (tanpa Daftar — §11)
+│       ├── FormFooter                        (tanpa Daftar juga — §11)
 │       ├── PemilihFoto · BarPublish · Tema.tsx
 │       └── ui.tsx · api.ts · styles.css
 └── uploads/            gambar unggahan (di luar git)
@@ -210,7 +221,7 @@ Panel ini tidak butuh satu pun dari itu.
 
 ## §4 Skema database
 
-Dua puluh dua tabel, sebelas entitas konten. Yang paling penting di slice pertama:
+Dua puluh empat tabel, dua belas entitas konten. Yang paling penting di slice pertama:
 **menyatukan dua sumber yang dulu terpisah** — daftar lowongan di `Careers.tsx`
 dan isi halaman di `src/data/jobs.ts` — menjadi satu baris `jobs`. Penyatuan itu
 prasyarat, bukan kerapian: dua tempat untuk satu lowongan mustahil dijelaskan ke
@@ -275,6 +286,13 @@ vision
   id (SELALU 1 — CHECK vision_satu_baris), statement, photo_id → images,
   created_at, updated_at, published_at        ← tanpa state, tanpa deleted_at
 
+footer
+  id (SELALU 1 — CHECK footer_satu_baris), email, address, copyright,
+  created_at, updated_at, published_at        ← tanpa state, sort_order, deleted_at
+
+footer_socials      (footer_id, position) PK · label, href
+                     label TEKS BEBAS, bukan enum — beda dari crew_socials (§4b)
+
 images              id, path (unique), source (static|upload),
                     original_name, width, height, bytes
 users               id, email (unique), password_hash, name, deleted_at
@@ -290,9 +308,9 @@ Enum Postgres sungguhan, bukan `text` + konvensi: `job_state`, `lang`,
 
 ### §4a Pola yang dipakai ulang antar entitas
 
-Sepuluh dari sebelas entitas berbagi lima keputusan yang sama, dan itu yang
-membuat entitas berikutnya tinggal menyalin (**visi satu-satunya pengecualian**
-— lihat §4b):
+Sepuluh dari dua belas entitas berbagi lima keputusan yang sama, dan itu yang
+membuat entitas berikutnya tinggal menyalin (**visi dan footer dua
+pengecualiannya** — dua-duanya entitas tunggal, lihat §4b):
 
 1. **`state` menentukan apa yang tayang.** `draft` tidak pernah ikut masuk
    `content.json` sama sekali. Inilah yang membuat tombol Publish aman ditekan
@@ -350,9 +368,9 @@ dari panel akan membuat React menukar state animasi antar kartu.
 
 ### §4b Yang BERBEDA di tiap entitas
 
-**Sembilan entitas punya `sort_order`; crew dan visi TIDAK — dan itu keputusan,
-bukan kelupaan** (visi karena satu baris tidak bisa diurutkan terhadap apa
-pun; crew karena alasan di bawah).
+**Sembilan entitas punya `sort_order`; crew, visi, dan footer TIDAK — dan itu
+keputusan, bukan kelupaan** (visi dan footer karena satu baris tidak bisa
+diurutkan terhadap apa pun; crew karena alasan di bawah).
 
 Panel nilai bertumpuk sticky di `PeopleValues.tsx`: yang terakhir adalah yang
 menutup seluruh tumpukan dan paling lama dilihat, jadi urutannya adalah konten
@@ -452,6 +470,38 @@ sampai ke pengunjung, karena visi tidak punya draf yang menahannya (§9a).
 `saveVision()` memakai **upsert**, bukan baca-dulu-lalu-insert-atau-update: dua
 penyimpanan yang berlomba akan sama-sama insert dan yang kedua menabrak primary
 key.
+
+**`footer` adalah entitas tunggal KEDUA, dan alasannya sama sekali berbeda dari
+visi.** Visi tunggal karena seksinya menjatah celah 80px yang tidak boleh
+hilang; kaki halaman tunggal karena memang cuma ada SATU kaki halaman di
+seluruh situs — `SiteFooter.tsx` sengaja dipakai bersama bagian Contact di
+KEEMPAT halaman plus halaman detail lowongan, justru supaya alamat kantor yang
+pindah tidak punya dua tempat untuk diperbarui. Membuatnya daftar di CMS akan
+mengembalikan persis masalah yang komponen itu selesaikan. Mekanismenya meniru
+visi apa adanya: `CHECK footer_satu_baris` (`id = 1`), upsert, tanpa
+`state`/`sort_order`/`deleted_at` — kaki halaman tidak punya keadaan "draft"
+(ia selalu tayang) dan tidak punya jalur hapus (tidak ada keadaan "situs tanpa
+kaki halaman" yang boleh dicapai dari panel).
+
+Yang TIDAK ada di visi: **tabel anak** `footer_socials` — satu-satunya bagian
+footer yang boleh bertambah dan berkurang, dan itu baris anak, bukan baris
+kedua. Urutannya kolom `position` yang diisi dari **urutan kirim form** (tanpa
+endpoint `/urutkan` — form selalu mengirim daftarnya utuh, jadi endpoint
+tersendiri cuma jalan kedua untuk hal yang sama). **BUKAN salinan
+`crew_socials`, meski namanya bersaudara:** yang di crew memakai
+`socialPlatformEnum` karena situs yang menentukan tulisannya, yang di sini
+`label` teks bebas karena kaki halaman mencetaknya APA ADANYA — kanal baru
+(TikTok, YouTube) tidak perlu menunggu migrasi database. Harganya: tidak ada
+yang mencegah dua "Instagram", dan itu kesalahan yang langsung terlihat editor
+di situsnya sendiri. Nama field-nya juga `href`, bukan `url` seperti di crew —
+`{ label, href }` sudah jadi bentuk yang dibaca `SiteFooter.tsx` dan menu HP
+navbar sejak sebelum ada CMS.
+
+**Baris hak cipta disimpan TANPA tahun dan TANPA lambang ©.** Situs mencetak
+`© {new Date().getFullYear()}` di depannya saat render; tahun yang ikut
+disimpan jadi salah tiap 1 Januari sampai ada yang ingat menyuntingnya — dan
+tidak ada yang memberitahu siapa pun. Validator yang menolaknya di depan,
+dengan kalimat, alih-alih membersihkannya diam-diam (§5b).
 
 **`deployments` satu-satunya entitas yang identitasnya PASANGAN dua kolom.**
 Sektor sendirian bukan pengenal: "Logistics · Indonesia" dan "Logistics ·
@@ -563,8 +613,8 @@ unique index parsial, jsonb, dan transaksi.
 `bun run db:seed` membaca `FALLBACK_ROLES`, `FALLBACK_JOBS`, `FALLBACK_VALUES`,
 `FALLBACK_CREW`, `FALLBACK_WORK_PROJECTS`, `FALLBACK_CASE_STUDIES`,
 `FALLBACK_SERVICES`, `FALLBACK_TESTIMONIALS`, `FALLBACK_INDUSTRIES`,
-`FALLBACK_DEPLOYMENTS`, `FALLBACK_PROCESS_STEPS`, dan
-`FALLBACK_VISION` dari repo lalu memasukkannya ke Postgres. Konten yang sudah
+`FALLBACK_DEPLOYMENTS`, `FALLBACK_PROCESS_STEPS`, `FALLBACK_VISION`, dan
+`FALLBACK_FOOTER` dari repo lalu memasukkannya ke Postgres. Konten yang sudah
 ditulis tidak perlu diketik ulang, dan tidak ada kesempatan salah ketik saat
 memindahkannya.
 
@@ -578,8 +628,8 @@ MENGHAPUS suntingan editor.
 > pertama sambil melapor "sudah terisi", dan dua tabel lain tetap kosong tanpa
 > ada yang salah kelihatannya. Aturan yang sama dipatuhi `seedWorkProjects()`,
 > `seedCaseStudies()`, `seedServices()`, `seedTestimonials()`,
-> `seedIndustries()`, `seedDeployments()`, `seedProcessSteps()`, dan
-> `seedVision()` — dan di
+> `seedIndustries()`, `seedDeployments()`, `seedProcessSteps()`,
+> `seedVision()`, dan `seedFooter()` — dan di
 > situlah gerbang per-tabel benar-benar terpakai, karena database lokal SUDAH
 > terisi entitas-entitas sebelumnya setiap kali yang baru ditambahkan.
 
@@ -596,7 +646,10 @@ penuh, jadi sektor ke-14 lewat panel langsung ditolak sampai ada yang
 di-draft-kan atau dihapus, dan itu memang yang diinginkan; keenam langkah cara
 kerja mengulanginya untuk `MAX_LIVE_PROCESS_STEPS`. Baris visi diseed
 dengan `id: 1` eksplisit (walau kolomnya sudah `default(1)`) supaya batasan
-satu-barisnya terbaca di seed juga, bukan cuma di skema. Foto ketiga belas
+satu-barisnya terbaca di seed juga, bukan cuma di skema; baris footer
+mengikutinya — kaki halaman plus ketiga tautan sosialnya, yang isinya salinan
+apa adanya dari literal lama `SiteFooter.tsx` dan `src/data/socials.ts`
+(berkas kedua itu dihapus waktu footer masuk CMS, §10c). Foto ketiga belas
 sektor dan kelima kartu deployment semuanya **hotlink Unsplash** — tetap
 `source: "static"`, dengan alasan
 yang sama seperti gambar Work (§8). Langkah cara kerja satu-satunya seed
@@ -610,7 +663,7 @@ bergambar yang tidak menyentuh tabel `images` sama sekali: ilustrasinya enum
 `shared/validateJob.ts`, `validateValue.ts`, `validateCrew.ts`,
 `validateWorkProject.ts`, `validateCaseStudy.ts`, `validateService.ts`,
 `validateTestimonial.ts`, `validateIndustry.ts`, `validateDeployment.ts`,
-`validateProcessStep.ts`, dan `validateVision.ts`
+`validateProcessStep.ts`, `validateVision.ts`, dan `validateFooter.ts`
 dipanggil
 **admin** saat mengisi form dan **server** saat menyimpan. Server tetap memeriksa
 meski admin sudah memeriksa: yang menjaga data bukan antarmuka, melainkan
@@ -655,6 +708,12 @@ maksimal 6.
 
 **Visi:** kalimat 400.
 
+**Footer:** surel 120 · alamat 160 · baris hak cipta 160 · tulisan tautan 40 ·
+alamat tautan 400 — **tanpa batas JUMLAH tautan**, sengaja: barisnya
+`flex-wrap`, jadi tautan kesembilan turun ke baris berikutnya alih-alih merusak
+apa pun, sama seperti kartu deployment. Yang menahan jumlahnya kanal sosial
+yang benar-benar dimiliki perusahaan, bukan validator.
+
 Angka-angka Work diambil dari tata letaknya juga, dan dua kelompok yang berbeda
 di dalam satu entitas: yang **di atas gambar** (meta, judul, hasil) ketat karena
 tiap baris tambahan naik menutupi gambarnya, sedangkan yang **di dalam cerita**
@@ -677,6 +736,14 @@ kedua panah ikut bergeser tiap ganti sektor), muat ±26 karakter sebelum
 tayang sekarang: kalimatnya dirender sangat besar (`text-3xl`/`text-5xl`), dan
 yang panjang mendorong fotonya (`sm:h-[90vh]`) keluar viewport.
 
+Angka footer menjaga **pembungkusan**, bukan luapan: seluruh kaki halaman
+dirender `text-xs` dalam dua baris `flex-wrap` yang kiri-kanannya saling
+mendorong (`justify-between`), jadi satu isian yang jauh lebih panjang dari
+tetangganya mendorong pasangannya turun ke baris sendiri — kaki halaman dua
+baris berubah jadi empat, persis tumpukan yang dihindari waktu surel dan
+alamat disembunyikan di HP (18 Agu). Angkanya kelipatan longgar dari isi yang
+tayang sekarang (surel 16 karakter, alamat 41, hak cipta 47).
+
 Angka dua entitas Home yang baru diturunkan dari kartunya juga. Kartu
 deployment `aspect-[4/3]` ber-`overflow-hidden` menempelkan isinya ke DASAR
 kartu, jadi teks kepanjangan tidak meluber ke bawah melainkan mendorong judul
@@ -697,9 +764,15 @@ tepat saat isinya akan dibaca pengunjung. (Langkah cara kerja sedikit lebih
 ketat: `glyph` dan `state` divalidasi bahkan untuk draf, karena enum tidak
 punya keadaan "belum diisi".)
 
-**Visi tidak ikut aturan ini karena tidak punya status**: satu-satunya isi yang
-ada adalah isi yang tayang, jadi pemeriksaannya selalu penuh — kalimat dan foto
-dua-duanya wajib, setiap kali disimpan.
+**Visi dan footer tidak ikut aturan ini karena tidak punya status**:
+satu-satunya isi yang ada adalah isi yang tayang, jadi pemeriksaannya selalu
+penuh setiap kali disimpan. Konsekuensinya sengaja diterima — editor tidak
+bisa menyimpan yang separuh jadi — dan yang membuatnya tidak menyakitkan sama
+di keduanya: barisnya SELALU sudah terisi sejak seed dan tidak bisa dihapus,
+jadi menyunting berarti mengganti isi yang ada, bukan mengisi form kosong dari
+nol lalu ditahan di tengah jalan. Satu kelonggaran di footer: **daftar tautan
+KOSONG sah** — "perusahaan sedang tidak punya kanal sosial yang mau dipajang"
+bukan keadaan yang berhak ditolak validator.
 
 ### §5b Aturan yang bukan sekadar panjang
 
@@ -780,11 +853,35 @@ dua-duanya wajib, setiap kali disimpan.
   (`glyph`) yang tidak dikenal SENGAJA tidak dijatuhkan ke default oleh parser
   route: dibiarkan lolos supaya validator menolaknya dengan kalimat — gambar
   salah yang dipilih diam-diam tidak pernah kelihatan salah (§6).
+- **`mailto:` di surel footer ditolak lewat pemeriksaan TERPISAH, sebelum
+  regex-nya.** Regex surel yang seadanya (`tepat satu @, ada titik di
+  kanannya`) MELOLOSKAN `mailto:hello@cogniti.id` — tetap satu `@` dengan isi
+  di kiri-kanannya — dan yang tayang lalu `href="mailto:mailto:hello@…"`:
+  aplikasi surel terbuka dengan alamat yang tidak bisa dikirim, tanpa galat di
+  mana pun. Pesannya juga lebih berguna daripada "bukan alamat": editor yang
+  menempelkannya sudah punya alamat yang benar, tinggal buang awalannya.
+  Regex-nya sengaja TIDAK regex RFC yang panjang itu — yang lebih ketat cuma
+  menolak alamat sah yang bentuknya tidak biasa.
+- **Tahun dan lambang © di baris hak cipta ditolak, bukan dibersihkan
+  diam-diam.** Situs sudah mencetak `© {tahun berjalan}` di depan teks ini,
+  jadi "2026 Cognitiva…" tayang sebagai "© 2026 2026 Cognitiva…"; dan
+  membuang angkanya sendiri berarti menebak mana yang tahun dan mana yang
+  bagian nama. Angka yang bukan tahun ("Studio 54") tetap lolos — polanya
+  `(19|20)\d{2}` berdiri sendiri, bukan sembarang angka.
+- **Tautan sosial footer harus diawali `https://` (atau `http://`), TANPA
+  pengecualian `"#"` seperti di crew** — isi seed-nya URL sungguhan dari situs
+  lama, jadi tidak ada alasan meloloskan placeholder. Barisnya disebut lewat
+  NOMOR ("Tautan ke-2"), bukan lewat platform seperti di crew: tulisannya teks
+  bebas dan boleh masih kosong, jadi "Tautan Instagram" tidak selalu bisa
+  dibentuk. Baris yang KEDUA isiannya kosong dibuang oleh form sebelum
+  diperiksa (baris yang baru ditambah lalu ditinggalkan); yang terisi separuh
+  TETAP diteruskan ke validator — separuh terisi artinya editor bermaksud
+  mengisinya, dan diam-diam membuangnya menghapus pekerjaannya.
 
 `JOB_FIELD_ORDER` / `VALUE_FIELD_ORDER` / `CREW_FIELD_ORDER` /
 `WORK_PROJECT_FIELD_ORDER` / `CASE_STUDY_FIELD_ORDER` / `SERVICE_FIELD_ORDER` /
 `TESTIMONIAL_FIELD_ORDER` / `INDUSTRY_FIELD_ORDER` / `DEPLOYMENT_FIELD_ORDER` /
-`PROCESS_STEP_FIELD_ORDER` / `VISION_FIELD_ORDER`
+`PROCESS_STEP_FIELD_ORDER` / `VISION_FIELD_ORDER` / `FOOTER_FIELD_ORDER`
 menetapkan urutan
 isian, dipakai admin untuk memilih masalah PERTAMA dan melompatkan fokus ke sana
 — bukan menumpahkan sepuluh galat sekaligus.
@@ -899,6 +996,10 @@ DELETE /api/process-steps/:id
 GET    /api/vision                { vision } — null kalau barisnya belum ada
 PUT    /api/vision                upsert baris 1; TIDAK ada POST/DELETE/urutkan
 
+GET    /api/footer                { footer } — null kalau barisnya belum ada
+PUT    /api/footer                upsert baris 1 + tulis ulang tautan sosial;
+                                  TIDAK ada POST/DELETE/urutkan/:id
+
 GET    /api/images
 POST   /api/images           multipart → resize + WebP
 
@@ -920,10 +1021,10 @@ tiba-tiba kosong.
 prefix `/api/jobs`, `/api/values`, `/api/crew`, `/api/projects`,
 `/api/case-studies`, `/api/services`, `/api/testimonials`, `/api/industries`,
 `/api/deployments`, `/api/process-steps`,
-`/api/vision`, `/api/images`,
-`/api/publish` — bukan ditempel per handler. Visi belum punya route anak
-(cuma `GET /` dan `PUT /`), tapi pasangan `/*`-nya tetap dipasang seperti yang
-lain: itulah yang membuat endpoint berikutnya lahir sudah terjaga. Penjaga yang ditempel satu per satu akan terlewat
+`/api/vision`, `/api/footer`, `/api/images`,
+`/api/publish` — bukan ditempel per handler. Visi dan footer belum punya route
+anak (cuma `GET /` dan `PUT /`), tapi pasangan `/*`-nya tetap dipasang seperti
+yang lain: itulah yang membuat endpoint berikutnya lahir sudah terjaga. Penjaga yang ditempel satu per satu akan terlewat
 pada endpoint berikutnya yang ditambahkan, dan lubang seperti itu tidak
 memunculkan error: endpoint-nya justru bekerja dengan baik, untuk siapa saja.
 
@@ -974,11 +1075,20 @@ Dua perlakuan yang berbeda di dalamnya, dan bedanya disengaja:
 | Deployment | `deployments` saja | tidak perlu |
 | Cara kerja | `process_steps` saja | tidak perlu |
 | Visi | `vision` saja — upsert baris 1 | tidak perlu |
+| Footer | `footer` (upsert baris 1) + `footer_socials` | ya |
 
 Anak-anaknya **dihapus lalu ditulis ulang, bukan di-diff** — jumlah barisnya
 belasan, dan diff yang salah jauh lebih mahal daripada tulis ulang yang benar.
 Gagal di tengah tidak boleh meninggalkan orang yang tautan sosialnya sudah
 terhapus tapi yang baru belum masuk.
+
+Footer satu-satunya yang MENGGABUNGKAN dua pola tulis: upsert ala visi untuk
+baris induknya, hapus-lalu-sisip ala crew untuk tautannya — dalam SATU
+transaksi, dan transaksinya yang tidak ada di `saveVision()`. Baris induk yang
+tersimpan tapi tautannya gagal ditulis meninggalkan kaki halaman tanpa satu
+pun tautan: bukan galat yang terlihat, melainkan tautan yang diam-diam lenyap
+dari situs. Urutannya juga penting — induk lebih dulu, karena
+`footer_socials.footer_id` menunjuk kepadanya.
 
 Dua detail yang gampang terlewat, berlaku untuk semua entitas:
 
@@ -1026,6 +1136,12 @@ mengarang angka `sortOrder` padahal yang dia lihat adalah tumpukan panel.
 Crew **sengaja tidak punya endpoint ini** meski tabelnya mirip: halaman People
 mengurutkan crew A-Z sendiri, jadi tombol Naikkan di sana akan menggerakkan baris
 di panel tanpa menggerakkan apa pun di situs (§4b).
+
+Tautan sosial footer juga tanpa endpoint ini, dengan alasan yang lain lagi:
+urutannya memang urutan tampil, tapi ia tabel anak yang SELALU dikirim utuh
+bersama induknya lewat `PUT /api/footer` — kolom `position` diisi dari urutan
+kirim form, jadi endpoint reorder tersendiri cuma jalan kedua untuk hal yang
+sama (§4b).
 
 > ⚠️ `POST /urutkan` didaftarkan **sebelum** `/:id`. Hono mencocokkan route sesuai
 > urutan pendaftaran; kalau suatu saat ada `POST /:id` yang didaftarkan lebih
@@ -1087,12 +1203,13 @@ jadi gambar kecil tidak dipaksa membesar) → **WebP kualitas 82** → simpan ke
 tipe yang diterima JPEG, PNG, WebP, AVIF, HEIC/HEIF (foto dari iPhone masuk apa
 adanya, tidak perlu dikonversi dulu).
 
-`PemilihFoto` dipakai **delapan dari sebelas form** — lowongan, nilai, crew,
+`PemilihFoto` dipakai **delapan dari dua belas form** — lowongan, nilai, crew,
 Selected work, case study, industri ("Foto plank"), deployment ("Foto kartu"),
-dan visi. Tiga form tidak memakainya sama sekali: layanan
-memang tidak bergambar, testimoni sengaja tanpa kolom foto (§4b), dan langkah
+dan visi. Empat form tidak memakainya sama sekali: layanan
+memang tidak bergambar, testimoni sengaja tanpa kolom foto (§4b), langkah
 cara kerja memilih ilustrasinya lewat radio enam pilihan bernama gambar
-("Radar", "Artboard", …) — gambarnya komponen SVG, bukan berkas (§4b).
+("Radar", "Artboard", …) — gambarnya komponen SVG, bukan berkas (§4b) — dan
+footer seluruhnya teks dan tautan.
 Komponennya menampilkan dua sumber sekaligus: foto lama di
 `public/careers/` dan `public/people/` (baris `images` ber-`source: "static"`,
 dimasukkan saat seed) dan foto unggahan baru (`source: "upload"`). Editor tidak
@@ -1130,24 +1247,24 @@ nilai atau crew tersimpan tanpa `photoId`.
 
 `POST /api/publish`:
 
-1. Query semua baris non-draft non-deleted dari **kesebelas entitas sekaligus**
-   (`Promise.all`) → rakit `ContentPayload`
+1. Query semua baris non-draft non-deleted dari **kedua belas entitas
+   sekaligus** (`Promise.all`) → rakit `ContentPayload`
    (`{ version: 1, generatedAt, jobs, values, crew, projects, caseStudies,
-   services, testimonials, industries, deployments, processSteps, vision }`).
-   Tiga field bentuknya
+   services, testimonials, industries, deployments, processSteps, vision,
+   footer }`). Empat field bentuknya
    menyimpang: `industries` dan `processSteps` daftar biasa tapi panjangnya
    PALING BANYAK 13 dan 6
-   (§4b), dan `vision` **satu objek, bukan larik** — satu-satunya field yang
-   boleh `null`, artinya "barisnya belum ada di database, situs pakai isi
-   bundle".
+   (§4b), dan `vision` serta `footer` **satu objek, bukan larik** — dua
+   satu-satunya field yang boleh `null`, artinya "barisnya belum ada di
+   database, situs pakai isi bundle".
 2. **Tulis atomik** ke `dist/content.json`: tulis ke `content.json.tmp-<pid>` di
    direktori yang sama, lalu `rename`. `rename` dalam satu filesystem bersifat
    atomik di tingkat OS, jadi pengunjung tidak pernah membaca berkas setengah
    tertulis.
-3. Tandai `published_at` di kesebelas tabel — **sesudah** berkasnya
-   benar-benar tertulis. (Untuk `vision` update-nya tanpa `where`: tabelnya
-   memang cuma boleh punya satu baris, dan kalau barisnya belum ada, tidak
-   menyentuh apa pun adalah jawaban yang benar.) Menandai lebih dulu lalu gagal menulis akan memadamkan badge "belum
+3. Tandai `published_at` di kedua belas tabel — **sesudah** berkasnya
+   benar-benar tertulis. (Untuk `vision` dan `footer` update-nya tanpa
+   `where`: tabelnya memang cuma boleh punya satu baris, dan kalau barisnya
+   belum ada, tidak menyentuh apa pun adalah jawaban yang benar.) Menandai lebih dulu lalu gagal menulis akan memadamkan badge "belum
    tayang" untuk perubahan yang sebenarnya tidak pernah tayang.
 4. Purge cache Cloudflare (kalau `CF_ZONE_ID` + `CF_PURGE_TOKEN` diisi).
    **Gagal purge TIDAK menggagalkan publish** — berkasnya sudah tertulis; yang
@@ -1155,8 +1272,10 @@ nilai atau crew tersimpan tanpa `photoId`.
 5. Catat ke `audit_log`, dengan jumlah per entitas di snapshot-nya.
 
 **Kolom admin dibuang dari payload.** `updatedAt`, `publishedAt`, dan
-`unpublished` dilepas di `collect()` untuk kesebelas entitas (visi juga
-membuang `id`-nya — nomor baris yang selalu 1 tidak berguna bagi pengunjung) —
+`unpublished` dilepas di `collect()` untuk kedua belas entitas (visi dan
+footer juga membuang `id`-nya — nomor baris yang selalu 1 tidak berguna bagi
+pengunjung; tautan footer ikut membuang `footer_id` dan `position`, yang cuma
+cara database menjaga urutan) —
 bukan dibiarkan ikut
 "karena tidak ada yang membacanya": `content.json` diunduh SETIAP pengunjung, dan
 bocornya jadwal sunting internal ke publik bukan sesuatu yang perlu terjadi demi
@@ -1173,11 +1292,13 @@ ditanyakan editor adalah "apa masih ada yang perlu saya publish", bukan "berapa
 di tabel mana".
 
 Aturannya cukup tiga cap waktu, jadi ia ditulis **sekali** sebagai fungsi
-`menunggu(r)` dan dipakai kesebelas entitas. Visi tidak punya `deletedAt`,
-dan yang dilonggarkan BUKAN tipe `Stamps`-nya: query visi memetakan
-`deletedAt: null` secara eksplisit, supaya entitas berikutnya yang PUNYA
-`deletedAt` tidak bisa lupa mengirimkannya dan diam-diam berhenti menghitung
-penghapusan. Kalau tiap entitas menyalin aturan ini,
+`menunggu(r)` dan dipakai kedua belas entitas. Visi dan footer tidak punya
+`deletedAt`, dan yang dilonggarkan BUKAN tipe `Stamps`-nya: query keduanya
+memetakan `deletedAt: null` secara eksplisit, supaya entitas berikutnya yang
+PUNYA `deletedAt` tidak bisa lupa mengirimkannya dan diam-diam berhenti
+menghitung penghapusan. (Cap waktu footer milik baris induknya; tabel
+`footer_socials` memang tidak punya cap waktu sendiri, dan `saveFooter()`
+selalu menaikkan `updatedAt` induk — mengubah tautan pun menyalakan badge.) Kalau tiap entitas menyalin aturan ini,
 perbaikan seperti yang di bawah akan diperbaiki di satu tempat dan tetap salah di
 tempat lain.
 
@@ -1193,20 +1314,20 @@ tempat lain.
 Kalimat konfirmasi di `BarPublish` dirakit dari angka-angka itu, **melewati yang
 nol**: "3 lowongan, 8 proyek" kalau memang cuma itu yang tayang, bukan "3
 lowongan, 0 nilai, 0 orang, 8 proyek, 0 case study". Daftarnya satu array
-`[jumlah, nama]` yang di-`filter` lalu di-`join`. **Visi disebut namanya saja,
-tanpa angka** — ia bukan cacah baris melainkan ada/tidak ada, dan "1 visi" akan
-terbaca seolah visi kedua mungkin ada; `PublishResult.vision` karena itu
-bertipe `boolean`, bukan `number`.
+`[jumlah, nama]` yang di-`filter` lalu di-`join`. **Visi dan kaki halaman
+disebut namanya saja, tanpa angka** — keduanya bukan cacah baris melainkan
+ada/tidak ada, dan "1 visi" akan terbaca seolah visi kedua mungkin ada;
+`PublishResult.vision` dan `.footer` karena itu bertipe `boolean`, bukan
+`number`.
 
-> ⚠️ **Kalimat konfirmasi BELUM menyebut langkah cara kerja.** Selisih serupa
-> pernah tersisa dari slice industri dan SUDAH dibayar slice deployment:
-> `BarPublish` kini menyebut "N sektor" dan "N kartu deployment", dan tipe
-> `tayangkan()` di `admin/src/api.ts` sudah lengkap sampai
-> `processSteps: number`. Tapi angka `processSteps` itu belum di-destructure
-> dan belum ditambahkan ke daftar `bagian`-nya. Bukan kerusakan — angkanya
-> cuma tidak ikut disebut — tapi polanya berulang dua slice berturut-turut:
-> entitas baru harus ingat menambah SATU baris `[jumlah, nama]` di
-> `BarPublish.tsx`, dan tidak ada test yang menagihnya.
+> ⚠️ Selisih "kalimat konfirmasi belum menyebut entitas baru" pernah tersisa
+> DUA slice berturut-turut (industri, lalu langkah cara kerja) dan sekarang
+> sudah lunas semua: slice footer menambahkan "N langkah cara kerja" yang
+> tertinggal SEKALIGUS "kaki halaman" miliknya sendiri ke daftar `bagian` di
+> `BarPublish.tsx`. Polanya tetap patut diwaspadai untuk entitas berikutnya —
+> tipe `tayangkan()` di `admin/src/api.ts` bisa saja sudah lengkap sementara
+> baris `[jumlah, nama]`-nya lupa ditambahkan, dan tidak ada test yang
+> menagihnya.
 
 ---
 
@@ -1236,8 +1357,8 @@ disentuh (wilayah kerja Nico, lihat `INVARIANTS.md`).
 
 `contentJobs()`, `contentValues()`, `contentCrew()`, `contentWorkProjects()`,
 `contentCaseStudies()`, `contentServices()`, `contentTestimonials()`,
-`contentIndustries()`, `contentDeployments()`, `contentProcessSteps()`, dan
-`contentVision()`
+`contentIndustries()`, `contentDeployments()`, `contentProcessSteps()`,
+`contentVision()`, dan `contentFooter()`
 masing-masing memeriksa bagiannya sendiri, dan bagian yang
 tidak ada TIDAK memvonis seluruh berkas.
 
@@ -1253,13 +1374,25 @@ baru ditambahkan.
 editor yang menghapus semua nilai akan melihat tiga nilai lama hidup kembali
 sesudah Publish dan tidak punya cara menghapusnya.
 
-**`contentVision()` satu-satunya pembaca TANPA keadaan "kosong yang
-dihormati"** — seksi Visi tidak boleh menghilang (§4b), jadi tidak ada "daftar
-kosong" untuk dihormati. Bentuknya juga bukan larik, jadi penjaganya
-`typeof … === "object"` + pemeriksaan kedua field-nya string, bukan
-`Array.isArray`. Isian kosong lalu ditangani `src/data/vision.ts` **per
-isian**: kalimat kosong memakai kalimat cadangan, foto kosong memakai foto
-cadangan — bukan semua-atau-tidak-sama-sekali.
+**`contentVision()` dan `contentFooter()` dua pembaca yang bentuknya OBJEK,
+bukan larik** — penjaganya `typeof … === "object"` + pemeriksaan field-nya
+satu per satu, bukan `Array.isArray`. Isian teks yang kosong lalu ditangani
+`src/data/vision.ts` dan `src/data/footer.ts` **per isian**: kalimat/surel/
+alamat/hak-cipta kosong memakai cadangannya masing-masing — bukan
+semua-atau-tidak-sama-sekali. Bedanya: visi sama sekali tanpa keadaan "kosong
+yang dihormati" (seksinya tidak boleh menghilang, §4b), sedangkan footer
+punya SATU — larik `socials` kosong dihormati apa adanya, seperti daftar
+entitas lain, karena editor yang menghapus semua tautannya memang minta kaki
+halaman tanpa baris tautan.
+
+`contentFooter()` sekaligus penjaga paling teliti di berkas store, dan itu
+bukan kelebihan hati-hati: `socials` satu-satunya bagian `content.json` berupa
+larik OBJEK yang langsung disebar jadi elemen `<a href>` — satu `href` yang
+ternyata angka membuat React merender `href="3"`, tautan ke halaman
+cogniti.id/3 tanpa satu pun galat. Baris tautan yang bentuknya salah karena
+itu **dibuang satuan**, bukan menggugurkan seluruh kaki halaman: satu tautan
+rusak tidak sebanding dengan alamat kantor dan hak cipta yang ikut mundur ke
+isi bundle.
 
 ### §10b Pembacanya FUNGSI, bukan konstanta
 
@@ -1275,10 +1408,16 @@ src/data/industries.ts   industries()
 src/data/deployments.ts  deployments()
 src/data/processSteps.ts processSteps()
 src/data/vision.ts       vision()
+src/data/footer.ts       footer()
 ```
 
 Semuanya memanggil `content*()`; kalau `null`, mereka mengembalikan
-`FALLBACK_*` dari `src/data/*Fallback.ts`.
+`FALLBACK_*` dari `src/data/*Fallback.ts`. `footer()` (seperti `vision()`)
+**tidak pernah mengembalikan `null`** — kaki halaman ikut setiap halaman
+situs, jadi tidak ada keadaan "halaman tanpa kaki halaman" yang bisa dicapai
+lewat data. `footerFallback.ts` juga dibaca `server/db/seed.ts` dari Node,
+makanya ia literal murni tanpa satu pun impor: satu impor ke store situs
+sudah cukup menyeret `fetch` dan tipe DOM ke dalam skrip seed.
 
 > 🔥 **`export const VALUES = ...` akan membekukan isi cadangan selamanya.**
 > `content.json` baru mendarat sesudah `loadContent()` di `main.tsx`, sedangkan
@@ -1302,9 +1441,9 @@ key itu apa adanya.
 
 ### §10c Yang disentuh di `src/components/`
 
-Enam belas berkas (tiga belas di `sections/`, dua di `canvas/`, satu di
-`motion/`), semuanya perubahan
-kecil dengan satu alasan besar:
+Delapan belas berkas (tiga belas di `sections/`, dua di `canvas/`, satu di
+`motion/`, dua di akar `components/` — `SiteFooter` dan `Navbar`), semuanya
+perubahan kecil dengan satu alasan besar:
 
 - **`Careers.tsx`** — literal `ROLES` ditukar `import { careerRoles }`.
 - **`PeopleValues.tsx`** — `VALUES` ditukar `peopleValues()`, plus
@@ -1383,6 +1522,18 @@ kecil dengan satu alasan besar:
   enum ketujuh di `shared/` membuat TypeScript menolak berkas ini sampai
   gambarnya benar-benar dibuat. Larik lama `PROCESS_GLYPHS` masih ada untuk
   test-nya, dengan peringatan besar bahwa ia bukan lagi cara memilih gambar.
+- **`SiteFooter.tsx`** — surel, alamat, dan baris hak cipta hardcoded ditukar
+  `useMemo(() => footer(), [])`, dan situs tetap yang mencetak
+  `© {new Date().getFullYear()}` di depan baris hak cipta (§4b). Tidak ada
+  gerbang daftar-kosong untuk komponennya sendiri (kaki halaman selalu
+  dirender); `socials` kosong = barisnya tidak ada, bukan jatuh ke cadangan.
+- **`Navbar.tsx`** — menu HP-nya dulu membaca `SOCIALS` dari
+  `src/data/socials.ts`; sekarang `useMemo(() => footer().socials, [])` —
+  daftar yang SAMA dengan yang dirender `SiteFooter`. **`src/data/socials.ts`
+  DIHAPUS**, satu-satunya berkas data situs yang hilang bersama sebuah slice:
+  dua daftar terpisah berarti editor mengubah URL Instagram di panel lalu menu
+  HP tetap menunjuk yang lama, tanpa galat. Kedua pemanggilan `footer()` wajib
+  di dalam komponen — jebakan ruang-modul §14 menular ke pemanggil.
 
 **Di dev, `content.json` disajikan plugin `serveContentJson()` di `vite.config.ts`**
 — `dist/` tidak disajikan sama sekali oleh dev server, jadi tanpa plugin ini
@@ -1423,6 +1574,7 @@ Bahasa Indonesia, hitam-putih, tanpa animasi, tanpa framework UI.
 | `DaftarProses` | # · Judul langkah · Ilustrasi · Status · Terakhir diubah, plus **Naikkan/Turunkan**; tombol **Tambah mati saat 6 langkah Live** (§4b) |
 | `FormProses` | judul, kicker, penjelasan, pemilih ilustrasi (radio 6 gambar bernama — "Radar", "Artboard", …), status — tanpa unggah foto |
 | `FormVisi` | kalimat visi + foto — TANPA daftar di depannya, tanpa Tambah/Hapus/Naikkan/Draft (§4b); `#/visi` langsung membuka form |
+| `FormFooter` | surel, alamat, baris hak cipta, dan daftar tautan sosial (tulisan + alamat per baris, urutan baris = urutan tampil) — TANPA daftar di depannya juga (§4b); `#/footer` langsung membuka form; baris tautan yang dua-duanya kosong dibuang saat simpan (§5b) |
 | `PemilihFoto` | grid foto lama + unggah baru — dipakai delapan form yang bergambar (§8), label & petunjuknya bisa diganti per form |
 | `BarPublish` | menetap di bawah: "N perubahan belum tayang" + tombol Publish |
 | `Tema` | tombol terang/gelap di kepala panel (§11a) |
@@ -1437,8 +1589,17 @@ dan pesan sesudahnya menjelaskan apa yang belum terjadi:
 ### §11a Beranda dari peta konten, bukan daftar tabel
 
 `shared/contentMap.ts` memetakan **empat halaman navbar** (Home → Services →
-Work → People) plus satu grup "Seluruh situs", dan konten apa saja yang tinggal di
-masing-masingnya. Inilah yang jadi beranda panel.
+Work → People) plus satu kelompok **"Footer"**, dan konten apa saja yang
+tinggal di masing-masingnya. Inilah yang jadi beranda panel.
+
+> ⚠️ Kelompok kelima itu pernah bernama **"Seluruh situs"** dengan satu entri
+> "Tautan sosial" berstatus `belum`. Diganti waktu footer masuk CMS, karena
+> isinya ternyata satu benda utuh — surel, alamat, hak cipta, DAN tautan
+> sosialnya sama-sama tinggal di kaki halaman — dan "Seluruh situs" membuat
+> editor mencari pengaturan situs di sana, yang tidak ada. Dipisah dari
+> keempat halaman navbar (bukan dititipkan ke Home) supaya editor tidak
+> mengira mengubahnya cuma berdampak di halaman depan: `SiteFooter.tsx`
+> dirender di dasar SEMUA halaman.
 
 Alasannya satu: teman R&D yang memakai panel ini tidak tahu — dan tidak perlu
 tahu — bahwa lowongan disimpan di tabel `jobs`. Yang dia tahu adalah "lowongan itu
@@ -1452,12 +1613,22 @@ perlu bisa membedakan "tidak ada di panel karena belum dibuat" dari "tidak ada d
 panel karena saya tidak menemukannya"; yang kedua berakhir jadi pertanyaan ke
 developer, yang pertama tidak.
 
-Hari ini **11 dari 12 entri berstatus `siap`** — satu-satunya `belum` yang
-tersisa Tautan sosial di grup "Seluruh situs". Keempat entri halaman Home
-(Deployment, Cara kerja, Industri, Visi) sudah `siap`, urut mengikuti urutan
-section di situsnya; Nilai, Crew, dan Lowongan di
-halaman People; Selected work dan Case study di halaman Work; Layanan dan
-Testimoni di halaman Services.
+Hari ini **SEMUA 12 entri berstatus `siap`** — sejak footer masuk, tidak ada
+`belum` yang tersisa (aturan menampilkannya tetap berlaku untuk entitas yang
+mungkin lahir nanti). Keempat entri halaman Home (Deployment, Cara kerja,
+Industri, Visi) urut mengikuti urutan section di situsnya; Nilai, Crew, dan
+Lowongan di halaman People; Selected work dan Case study di halaman Work;
+Layanan dan Testimoni di halaman Services; Footer kelompoknya sendiri.
+
+Kelompok Footer satu-satunya yang ditandai **`langsung: true`**: isinya cuma
+dirinya sendiri (entri `footer`, berlabel sama dengan kelompoknya), jadi menu
+sisi merendernya sebagai SATU baris yang langsung membuka layarnya — sederajat
+dengan "Beranda", bukan judul berpanah yang harus dibuka dulu. Panah yang
+membuka satu anak bernama sama dengan induknya ("Footer ▸ Footer") cuma
+menambah ketukan tanpa memberi tahu apa pun. Kalimat statusnya di beranda juga
+bukan `ringkas()`: "Belum terisi — situs memakai isi bawaan." atau "Terisi,
+N tautan sosial(, belum tayang)" — tautan sosial disebut karena cuma itu
+bagian footer yang bisa berubah jumlahnya.
 
 > ⚠️ Peta ini pernah SALAH, dan salahnya cuma ketahuan karena dibaca manusia:
 > "Testimoni" terdaftar di halaman **Work**, padahal di situs ia ada di halaman
@@ -1478,11 +1649,12 @@ daftar. Sejak ada entitas kedua, `#/apa-saja/baru` yang lolos akan membuka form
 lowongan dengan alamat yang menjanjikan hal lain.
 
 Sejak visi masuk, `bacaRute()` juga mengenal **entitas tanpa daftar**
-(`tanpaDaftar()` — hari ini cuma `visi`): bentuk `#/visi/baru` dan
+(`tanpaDaftar()` — kini `visi` DAN `footer`): bentuk `#/visi/baru` dan
 `#/visi/ubah/<id>` tidak punya arti untuk entitas satu baris, dan tanpa
 pengecualian ini keduanya SAH menurut penjaga `siap()` lalu jatuh ke ujung
 rantai pemilihan komponen — form LOWONGAN, di alamat yang menjanjikan visi.
-Keduanya kini dinormalkan ke layar `#/visi`. Kalimat status visi di beranda
+Keduanya kini dinormalkan ke layar `#/visi`, dan `#/footer/…` diperlakukan
+sama. Kalimat status visi di beranda
 juga tidak lewat `ringkas()`: jumlahnya selalu satu dan tidak ada draf, jadi
 yang dilaporkan cuma "Belum terisi — situs memakai kalimat bawaan." atau
 "Terisi(, belum tayang)".
@@ -1606,7 +1778,7 @@ setelah deploy.
 
 ## §13 Test & verifikasi
 
-**577 test CMS** di dalam `bun run test` (yang totalnya 94 berkas / 996 test) —
+**632 test CMS** di dalam `bun run test` (yang totalnya 98 berkas / 1.051 test) —
 selebihnya di tabel ini; 3 menumpang `TestimonialSpotlight.test.tsx`, beberapa
 menumpang `Industries.test.tsx`, dan 5 + 5 menumpang `Deployments.test.tsx` &
 `Process.test.tsx` (disebut sesudah tabel):
@@ -1624,6 +1796,7 @@ menumpang `Industries.test.tsx`, dan 5 + 5 menumpang `Deployments.test.tsx` &
 | `shared/validateVision.test.ts` | 9 | aturan visi: kalimat & foto selalu wajib (tidak ada draf), batas 400 |
 | `shared/validateDeployment.test.ts` | 15 | aturan kartu: foto/wilayah/keterangan WAJIB saat Live, batas 40/30/240, kelima kartu bawaan lolos apa adanya |
 | `shared/validateProcessStep.test.ts` | 18 | aturan langkah: judul wajib bahkan draf, kicker/penjelasan wajib saat Live, glyph tak dikenal ditolak, batas 40/18/180 |
+| `shared/validateFooter.test.ts` | 20 | aturan kaki halaman: selalu diperiksa penuh, `mailto:` ditolak terpisah, tahun & © ditolak (angka bukan-tahun lolos), tautan wajib `https://` tapi `http://` diterima, daftar kosong sah |
 | `server/routes/jobs.test.ts` | 17 | CRUD, 401 tanpa login, slug bentrok, soft delete |
 | `server/routes/values.test.ts` | 20 | CRUD + reorder, daftar tak lengkap ditolak |
 | `server/routes/crew.test.ts` | 26 | CRUD, tautan sosial, nama bentrok, departemen asing |
@@ -1633,10 +1806,11 @@ menumpang `Industries.test.tsx`, dan 5 + 5 menumpang `Deployments.test.tsx` &
 | `server/routes/testimonials.test.ts` | 20 | CRUD + reorder, nama bentrok, daftar reorder tak lengkap ditolak |
 | `server/routes/industries.test.ts` | 26 | CRUD + reorder, **batas 13 Live ditolak 422** (lewat POST maupun PUT), nama bentrok |
 | `server/routes/vision.test.ts` | 9 | GET null sebelum ada, PUT upsert (simpan kedua menimpa, bukan menambah), validasi |
+| `server/routes/footer.test.ts` | 12 | GET null bukan 404, PUT pertama membuat baris+tautan, PUT berulang menimpa, urutan tautan persis seperti dikirim, daftar ditulis ulang bukan ditumpuk, 422 tidak menyentuh baris yang ada, tidak ada POST/DELETE/urutkan |
 | `server/routes/deployments.test.ts` | 25 | CRUD + reorder, pasangan sektor+wilayah kembar ditolak case-insensitive (galat di `region`), kartu baru mendarat di bawah |
 | `server/routes/processSteps.test.ts` | 28 | CRUD + reorder, **batas 6 Live ditolak 422** (POST maupun PUT, `exceptId` untuk baris sendiri), ilustrasi ikut pindah bersama langkahnya, judul kembar |
 | `server/routes/auth.test.ts` | 6 | masuk pakai sandi saja, sandi salah, sesi |
-| `server/publish.test.ts` | 42 | draft tidak ikut, tulis atomik, hitungan pending, visi null → objek → tertimpa — BELUM menyebut deployment/proses (lihat ⚠️ di bawah) |
+| `server/publish.test.ts` | 48 | draft tidak ikut, tulis atomik, hitungan pending, visi null → objek → tertimpa, kaki halaman ikut (kolom payload-nya dikunci apa adanya, socials kosong = `[]` bukan hilang) — BELUM menyebut deployment/proses (lihat ⚠️ di bawah) |
 | `src/lib/content/store.test.ts` | 9 | content.json valid dipakai; gagal/timeout/versi salah → fallback |
 | `src/data/people.test.ts` | 17 | CMS menang atas bundle; daftar kosong dihormati; payload lama |
 | `src/data/work.test.ts` | 9 | CMS menang atas bundle; `outcome` kosong jadi `undefined` |
@@ -1645,9 +1819,11 @@ menumpang `Industries.test.tsx`, dan 5 + 5 menumpang `Deployments.test.tsx` &
 | `src/data/testimonials.test.ts` | 9 | CMS menang atas bundle; daftar kosong dihormati |
 | `src/data/industries.test.ts` | 10 | CMS menang atas bundle; daftar kosong dihormati; payload lama tanpa field industri |
 | `src/data/vision.test.ts` | 6 | CMS menang atas bundle; **isian kosong jatuh ke cadangan PER ISIAN** |
+| `src/data/footer.test.ts` | 10 | CMS menang atas bundle; cadangan per isian; **`socials` kosong dihormati, tidak menghidupkan tautan cadangan**; cadangan bundle-nya sendiri diperiksa (tanpa tahun/©, semua tautan ber-`https://`) |
+| `src/components/SiteFooter.test.tsx` | 6 | komponen membaca CMS bukan cadangan beku; `mailto:` tunggal (tidak ganda); tautan terbuka ke luar sesuai urutan panel; © + tahun berjalan dicetak situs |
 | `src/data/deployments.test.ts` | 9 | CMS menang atas bundle; daftar kosong dihormati; hanya isian yang dirender diteruskan (key dikunci apa adanya) |
 | `src/data/processSteps.test.ts` | 13 | glyph milik LANGKAH bukan posisi; `PROCESS_GLYPHS_BY_KEY` lengkap; daftar kosong dihormati; payload lama tanpa field ini → bundle |
-| `src/lib/contentMap.test.ts` | 11 | peta konten sinkron dengan slug & label situs, letak entri per halaman |
+| `src/lib/contentMap.test.ts` | 12 | peta konten sinkron dengan slug & label situs, letak entri per halaman, kelompok footer ikut `CONTENT_GROUPS` |
 
 Tiga test CMS lain menumpang `TestimonialSpotlight.test.tsx` (komponennya):
 membaca entri dari CMS alih-alih bundle, daftar kosong = tidak dirender sama
@@ -1665,7 +1841,14 @@ langkah, bukan posisi).
 > langkah cara kerja — dua-duanya sudah terangkut `collect()`/`pendingCount()`
 > dan terbukti lewat probe (draf tidak ikut, urutan ikut, publish menghitung),
 > tapi cakupan unit jalur publish-nya masih menumpang test entitas lama. Utang
-> kecil untuk slice berikutnya.
+> kecil untuk slice berikutnya. (Footer TIDAK ikut berutang: describe "kaki
+> halaman ikut ke content.json" ditulis bersama slice-nya.)
+
+> Menambah `footer` ke `ContentPayload` membuat **13 berkas test situs** gagal
+> tsc sekaligus — masing-masing punya literal payload `kosong` sendiri yang
+> kini kurang satu kolom. Itu wajar dan bukan bug (satu baris per berkas),
+> tapi patut diingat untuk entitas berikutnya: kolom payload baru = sapuan
+> satu-baris ke semua literal test itu.
 
 Test server jalan di **project vitest terpisah** (`environment: "node"`), karena
 `src/test/setup.ts` menyentuh `window` dan akan melempar di sana. Semua berkas
@@ -1839,6 +2022,13 @@ bukan penyimpanannya, melainkan apakah komponen situs benar-benar MEMBACA baris
 baru itu — dan §14 mencatat satu cara kegagalan yang lolos semua test unit tapi
 ketahuan persis di langkah ini.
 
+> ⚠️ **Footer SATU-SATUNYA entitas tanpa probe end-to-end, dan panelnya belum
+> pernah diklik sungguhan** — saat slice-nya ditutup, sandi login dev tidak
+> ada di tangan. Jalur baca situsnya teruji (test komponen + store + publish),
+> tapi perjalanan editor sungguhan (buka `#/footer`, sunting, Simpan, Publish,
+> lihat kaki halaman berubah) belum pernah dijalankan. Utang yang harus
+> dibayar sebelum atau saat deploy.
+
 `scripts/probe-tema-admin.mjs` — 15 pemeriksaan: kedua tema diukur di daftar,
 form, dialog, dan layar masuk; **semua warna abu-abu murni** (R=G=B) diperiksa ke
 seluruh elemen; cincin fokus 2px tidak meluber; ikut sistem tanpa menyimpan
@@ -1909,6 +2099,16 @@ galat, dan dua-duanya baru jadi bug begitu editor BISA mengganti nama dan
 memindahkan baris — kodenya benar selama datanya literal. Fix: gambar jadi
 kolom milik barisnya (`photo_id` / `glyph`, §4b), dan probe proses
 membandingkan peta judul→ilustrasi sebelum/sesudah pindah (§13).
+
+**Regex surel yang wajar-wajar saja MELOLOSKAN `mailto:`.** Pola
+"tepat satu `@`, ada titik di kanannya" — cukup untuk menangkap alamat tanpa
+domain — lolos untuk `mailto:hello@cogniti.id`, karena awalannya tidak
+menambah `@` kedua. Situs lalu merender `href="mailto:mailto:hello@…"`:
+aplikasi surel terbuka dengan alamat yang tidak bisa dikirim, tanpa galat di
+mana pun. Fix: pemeriksaan `^mailto:` TERPISAH, sebelum regex-nya, dengan
+pesan yang menyuruh membuang awalannya (§5b). Berlaku untuk isian alamat
+apa pun yang editor kemungkinan mengisinya dengan menyalin dari `href` yang
+sudah jadi.
 
 **Indeks unik parsial atas PASANGAN kolom butuh mengecualikan yang separuh
 kosong.** `deployments_sector_region_alive` versi pertama (migrasi 0009) cuma
@@ -1990,14 +2190,17 @@ mirip sandi yang masuk git adalah fixture test `"sandi-yang-panjang"` di
 - cron `pg_dump`
 - `CF_ZONE_ID` + `CF_PURGE_TOKEN` diisi supaya purge otomatis jalan
 
-**Satu entitas konten tersisa** — tautan sosial (grup "Seluruh situs") —
-menyusul dengan pola §16. Keempat halaman navbar **sudah selesai seluruhnya**:
-Home genap bersama deployment dan cara kerja.
+**Entitas konten: TIDAK ADA yang tersisa.** Keempat halaman navbar plus
+kelompok Footer selesai seluruhnya — 12 dari 12 entri panel `siap`, dan entri
+"Tautan sosial" yang dulu tercatat di sini sudah terbayar sebagai bagian dari
+slice footer (kelompok "Seluruh situs" sekalian diganti nama, §11a).
 
-**Selisih kecil yang diketahui:** kalimat konfirmasi Publish belum menyebut
-jumlah langkah cara kerja (§9a — selisih serupa milik industri sudah dibayar
-slice deployment), dan `server/publish.test.ts` belum ketambahan describe
-deployment/cara kerja (§13).
+**Selisih kecil yang diketahui:** `server/publish.test.ts` belum ketambahan
+describe deployment/cara kerja (§13), dan **footer belum punya probe
+end-to-end — panelnya belum pernah diklik sungguhan** (§13); jalankan
+perjalanan editor lengkapnya sebelum atau saat deploy. (Selisih lama "kalimat
+konfirmasi belum menyebut langkah cara kerja" sudah dibayar slice footer,
+§9a.)
 
 **Di luar cakupan, permanen:** teks yang terikat tata letak — wordmark
 `COGNITI.ID` dengan lebar `7.342` di `Contact.tsx`, `HEADING_LINES` di
@@ -2009,7 +2212,7 @@ sampai ada yang benar-benar membutuhkannya.
 
 ## §16 Resep menambah entitas berikutnya
 
-Urutan yang sudah terbukti **sebelas kali**, dipakai ulang apa adanya:
+Urutan yang sudah terbukti **dua belas kali**, dipakai ulang apa adanya:
 
 1. Tipe + validasi di `shared/` (dipakai server & admin sekaligus)
 2. Tabel di `server/db/schema.ts` → `bun run db:generate` → `db:migrate`
@@ -2061,7 +2264,12 @@ kode), upsert di repo (bukan insert/update terpisah), `GET` + `PUT` saja
 layar panel LANGSUNG form lewat `tanpaDaftar()` di `bacaRute()` (§11), dan
 pembaca situs dengan cadangan **per isian** (§10a). Probe-nya juga wajib
 memulihkan isi semula bahkan saat gagal di tengah — entitas tunggal tidak bisa
-dibersihkan dengan menghapus baris uji (§13).
+dibersihkan dengan menghapus baris uji (§13). **Kalau baris tunggalnya
+membawa daftar anak** (tautan sosial footer): tabel anak ber-`position`,
+ditulis hapus-lalu-sisip dalam SATU transaksi bersama upsert induknya —
+urutannya urutan kirim form, tanpa endpoint `/urutkan` (§4b, §6a); dan daftar
+anak yang dikosongkan editor DIHORMATI oleh pembaca situs meski isian teks di
+sebelahnya jatuh per-isian (§10a).
 
 **Butuh batas jumlah baris tayang?** Sudah ada dua preseden dengan alasan yang
 berbeda — 13 industri (geometri) dan 6 langkah cara kerja (panjang halaman):

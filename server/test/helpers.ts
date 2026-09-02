@@ -29,7 +29,8 @@ export async function resetDb(): Promise<void> {
       people_values, crew_socials, crew_members,
       work_project_tags, work_projects,
       case_study_scopes, case_studies, service_subs, services,
-      testimonials, industries, deployments, vision, process_steps, images, users
+      testimonials, industries, deployments, vision, process_steps,
+      footer_socials, footer, images, users
     restart identity cascade
   `);
 }
@@ -190,6 +191,23 @@ export function visionBody(over: Record<string, unknown> = {}) {
     statement:
       "To become a trusted technology partner that empowers organizations through intelligent digital innovation.",
     photo: "/home/P1330392_velocity.webp",
+    ...over,
+  };
+}
+
+/** Bentuk kaki halaman minimal yang lolos validasi. Tanpa `state`, alasan
+ *  sama seperti visi. Baris hak ciptanya sengaja TANPA tahun: situs yang
+ *  mencetak "© {tahun berjalan}" di depannya, dan validator menolak kalau
+ *  tahunnya ikut diketik. */
+export function footerBody(over: Record<string, unknown> = {}) {
+  return {
+    email: "hello@cogniti.id",
+    address: "Jl. Kediri No.27, Tuban, Badung, Bali 80361",
+    copyright: "Cognitiva Solusi Indonesia. All rights reserved.",
+    socials: [
+      { label: "Instagram", href: "https://www.instagram.com/cogniti.id/" },
+      { label: "LinkedIn", href: "https://www.linkedin.com/company/cogniti/" },
+    ],
     ...over,
   };
 }

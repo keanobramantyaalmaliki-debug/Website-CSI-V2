@@ -34,11 +34,14 @@ import { FALLBACK_INDUSTRIES } from "../../src/data/industriesFallback";
 import { FALLBACK_DEPLOYMENTS } from "../../src/data/deploymentsFallback";
 import { FALLBACK_VISION } from "../../src/data/visionFallback";
 import { FALLBACK_PROCESS_STEPS } from "../../src/data/processStepsFallback";
+import { FALLBACK_FOOTER } from "../../src/data/footerFallback";
 import { db, sql } from "./client";
 import {
   crewMembers,
   crewSocials,
   deployments,
+  footer,
+  footerSocials,
   images,
   industries,
   jobCopy,
@@ -779,6 +782,61 @@ async function seedVision() {
 }
 
 /**
+ * Kaki halaman — surel, alamat, hak cipta, dan tautan sosialnya.
+ *
+ * Gerbangnya baris INDUK, bukan tautannya: kalau barisnya sudah ada, seluruh
+ * seed dilewati termasuk tautan sosialnya. Menyisipkan tautan ke baris yang
+ * sudah disunting editor akan menduplikasi daftar yang sudah benar — dan
+ * `position` yang sudah terpakai membuatnya gagal di tengah jalan, bukan
+ * gagal di depan.
+ *
+ * Tidak ada `state` di sini, alasan yang sama dengan visi: tabelnya memang
+ * tidak punya kolomnya. Kaki halaman ikut setiap halaman situs; yang bisa
+ * diubah editor isinya, bukan keberadaannya.
+ *
+ * Tidak ada gambar apa pun, jadi tidak ada urusan dengan tabel `images` —
+ * satu-satunya seed konten yang begitu.
+ */
+async function seedFooter() {
+  const [{ count }] = await db
+    .select({ count: raw<number>`count(*)::int` })
+    .from(footer);
+
+  if (count > 0) {
+    console.log(`Tabel footer sudah berisi ${count} baris — dilewati.`);
+    return;
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.insert(footer).values({
+      /* `id: 1` ditulis eksplisit walau kolomnya sudah `default(1)`, supaya
+         batasan satu-barisnya terbaca di sini juga dan bukan cuma di skema. */
+      id: 1,
+      email: FALLBACK_FOOTER.email,
+      address: FALLBACK_FOOTER.address,
+      copyright: FALLBACK_FOOTER.copyright,
+      /* Sudah tayang hari ini — lihat alasan yang sama di seed lowongan. */
+      publishedAt: new Date(),
+    });
+
+    if (FALLBACK_FOOTER.socials.length) {
+      await tx.insert(footerSocials).values(
+        FALLBACK_FOOTER.socials.map((s, position) => ({
+          footerId: 1,
+          position,
+          label: s.label,
+          href: s.href,
+        })),
+      );
+    }
+  });
+
+  console.log(
+    `Seed selesai: kaki halaman + ${FALLBACK_FOOTER.socials.length} tautan sosial masuk ke database.`,
+  );
+}
+
+/**
  * Langkah "How We Work" di halaman depan.
  *
  * Gerbang isinya sendiri, alasan yang sama dengan `seedValues`.
@@ -836,4 +894,5 @@ await seedIndustries();
 await seedDeployments();
 await seedVision();
 await seedProcessSteps();
+await seedFooter();
 await sql.end();

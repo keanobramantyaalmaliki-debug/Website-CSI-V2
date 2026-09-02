@@ -14,7 +14,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { CONTENT_GROUPS, CONTENT_PAGES, SITE_WIDE, findEntry } from "@shared/contentMap";
+import { CONTENT_GROUPS, CONTENT_PAGES, FOOTER_GROUP, findEntry } from "@shared/contentMap";
 import { ROOM_LABELS, ROOM_SLUGS, pathFor, type RoomKey } from "@/lib/store/sceneStore";
 
 /** Urutan navbar (`NAV_CONTENT_ORDER` di Navbar.tsx), dalam RoomKey. */
@@ -91,11 +91,12 @@ describe("bentuk peta konten", () => {
       "nilai",
       "crew",
       "lowongan",
+      "footer",
     ]);
   });
 
-  it("kelompok seluruh-situs ikut terangkut ke CONTENT_GROUPS", () => {
-    expect(CONTENT_GROUPS).toContain(SITE_WIDE);
+  it("kelompok footer ikut terangkut ke CONTENT_GROUPS", () => {
+    expect(CONTENT_GROUPS).toContain(FOOTER_GROUP);
     expect(CONTENT_GROUPS.length).toBe(CONTENT_PAGES.length + 1);
   });
 
@@ -112,12 +113,29 @@ describe("bentuk peta konten", () => {
     expect(keys("services")).toEqual(["layanan", "testimoni"]);
     expect(keys("work")).toEqual(["selected-work", "case-study"]);
     expect(keys("people")).toEqual(["nilai", "crew", "lowongan"]);
-    expect(keys("situs")).toEqual(["sosial"]);
+    expect(keys("footer")).toEqual(["footer"]);
+  });
+
+  /**
+   * Menu sisi merender kelompok bertanda `langsung` sebagai SATU baris dan
+   * mencetak label kelompoknya — anaknya tidak pernah digambar sama sekali
+   * (`admin/src/Sidebar.tsx`).
+   *
+   * Dua hal yang rusak diam-diam kalau tanda itu dipasang sembarangan: entri
+   * kedua jadi tidak terjangkau dari menu mana pun, dan label anak yang beda
+   * dari label kelompok berarti nama yang dilihat editor di menu bukan nama
+   * yang dilihatnya di beranda. Keduanya tanpa galat.
+   */
+  it("kelompok langsung punya tepat satu entri, bernama sama dengan kelompoknya", () => {
+    for (const halaman of CONTENT_GROUPS.filter((p) => p.langsung)) {
+      expect(halaman.entries, `${halaman.label} bertanda langsung`).toHaveLength(1);
+      expect(halaman.entries[0].label).toBe(halaman.label);
+    }
   });
 
   it("findEntry menemukan entri dari kelompok mana pun", () => {
     expect(findEntry("lowongan")?.page.key).toBe("people");
-    expect(findEntry("sosial")?.page.key).toBe("situs");
+    expect(findEntry("footer")?.page.key).toBe("footer");
     expect(findEntry("tidak-ada")).toBeNull();
   });
 });

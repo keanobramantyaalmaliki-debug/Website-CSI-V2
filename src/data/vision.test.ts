@@ -17,6 +17,7 @@ const kosong = {
   deployments: [],
   processSteps: [],
   vision: null,
+  footer: null,
 };
 
 describe("FALLBACK_VISION", () => {

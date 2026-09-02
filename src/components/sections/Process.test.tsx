@@ -65,6 +65,7 @@ const payload = (processSteps: unknown[]): ContentPayload =>
     version: 1,
     generatedAt: new Date().toISOString(),
     vision: null,
+    footer: null,
     jobs: [],
     values: [],
     crew: [],

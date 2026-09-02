@@ -19,6 +19,7 @@ import publishRoute from "./routes/publish";
 import testimonialsRoute from "./routes/testimonials";
 import valuesRoute from "./routes/values";
 import visionRoute from "./routes/vision";
+import footerRoute from "./routes/footer";
 import workProjectsRoute from "./routes/workProjects";
 import servicesRoute from "./routes/services";
 import industriesRoute from "./routes/industries";
@@ -88,6 +89,10 @@ app.use("/api/process-steps", requireLogin);
    ingat menambahkannya. */
 app.use("/api/vision/*", requireLogin);
 app.use("/api/vision", requireLogin);
+/* Sama untuk kaki halaman: `GET /` dan `PUT /` saja hari ini, pasangan
+   `/*`-nya dipasang untuk endpoint berikutnya. */
+app.use("/api/footer/*", requireLogin);
+app.use("/api/footer", requireLogin);
 app.use("/api/images/*", requireLogin);
 app.use("/api/images", requireLogin);
 app.use("/api/publish/*", requireLogin);
@@ -104,6 +109,7 @@ app.route("/api/industries", industriesRoute);
 app.route("/api/deployments", deploymentsRoute);
 app.route("/api/process-steps", processStepsRoute);
 app.route("/api/vision", visionRoute);
+app.route("/api/footer", footerRoute);
 app.route("/api/images", imagesRoute);
 app.route("/api/publish", publishRoute);
 

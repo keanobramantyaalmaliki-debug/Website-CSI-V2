@@ -1,6 +1,8 @@
 "use client";
 
-import { SOCIALS } from "@/data/socials";
+import { useMemo } from "react";
+
+import { footer } from "@/data/footer";
 
 /**
  * Kaki halaman: surel + alamat di kiri, kanal sosial + hak cipta di kanan.
@@ -14,8 +16,18 @@ import { SOCIALS } from "@/data/socials";
  *
  * `className` cuma mengatur JARAKNYA; isinya tidak bisa diatur pemanggil. Itu
  * yang membuat dua tempat pemakaiannya dijamin identik.
+ *
+ * ⚠️ Isinya datang dari CMS (kelompok "Footer" di panel), dan `footer()`
+ * WAJIB dipanggil di dalam komponen lewat `useMemo` — bukan di ruang modul.
+ * Konstanta modul dihitung saat berkas ini diimpor, yaitu sebelum
+ * `loadContent()` selesai, jadi ia akan membekukan isi cadangan selamanya
+ * tanpa satu pun error. Lihat catatan panjangnya di `src/data/footer.ts`.
  */
 export default function SiteFooter({ className = "" }: { className?: string }) {
+  /* `[]` dan bukan dependensi apa pun: `content.json` diunduh sekali sebelum
+     React merender, dan tidak pernah berubah lagi selama halaman hidup. */
+  const isi = useMemo(() => footer(), []);
+
   return (
     <footer className={`text-xs text-zinc-400 ${className}`}>
       {/* Dua baris, dipasangkan per KOLOM bukan per baris: kiri = cara
@@ -35,15 +47,17 @@ export default function SiteFooter({ className = "" }: { className?: string }) {
             `hidden`, bukan dilepas dari DOM: alamat masih terbaca crawler
             sebagai sinyal lokasi. */}
         <a
-          href="mailto:hello@cogniti.id"
+          href={`mailto:${isi.email}`}
           className="hidden text-white transition-colors hover:text-zinc-400 sm:inline"
         >
-          hello@cogniti.id
+          {isi.email}
         </a>
         <div className="flex flex-wrap gap-4">
-          {SOCIALS.map((s) => (
+          {isi.socials.map((s, i) => (
             <a
-              key={s.label}
+              /* Kunci berikut nomornya: `label` teks bebas dari CMS sejak 2
+                 Sep, jadi dua "Instagram" bukan lagi hal yang mustahil. */
+              key={`${i}-${s.label}`}
               href={s.href}
               target="_blank"
               rel="noopener noreferrer"
@@ -55,12 +69,14 @@ export default function SiteFooter({ className = "" }: { className?: string }) {
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
-        <span className="hidden sm:inline">
-          Jl. Kediri No.27, Tuban, Badung, Bali 80361
-        </span>
+        <span className="hidden sm:inline">{isi.address}</span>
+        {/* Tahunnya dihitung SAAT RENDER, bukan disimpan di CMS: kaki halaman
+            yang menyimpan tahunnya jadi salah tiap 1 Januari sampai ada yang
+            ingat menyuntingnya, dan tidak ada yang memberitahu siapa pun.
+            `validateFooter.ts` menolak tahun yang terlanjur diketik editor
+            supaya tidak tercetak dua kali. */}
         <span>
-          © {new Date().getFullYear()} Cognitiva Solusi Indonesia. All rights
-          reserved.
+          © {new Date().getFullYear()} {isi.copyright}
         </span>
       </div>
     </footer>

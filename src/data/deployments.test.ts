@@ -22,6 +22,7 @@ const kosong = {
   version: 1 as const,
   generatedAt: new Date().toISOString(),
   vision: null,
+  footer: null,
   jobs: [],
   values: [],
   crew: [],

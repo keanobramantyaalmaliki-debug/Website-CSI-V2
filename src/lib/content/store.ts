@@ -32,6 +32,7 @@ import type { Industry } from "@shared/industry";
 import type { Deployment } from "@shared/deployment";
 import type { ProcessStep } from "@shared/processStep";
 import type { Vision } from "@shared/vision";
+import type { Footer, FooterSocial } from "@shared/footer";
 
 /**
  * Batas tunggu.
@@ -300,6 +301,47 @@ export function contentVision(): Vision | null {
     return null;
   }
   return row;
+}
+
+/**
+ * Isi kaki halaman dari CMS, atau `null` kalau harus memakai isi bundle.
+ *
+ * Penjaganya paling teliti di berkas ini, dan itu bukan kelebihan hati-hati:
+ * `socials` satu-satunya bagian `content.json` yang berupa larik OBJEK yang
+ * langsung disebar jadi elemen `<a href>`. Satu `href` yang ternyata angka
+ * membuat React merender `href="3"` — tautan yang mengarah ke halaman
+ * cogniti.id/3, tanpa satu pun galat.
+ *
+ * ‼️ Larik `socials` KOSONG dihormati, beda dari isian teks di sebelahnya.
+ * Editor yang menghapus semua tautannya memang minta kaki halaman tanpa baris
+ * tautan; menjatuhkannya ke cadangan bundle akan menghidupkan lagi tautan yang
+ * baru saja dihapus. Isian teks yang kosong TIDAK begitu — itu ditangani
+ * `src/data/footer.ts` per isian, karena kaki halaman tanpa hak cipta cuma
+ * terlihat seperti halaman yang belum selesai dimuat.
+ */
+export function contentFooter(): Footer | null {
+  const row = content?.footer;
+  if (!row || typeof row !== "object") return null;
+  if (
+    typeof row.email !== "string" ||
+    typeof row.address !== "string" ||
+    typeof row.copyright !== "string"
+  ) {
+    return null;
+  }
+  if (!Array.isArray(row.socials)) return null;
+
+  const socials: FooterSocial[] = [];
+  for (const item of row.socials) {
+    /* Baris yang bentuknya salah DIBUANG, bukan menggugurkan seluruh kaki
+       halaman. Satu tautan rusak tidak sebanding dengan alamat kantor dan
+       hak cipta yang ikut mundur ke isi bundle. */
+    if (!item || typeof item !== "object") continue;
+    if (typeof item.label !== "string" || typeof item.href !== "string") continue;
+    socials.push({ label: item.label, href: item.href });
+  }
+
+  return { ...row, socials };
 }
 
 /** Kapan konten ini dipublish — dipakai test dan pemeriksaan manual. */

@@ -41,7 +41,9 @@ export function BarPublish({
       testimonials,
       industries,
       deployments,
+      processSteps,
       vision,
+      footer,
       warning,
     } = hasil.data;
 
@@ -61,6 +63,7 @@ export function BarPublish({
       [testimonials, "testimoni"],
       [industries, "sektor"],
       [deployments, "kartu deployment"],
+      [processSteps, "langkah cara kerja"],
     ] as const;
     const isi = [
       ...bagian.filter(([n]) => n > 0).map(([n, nama]) => `${n} ${nama}`),
@@ -69,6 +72,8 @@ export function BarPublish({
          ada. `false` berarti barisnya belum ada di database sama sekali — dan
          itu memang bukan sesuatu yang barusan tayang. */
       ...(vision ? ["visi"] : []),
+      /* Kaki halaman, alasan sama seperti visi: ada/tidak ada, bukan cacah. */
+      ...(footer ? ["kaki halaman"] : []),
     ].join(", ");
 
     onSelesai(

@@ -57,6 +57,20 @@ export type ContentPage = {
   path: string;
   /** Untuk apa halaman ini, dari sudut pandang pengunjung. */
   summary: string;
+  /**
+   * Kelompok yang ISINYA DIRINYA SENDIRI: satu entri, dan entri itu bernama
+   * sama dengan kelompoknya.
+   *
+   * Menu sisi merender kelompok seperti ini sebagai satu baris yang langsung
+   * bisa diklik, tanpa panah dan tanpa anak. Tanpa penanda ini ia jadi
+   * "Footer ▸ Footer" — satu ketukan tambahan yang tidak memberi tahu apa pun,
+   * dan nama yang sama dua kali beruntun terbaca seperti ada dua hal berbeda.
+   *
+   * Dijaga `src/lib/contentMap.test.ts`: kalau kelompok bertanda ini suatu
+   * hari punya entri kedua, anak keduanya akan tidak terjangkau di menu —
+   * jadi test yang gagal, bukan menu yang diam-diam menyembunyikannya.
+   */
+  langsung?: true;
   entries: ContentEntry[];
 };
 
@@ -195,30 +209,52 @@ export const CONTENT_PAGES: readonly ContentPage[] = [
 ];
 
 /**
- * Konten yang tidak tinggal di satu halaman mana pun.
+ * Konten yang tidak tinggal di satu halaman mana pun: kaki halaman.
  *
- * Dipisah alih-alih dititipkan ke Home supaya editor tidak mengira mengubahnya
- * hanya berdampak di halaman depan — tautan sosial muncul di navbar, footer,
- * DAN bagian kontak di keempat halaman sekaligus.
+ * Dipisah dari keempat halaman navbar alih-alih dititipkan ke Home, supaya
+ * editor tidak mengira mengubahnya cuma berdampak di halaman depan. Kaki
+ * halaman dirender `SiteFooter.tsx`, dan komponen itu dipakai bagian Contact
+ * di KEEMPAT halaman sekaligus plus halaman detail lowongan
+ * (`/careers/<slug>`) yang tidak punya Contact sama sekali.
+ *
+ * ⚠️ Kelompok ini pernah bernama "Seluruh situs" dengan satu entri "Tautan
+ * sosial" berstatus `belum`. Namanya diganti karena isinya ternyata satu
+ * benda utuh — surel, alamat, hak cipta, DAN tautan sosialnya sama-sama
+ * tinggal di kaki halaman — dan "Seluruh situs" membuat editor mencari
+ * pengaturan situs di sini, yang tidak ada.
  */
-export const SITE_WIDE: ContentPage = {
-  key: "situs",
-  label: "Seluruh situs",
+export const FOOTER_GROUP: ContentPage = {
+  key: "footer",
+  label: "Footer",
   path: "/",
-  summary: "Muncul di semua halaman sekaligus, bukan cuma di satu.",
+  summary: "Kaki halaman — muncul di dasar semua halaman sekaligus, bukan cuma di satu.",
+  /* Isinya cuma dirinya sendiri, jadi menu sisi menampilkannya sebagai satu
+     baris langsung. Lihat catatan `langsung` di atas. */
+  langsung: true,
   entries: [
     {
-      key: "sosial",
-      label: "Tautan sosial",
-      summary: "Instagram, LinkedIn, dan kawan-kawan — dipakai navbar, footer, dan bagian kontak.",
-      status: "belum",
-      approxCount: 4,
+      key: "footer",
+      /* Sama persis dengan label kelompoknya, dan memang harus: keduanya
+         benda yang sama, dan menu sisi cuma mencetak salah satunya. */
+      label: "Footer",
+      /* Menyebut navbar meski kelompoknya bernama "Footer": tautan sosial di
+         sini SATU-SATUNYA daftar sosial situs, dan menu HP di navbar
+         membacanya juga (`src/data/footer.ts`). Editor yang mengubah URL
+         Instagram di sini mengubah keduanya, dan lebih baik tahu di depan
+         daripada menemukannya sesudah tayang. */
+      summary:
+        "Surel, alamat, baris hak cipta, dan tautan sosial di dasar halaman — tautan sosialnya dipakai menu HP di navbar juga.",
+      status: "siap",
+      /* Satu, dan selamanya satu: kaki halaman satu baris di database,
+         dijaga CHECK `footer_satu_baris`. Tautan sosialnya yang bisa
+         bertambah, dan itu tabel anak — bukan baris kedua di sini. */
+      approxCount: 1,
     },
   ],
 };
 
 /** Semua kelompok yang tampil di beranda, dalam urutan tampil. */
-export const CONTENT_GROUPS: readonly ContentPage[] = [...CONTENT_PAGES, SITE_WIDE];
+export const CONTENT_GROUPS: readonly ContentPage[] = [...CONTENT_PAGES, FOOTER_GROUP];
 
 /** Cari satu entri lewat key-nya, dari kelompok mana pun. */
 export function findEntry(key: string): { page: ContentPage; entry: ContentEntry } | null {

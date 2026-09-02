@@ -48,7 +48,13 @@ export function Beranda({
               <div className="entri-teks">
                 <strong>{entri.label}</strong>{" "}
                 <code className="alamat">
-                  {halaman.label} · {halaman.path}
+                  {/* Kelompok `langsung` menyebut alamatnya saja: judulnya
+                      sudah tercetak sebagai nama entri tepat di sebelah kiri,
+                      jadi "Footer · Footer" cuma mengulang. Dan alamat kaki
+                      halaman memang bukan satu halaman — ia ada di semuanya. */}
+                  {halaman.langsung
+                    ? "Semua halaman"
+                    : `${halaman.label} · ${halaman.path}`}
                 </code>
                 <p className="petunjuk">{entri.summary}</p>
                 <p className="petunjuk">{keterangan[entri.key] ?? ""}</p>

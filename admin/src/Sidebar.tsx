@@ -2,7 +2,7 @@
  * Menu sisi: peta halaman situs yang selalu kelihatan.
  *
  * Susunannya sama persis dengan navbar situs (Home, Services, Work, People,
- * lalu "Seluruh situs"), diambil dari `@shared/contentMap` dan dijaga tetap
+ * lalu "Footer"), diambil dari `@shared/contentMap` dan dijaga tetap
  * sinkron oleh `src/lib/contentMap.test.ts`. Editor panel ini tidak pernah
  * perlu tahu ada tabel bernama `jobs`; yang dia tahu adalah "lowongan itu ada
  * di halaman People", dan itulah yang menu ini tunjukkan.
@@ -70,6 +70,28 @@ export function Sidebar({
           </li>
 
           {CONTENT_GROUPS.map((halaman) => {
+            /* Kelompok yang isinya dirinya sendiri (hari ini: Footer) tampil
+               sebagai SATU baris yang langsung membuka layarnya — sederajat
+               dengan "Beranda" di atas, bukan judul yang harus dibuka dulu.
+               Panah yang membuka satu anak bernama sama dengan induknya cuma
+               menambah ketukan tanpa memberi tahu apa pun. */
+            if (halaman.langsung) {
+              const entri = halaman.entries[0];
+              const ini = aktif === entri.key;
+              return (
+                <li key={halaman.key}>
+                  <button
+                    type="button"
+                    className={ini ? "sisi-judul aktif" : "sisi-judul"}
+                    aria-current={ini ? "page" : undefined}
+                    onClick={() => onBuka(entri.key)}
+                  >
+                    <span>{halaman.label}</span>
+                  </button>
+                </li>
+              );
+            }
+
             const buka = terbuka === halaman.key;
             return (
               <li key={halaman.key}>

@@ -21,6 +21,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ambilCrew,
   ambilDeployment,
+  ambilFooter,
   ambilIndustri,
   ambilLowongan,
   ambilNilai,
@@ -35,6 +36,7 @@ import {
   statusPublish,
   type CrewRecord,
   type DeploymentRecord,
+  type FooterRecord,
   type IndustryRecord,
   type JobRecord,
   type Pengguna,
@@ -60,6 +62,7 @@ import { DaftarLayanan } from "./DaftarLayanan";
 import { DaftarTestimoni } from "./DaftarTestimoni";
 import { FormCrew } from "./FormCrew";
 import { FormDeployment } from "./FormDeployment";
+import { FormFooter } from "./FormFooter";
 import { FormIndustri } from "./FormIndustri";
 import { FormLowongan } from "./FormLowongan";
 import { FormNilai } from "./FormNilai";
@@ -92,7 +95,7 @@ function bacaRute(): Rute {
 
   /**
    * Entitas yang layar utamanya LANGSUNG form, tanpa daftar di depannya —
-   * hari ini cuma visi, karena datanya satu baris.
+   * visi dan footer, karena datanya masing-masing satu baris.
    *
    * Bentuk `.../baru` dan `.../ubah/<id>` tidak punya arti untuk mereka, dan
    * membiarkannya lolos bukan sekadar tidak berguna: rantai pemilihan
@@ -100,7 +103,7 @@ function bacaRute(): Rute {
    * membuka form LOWONGAN di alamat yang menjanjikan visi. Persis jenis
    * kerusakan yang dijaga pemeriksaan `siap()` di atas, cuma dari arah lain.
    */
-  const tanpaDaftar = (key: string) => key === "visi";
+  const tanpaDaftar = (key: string) => key === "visi" || key === "footer";
 
   const baru = /^\/([a-z-]+)\/baru$/.exec(h);
   if (baru && siap(baru[1]))
@@ -140,6 +143,8 @@ export function App() {
      memang belum ada di database. Keduanya ditampilkan sama di beranda
      ("belum terisi"), jadi tidak perlu dibedakan. */
   const [visi, setVisi] = useState<VisionRecord | null>(null);
+  /* Sama seperti visi: `null` = belum diambil ATAU barisnya memang belum ada. */
+  const [footer, setFooter] = useState<FooterRecord | null>(null);
   const [pending, setPending] = useState(0);
   const [pesan, setPesan] = useState<string | null>(null);
   const [galat, setGalat] = useState<string | null>(null);
@@ -176,6 +181,7 @@ export function App() {
       hDeployment,
       hProses,
       hVisi,
+      hFooter,
       hPending,
     ] = await Promise.all([
       ambilLowongan(),
@@ -189,6 +195,7 @@ export function App() {
       ambilDeployment(),
       ambilProses(),
       ambilVisi(),
+      ambilFooter(),
       statusPublish(),
     ]);
 
@@ -206,6 +213,7 @@ export function App() {
       hDeployment,
       hProses,
       hVisi,
+      hFooter,
     ].find((h) => !h.ok);
     if (gagal && !gagal.ok) {
       if (gagal.perluMasuk) setUser(null);
@@ -225,6 +233,7 @@ export function App() {
     if (hDeployment.ok) setDeployment(hDeployment.data.deployments);
     if (hProses.ok) setProses(hProses.data.steps);
     if (hVisi.ok) setVisi(hVisi.data.vision);
+    if (hFooter.ok) setFooter(hFooter.data.footer);
     if (hPending.ok) setPending(hPending.data.pending);
   }, []);
 
@@ -342,6 +351,14 @@ export function App() {
       visi === null
         ? "Belum terisi — situs memakai kalimat bawaan."
         : "Terisi" + (visi.unpublished ? ", belum tayang" : ""),
+    /* Alasan sama seperti visi — satu baris, tanpa draf. Bedanya jumlah
+       tautan sosialnya disebut: itu satu-satunya bagian footer yang bisa
+       bertambah dan berkurang, jadi angkanya memberi tahu sesuatu. */
+    footer:
+      footer === null
+        ? "Belum terisi — situs memakai isi bawaan."
+        : `Terisi, ${footer.socials.length} tautan sosial` +
+          (footer.unpublished ? ", belum tayang" : ""),
   };
 
   if (user === undefined) return <div className="bungkus">Memuat…</div>;
@@ -402,6 +419,9 @@ export function App() {
                `#/visi/ubah/<id>` yang bisa dituju. */
             rute.entitas === "visi" ? (
               <FormVisi onSelesai={selesai} />
+            ) : rute.entitas === "footer" ? (
+              /* Footer, alasan sama: `#/footer` langsung formnya. */
+              <FormFooter onSelesai={selesai} />
             ) : rute.entitas === "deployment" ? (
               <DaftarDeployment
                 daftar={deployment}

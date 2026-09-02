@@ -1,6 +1,6 @@
 /**
  * Skema database CMS — lowongan, nilai, crew, proyek, case study, layanan,
- * testimoni, dan visi.
+ * testimoni, visi, dan kaki halaman.
  *
  * Dibaca dua arah: `drizzle-kit` menerjemahkannya jadi migrasi SQL, dan kode
  * server memakainya sebagai tipe query. Jadi berkas ini SATU-SATUNYA tempat
@@ -1169,6 +1169,95 @@ export const vision = pgTable(
   ],
 );
 
+/* ──────────────────────── kaki halaman ────────────────────── */
+
+/**
+ * Isi kaki halaman — surel, alamat, baris hak cipta.
+ *
+ * ‼️ TABEL SATU BARIS, dipaksakan lewat `check` seperti `vision`. Yang kedua
+ * dan sejauh ini yang terakhir. Alasan tekniknya identik: kalau baris kedua
+ * pernah lolos masuk, `getFooter()` akan memilih salah satunya secara acak
+ * antar query dan alamat kantor berganti-ganti tiap publish tanpa satu pun
+ * galat yang bisa dilacak.
+ *
+ * Alasan KONSEPTUALNYA berbeda dan lebih sederhana daripada visi: cuma ada
+ * satu kaki halaman di situs ini. `SiteFooter.tsx` sengaja dipakai bersama
+ * bagian Contact di keempat halaman DAN halaman detail lowongan, supaya alamat
+ * kantor yang pindah tidak punya dua tempat untuk diperbarui — tabel berdaftar
+ * di sini akan mengembalikan persis masalah itu lewat pintu belakang.
+ *
+ * Tiga kolom yang ada di tabel konten berdaftar sengaja tidak ada, sama
+ * seperti `vision`: `state` (kaki halaman tidak punya keadaan draft — ia ikut
+ * setiap halaman), `sortOrder` (tidak ada yang bisa diurutkan terhadap apa
+ * pun), dan `deletedAt` (tidak ada tombol hapus, jadi kolomnya akan selalu
+ * `null` dan cuma memberi kesan ada jalur hapus yang tidak ada).
+ */
+export const footer = pgTable(
+  "footer",
+  {
+    /** Selalu 1, alasan lengkapnya di `vision.id`: angka tetap membuat
+     *  barisnya bisa DISEBUT (`where id = 1`), dan itu yang memungkinkan
+     *  upsert satu perintah tanpa membaca dulu. */
+    id: integer("id").primaryKey().default(1),
+    /** Alamat surel saja, tanpa `mailto:` — situs yang menambahkannya. */
+    email: text("email").notNull().default(""),
+    /** Alamat kantor, satu baris. */
+    address: text("address").notNull().default(""),
+    /**
+     * Baris hak cipta TANPA tahun dan TANPA lambang ©.
+     *
+     * Situs mencetak `© {new Date().getFullYear()}` di depannya saat render.
+     * Menyimpan tahunnya di sini berarti kaki halaman jadi salah tiap 1
+     * Januari sampai ada yang ingat menyuntingnya — dan tidak ada yang
+     * memberitahu siapa pun. `validateFooter.ts` yang menolaknya di depan.
+     */
+    copyright: text("copyright").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+  },
+  (t) => [check("footer_satu_baris", sql`${t.id} = 1`)],
+);
+
+/**
+ * Tautan sosial di kaki halaman — satu baris per tautan.
+ *
+ * Tabel anak dengan `position` eksplisit, pola yang sama dengan
+ * `service_subs`: urutannya URUTAN TAMPIL dari kiri ke kanan, dan Postgres
+ * tidak menjanjikan urutan baris apa pun tanpa `ORDER BY`. Ditulis
+ * hapus-lalu-sisip di dalam satu transaksi, sama seperti `crew_socials`.
+ *
+ * ⚠️ BUKAN salinan `crew_socials`, meski namanya bersaudara. Yang di sana
+ * memakai `socialPlatformEnum` karena situs yang menentukan tulisan dan
+ * ikonnya; yang di sini `label` teks bebas karena kaki halaman mencetaknya apa
+ * adanya. Menyatukan keduanya berarti kanal baru (TikTok, YouTube) butuh
+ * migrasi database sebelum editor bisa menambahkannya.
+ *
+ * ‼️ Daftar ini SATU-SATUNYA daftar sosial situs: menu HP di navbar
+ * membacanya juga (`src/data/footer.ts`). Dulu ia literal di
+ * `src/data/socials.ts` yang dipakai bersama kedua komponen, dan sifat itu
+ * dipertahankan justru supaya keduanya tidak bisa berbeda.
+ */
+export const footerSocials = pgTable(
+  "footer_socials",
+  {
+    footerId: integer("footer_id")
+      .notNull()
+      .references(() => footer.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    /** Yang tercetak, misalnya "Instagram". */
+    label: text("label").notNull(),
+    /** Alamat lengkapnya berikut `https://` — dijaga `validateFooter.ts`,
+     *  karena tautan tanpa skema mendarat di 404 cogniti.id sendiri. */
+    href: text("href").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.footerId, t.position] })],
+);
+
 /* ──────────────────────── akun & sesi ─────────────────────── */
 
 export const users = pgTable("users", {
@@ -1315,6 +1404,17 @@ export const deploymentsRelations = relations(deployments, ({ one }) => ({
 
 export const industriesRelations = relations(industries, ({ one }) => ({
   photo: one(images, { fields: [industries.photoId], references: [images.id] }),
+}));
+
+export const footerRelations = relations(footer, ({ many }) => ({
+  socials: many(footerSocials),
+}));
+
+export const footerSocialsRelations = relations(footerSocials, ({ one }) => ({
+  footer: one(footer, {
+    fields: [footerSocials.footerId],
+    references: [footer.id],
+  }),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({

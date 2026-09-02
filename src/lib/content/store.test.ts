@@ -37,6 +37,7 @@ const payload = (jobs: Job[]): ContentPayload => ({
   version: 1,
   generatedAt: "2026-08-31T00:00:00.000Z",
   vision: null,
+  footer: null,
   jobs,
   values: [],
   crew: [],

@@ -17,6 +17,7 @@ import type { CaseStudy } from "@shared/caseStudy";
 import type { Service } from "@shared/service";
 import type { Testimonial } from "@shared/testimonial";
 import type { Vision } from "@shared/vision";
+import type { Footer } from "@shared/footer";
 import type { ProcessStep } from "@shared/processStep";
 import type { CrewFieldErrors, CrewInput } from "@shared/validateCrew";
 import type { JobFieldErrors, JobInput } from "@shared/validateJob";
@@ -43,6 +44,7 @@ import type {
 } from "@shared/validateTestimonial";
 import type { ServiceFieldErrors, ServiceInput } from "@shared/validateService";
 import type { VisionFieldErrors, VisionInput } from "@shared/validateVision";
+import type { FooterFieldErrors, FooterInput } from "@shared/validateFooter";
 import type {
   ProcessStepFieldErrors,
   ProcessStepInput,
@@ -127,6 +129,15 @@ export type VisionRecord = Vision & {
   unpublished: boolean;
 };
 
+/** Tanpa `id` juga, alasan yang sama dengan `VisionRecord`: barisnya cuma satu
+ *  dan alamatnya endpoint-nya sendiri (`/api/footer`). */
+export type FooterRecord = Footer & {
+  updatedAt: string;
+  publishedAt: string | null;
+  /** Ada perubahan yang belum ikut Publish. */
+  unpublished: boolean;
+};
+
 export type ImageRow = {
   id: string;
   path: string;
@@ -164,7 +175,8 @@ export type FieldErrors = JobFieldErrors &
   IndustryFieldErrors &
   DeploymentFieldErrors &
   ProcessStepFieldErrors &
-  VisionFieldErrors;
+  VisionFieldErrors &
+  FooterFieldErrors;
 
 async function minta<T>(path: string, init: RequestInit = {}): Promise<Hasil<T>> {
   let res: Response;
@@ -532,6 +544,26 @@ export const ambilVisi = () => minta<{ vision: VisionRecord | null }>("/api/visi
 export const simpanVisi = (input: VisionInput) =>
   minta<{ vision: VisionRecord }>("/api/vision", kirimJson("PUT", input));
 
+/* ── kaki halaman (dasar semua halaman) ─────────────────────────────── */
+
+/**
+ * Dua fungsi saja, bentuk yang sama dengan visi dan karena alasan yang sama.
+ *
+ * `PUT` yang sama menangani pengisian pertama maupun perubahan berikutnya
+ * (server memakai upsert), dan tidak ada yang bisa dihapus — kaki halaman ikut
+ * setiap halaman situs.
+ *
+ * Tautan sosialnya tidak punya endpoint sendiri: ia ikut di dalam body `PUT`,
+ * seluruh daftarnya sekaligus, dan URUTAN KIRIM itulah urutan tampilnya.
+ */
+
+/** `footer: null` berarti barisnya belum ada di database, bukan galat.
+ *  Form membukanya sebagai isian kosong. */
+export const ambilFooter = () => minta<{ footer: FooterRecord | null }>("/api/footer");
+
+export const simpanFooter = (input: FooterInput) =>
+  minta<{ footer: FooterRecord }>("/api/footer", kirimJson("PUT", input));
+
 /* ── publish ────────────────────────────────────────────────────────── */
 
 export const statusPublish = () =>
@@ -552,6 +584,8 @@ export const tayangkan = () =>
     /* Bukan cacah — visi selalu tepat satu. `false` berarti situs masih
        memakai cadangan bundle karena barisnya belum ada. */
     vision: boolean;
+    /* Sama: kaki halaman selalu tepat satu. */
+    footer: boolean;
     generatedAt: string;
     warning: string | null;
   }>(

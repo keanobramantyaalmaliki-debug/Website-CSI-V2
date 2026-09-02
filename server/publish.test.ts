@@ -35,6 +35,7 @@ const {
   testimonialBody,
   valueBody,
   visionBody,
+  footerBody,
 } = await import("./test/helpers");
 
 /* Pastikan chdir-nya benar-benar kena sebelum ada satu pun berkas ditulis. */
@@ -119,6 +120,15 @@ const simpanVisi = async (over: Record<string, unknown> = {}) => {
     body: JSON.stringify(visionBody(over)),
   });
   return (await json<{ vision: { statement: string } }>(res)).vision;
+};
+
+/* `PUT` juga, alasan sama seperti visi. */
+const simpanFooter = async (over: Record<string, unknown> = {}) => {
+  const res = await api("/api/footer", {
+    method: "PUT",
+    body: JSON.stringify(footerBody(over)),
+  });
+  return (await json<{ footer: { email: string } }>(res)).footer;
 };
 
 const bacaContent = async () =>
@@ -588,6 +598,75 @@ describe("visi ikut ke content.json", () => {
   });
 });
 
+describe("kaki halaman ikut ke content.json", () => {
+  /* Sama seperti visi: bukan daftar, dan boleh `null` — artinya "barisnya
+     belum ada di database", bukan "editor mengosongkannya". */
+  it("null selama barisnya belum pernah disimpan", async () => {
+    const hasil = await publish(aktor);
+    expect(hasil.footer).toBe(false);
+    expect((await bacaContent()).footer).toBeNull();
+  });
+
+  it("terangkut utuh beserta tautannya, dalam urutan yang disimpan", async () => {
+    await simpanFooter({
+      email: "halo@cogniti.id",
+      socials: [
+        { label: "Facebook", href: "https://facebook.com/cogniti" },
+        { label: "Instagram", href: "https://instagram.com/cogniti.id" },
+      ],
+    });
+
+    const hasil = await publish(aktor);
+    expect(hasil.footer).toBe(true);
+
+    const kaki = (await bacaContent()).footer;
+    expect(kaki.email).toBe("halo@cogniti.id");
+    expect(kaki.socials).toEqual([
+      { label: "Facebook", href: "https://facebook.com/cogniti" },
+      { label: "Instagram", href: "https://instagram.com/cogniti.id" },
+    ]);
+  });
+
+  it("tidak membocorkan kolom yang cuma urusan admin", async () => {
+    await simpanFooter();
+    await publish(aktor);
+
+    const kaki = (await bacaContent()).footer;
+    expect(Object.keys(kaki).sort()).toEqual([
+      "address",
+      "copyright",
+      "email",
+      "socials",
+    ]);
+    /* Tautannya juga: `footer_id` dan `position` cuma cara database menjaga
+       urutan — yang tayang urutan lariknya sendiri. */
+    expect(Object.keys(kaki.socials[0]).sort()).toEqual(["href", "label"]);
+  });
+
+  /* Daftar tautan yang dikosongkan harus SAMPAI ke pengunjung sebagai larik
+     kosong, bukan hilang dari berkasnya — `src/data/footer.ts` membedakan
+     "kosong" dari "tidak ada", dan pembedaan itu cuma berguna kalau publish
+     benar-benar menuliskan yang kosong. */
+  it("daftar tautan yang dikosongkan tayang sebagai larik kosong", async () => {
+    await simpanFooter({ socials: [] });
+    await publish(aktor);
+
+    const kaki = (await bacaContent()).footer;
+    expect(kaki.socials).toEqual([]);
+  });
+
+  it("menimpa yang tayang, bukan menambah di sebelahnya", async () => {
+    await simpanFooter({ email: "satu@cogniti.id" });
+    await publish(aktor);
+    await simpanFooter({ email: "dua@cogniti.id" });
+    await publish(aktor);
+
+    const kaki = (await bacaContent()).footer;
+    expect(Array.isArray(kaki)).toBe(false);
+    expect(kaki.email).toBe("dua@cogniti.id");
+  });
+});
+
 describe("badge perubahan belum tayang", () => {
   it("nol sesudah publish", async () => {
     await buat();
@@ -642,6 +721,15 @@ describe("badge perubahan belum tayang", () => {
        badge inilah SATU-SATUNYA yang memberi tahu editor bahwa kalimat yang
        barusan diketik belum sampai ke pengunjung. */
     await simpanVisi({ statement: "Kalimat yang baru diketik." });
+    expect(await pendingCount()).toBe(1);
+  });
+
+  it("menghitung kaki halaman yang diubah — ia juga tanpa draft", async () => {
+    await simpanFooter();
+    await publish(aktor);
+    expect(await pendingCount()).toBe(0);
+
+    await simpanFooter({ email: "baru@cogniti.id" });
     expect(await pendingCount()).toBe(1);
   });
 
