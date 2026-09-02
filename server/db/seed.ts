@@ -30,6 +30,7 @@ import { FALLBACK_WORK_PROJECTS } from "../../src/data/workProjectsFallback";
 import { FALLBACK_CASE_STUDIES } from "../../src/data/caseStudiesFallback";
 import { FALLBACK_TESTIMONIALS } from "../../src/data/testimonialsFallback";
 import { FALLBACK_SERVICES } from "../../src/data/servicesFallback";
+import { FALLBACK_VISION } from "../../src/data/visionFallback";
 import { db, sql } from "./client";
 import {
   crewMembers,
@@ -46,6 +47,7 @@ import {
   caseStudies,
   caseStudyScopes,
   testimonials,
+  vision,
   workProjectTags,
 } from "./schema";
 
@@ -569,6 +571,71 @@ async function seedTestimonials() {
   );
 }
 
+/**
+ * Seksi Visi di halaman depan.
+ *
+ * Satu baris, bukan daftar — jadi gerbangnya tetap `count > 0` seperti yang
+ * lain, tapi artinya lebih tegas: barisnya ada atau tidak ada sama sekali.
+ * Gerbangnya tetap punya sendiri, alasan yang sama dengan `seedValues`.
+ *
+ * Tidak ada `state` yang perlu diisi di sini. Tabelnya memang tidak punya
+ * kolomnya, karena seksi Visi TIDAK BOLEH menghilang: `pt-20 pb-20` miliknya
+ * satu-satunya yang menjatah celah 80px antara plank Industries dan Contact di
+ * mobile. Yang bisa diubah editor cuma isinya, bukan keberadaannya.
+ */
+async function seedVision() {
+  const [{ count }] = await db
+    .select({ count: raw<number>`count(*)::int` })
+    .from(vision);
+
+  if (count > 0) {
+    console.log(`Tabel vision sudah berisi ${count} baris — dilewati.`);
+    return;
+  }
+
+  await db.transaction(async (tx) => {
+    /* Fotonya `source: "static"`: berkasnya milik repo di `public/home/`
+       (hasil grading ffmpeg manual), jadi CMS boleh MEMILIHNYA tapi tidak
+       boleh menghapusnya dari disk. */
+    let photoId: string | null = null;
+    if (FALLBACK_VISION.photo) {
+      const [row] = await tx
+        .insert(images)
+        .values({
+          path: FALLBACK_VISION.photo,
+          source: "static" as const,
+          originalName: FALLBACK_VISION.photo.split("/").pop() ?? null,
+        })
+        .onConflictDoNothing({ target: images.path })
+        .returning({ id: images.id });
+
+      /* `onConflictDoNothing` tidak mengembalikan baris kalau path-nya sudah
+         terdaftar, jadi baris lamanya dicari — sama seperti di `seedValues`. */
+      photoId =
+        row?.id ??
+        (
+          await tx
+            .select({ id: images.id })
+            .from(images)
+            .where(eq(images.path, FALLBACK_VISION.photo))
+        )[0]?.id ??
+        null;
+    }
+
+    await tx.insert(vision).values({
+      /* `id: 1` ditulis eksplisit walau kolomnya sudah `default(1)`, supaya
+         batasan satu-barisnya terbaca di sini juga dan bukan cuma di skema. */
+      id: 1,
+      statement: FALLBACK_VISION.statement,
+      photoId,
+      /* Sudah tayang hari ini — lihat alasan yang sama di seed lowongan. */
+      publishedAt: new Date(),
+    });
+  });
+
+  console.log("Seed selesai: visi masuk ke database.");
+}
+
 await seedJobs();
 await seedValues();
 await seedCrew();
@@ -576,4 +643,5 @@ await seedWorkProjects();
 await seedCaseStudies();
 await seedServices();
 await seedTestimonials();
+await seedVision();
 await sql.end();

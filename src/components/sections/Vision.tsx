@@ -1,13 +1,29 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "motion/react";
+
+import { vision } from "@/data/vision";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-const HEADTEXT =
-  "To become a trusted technology partner that empowers organizations through intelligent digital innovation, creating sustainable value for businesses and communities worldwide.";
-
 export default function Vision() {
+  /**
+   * Dipanggil DI DALAM komponen, bukan di ruang modul.
+   *
+   * Kalimatnya dulu `const HEADTEXT = "…"` di sini. Menggantinya jadi
+   * `const HEADTEXT = vision().statement` di tempat yang sama akan tetap
+   * "jalan" dan tetap salah: nilainya dihitung saat modul ini diimpor —
+   * sebelum `loadContent()` di `main.tsx` selesai — jadi isi CMS-nya tidak
+   * akan pernah kelihatan, tanpa satu pun error. Jebakan yang sama sudah
+   * memakan empat slice sebelumnya.
+   *
+   * `useMemo` tanpa dependensi cukup: `content.json` tidak berubah lagi
+   * sesudah dimuat sekali, dan yang dihindari cuma pemanggilan ulang tiap
+   * render.
+   */
+  const { statement, photo } = useMemo(() => vision(), []);
+
   return (
     <section
       id="vision"
@@ -19,7 +35,7 @@ export default function Vision() {
     >
       <div className="relative z-10">
         <p className="max-w-[1600px] text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
-          {HEADTEXT}
+          {statement}
         </p>
 
         <motion.div
@@ -34,7 +50,7 @@ export default function Vision() {
           transition={{ duration: 0.7, ease: EASE }}
         >
           <img
-            src="/home/P1330392_velocity.webp"
+            src={photo}
             alt="CSI office"
             className="h-full w-full object-cover"
             loading="lazy"

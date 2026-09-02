@@ -36,6 +36,7 @@ const job = (over: Partial<Job> = {}): Job => ({
 const payload = (jobs: Job[]): ContentPayload => ({
   version: 1,
   generatedAt: "2026-08-31T00:00:00.000Z",
+  vision: null,
   jobs,
   values: [],
   crew: [],

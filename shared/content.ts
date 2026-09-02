@@ -27,6 +27,7 @@ import type { WorkProject } from "./workProject";
 import type { CaseStudy } from "./caseStudy";
 import type { Testimonial } from "./testimonial";
 import type { Service } from "./service";
+import type { Vision } from "./vision";
 
 export type ContentPayload = {
   version: 1;
@@ -58,6 +59,18 @@ export type ContentPayload = {
    *  adalah kutipan yang TERLIHAT saat halaman dibuka, sisanya baru muncul
    *  kalau pengunjung menekan panah. */
   testimonials: Testimonial[];
+  /**
+   * Seksi Visi di halaman depan. SATU objek, bukan larik — dan satu-satunya
+   * field di sini yang bisa bernilai `null`.
+   *
+   * `null` artinya "belum ada barisnya di database", bukan "editor
+   * mengosongkannya": beda dari daftar, seksi Visi tidak punya keadaan
+   * menghilang, karena `pt-20 pb-20` miliknya satu-satunya yang menjatah celah
+   * 80px antara plank Industries dan Contact di mobile. Situs memperlakukan
+   * `null` persis seperti bagian yang belum ada di `content.json` lama — jatuh
+   * ke isi bundle-nya.
+   */
+  vision: Vision | null;
 };
 
 export const CONTENT_VERSION = 1 as const;

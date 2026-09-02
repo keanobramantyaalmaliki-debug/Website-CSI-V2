@@ -31,8 +31,17 @@ export function BarPublish({
       return;
     }
 
-    const { jobs, values, crew, projects, caseStudies, testimonials, warning } =
-      hasil.data;
+    const {
+      jobs,
+      values,
+      crew,
+      projects,
+      caseStudies,
+      services,
+      testimonials,
+      vision,
+      warning,
+    } = hasil.data;
 
     /* Semua entitas disebut, bukan cuma lowongan. Kalimat ini dulu berhenti di
        "N lowongan" karena lowongan penghuni pertamanya, dan sesudah entitas
@@ -46,12 +55,17 @@ export function BarPublish({
       [crew, "orang"],
       [projects, "proyek"],
       [caseStudies, "case study"],
+      [services, "layanan"],
       [testimonials, "testimoni"],
     ] as const;
-    const isi = bagian
-      .filter(([n]) => n > 0)
-      .map(([n, nama]) => `${n} ${nama}`)
-      .join(", ");
+    const isi = [
+      ...bagian.filter(([n]) => n > 0).map(([n, nama]) => `${n} ${nama}`),
+      /* Visi disebut namanya saja, tanpa angka: ia bukan cacah baris melainkan
+         ada/tidak ada, dan "1 visi" akan terbaca seolah visi kedua mungkin
+         ada. `false` berarti barisnya belum ada di database sama sekali — dan
+         itu memang bukan sesuatu yang barusan tayang. */
+      ...(vision ? ["visi"] : []),
+    ].join(", ");
 
     onSelesai(
       `Sudah tayang: ${isi || "tidak ada apa pun yang"} sekarang terlihat pengunjung.` +

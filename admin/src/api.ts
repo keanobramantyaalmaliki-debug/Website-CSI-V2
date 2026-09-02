@@ -14,6 +14,7 @@ import type { WorkProject } from "@shared/workProject";
 import type { CaseStudy } from "@shared/caseStudy";
 import type { Service } from "@shared/service";
 import type { Testimonial } from "@shared/testimonial";
+import type { Vision } from "@shared/vision";
 import type { CrewFieldErrors, CrewInput } from "@shared/validateCrew";
 import type { JobFieldErrors, JobInput } from "@shared/validateJob";
 import type { ValueFieldErrors, ValueInput } from "@shared/validateValue";
@@ -30,6 +31,7 @@ import type {
   TestimonialInput,
 } from "@shared/validateTestimonial";
 import type { ServiceFieldErrors, ServiceInput } from "@shared/validateService";
+import type { VisionFieldErrors, VisionInput } from "@shared/validateVision";
 
 export type JobRecord = Job & {
   updatedAt: string;
@@ -80,6 +82,15 @@ export type ServiceRecord = Service & {
   unpublished: boolean;
 };
 
+/** Beda dari tetangganya di atas: tanpa `id`, karena barisnya cuma satu dan
+ *  alamatnya endpoint-nya sendiri (`/api/vision`). */
+export type VisionRecord = Vision & {
+  updatedAt: string;
+  publishedAt: string | null;
+  /** Ada perubahan yang belum ikut Publish. */
+  unpublished: boolean;
+};
+
 export type ImageRow = {
   id: string;
   path: string;
@@ -113,7 +124,8 @@ export type FieldErrors = JobFieldErrors &
   WorkProjectFieldErrors &
   CaseStudyFieldErrors &
   ServiceFieldErrors &
-  TestimonialFieldErrors;
+  TestimonialFieldErrors &
+  VisionFieldErrors;
 
 async function minta<T>(path: string, init: RequestInit = {}): Promise<Hasil<T>> {
   let res: Response;
@@ -363,6 +375,23 @@ export const urutkanTestimoni = (ids: string[]) =>
     kirimJson("POST", { ids }),
   );
 
+/* ── visi (halaman depan → paragraf penutup) ────────────────────────── */
+
+/**
+ * Dua fungsi saja, dan tidak ada `buat`/`hapus`/`urutkan`.
+ *
+ * Visi satu baris: `PUT` yang sama menangani pengisian pertama maupun
+ * perubahan berikutnya (server memakai upsert), dan tidak ada yang bisa
+ * dihapus — seksinya tidak boleh menghilang dari halaman depan.
+ */
+
+/** `vision: null` berarti barisnya belum ada di database, bukan galat.
+ *  Form membukanya sebagai isian kosong. */
+export const ambilVisi = () => minta<{ vision: VisionRecord | null }>("/api/vision");
+
+export const simpanVisi = (input: VisionInput) =>
+  minta<{ vision: VisionRecord }>("/api/vision", kirimJson("PUT", input));
+
 /* ── publish ────────────────────────────────────────────────────────── */
 
 export const statusPublish = () =>
@@ -377,6 +406,9 @@ export const tayangkan = () =>
     caseStudies: number;
     services: number;
     testimonials: number;
+    /* Bukan cacah — visi selalu tepat satu. `false` berarti situs masih
+       memakai cadangan bundle karena barisnya belum ada. */
+    vision: boolean;
     generatedAt: string;
     warning: string | null;
   }>(

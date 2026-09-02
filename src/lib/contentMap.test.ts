@@ -76,10 +76,11 @@ describe("bentuk peta konten", () => {
     const siap = CONTENT_GROUPS.flatMap((p) => p.entries)
       .filter((e) => e.status === "siap")
       .map((e) => e.key);
-    /* Urutannya urutan halaman, bukan urutan pengerjaan: Services datang
-       sebelum Work, Work sebelum People, dan di dalam People nilai dan crew
-       berada di atas lowongan. */
+    /* Urutannya urutan halaman, bukan urutan pengerjaan: Beranda datang
+       sebelum Services, Services sebelum Work, Work sebelum People, dan di
+       dalam People nilai dan crew berada di atas lowongan. */
     expect(siap).toEqual([
+      "visi",
       "layanan",
       "testimoni",
       "selected-work",

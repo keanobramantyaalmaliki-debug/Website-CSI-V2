@@ -1,5 +1,6 @@
 /**
- * Skema database CMS — lowongan, nilai, crew, proyek, dan case study.
+ * Skema database CMS — lowongan, nilai, crew, proyek, case study, layanan,
+ * testimoni, dan visi.
  *
  * Dibaca dua arah: `drizzle-kit` menerjemahkannya jadi migrasi SQL, dan kode
  * server memakainya sebagai tipe query. Jadi berkas ini SATU-SATUNYA tempat
@@ -19,6 +20,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -728,6 +730,72 @@ export const testimonials = pgTable(
       .on(t.name)
       .where(sql`${t.deletedAt} is null`),
     index("testimonials_order").on(t.sortOrder),
+  ],
+);
+
+/* ──────────────────────────── visi ────────────────────────── */
+
+/**
+ * Visi — paragraf penutup halaman depan, tepat sebelum bagian kontak.
+ *
+ * ‼️ TABEL SATU BARIS, dan itu dipaksakan di database lewat `check` di bawah,
+ * bukan sekadar disepakati di kode. Ini satu-satunya tabel konten yang begitu.
+ *
+ * Kenapa dipaksakan dan tidak dipercayakan ke repo: kalau baris kedua pernah
+ * lolos masuk, `getVision()` akan memilih salah satunya secara acak antar
+ * query — halaman depan lalu berganti-ganti kalimat tiap kali dipublish,
+ * tanpa satu pun galat yang bisa dilacak. `check` membuat keadaan itu mustahil
+ * ada, bukan sekadar tidak diharapkan.
+ *
+ * Tiga kolom yang ada di SEMUA tabel konten lain sengaja tidak ada di sini.
+ * Alasan lengkapnya di `shared/vision.ts`; ringkasnya:
+ *
+ * - **`state`** — draft pada entitas tunggal berarti seksinya hilang dari
+ *   halaman depan, dan seksi inilah satu-satunya yang menjatah celah 80px
+ *   antara plank Industries (tanpa `pb`) dan Contact (`pt-0`) di mobile.
+ * - **`sortOrder`** — tidak ada yang bisa diurutkan terhadap apa pun.
+ * - **`deletedAt`** — visi tidak bisa dihapus, cuma diganti kalimatnya. Tanpa
+ *   tombol hapus, kolomnya tidak akan pernah terisi; kolom yang selalu `null`
+ *   cuma memberi kesan ada jalur hapus yang sebenarnya tidak ada.
+ *
+ * `publishedAt` TETAP ada: badge "belum tayang" bekerja dari perbandingan cap
+ * waktu dan tidak peduli entitasnya tunggal atau daftar.
+ */
+export const vision = pgTable(
+  "vision",
+  {
+    /**
+     * Selalu 1. Bukan `uuid` seperti tabel lain, dan bukan gaya yang tidak
+     * konsisten: id acak pada tabel satu baris membuat "baris yang mana"
+     * berubah tiap kali database dibangun ulang, sehingga repo terpaksa
+     * mencarinya lewat `limit 1` alih-alih menyebutnya. Angka tetap membuat
+     * baris itu bisa DISEBUT — `where id = 1` — dan itulah yang memungkinkan
+     * upsert satu perintah tanpa membaca dulu.
+     */
+    id: integer("id").primaryKey().default(1),
+    /** Kalimat visinya. Boleh kosong HANYA di tingkat database, supaya seed
+     *  dan migrasi tidak butuh nilai; yang menjaga isinya `validateVision.ts`,
+     *  dan di sana ia wajib. */
+    statement: text("statement").notNull().default(""),
+    /** `set null` dan bukan `cascade`, sama seperti di `jobs` dan
+     *  `people_values`: menghapus sebuah gambar tidak boleh ikut menghapus
+     *  satu-satunya baris visi — yang tersisa nanti bukan foto yang hilang,
+     *  melainkan seluruh seksinya. */
+    photoId: uuid("photo_id").references(() => images.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+  },
+  (t) => [
+    /* Inilah yang membuat tabel ini tidak akan pernah punya baris kedua —
+       termasuk lewat `psql` langsung, di mana kode server tidak ikut campur. */
+    check("vision_satu_baris", sql`${t.id} = 1`),
   ],
 );
 

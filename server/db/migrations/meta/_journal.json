@@ -50,6 +50,13 @@
       "when": 1788315584190,
       "tag": "0006_furry_fenris",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788318192759,
+      "tag": "0007_useful_wasp",
+      "breakpoints": true
     }
   ]
 }

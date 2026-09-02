@@ -26,6 +26,7 @@ import {
   ambilCaseStudy,
   ambilLayanan,
   ambilTestimoni,
+  ambilVisi,
   keluar,
   siapaAku,
   statusPublish,
@@ -37,6 +38,7 @@ import {
   type CaseStudyRecord,
   type TestimonialRecord,
   type ServiceRecord,
+  type VisionRecord,
 } from "./api";
 import { BarPublish } from "./BarPublish";
 import { Beranda } from "./Beranda";
@@ -54,6 +56,7 @@ import { FormProyek } from "./FormProyek";
 import { FormCaseStudy } from "./FormCaseStudy";
 import { FormLayanan } from "./FormLayanan";
 import { FormTestimoni } from "./FormTestimoni";
+import { FormVisi } from "./FormVisi";
 import { Masuk } from "./Masuk";
 import { Sidebar } from "./Sidebar";
 import { TombolTema } from "./Tema";
@@ -75,13 +78,29 @@ function bacaRute(): Rute {
      membuka form lowongan dengan alamat yang menjanjikan hal lain. */
   const siap = (key: string) => findEntry(key)?.entry.status === "siap";
 
+  /**
+   * Entitas yang layar utamanya LANGSUNG form, tanpa daftar di depannya —
+   * hari ini cuma visi, karena datanya satu baris.
+   *
+   * Bentuk `.../baru` dan `.../ubah/<id>` tidak punya arti untuk mereka, dan
+   * membiarkannya lolos bukan sekadar tidak berguna: rantai pemilihan
+   * komponen di bawah berakhir di form lowongan, jadi `#/visi/baru` akan
+   * membuka form LOWONGAN di alamat yang menjanjikan visi. Persis jenis
+   * kerusakan yang dijaga pemeriksaan `siap()` di atas, cuma dari arah lain.
+   */
+  const tanpaDaftar = (key: string) => key === "visi";
+
   const baru = /^\/([a-z-]+)\/baru$/.exec(h);
   if (baru && siap(baru[1]))
-    return { nama: "form", entitas: baru[1], id: null };
+    return tanpaDaftar(baru[1])
+      ? { nama: "daftar", entitas: baru[1] }
+      : { nama: "form", entitas: baru[1], id: null };
 
   const ubah = /^\/([a-z-]+)\/ubah\/(.+)$/.exec(h);
   if (ubah && siap(ubah[1]))
-    return { nama: "form", entitas: ubah[1], id: ubah[2] };
+    return tanpaDaftar(ubah[1])
+      ? { nama: "daftar", entitas: ubah[1] }
+      : { nama: "form", entitas: ubah[1], id: ubah[2] };
 
   const daftar = /^\/([a-z-]+)$/.exec(h);
   if (daftar && siap(daftar[1])) return { nama: "daftar", entitas: daftar[1] };
@@ -102,6 +121,10 @@ export function App() {
   const [cerita, setCerita] = useState<CaseStudyRecord[]>([]);
   const [layanan, setLayanan] = useState<ServiceRecord[]>([]);
   const [testimoni, setTestimoni] = useState<TestimonialRecord[]>([]);
+  /* `null` di sini berarti dua hal sekaligus — belum diambil, atau barisnya
+     memang belum ada di database. Keduanya ditampilkan sama di beranda
+     ("belum terisi"), jadi tidak perlu dibedakan. */
+  const [visi, setVisi] = useState<VisionRecord | null>(null);
   const [pending, setPending] = useState(0);
   const [pesan, setPesan] = useState<string | null>(null);
   const [galat, setGalat] = useState<string | null>(null);
@@ -134,6 +157,7 @@ export function App() {
       hCerita,
       hLayanan,
       hTestimoni,
+      hVisi,
       hPending,
     ] = await Promise.all([
       ambilLowongan(),
@@ -143,6 +167,7 @@ export function App() {
       ambilCaseStudy(),
       ambilLayanan(),
       ambilTestimoni(),
+      ambilVisi(),
       statusPublish(),
     ]);
 
@@ -156,6 +181,7 @@ export function App() {
       hCerita,
       hLayanan,
       hTestimoni,
+      hVisi,
     ].find((h) => !h.ok);
     if (gagal && !gagal.ok) {
       if (gagal.perluMasuk) setUser(null);
@@ -171,6 +197,7 @@ export function App() {
     if (hCerita.ok) setCerita(hCerita.data.studies);
     if (hLayanan.ok) setLayanan(hLayanan.data.services);
     if (hTestimoni.ok) setTestimoni(hTestimoni.data.testimonials);
+    if (hVisi.ok) setVisi(hVisi.data.vision);
     if (hPending.ok) setPending(hPending.data.pending);
   }, []);
 
@@ -259,6 +286,14 @@ export function App() {
       "testimoni",
       "Belum ada testimoni.",
     ),
+    /* Tidak lewat `ringkas()`: yang itu menghitung baris dan menyebut draf,
+       dan visi tidak punya keduanya — jumlahnya selalu satu, dan tidak ada
+       keadaan draft. Yang berguna diketahui editor cuma dua: sudah terisi
+       atau belum, dan apakah masih menunggu Publish. */
+    visi:
+      visi === null
+        ? "Belum terisi — situs memakai kalimat bawaan."
+        : "Terisi" + (visi.unpublished ? ", belum tayang" : ""),
   };
 
   if (user === undefined) return <div className="bungkus">Memuat…</div>;
@@ -313,7 +348,13 @@ export function App() {
                vs `ValueRecord[]`) — dan yang hilang begitu semuanya dijejalkan
                ke satu peta adalah pemeriksaan TypeScript yang menangkap
                ketidakcocokan itu. */
-            rute.entitas === "layanan" ? (
+            /* Visi tidak punya daftar: satu baris, jadi layar entitasnya
+               LANGSUNG formnya. Ditangkap di cabang "daftar" karena itulah
+               bentuk hash-nya (`#/visi`) — tidak ada `#/visi/baru` maupun
+               `#/visi/ubah/<id>` yang bisa dituju. */
+            rute.entitas === "visi" ? (
+              <FormVisi onSelesai={selesai} />
+            ) : rute.entitas === "layanan" ? (
               <DaftarLayanan
                 daftar={layanan}
                 onBaru={() => {

@@ -77,6 +77,7 @@ const payload = (testimonials: unknown[]): ContentPayload =>
   ({
     version: 1,
     generatedAt: new Date().toISOString(),
+    vision: null,
     jobs: [],
     values: [],
     crew: [],

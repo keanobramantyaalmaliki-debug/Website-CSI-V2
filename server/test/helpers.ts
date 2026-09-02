@@ -29,7 +29,7 @@ export async function resetDb(): Promise<void> {
       people_values, crew_socials, crew_members,
       work_project_tags, work_projects,
       case_study_scopes, case_studies, service_subs, services,
-      testimonials, images, users
+      testimonials, vision, images, users
     restart identity cascade
   `);
 }
@@ -155,6 +155,17 @@ export function serviceBody(over: Record<string, unknown> = {}) {
     desc: "Infrastruktur cloud yang aman dan skalabel.",
     subs: ["Cloud Migration", "Serverless"],
     state: "live",
+    ...over,
+  };
+}
+
+/** Bentuk visi minimal yang lolos validasi. Tanpa `state`: visi memang tidak
+ *  punya keadaan draft/live — seksinya selalu tayang. */
+export function visionBody(over: Record<string, unknown> = {}) {
+  return {
+    statement:
+      "To become a trusted technology partner that empowers organizations through intelligent digital innovation.",
+    photo: "/home/P1330392_velocity.webp",
     ...over,
   };
 }

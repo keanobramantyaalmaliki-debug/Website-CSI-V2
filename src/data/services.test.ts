@@ -16,6 +16,7 @@ const dariCms = (over: Record<string, unknown> = {}) => ({
 const kosong = {
   version: 1 as const,
   generatedAt: new Date().toISOString(),
+  vision: null,
   jobs: [],
   values: [],
   crew: [],
@@ -91,6 +92,7 @@ describe("services()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      vision: null,
       jobs: [],
     } as never);
     expect(services()).toEqual(FALLBACK_SERVICES);

@@ -96,7 +96,9 @@ export const CONTENT_PAGES: readonly ContentPage[] = [
         key: "visi",
         label: "Visi",
         summary: "Paragraf penutup sebelum bagian kontak.",
-        status: "belum",
+        status: "siap",
+        /* Satu, dan selamanya satu: seksinya satu baris di database, dijaga
+           CHECK `vision_satu_baris`. Angka ini tidak akan pernah bergerak. */
         approxCount: 1,
       },
     ],

@@ -33,6 +33,7 @@ const {
   resetDb,
   testimonialBody,
   valueBody,
+  visionBody,
 } = await import("./test/helpers");
 
 /* Pastikan chdir-nya benar-benar kena sebelum ada satu pun berkas ditulis. */
@@ -99,6 +100,16 @@ const buatTestimoni = async (over: Record<string, unknown> = {}) => {
   });
   return (await json<{ testimonial: { id: string; name: string } }>(res))
     .testimonial;
+};
+
+/* `PUT`, bukan `POST`: barisnya tidak dibuat lewat panel — ia satu, selalu,
+   dan `saveVision` yang memutuskan apakah menyisipkan atau menimpa. */
+const simpanVisi = async (over: Record<string, unknown> = {}) => {
+  const res = await api("/api/vision", {
+    method: "PUT",
+    body: JSON.stringify(visionBody(over)),
+  });
+  return (await json<{ vision: { statement: string } }>(res)).vision;
 };
 
 const bacaContent = async () =>
@@ -457,6 +468,52 @@ describe("testimoni ikut ke content.json", () => {
   });
 });
 
+describe("visi ikut ke content.json", () => {
+  /* Satu-satunya isian `content.json` yang bukan daftar, dan satu-satunya
+     yang boleh `null`. `null` di sini berarti "barisnya belum ada di
+     database" — bukan "editor mengosongkannya", yang memang tidak mungkin. */
+  it("null selama barisnya belum pernah disimpan", async () => {
+    const hasil = await publish(aktor);
+    expect(hasil.vision).toBe(false);
+    expect((await bacaContent()).vision).toBeNull();
+  });
+
+  it("terangkut utuh sesudah disimpan sekali", async () => {
+    await simpanVisi({ statement: "Visi yang tayang." });
+
+    const hasil = await publish(aktor);
+    expect(hasil.vision).toBe(true);
+    expect((await bacaContent()).vision).toEqual({
+      statement: "Visi yang tayang.",
+      photo: visionBody().photo,
+    });
+  });
+
+  it("tidak membocorkan kolom yang cuma urusan admin", async () => {
+    await simpanVisi();
+    await publish(aktor);
+
+    /* Tanpa `id` juga: nomor barisnya selalu 1, dan mengirimnya ke pengunjung
+       cuma mengundang kode yang mencarinya dengan `find` di berkas yang cuma
+       punya satu. */
+    expect(Object.keys((await bacaContent()).vision).sort()).toEqual([
+      "photo",
+      "statement",
+    ]);
+  });
+
+  it("menimpa yang tayang, bukan menambah di sebelahnya", async () => {
+    await simpanVisi({ statement: "Kalimat pertama." });
+    await publish(aktor);
+    await simpanVisi({ statement: "Kalimat kedua." });
+    await publish(aktor);
+
+    const visi = (await bacaContent()).vision;
+    expect(Array.isArray(visi)).toBe(false);
+    expect(visi.statement).toBe("Kalimat kedua.");
+  });
+});
+
 describe("badge perubahan belum tayang", () => {
   it("nol sesudah publish", async () => {
     await buat();
@@ -499,6 +556,19 @@ describe("badge perubahan belum tayang", () => {
        "10 perubahan belum tayang" tanpa pernah menyentuh apa pun — dan begitu
        angka itu berbohong sekali, ia tidak berguna lagi untuk seterusnya. */
     expect(await pendingCount()).toBe(0);
+  });
+
+  it("menghitung visi yang diubah — ia tidak punya draft yang menjaganya", async () => {
+    await simpanVisi();
+    await publish(aktor);
+    expect(await pendingCount()).toBe(0);
+
+    /* Entitas lain punya Draft/Live: perubahan yang belum siap bisa ditahan
+       di sana dan badge-nya tetap masuk akal. Visi tidak punya keadaan itu —
+       badge inilah SATU-SATUNYA yang memberi tahu editor bahwa kalimat yang
+       barusan diketik belum sampai ke pengunjung. */
+    await simpanVisi({ statement: "Kalimat yang baru diketik." });
+    expect(await pendingCount()).toBe(1);
   });
 
   it("angkanya tetap nol sesudah publish beruntun tanpa suntingan", async () => {

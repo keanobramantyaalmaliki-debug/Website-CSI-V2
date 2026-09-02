@@ -20,6 +20,7 @@ import type { WorkProject } from "@shared/workProject";
 import type { CaseStudy } from "@shared/caseStudy";
 import type { Testimonial } from "@shared/testimonial";
 import type { Service } from "@shared/service";
+import type { Vision } from "@shared/vision";
 
 import { record, type Actor } from "./audit";
 import { db } from "./db/client";
@@ -30,6 +31,7 @@ import {
   peopleValues,
   testimonials,
   services,
+  vision,
   workProjects,
 } from "./db/schema";
 import { env } from "./env";
@@ -40,6 +42,7 @@ import { listWorkProjects } from "./workProjectsRepo";
 import { listCaseStudies } from "./caseStudiesRepo";
 import { listTestimonials } from "./testimonialsRepo";
 import { listServices } from "./servicesRepo";
+import { getVision } from "./visionRepo";
 
 /**
  * `dist/` — hasil build Vite, yang disajikan `serve` di produksi.
@@ -62,6 +65,7 @@ async function collect(): Promise<ContentPayload> {
     studyRows,
     serviceRows,
     testimonialRows,
+    visionRow,
   ] = await Promise.all([
     listJobs({ includeDrafts: false }),
     listValues({ includeDrafts: false }),
@@ -70,6 +74,9 @@ async function collect(): Promise<ContentPayload> {
     listCaseStudies({ includeDrafts: false }),
     listServices({ includeDrafts: false }),
     listTestimonials({ includeDrafts: false }),
+    /* Tanpa `includeDrafts`: visi tidak punya keadaan draft/live sama
+       sekali. Satu-satunya isi yang ada adalah isi yang tayang. */
+    getVision(),
   ]);
 
   const publicJobs: Job[] = jobRows.map(
@@ -107,6 +114,12 @@ async function collect(): Promise<ContentPayload> {
       testimonial,
   );
 
+  /* `null` diteruskan apa adanya kalau barisnya belum ada — situs tahu
+     artinya "pakai isi bundle". Lihat catatan di `shared/content.ts`. */
+  const publicVision: Vision | null = visionRow
+    ? { statement: visionRow.statement, photo: visionRow.photo }
+    : null;
+
   return {
     version: CONTENT_VERSION,
     generatedAt: new Date().toISOString(),
@@ -117,6 +130,7 @@ async function collect(): Promise<ContentPayload> {
     caseStudies: publicCaseStudies,
     services: publicServices,
     testimonials: publicTestimonials,
+    vision: publicVision,
   };
 }
 
@@ -183,6 +197,10 @@ export type PublishResult = {
   caseStudies: number;
   services: number;
   testimonials: number;
+  /** Bukan cacah baris seperti tetangganya — visi selalu tepat satu. Yang
+   *  dilaporkan: apakah isinya datang dari CMS, atau situs masih memakai
+   *  cadangan bundle karena barisnya belum ada. */
+  vision: boolean;
   generatedAt: string;
   warning: string | null;
 };
@@ -208,6 +226,10 @@ export async function publish(actor: Actor): Promise<PublishResult> {
   await db.update(caseStudies).set({ publishedAt: now });
   await db.update(services).set({ publishedAt: now });
   await db.update(testimonials).set({ publishedAt: now });
+  /* Tanpa `where`: tabelnya memang cuma boleh punya satu baris, dijaga
+     CHECK `vision_satu_baris`. Kalau barisnya belum ada, ini tidak
+     menyentuh apa pun dan itu jawaban yang benar. */
+  await db.update(vision).set({ publishedAt: now });
 
   const warning = await purgeCloudflare();
 
@@ -223,6 +245,7 @@ export async function publish(actor: Actor): Promise<PublishResult> {
       caseStudies: payload.caseStudies.length,
       services: payload.services.length,
       testimonials: payload.testimonials.length,
+      vision: payload.vision !== null,
       generatedAt: payload.generatedAt,
     },
   });
@@ -235,6 +258,7 @@ export async function publish(actor: Actor): Promise<PublishResult> {
     caseStudies: payload.caseStudies.length,
     services: payload.services.length,
     testimonials: payload.testimonials.length,
+    vision: payload.vision !== null,
     generatedAt: payload.generatedAt,
     warning,
   };
@@ -285,6 +309,7 @@ export async function pendingCount(): Promise<number> {
     studyRows,
     serviceRows,
     testimonialRows,
+    visionRows,
   ] = await Promise.all([
     db
       .select({
@@ -335,6 +360,24 @@ export async function pendingCount(): Promise<number> {
         deletedAt: testimonials.deletedAt,
       })
       .from(testimonials),
+    /**
+     * `deletedAt: null` dipetakan tetap, karena tabelnya memang tidak punya
+     * kolomnya — seksi Visi tidak bisa dihapus, `pt-20 pb-20` miliknya
+     * satu-satunya yang menjatah celah 80px antara plank Industries dan
+     * Contact di mobile.
+     *
+     * Ditulis di sini alih-alih melonggarkan `Stamps` jadi opsional: `menunggu`
+     * berhak menuntut ketiga cap waktunya disebut, supaya entitas berikutnya
+     * yang PUNYA `deletedAt` tidak bisa lupa mengirimkannya dan diam-diam
+     * berhenti menghitung penghapusan.
+     */
+    db
+      .select({
+        updatedAt: vision.updatedAt,
+        publishedAt: vision.publishedAt,
+      })
+      .from(vision)
+      .then((rows) => rows.map((r) => ({ ...r, deletedAt: null }))),
   ]);
 
   return [
@@ -345,5 +388,6 @@ export async function pendingCount(): Promise<number> {
     ...studyRows,
     ...serviceRows,
     ...testimonialRows,
+    ...visionRows,
   ].filter(menunggu).length;
 }

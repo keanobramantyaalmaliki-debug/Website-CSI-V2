@@ -28,6 +28,7 @@ import type { WorkProject } from "@shared/workProject";
 import type { CaseStudy } from "@shared/caseStudy";
 import type { Testimonial } from "@shared/testimonial";
 import type { Service } from "@shared/service";
+import type { Vision } from "@shared/vision";
 
 /**
  * Batas tunggu.
@@ -198,6 +199,37 @@ export function contentServices(): Service[] | null {
 export function contentTestimonials(): Testimonial[] | null {
   const rows = content?.testimonials;
   return Array.isArray(rows) ? rows : null;
+}
+
+/**
+ * Seksi Visi dari CMS, atau `null` kalau harus memakai isi bundle.
+ *
+ * Diperiksa terpisah dengan alasan yang sama seperti pembaca-pembaca di atas:
+ * `content.json` yang ditulis sebelum visi masuk CMS adalah berkas sehat yang
+ * cuma belum punya bagian ini.
+ *
+ * ‼️ SATU-SATUNYA pembaca di berkas ini yang TIDAK punya keadaan "kosong yang
+ * dihormati".
+ *
+ * Di daftar, kosong berarti seksinya tidak dirender, dan itu memang yang
+ * diminta editor yang menghapus semua isinya. Seksi Visi tidak punya jalan ke
+ * sana: `pt-20 pb-20` miliknya satu-satunya yang menjatah celah 80px antara
+ * plank Industries (tanpa `pb`) dan Contact (`pt-0`) di mobile, jadi ia selalu
+ * dirender. Isian kosong ditangani `src/data/vision.ts` per isian — kalimat
+ * kosong memakai kalimat cadangan, foto kosong memakai foto cadangan.
+ *
+ * Bentuknya juga bukan larik, jadi penjaganya `typeof … === "object"` dan
+ * bukan `Array.isArray`. `null` yang ditulis publish (barisnya belum ada di
+ * database) lolos lewat jalur yang sama dengan field yang belum ada sama
+ * sekali, dan itu memang jawaban yang sama.
+ */
+export function contentVision(): Vision | null {
+  const row = content?.vision;
+  if (!row || typeof row !== "object") return null;
+  if (typeof row.statement !== "string" || typeof row.photo !== "string") {
+    return null;
+  }
+  return row;
 }
 
 /** Kapan konten ini dipublish — dipakai test dan pemeriksaan manual. */

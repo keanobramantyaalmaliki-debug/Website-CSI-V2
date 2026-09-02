@@ -56,6 +56,7 @@ describe("testimonials()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      vision: null,
       caseStudies: [],
       services: [],
       jobs: [],
@@ -77,6 +78,7 @@ describe("testimonials()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      vision: null,
       caseStudies: [],
       services: [],
       jobs: [],
@@ -98,6 +100,7 @@ describe("testimonials()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      vision: null,
       caseStudies: [],
       services: [],
       jobs: [],
@@ -115,6 +118,7 @@ describe("testimonials()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      vision: null,
       caseStudies: [],
       jobs: [],
       values: [],

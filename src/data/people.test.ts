@@ -74,6 +74,7 @@ describe("peopleValues()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      vision: null,
       caseStudies: [],
       services: [],
       testimonials: [],
@@ -105,6 +106,7 @@ describe("peopleValues()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      vision: null,
       caseStudies: [],
       services: [],
       testimonials: [],
@@ -122,6 +124,7 @@ describe("peopleValues()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      vision: null,
       caseStudies: [],
       jobs: [],
     } as never);
@@ -132,6 +135,7 @@ describe("peopleValues()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      vision: null,
       caseStudies: [],
       services: [],
       testimonials: [],
@@ -166,6 +170,7 @@ describe("crew()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      vision: null,
       caseStudies: [],
       services: [],
       testimonials: [],
@@ -197,6 +202,7 @@ describe("crew()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      vision: null,
       caseStudies: [],
       services: [],
       testimonials: [],
@@ -214,6 +220,7 @@ describe("crew()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      vision: null,
       caseStudies: [],
       jobs: [],
       values: [],
@@ -230,6 +237,7 @@ describe("crew()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      vision: null,
       caseStudies: [],
       services: [],
       testimonials: [],

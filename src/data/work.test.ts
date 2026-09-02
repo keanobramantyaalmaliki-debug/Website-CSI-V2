@@ -55,6 +55,7 @@ describe("workProjects()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      vision: null,
       caseStudies: [],
       services: [],
       testimonials: [],
@@ -76,6 +77,7 @@ describe("workProjects()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      vision: null,
       caseStudies: [],
       services: [],
       testimonials: [],
@@ -97,6 +99,7 @@ describe("workProjects()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      vision: null,
       caseStudies: [],
       services: [],
       testimonials: [],
@@ -114,6 +117,7 @@ describe("workProjects()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      vision: null,
       caseStudies: [],
       jobs: [],
     } as never);
@@ -127,6 +131,7 @@ describe("workProjects()", () => {
     __setContent({
       version: 1,
       generatedAt: new Date().toISOString(),
+      vision: null,
       caseStudies: [],
       services: [],
       testimonials: [],
