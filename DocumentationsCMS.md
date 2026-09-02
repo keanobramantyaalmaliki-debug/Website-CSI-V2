@@ -6,21 +6,23 @@ terpisah, `Documentations.md` — dua berkas ini sengaja tidak dicampur.
 
 Terakhir diupdate: **2 September 2026**.
 
-**Status ringkas:** **sembilan entitas selesai dan terverifikasi di lokal** —
+**Status ringkas:** **sebelas entitas selesai dan terverifikasi di lokal** —
 lowongan, nilai ("What We Stand For"), dan crew ("The Crew") di halaman People;
 **Selected work** dan **case study** di halaman Work; **layanan** dan
-**testimoni** di halaman Services; **industri** ("Built Across Sectors") dan
-**visi** di halaman depan. Tiga entitas konten lain belum dikerjakan.
+**testimoni** di halaman Services; **deployment**, **cara kerja** ("How We
+Work"), **industri** ("Built Across Sectors"), dan **visi** di halaman depan.
+Tinggal SATU entitas konten yang belum dikerjakan (tautan sosial).
 Deploy ke VPS belum dikerjakan.
 
 - Cabang: `feat/cms-lowongan` (`main` 31 Agu sudah di-merge masuk lewat `99937f5`)
-- Kode CMS-nya sendiri: **101 berkas, ~21.300 baris** di `shared/` + `server/` +
-  `admin/src/` (di luar SQL & snapshot migrasi) — panel adminnya saja ~6.900 baris
-- Test: `bun run test` → **88 berkas, 878 test hijau** (459 di antaranya milik CMS)
-- Sebelas probe end-to-end lewat Brave: `probe-admin`, `probe-nilai-admin`,
+- Kode CMS-nya sendiri: **116 berkas, ~25.000 baris** di `shared/` + `server/` +
+  `admin/src/` (di luar SQL & snapshot migrasi) — panel adminnya saja ~7.400 baris
+- Test: `bun run test` → **94 berkas, 996 test hijau** (577 di antaranya milik CMS)
+- Tiga belas probe end-to-end lewat Brave: `probe-admin`, `probe-nilai-admin`,
   `probe-crew-admin`, `probe-proyek-admin`, `probe-case-study-admin`,
   `probe-layanan-admin`, `probe-testimoni-admin`, `probe-industri-admin`,
-  `probe-visi-admin`, `probe-tema-admin`, `probe-job-page`
+  `probe-visi-admin`, `probe-deployment-admin`, `probe-proses-admin`,
+  `probe-tema-admin`, `probe-job-page`
 
 Yang berubah sejak slice pertama, selain delapan entitas baru: **masuk kini
 dengan kata sandi saja** (§7), panel punya **beranda dari peta konten situs**
@@ -36,7 +38,15 @@ daftar `sr-only` (§4b, §13). Dua slice Home menambah dua bentuk yang belum
 pernah ada: **industri adalah satu-satunya entitas berbatas jumlah** (maksimal
 13 sektor tayang — batas geometri tumpukan 3D-nya, §4b), dan **visi adalah
 satu-satunya entitas satu baris** — tanpa daftar, tanpa draf, tanpa hapus,
-dijaga `CHECK` di database (§4b, §11).
+dijaga `CHECK` di database (§4b, §11). Dua slice Home terakhir — **deployment**
+dan **cara kerja**, dikerjakan dua sesi terpisah pada hari yang sama — menambah
+tiga bentuk lagi: deployment satu-satunya entitas yang identitasnya **pasangan
+dua kolom** (sektor + wilayah — unique index dua kolom pertama di CMS ini,
+§4b); cara kerja **entitas berbatas kedua** (maksimal 6 langkah tayang —
+alasannya panjang halaman, bukan geometri seperti batas 13 industri, §4b); dan
+ilustrasinya satu-satunya "gambar" CMS yang **bukan berkas** — enum `glyph`
+yang menunjuk komponen SVG, milik langkahnya sendiri dan bukan posisi barisnya
+(§4b).
 
 ---
 
@@ -119,9 +129,12 @@ Website CSI V2/
 │   ├── data/services.ts         baca store  (isi lama → servicesFallback.ts)
 │   ├── data/testimonials.ts     baca store  (isi lama → testimonialsFallback.ts)
 │   ├── data/industries.ts       baca store  (isi lama → industriesFallback.ts)
+│   ├── data/deployments.ts      baca store  (isi lama → deploymentsFallback.ts)
+│   ├── data/processSteps.ts     baca store  (isi lama → processStepsFallback.ts)
 │   ├── data/vision.ts           baca store, cadangan PER ISIAN (§10a)
 │   └── data/{jobs,careerRoles,crew,values,workProjects,caseStudies,
-│             services,testimonials,industries,vision}Fallback.ts
+│             services,testimonials,industries,deployments,processSteps,
+│             vision}Fallback.ts
 ├── shared/             tipe & validasi dipakai bertiga
 │   ├── content.ts               ContentPayload + CONTENT_VERSION
 │   ├── contentMap.ts            peta konten situs → beranda & menu sisi panel
@@ -133,11 +146,13 @@ Website CSI V2/
 │   ├── service.ts     · validateService.ts
 │   ├── testimonial.ts · validateTestimonial.ts
 │   ├── industry.ts    · validateIndustry.ts   (+ MAX_LIVE_INDUSTRIES — §4b)
+│   ├── deployment.ts  · validateDeployment.ts
+│   ├── processStep.ts · validateProcessStep.ts (+ MAX_LIVE_PROCESS_STEPS — §4b)
 │   └── vision.ts      · validateVision.ts
 ├── server/             API + Postgres, proses Node terpisah
 │   ├── app.ts / index.ts        rakit app · buka port
-│   ├── db/schema.ts             20 tabel Drizzle
-│   ├── db/migrations/           SQL hasil drizzle-kit (0000 → 0008)
+│   ├── db/schema.ts             22 tabel Drizzle
+│   ├── db/migrations/           SQL hasil drizzle-kit (0000 → 0011)
 │   ├── db/seed.ts               isi DB dari literal repo, sekali jalan per tabel
 │   ├── jobsRepo.ts              transaksi 4 tabel
 │   ├── valuesRepo.ts            satu baris + reorder
@@ -147,9 +162,12 @@ Website CSI V2/
 │   ├── servicesRepo.ts          transaksi 2 tabel + reorder
 │   ├── testimonialsRepo.ts      satu baris + reorder
 │   ├── industriesRepo.ts        satu baris + reorder
+│   ├── deploymentsRepo.ts       satu baris + reorder
+│   ├── processStepsRepo.ts      satu baris + reorder + hitung batas 6
 │   ├── visionRepo.ts            SATU BARIS HARFIAH — upsert, tanpa daftar (§4b)
 │   ├── routes/{auth,jobs,values,crew,workProjects,caseStudies,
-│   │           services,testimonials,industries,vision,images,publish}.ts
+│   │           services,testimonials,industries,deployments,processSteps,
+│   │           vision,images,publish}.ts
 │   ├── auth.ts · audit.ts · images.ts · publish.ts · env.ts
 │   ├── createUser.ts            bikin akun editor dari terminal
 │   └── tsconfig.json            WAJIB — lihat §3a
@@ -166,6 +184,8 @@ Website CSI V2/
 │       ├── DaftarLayanan  · FormLayanan
 │       ├── DaftarTestimoni · FormTestimoni
 │       ├── DaftarIndustri · FormIndustri
+│       ├── DaftarDeployment · FormDeployment
+│       ├── DaftarProses   · FormProses       (Cara kerja)
 │       ├── FormVisi                          (tanpa Daftar — §11)
 │       ├── PemilihFoto · BarPublish · Tema.tsx
 │       └── ui.tsx · api.ts · styles.css
@@ -190,7 +210,7 @@ Panel ini tidak butuh satu pun dari itu.
 
 ## §4 Skema database
 
-Dua puluh tabel, sembilan entitas konten. Yang paling penting di slice pertama:
+Dua puluh dua tabel, sebelas entitas konten. Yang paling penting di slice pertama:
 **menyatukan dua sumber yang dulu terpisah** — daftar lowongan di `Careers.tsx`
 dan isi halaman di `src/data/jobs.ts` — menjadi satu baris `jobs`. Penyatuan itu
 prasyarat, bukan kerapian: dua tempat untuk satu lowongan mustahil dijelaskan ke
@@ -243,6 +263,14 @@ industries
   id, name, desc, tier (core|also), photo_id → images,
   state, sort_order, created_at, updated_at, published_at, deleted_at
 
+deployments
+  id, sector, region, desc, photo_id → images,
+  state, sort_order, created_at, updated_at, published_at, deleted_at
+
+process_steps
+  id, title, kicker, desc, glyph (enum process_glyph — 6 ilustrasi SVG),
+  state, sort_order, created_at, updated_at, published_at, deleted_at
+
 vision
   id (SELALU 1 — CHECK vision_satu_baris), statement, photo_id → images,
   created_at, updated_at, published_at        ← tanpa state, tanpa deleted_at
@@ -257,11 +285,12 @@ audit_log           id, user_id, entity, entity_id, action, at, snapshot (jsonb)
 Enum Postgres sungguhan, bukan `text` + konvensi: `job_state`, `lang`,
 `bullet_kind`, `image_source`, `value_state`, `crew_state`, `crew_category`,
 `social_platform`, `work_project_state`, `case_study_state`, `service_state`,
-`testimonial_state`, `industry_state`, `industry_tier`.
+`testimonial_state`, `industry_state`, `industry_tier`, `deployment_state`,
+`process_step_state`, `process_glyph`.
 
 ### §4a Pola yang dipakai ulang antar entitas
 
-Delapan dari sembilan entitas berbagi lima keputusan yang sama, dan itu yang
+Sepuluh dari sebelas entitas berbagi lima keputusan yang sama, dan itu yang
 membuat entitas berikutnya tinggal menyalin (**visi satu-satunya pengecualian**
 — lihat §4b):
 
@@ -275,7 +304,9 @@ membuat entitas berikutnya tinggal menyalin (**visi satu-satunya pengecualian**
    `people_values_title_alive`, `crew_members_name_alive`,
    `work_projects_title_alive`, `case_studies_title_alive`,
    `services_title_alive`, `testimonials_name_alive`,
-   `industries_name_alive`, semuanya
+   `industries_name_alive`, `process_steps_title_alive`, dan — satu-satunya
+   yang DUA kolom — `deployments_sector_region_alive` (sektor + wilayah, §4b),
+   semuanya
    `where deleted_at is null`. Slug/judul/nama milik baris yang sudah dihapus
    tidak boleh terkunci selamanya, dan orang yang kembali bergabung adalah
    kejadian yang wajar.
@@ -310,9 +341,16 @@ entri di sizer tak terlihat `TestimonialSpotlight` (replika semua entri yang
 mengunci tinggi blok). Dua testimoni atas nama sama bukan error melainkan tinggi
 blok yang salah ukur.
 
+Dua entitas Home yang baru meneruskannya lagi: judul langkah jadi `key` kartu
+di `Process.tsx`, dan kartu deployment memakai **pasangan** `` `${sector} ·
+${region}` `` sebagai `key` — persis pasangan yang dijaga indeks uniknya,
+karena dua kartu bersektor sama (beda wilayah) memang sah tayang berdampingan
+(§4b). Indeks larik sengaja tidak dipakai sebagai key di keduanya: reorder
+dari panel akan membuat React menukar state animasi antar kartu.
+
 ### §4b Yang BERBEDA di tiap entitas
 
-**Tujuh entitas punya `sort_order`; crew dan visi TIDAK — dan itu keputusan,
+**Sembilan entitas punya `sort_order`; crew dan visi TIDAK — dan itu keputusan,
 bukan kelupaan** (visi karena satu baris tidak bisa diurutkan terhadap apa
 pun; crew karena alasan di bawah).
 
@@ -367,8 +405,9 @@ barisnya selalu tanpa nama. Perputaran izin itu juga yang membuat `draft`
 testimoni berguna: izin memakai kutipan bisa dicabut, dan menariknya dari situs
 tidak boleh berarti mengetik ulang kalimatnya kalau izinnya kembali.
 
-**`industries` adalah SATU-SATUNYA tabel berbatas jumlah: maksimal 13 baris
-boleh `live` bersamaan** (`MAX_LIVE_INDUSTRIES` di `shared/industry.ts`).
+**`industries` adalah tabel berbatas jumlah yang PERTAMA: maksimal 13 baris
+boleh `live` bersamaan** (`MAX_LIVE_INDUSTRIES` di `shared/industry.ts`;
+`process_steps` menyusul dengan batas 6 — alasannya beda, lihat di bawah).
 Batasnya geometri, bukan selera: framing kamera dan animasi plank-ke-kartu-fokus
 tumpukan spiral 3D di `IndustriesStack.tsx` dikalibrasi untuk busur sepanjang
 13 plank, dan plank ke-14 memanjat keluar bingkai. Batas itu **SENGAJA tidak
@@ -414,6 +453,58 @@ sampai ke pengunjung, karena visi tidak punya draf yang menahannya (§9a).
 penyimpanan yang berlomba akan sama-sama insert dan yang kedua menabrak primary
 key.
 
+**`deployments` satu-satunya entitas yang identitasnya PASANGAN dua kolom.**
+Sektor sendirian bukan pengenal: "Logistics · Indonesia" dan "Logistics ·
+International" adalah dua kartu yang sah tayang berdampingan. Indeks uniknya
+karena itu `deployments_sector_region_alive` atas (sector, region) — dan
+membawa syarat tambahan **`region <> ''`**, sebab draf boleh disimpan dengan
+wilayah kosong dan dua draf separuh jadi tidak boleh saling mengunci. Penjaga
+route memang sengaja melewatkan pasangan yang separuh kosong, dan dua penjaga
+yang tidak sepakat lebih buruk daripada satu penjaga yang longgar: tanpa
+syarat itu yang menjawab adalah galat database mentah, bukan kalimat (§14).
+Pemeriksaan kembarnya sendiri di route, case-insensitive, dan galatnya SENGAJA
+mendarat di isian Wilayah, bukan Sektor — supaya editor tidak menyimpulkan
+nama sektornya terlarang lalu mengarang nama palsu.
+
+`deployments` TIDAK berbatas jumlah, meski bertetangga dengan dua entitas
+berbatas: grid-nya (`sm:grid-cols-2 lg:grid-cols-3`) tinggal menambah baris ke
+bawah, jadi kartu keempat belas tidak merusak apa pun. `sort_order`-nya
+menanggung dua hal tayang, seperti di industri: posisi kartu di grid DAN nomor
+"01"–"NN" di baris meta — nomor itu tidak disimpan, diturunkan dari posisi
+baris tayang. Fotonya kolom `photo_id` per baris, dan itu perbaikan bug
+diam-diam: sebelum CMS gambar dicari lewat peta `SECTOR_IMAGE` berkunci NAMA
+sektor, jadi mengganti "Hospitality" menjadi "Hotels & Resorts" menjatuhkan
+kartunya ke foto default tanpa error (§14). `closed` ala lowongan tidak ada:
+sistem yang tidak lagi dipamerkan dicabut dari grid, bukan "ditutup".
+
+**`process_steps` entitas berbatas KEDUA: maksimal 6 langkah tayang**
+(`MAX_LIVE_PROCESS_STEPS` di `shared/processStep.ts`) — dan alasannya sengaja
+dibedakan dari batas 13 industri di semua komentarnya. Yang di industri
+geometri (plank ke-14 memanjat keluar bingkai kamera); yang di sini **panjang
+halaman**: enam slot `min-h-[55svh]` + landasan `45svh` sudah menjadikan "How
+We Work" bagian terpanjang di halaman depan (±3,5 layar), dan jumlah
+ilustrasinya memang enam — talinya sendiri menyesuaikan, tujuh kartu akan
+tergambar rapi. Penegakannya meniru industri: di route (422 berkalimat), tapi
+kalimatnya kini konstanta `PESAN_BATAS_PROSES` di `shared/` supaya panel bisa
+mengucapkan kalimat yang sama; tombol Tambah mati saat penuh; ke bawah bebas
+sampai kosong.
+
+**`glyph` adalah satu-satunya "gambar" CMS yang BUKAN berkas** — enum
+`process_glyph` berisi enam nama (`discovery`, `strategy`, `design`,
+`development`, `testing`, `deployment`) yang menunjuk komponen SVG di
+`ProcessGlyphs.tsx`; tanpa `photo_id`, tanpa tabel `images`. Enum dan bukan
+`text`, supaya nama ketujuh yang belum punya komponennya mustahil tersimpan.
+Nilainya deskriptif-fungsional ("discovery"), bukan visual ("radar"):
+mengganti coretannya tidak boleh memaksa migrasi kolom. Yang paling penting:
+**ilustrasi milik LANGKAHNYA, bukan posisi barisnya.** Sebelum CMS kartu
+mengambil `PROCESS_GLYPHS[i]` — pasangan berbasis posisi yang, begitu editor
+bisa memindahkan baris, membuat dua langkah bertukar gambar tanpa galat
+(kembaran bug `SECTOR_IMAGE` di atas, dengan posisi sebagai kunci alih-alih
+nama — §14). Ilustrasi SENGAJA boleh kembar antar langkah: melarangnya membuat
+menukar gambar dua langkah mustahil tanpa memarkir salah satunya di gambar
+ketiga dulu. (Kunci `deployment` di enum ini kebetulan senama dengan entitas
+Deployment — dua ruang nama yang tidak berhubungan.)
+
 **Proyek dan case study tabel TERPISAH, meski tetangga di halaman yang sama.**
 Keduanya memang punya judul, klien, tahun, dan satu baris hasil, jadi godaan
 menyatukannya nyata. Yang menghentikannya: yang satu **baris dalam daftar**, yang
@@ -449,8 +540,9 @@ pengunjung.
 kebetulan sama hari ini (`draft` | `live`). Enum yang dipakai bersama membuat
 penambahan keadaan untuk salah satu entitas — misal "alumni" untuk crew —
 diam-diam ikut jadi pilihan sah di form yang lain. `work_project_state`,
-`case_study_state`, `service_state`, `testimonial_state`, dan `industry_state`
-mengulang keputusan yang sama, jadi tujuh enum berisi `draft | live` yang
+`case_study_state`, `service_state`, `testimonial_state`, `industry_state`,
+`deployment_state`, dan `process_step_state`
+mengulang keputusan yang sama, jadi sembilan enum berisi `draft | live` yang
 identik hari ini; proyek
 mungkin butuh "arsip" suatu saat, dan saat itu tiba ia tidak boleh muncul
 sendiri di form crew.
@@ -470,7 +562,8 @@ unique index parsial, jsonb, dan transaksi.
 
 `bun run db:seed` membaca `FALLBACK_ROLES`, `FALLBACK_JOBS`, `FALLBACK_VALUES`,
 `FALLBACK_CREW`, `FALLBACK_WORK_PROJECTS`, `FALLBACK_CASE_STUDIES`,
-`FALLBACK_SERVICES`, `FALLBACK_TESTIMONIALS`, `FALLBACK_INDUSTRIES`, dan
+`FALLBACK_SERVICES`, `FALLBACK_TESTIMONIALS`, `FALLBACK_INDUSTRIES`,
+`FALLBACK_DEPLOYMENTS`, `FALLBACK_PROCESS_STEPS`, dan
 `FALLBACK_VISION` dari repo lalu memasukkannya ke Postgres. Konten yang sudah
 ditulis tidak perlu diketik ulang, dan tidak ada kesempatan salah ketik saat
 memindahkannya.
@@ -485,23 +578,30 @@ MENGHAPUS suntingan editor.
 > pertama sambil melapor "sudah terisi", dan dua tabel lain tetap kosong tanpa
 > ada yang salah kelihatannya. Aturan yang sama dipatuhi `seedWorkProjects()`,
 > `seedCaseStudies()`, `seedServices()`, `seedTestimonials()`,
-> `seedIndustries()`, dan `seedVision()` — dan di
+> `seedIndustries()`, `seedDeployments()`, `seedProcessSteps()`, dan
+> `seedVision()` — dan di
 > situlah gerbang per-tabel benar-benar terpakai, karena database lokal SUDAH
 > terisi entitas-entitas sebelumnya setiap kali yang baru ditambahkan.
 
-Semua baris nilai, crew, proyek, case study, layanan, testimoni, dan industri
+Semua baris nilai, crew, proyek, case study, layanan, testimoni, industri,
+deployment, dan langkah cara kerja
 masuk sebagai **`live`, bukan `draft`** — tiga belas orang, tiga nilai, delapan
-kartu proyek, dua cerita, sembilan layanan, tiga kutipan, dan tiga belas sektor
+kartu proyek, dua cerita, sembilan layanan, tiga kutipan, tiga belas sektor,
+lima kartu deployment, dan enam langkah
 itu memang sudah tayang hari ini. Menaruhnya sebagai draf akan MENGOSONGKAN
-halaman People, Work, Services, dan strip industri pada publish pertama,
+halaman People, Work, Services, dan tiga seksi Home pada publish pertama,
 kerusakan yang tidak kelihatan sampai ada yang menekan tombolnya. Ketiga belas
 sektor persis memenuhi `MAX_LIVE_INDUSTRIES` — seed mengisi tumpukan sampai
 penuh, jadi sektor ke-14 lewat panel langsung ditolak sampai ada yang
-di-draft-kan atau dihapus, dan itu memang yang diinginkan. Baris visi diseed
+di-draft-kan atau dihapus, dan itu memang yang diinginkan; keenam langkah cara
+kerja mengulanginya untuk `MAX_LIVE_PROCESS_STEPS`. Baris visi diseed
 dengan `id: 1` eksplisit (walau kolomnya sudah `default(1)`) supaya batasan
 satu-barisnya terbaca di seed juga, bukan cuma di skema. Foto ketiga belas
-sektor semuanya **hotlink Unsplash** — tetap `source: "static"`, dengan alasan
-yang sama seperti gambar Work (§8).
+sektor dan kelima kartu deployment semuanya **hotlink Unsplash** — tetap
+`source: "static"`, dengan alasan
+yang sama seperti gambar Work (§8). Langkah cara kerja satu-satunya seed
+bergambar yang tidak menyentuh tabel `images` sama sekali: ilustrasinya enum
+(§4b), dan `glyph`-nya ditulis dari literal, bukan dihitung dari index.
 
 ---
 
@@ -509,7 +609,8 @@ yang sama seperti gambar Work (§8).
 
 `shared/validateJob.ts`, `validateValue.ts`, `validateCrew.ts`,
 `validateWorkProject.ts`, `validateCaseStudy.ts`, `validateService.ts`,
-`validateTestimonial.ts`, `validateIndustry.ts`, dan `validateVision.ts`
+`validateTestimonial.ts`, `validateIndustry.ts`, `validateDeployment.ts`,
+`validateProcessStep.ts`, dan `validateVision.ts`
 dipanggil
 **admin** saat mengisi form dan **server** saat menyimpan. Server tetap memeriksa
 meski admin sudah memeriksa: yang menjaga data bukan antarmuka, melainkan
@@ -548,6 +649,10 @@ maksimal 6.
 
 **Industri:** nama sektor 40 · kalimat penjelas 160.
 
+**Deployment:** sektor 40 · wilayah 30 · keterangan 240.
+
+**Cara kerja:** judul langkah 40 · kicker 18 · penjelasan 180.
+
 **Visi:** kalimat 400.
 
 Angka-angka Work diambil dari tata letaknya juga, dan dua kelompok yang berbeda
@@ -572,14 +677,25 @@ kedua panah ikut bergeser tiap ganti sektor), muat ±26 karakter sebelum
 tayang sekarang: kalimatnya dirender sangat besar (`text-3xl`/`text-5xl`), dan
 yang panjang mendorong fotonya (`sm:h-[90vh]`) keluar viewport.
 
+Angka dua entitas Home yang baru diturunkan dari kartunya juga. Kartu
+deployment `aspect-[4/3]` ber-`overflow-hidden` menempelkan isinya ke DASAR
+kartu, jadi teks kepanjangan tidak meluber ke bawah melainkan mendorong judul
+sektornya keluar lewat ATAS — batasnya dihitung di kasus tersempit (grid dua
+kolom ±640px, isi kartu ±265px bersih); keterangan 240 ≈ 1,5× kalimat
+terpanjang yang tayang hari ini. Batas langkah cara kerja (40/18/180)
+mengikuti kartu selebar `min(20rem, 68vw)` — ±2× isi terpanjang hari ini.
+
 ### §5a Ketatnya IKUT STATUS
 
-Kedelapan entitas berdaftar memakai aturan yang sama: **draf cuma perlu isian
+Kesepuluh entitas berdaftar memakai aturan yang sama: **draf cuma perlu isian
 pengenalnya** — judul untuk nilai, nama + departemen untuk crew, judul saja
-untuk proyek, case study, dan layanan, nama saja untuk testimoni dan sektor
-industri — supaya editor bisa menyimpan pekerjaan setengah jalan tanpa
+untuk proyek, case study, layanan, dan langkah cara kerja, nama saja untuk
+testimoni dan sektor industri, sektor saja untuk kartu deployment — supaya
+editor bisa menyimpan pekerjaan setengah jalan tanpa
 dimarahi. Pemeriksaan penuh baru berlaku begitu statusnya Tayang/Live, yaitu
-tepat saat isinya akan dibaca pengunjung.
+tepat saat isinya akan dibaca pengunjung. (Langkah cara kerja sedikit lebih
+ketat: `glyph` dan `state` divalidasi bahkan untuk draf, karena enum tidak
+punya keadaan "belum diisi".)
 
 **Visi tidak ikut aturan ini karena tidak punya status**: satu-satunya isi yang
 ada adalah isi yang tayang, jadi pemeriksaannya selalu penuh — kalimat dan foto
@@ -649,10 +765,26 @@ dua-duanya wajib, setiap kali disimpan.
   justru "siapa yang bilang". Kutipannya sendiri diketik TANPA tanda kutip:
   situs yang menambahkan " dan " sendiri, jadi editor yang ikut mengetikkannya
   menghasilkan kutip ganda.
+- **Foto, wilayah, dan keterangan WAJIB untuk kartu deployment yang Live.**
+  Foto dengan alasan kartu proyek — kartunya `<img>` yang memenuhi kotaknya,
+  dan satu kartu polos di sebelah empat kartu berfoto terbaca sebagai gambar
+  yang gagal dimuat. Wilayah karena baris metanya dicetak `"03 · Indonesia"`:
+  tanpa wilayah yang tayang adalah `"03 · "` menggantung.
+- **Pasangan sektor+wilayah kembar ditolak — bukan sektornya.** "Logistics"
+  boleh dipakai dua kartu asal wilayahnya beda. Pemeriksaannya di route, bukan
+  di validator (butuh melihat seluruh daftar, dan form tidak memilikinya),
+  case-insensitive; galatnya mendarat di isian Wilayah (§4b).
+- **Kicker dan penjelasan WAJIB untuk langkah cara kerja yang Live; judul
+  WAJIB bahkan untuk draf** — judul satu-satunya pembeda baris di panel, dan
+  draf tanpa judul tidak bisa dikenali untuk disunting lagi. Ilustrasi
+  (`glyph`) yang tidak dikenal SENGAJA tidak dijatuhkan ke default oleh parser
+  route: dibiarkan lolos supaya validator menolaknya dengan kalimat — gambar
+  salah yang dipilih diam-diam tidak pernah kelihatan salah (§6).
 
 `JOB_FIELD_ORDER` / `VALUE_FIELD_ORDER` / `CREW_FIELD_ORDER` /
 `WORK_PROJECT_FIELD_ORDER` / `CASE_STUDY_FIELD_ORDER` / `SERVICE_FIELD_ORDER` /
-`TESTIMONIAL_FIELD_ORDER` / `INDUSTRY_FIELD_ORDER` / `VISION_FIELD_ORDER`
+`TESTIMONIAL_FIELD_ORDER` / `INDUSTRY_FIELD_ORDER` / `DEPLOYMENT_FIELD_ORDER` /
+`PROCESS_STEP_FIELD_ORDER` / `VISION_FIELD_ORDER`
 menetapkan urutan
 isian, dipakai admin untuk memilih masalah PERTAMA dan melompatkan fokus ke sana
 — bukan menumpahkan sepuluh galat sekaligus.
@@ -750,6 +882,20 @@ GET    /api/industries/:id
 PUT    /api/industries/:id        aturan batas 13 yang sama
 DELETE /api/industries/:id
 
+GET    /api/deployments           daftar untuk admin (TERMASUK draft)
+POST   /api/deployments           201
+POST   /api/deployments/urutkan   seluruh daftar id dalam urutan barunya
+GET    /api/deployments/:id
+PUT    /api/deployments/:id
+DELETE /api/deployments/:id
+
+GET    /api/process-steps         daftar untuk admin (TERMASUK draft)
+POST   /api/process-steps         201 — Live ke-7 ditolak 422 (§4b)
+POST   /api/process-steps/urutkan seluruh daftar id dalam urutan barunya
+GET    /api/process-steps/:id
+PUT    /api/process-steps/:id     aturan batas 6 yang sama
+DELETE /api/process-steps/:id
+
 GET    /api/vision                { vision } — null kalau barisnya belum ada
 PUT    /api/vision                upsert baris 1; TIDAK ada POST/DELETE/urutkan
 
@@ -773,6 +919,7 @@ tiba-tiba kosong.
 **`requireLogin` dipasang di SATU tempat**, sebagai `app.use()` untuk seluruh
 prefix `/api/jobs`, `/api/values`, `/api/crew`, `/api/projects`,
 `/api/case-studies`, `/api/services`, `/api/testimonials`, `/api/industries`,
+`/api/deployments`, `/api/process-steps`,
 `/api/vision`, `/api/images`,
 `/api/publish` — bukan ditempel per handler. Visi belum punya route anak
 (cuma `GET /` dan `PUT /`), tapi pasangan `/*`-nya tetap dipasang seperti yang
@@ -807,6 +954,10 @@ Dua perlakuan yang berbeda di dalamnya, dan bedanya disengaja:
   supaya ditolak dengan kalimat yang bisa dibaca. Departemen tidak punya nilai
   bawaan yang aman: "Management" untuk orang yang seharusnya Developer adalah
   kesalahan yang tersimpan diam-diam.
+- **Ilustrasi langkah cara kerja mengikuti departemen, bukan status.** `state`
+  yang tidak dikenal jatuh aman ke `draft`; `glyph` yang tidak dikenal
+  DILOLOSKAN ke validator, karena gambar tidak punya nilai jatuh yang aman —
+  ilustrasi default yang terpasang diam-diam tidak pernah kelihatan salah.
 
 ### §6a Simpan — tiga bentuk, sesuai lebar entitasnya
 
@@ -820,6 +971,8 @@ Dua perlakuan yang berbeda di dalamnya, dan bedanya disengaja:
 | Layanan | `services` + `service_subs` | ya |
 | Testimoni | `testimonials` saja | tidak perlu |
 | Industri | `industries` saja | tidak perlu |
+| Deployment | `deployments` saja | tidak perlu |
+| Cara kerja | `process_steps` saja | tidak perlu |
 | Visi | `vision` saja — upsert baris 1 | tidak perlu |
 
 Anak-anaknya **dihapus lalu ditulis ulang, bukan di-diff** — jumlah barisnya
@@ -837,12 +990,14 @@ Dua detail yang gampang terlewat, berlaku untuk semua entitas:
   mengetiknya. Nilai baru justru mendarat di BAWAH, karena di sana urutannya
   adalah tumpukan panel yang terlihat pengunjung: menyisipkan nilai baru ke
   puncak berarti mengubah panel pembuka halaman tanpa diminta. Proyek, case
-  study, layanan, testimoni, dan sektor industri mengikuti nilai — untuk proyek
+  study, layanan, testimoni, sektor industri, kartu deployment, dan langkah
+  cara kerja mengikuti nilai — untuk proyek
   alasannya paling kuat (kartu pertama adalah yang terbuka saat halaman Work
   dibuka), untuk
   testimoni sama kerasnya (baris teratas adalah satu-satunya kutipan yang
-  terlihat saat halaman dibuka), dan untuk industri baris baru yang menyelinap
-  ke puncak berarti merombak nomor "01"–"13" SEMUA sektor lain. Kalau memang
+  terlihat saat halaman dibuka), dan untuk industri, deployment, serta cara
+  kerja baris baru yang menyelinap
+  ke puncak berarti merombak nomor "01"–"NN" SEMUA baris lain. Kalau memang
   harus di depan, tombol "Naikkan" ada di sebelahnya.
 - **`desc` case study dirapikan `normalizeDesc()` sebelum disimpan, di SETIAP
   jalur tulis** — saat dibuat maupun saat disimpan ulang. Melewatkannya di salah
@@ -853,8 +1008,9 @@ Dua detail yang gampang terlewat, berlaku untuk semua entitas:
 
 `POST /api/values/urutkan` — dan sesudahnya `/api/projects/urutkan`,
 `/api/case-studies/urutkan`, `/api/services/urutkan`,
-`/api/testimonials/urutkan`, serta `/api/industries/urutkan`, enam entitas
-dengan endpoint yang bentuknya persis
+`/api/testimonials/urutkan`, `/api/industries/urutkan`,
+`/api/deployments/urutkan`, serta `/api/process-steps/urutkan`, delapan
+entitas dengan endpoint yang bentuknya persis
 sama — menerima **seluruh daftar id dalam urutan barunya**, bukan satu id + posisi
 baru. Daftar yang tidak menyebut semua baris hidup ditolak
 bulat-bulat (422): yang tidak disebut akan tertinggal di `sortOrder` lamanya dan
@@ -931,10 +1087,12 @@ jadi gambar kecil tidak dipaksa membesar) → **WebP kualitas 82** → simpan ke
 tipe yang diterima JPEG, PNG, WebP, AVIF, HEIC/HEIF (foto dari iPhone masuk apa
 adanya, tidak perlu dikonversi dulu).
 
-`PemilihFoto` dipakai **tujuh dari sembilan form** — lowongan, nilai, crew,
-Selected work, case study, industri ("Foto plank"), dan visi. Dua form Services
-tidak memakainya sama sekali: layanan
-memang tidak bergambar, dan testimoni sengaja tanpa kolom foto (§4b).
+`PemilihFoto` dipakai **delapan dari sebelas form** — lowongan, nilai, crew,
+Selected work, case study, industri ("Foto plank"), deployment ("Foto kartu"),
+dan visi. Tiga form tidak memakainya sama sekali: layanan
+memang tidak bergambar, testimoni sengaja tanpa kolom foto (§4b), dan langkah
+cara kerja memilih ilustrasinya lewat radio enam pilihan bernama gambar
+("Radar", "Artboard", …) — gambarnya komponen SVG, bukan berkas (§4b).
 Komponennya menampilkan dua sumber sekaligus: foto lama di
 `public/careers/` dan `public/people/` (baris `images` ber-`source: "static"`,
 dimasukkan saat seed) dan foto unggahan baru (`source: "upload"`). Editor tidak
@@ -946,7 +1104,8 @@ dua prop opsional `label` dan `petunjuk` yang **defaultnya persis kalimat
 lowongan** — form lama tidak perlu disentuh sama sekali, dua form baru mengirim
 kata-katanya sendiri ("Gambar proyek", "Gambar sampul").
 
-Gambar proyek, case study, dan ketiga belas sektor industri yang lama semuanya
+Gambar proyek, case study, ketiga belas sektor industri, dan kelima kartu
+deployment yang lama semuanya
 **hotlink Unsplash**, bukan berkas
 di disk. Seed tetap mendaftarkannya ke tabel `images` dengan `source: "static"`,
 dan itu jawaban yang benar meski tidak ada berkasnya: satu-satunya tugas kolom
@@ -971,11 +1130,13 @@ nilai atau crew tersimpan tanpa `photoId`.
 
 `POST /api/publish`:
 
-1. Query semua baris non-draft non-deleted dari **kesembilan entitas sekaligus**
+1. Query semua baris non-draft non-deleted dari **kesebelas entitas sekaligus**
    (`Promise.all`) → rakit `ContentPayload`
    (`{ version: 1, generatedAt, jobs, values, crew, projects, caseStudies,
-   services, testimonials, industries, vision }`). Dua field terakhir bentuknya
-   menyimpang: `industries` daftar biasa tapi panjangnya PALING BANYAK 13
+   services, testimonials, industries, deployments, processSteps, vision }`).
+   Tiga field bentuknya
+   menyimpang: `industries` dan `processSteps` daftar biasa tapi panjangnya
+   PALING BANYAK 13 dan 6
    (§4b), dan `vision` **satu objek, bukan larik** — satu-satunya field yang
    boleh `null`, artinya "barisnya belum ada di database, situs pakai isi
    bundle".
@@ -983,7 +1144,7 @@ nilai atau crew tersimpan tanpa `photoId`.
    direktori yang sama, lalu `rename`. `rename` dalam satu filesystem bersifat
    atomik di tingkat OS, jadi pengunjung tidak pernah membaca berkas setengah
    tertulis.
-3. Tandai `published_at` di kesembilan tabel — **sesudah** berkasnya
+3. Tandai `published_at` di kesebelas tabel — **sesudah** berkasnya
    benar-benar tertulis. (Untuk `vision` update-nya tanpa `where`: tabelnya
    memang cuma boleh punya satu baris, dan kalau barisnya belum ada, tidak
    menyentuh apa pun adalah jawaban yang benar.) Menandai lebih dulu lalu gagal menulis akan memadamkan badge "belum
@@ -994,7 +1155,7 @@ nilai atau crew tersimpan tanpa `photoId`.
 5. Catat ke `audit_log`, dengan jumlah per entitas di snapshot-nya.
 
 **Kolom admin dibuang dari payload.** `updatedAt`, `publishedAt`, dan
-`unpublished` dilepas di `collect()` untuk kesembilan entitas (visi juga
+`unpublished` dilepas di `collect()` untuk kesebelas entitas (visi juga
 membuang `id`-nya — nomor baris yang selalu 1 tidak berguna bagi pengunjung) —
 bukan dibiarkan ikut
 "karena tidak ada yang membacanya": `content.json` diunduh SETIAP pengunjung, dan
@@ -1012,7 +1173,7 @@ ditanyakan editor adalah "apa masih ada yang perlu saya publish", bukan "berapa
 di tabel mana".
 
 Aturannya cukup tiga cap waktu, jadi ia ditulis **sekali** sebagai fungsi
-`menunggu(r)` dan dipakai kesembilan entitas. Visi tidak punya `deletedAt`,
+`menunggu(r)` dan dipakai kesebelas entitas. Visi tidak punya `deletedAt`,
 dan yang dilonggarkan BUKAN tipe `Stamps`-nya: query visi memetakan
 `deletedAt: null` secara eksplisit, supaya entitas berikutnya yang PUNYA
 `deletedAt` tidak bisa lupa mengirimkannya dan diam-diam berhenti menghitung
@@ -1037,12 +1198,15 @@ tanpa angka** — ia bukan cacah baris melainkan ada/tidak ada, dan "1 visi" aka
 terbaca seolah visi kedua mungkin ada; `PublishResult.vision` karena itu
 bertipe `boolean`, bukan `number`.
 
-> ⚠️ **Kalimat konfirmasi BELUM menyebut sektor industri.** Server sudah
-> mengembalikan `industries: number` di `POST /api/publish`, tapi tipe
-> `tayangkan()` di `admin/src/api.ts` belum mendeklarasikannya dan `BarPublish`
-> belum menambah `[industries, "sektor"]` ke daftarnya. Bukan kerusakan —
-> angkanya cuma tidak ikut disebut — tapi ini selisih kecil yang tersisa dari
-> slice industri.
+> ⚠️ **Kalimat konfirmasi BELUM menyebut langkah cara kerja.** Selisih serupa
+> pernah tersisa dari slice industri dan SUDAH dibayar slice deployment:
+> `BarPublish` kini menyebut "N sektor" dan "N kartu deployment", dan tipe
+> `tayangkan()` di `admin/src/api.ts` sudah lengkap sampai
+> `processSteps: number`. Tapi angka `processSteps` itu belum di-destructure
+> dan belum ditambahkan ke daftar `bagian`-nya. Bukan kerusakan — angkanya
+> cuma tidak ikut disebut — tapi polanya berulang dua slice berturut-turut:
+> entitas baru harus ingat menambah SATU baris `[jumlah, nama]` di
+> `BarPublish.tsx`, dan tidak ada test yang menagihnya.
 
 ---
 
@@ -1072,7 +1236,8 @@ disentuh (wilayah kerja Nico, lihat `INVARIANTS.md`).
 
 `contentJobs()`, `contentValues()`, `contentCrew()`, `contentWorkProjects()`,
 `contentCaseStudies()`, `contentServices()`, `contentTestimonials()`,
-`contentIndustries()`, dan `contentVision()`
+`contentIndustries()`, `contentDeployments()`, `contentProcessSteps()`, dan
+`contentVision()`
 masing-masing memeriksa bagiannya sendiri, dan bagian yang
 tidak ada TIDAK memvonis seluruh berkas.
 
@@ -1107,6 +1272,8 @@ src/data/caseStudies.ts  caseStudies()
 src/data/services.ts     services()
 src/data/testimonials.ts testimonials()
 src/data/industries.ts   industries()
+src/data/deployments.ts  deployments()
+src/data/processSteps.ts processSteps()
 src/data/vision.ts       vision()
 ```
 
@@ -1128,11 +1295,15 @@ justru TIDAK menerjemahkan apa pun — di sana semua field wajib, jadi bentuk CM
 dan bentuk situs kebetulan sudah sama, dan menambahkan lapisan terjemahan kosong
 cuma menambah tempat yang bisa salah. `services.ts` dan `testimonials.ts` cuma
 membuang kolom yang tidak dibaca komponen (`state`, `sortOrder`) — urutan sudah
-dibawa urutan array-nya sendiri.
+dibawa urutan array-nya sendiri. `deployments.ts` dan `processSteps.ts`
+mengikuti keduanya: yang diteruskan hanya isian yang dirender (`sector, region,
+desc, image` / `title, kicker, desc, glyph`), dan ada test yang mengunci daftar
+key itu apa adanya.
 
 ### §10c Yang disentuh di `src/components/`
 
-Dua belas berkas (sepuluh di `sections/`, dua di `canvas/`), semuanya perubahan
+Enam belas berkas (tiga belas di `sections/`, dua di `canvas/`, satu di
+`motion/`), semuanya perubahan
 kecil dengan satu alasan besar:
 
 - **`Careers.tsx`** — literal `ROLES` ditukar `import { careerRoles }`.
@@ -1189,6 +1360,29 @@ kecil dengan satu alasan besar:
   `useMemo(() => vision(), [])` **di dalam komponen** — jebakan ruang-modul
   yang sama dengan empat slice sebelumnya (§14). Tidak ada gerbang
   daftar-kosong karena memang bukan daftar: seksinya selalu dirender (§4b).
+- **`Deployments.tsx`** — literal `DEPLOYMENTS` (lima objek dengan `num`
+  diketik tangan) ditukar `useMemo(() => deployments(), [])`, plus gerbang
+  `if (kartu.length === 0) return null` — seluruh section hilang berikut
+  CTA-nya, dan itu aman: celah 80px mobile dijatah `pb-20` CsiHero di atasnya,
+  beda nasib dengan Visi yang wajib selalu render. `key` kartu pasangan
+  `sektor · wilayah` (§4a), nomor "01"–"NN" dihitung dari posisi saat render.
+- **`DeploymentCard.tsx`** — peta `SECTOR_IMAGE` + `DEFAULT_IMAGE` dihapus;
+  gambar kini isian `image` yang dibawa tiap kartu (§4b). Foto kosong =
+  `<img>`-nya tidak dirender sama sekali, bukan `src=""` — string kosong di
+  `src` dibaca sebagian peramban sebagai "minta ulang halaman ini".
+- **`Process.tsx`** — komponen DIPECAH DUA: `Process` (gerbang — `useMemo` +
+  `if (steps.length === 0) return null`, tanpa satu pun hook lain) dan
+  `ProcessSection` (isi, semua hook motion). Pemecahannya bukan gaya:
+  `useScroll({ target })` yang telanjur jalan lalu komponennya `return null`
+  membuat motion melempar *"Target ref is defined but not hydrated"* satu
+  frame kemudian (§14). Ilustrasi tiap kartu kini
+  `PROCESS_GLYPHS_BY_KEY[step.glyph]` — dicari lewat NAMA yang dibawa
+  langkahnya, bukan `PROCESS_GLYPHS[i]` (§4b); `key` kartu judulnya.
+- **`ProcessGlyphs.tsx`** (di `motion/`) — dapat ekspor baru
+  `PROCESS_GLYPHS_BY_KEY`, sengaja bertipe `Record<ProcessGlyphKey, …>`: nilai
+  enum ketujuh di `shared/` membuat TypeScript menolak berkas ini sampai
+  gambarnya benar-benar dibuat. Larik lama `PROCESS_GLYPHS` masih ada untuk
+  test-nya, dengan peringatan besar bahwa ia bukan lagi cara memilih gambar.
 
 **Di dev, `content.json` disajikan plugin `serveContentJson()` di `vite.config.ts`**
 — `dist/` tidak disajikan sama sekali oleh dev server, jadi tanpa plugin ini
@@ -1224,8 +1418,12 @@ Bahasa Indonesia, hitam-putih, tanpa animasi, tanpa framework UI.
 | `FormTestimoni` | kutipan, nama, jabatan, status — tanpa foto (§4b) |
 | `DaftarIndustri` | # · Nama sektor · Bobot · Status · Terakhir diubah, plus **Naikkan/Turunkan**; tombol **Tambah mati saat 13 sektor Live** (§4b) |
 | `FormIndustri` | nama sektor, kalimat penjelas, foto plank, bobot (Core Focus/Sector), status |
+| `DaftarDeployment` | # · Sektor · Wilayah · Status · Terakhir diubah, plus **Naikkan/Turunkan** — tanpa batas jumlah |
+| `FormDeployment` | sektor, wilayah, keterangan, foto kartu, status — pasangan kembar ditolak di isian Wilayah (§4b) |
+| `DaftarProses` | # · Judul langkah · Ilustrasi · Status · Terakhir diubah, plus **Naikkan/Turunkan**; tombol **Tambah mati saat 6 langkah Live** (§4b) |
+| `FormProses` | judul, kicker, penjelasan, pemilih ilustrasi (radio 6 gambar bernama — "Radar", "Artboard", …), status — tanpa unggah foto |
 | `FormVisi` | kalimat visi + foto — TANPA daftar di depannya, tanpa Tambah/Hapus/Naikkan/Draft (§4b); `#/visi` langsung membuka form |
-| `PemilihFoto` | grid foto lama + unggah baru — dipakai lima form yang bergambar, label & petunjuknya bisa diganti per form |
+| `PemilihFoto` | grid foto lama + unggah baru — dipakai delapan form yang bergambar (§8), label & petunjuknya bisa diganti per form |
 | `BarPublish` | menetap di bawah: "N perubahan belum tayang" + tombol Publish |
 | `Tema` | tombol terang/gelap di kepala panel (§11a) |
 
@@ -1254,8 +1452,10 @@ perlu bisa membedakan "tidak ada di panel karena belum dibuat" dari "tidak ada d
 panel karena saya tidak menemukannya"; yang kedua berakhir jadi pertanyaan ke
 developer, yang pertama tidak.
 
-Hari ini **9 dari 12 entri berstatus `siap`**: Industri dan Visi di halaman
-Home; Nilai, Crew, dan Lowongan di
+Hari ini **11 dari 12 entri berstatus `siap`** — satu-satunya `belum` yang
+tersisa Tautan sosial di grup "Seluruh situs". Keempat entri halaman Home
+(Deployment, Cara kerja, Industri, Visi) sudah `siap`, urut mengikuti urutan
+section di situsnya; Nilai, Crew, dan Lowongan di
 halaman People; Selected work dan Case study di halaman Work; Layanan dan
 Testimoni di halaman Services.
 
@@ -1287,9 +1487,11 @@ juga tidak lewat `ringkas()`: jumlahnya selalu satu dan tidak ada draf, jadi
 yang dilaporkan cuma "Belum terisi — situs memakai kalimat bawaan." atau
 "Terisi(, belum tayang)".
 
-**Kolom "#" di `DaftarIndustri` menghitung baris TAYANG saja** — draf tampil
+**Kolom "#" di `DaftarIndustri`, `DaftarDeployment`, dan `DaftarProses`
+menghitung baris TAYANG saja** — draf tampil
 bertanda "—", karena ia memang belum punya nomor. Nomor itu bukan hiasan panel: ia harus
-sama dengan "01"–"13" yang tercetak di situs, dan situs cuma menghitung baris
+sama dengan "01"–"13" (atau "01"–"06", atau nomor kartu deployment) yang
+tercetak di situs, dan situs cuma menghitung baris
 `live`. Kolom # yang menghitung semua baris akan menunjukkan nomor yang
 berbeda dengan yang dilihat pengunjung persis saat ada draf di tengah daftar
 (§14).
@@ -1404,9 +1606,10 @@ setelah deploy.
 
 ## §13 Test & verifikasi
 
-**459 test CMS** di dalam `bun run test` (yang totalnya 88 berkas / 878 test) —
-selebihnya di tabel ini, 3 menumpang `TestimonialSpotlight.test.tsx` dan
-beberapa menumpang `Industries.test.tsx` (disebut sesudah tabel):
+**577 test CMS** di dalam `bun run test` (yang totalnya 94 berkas / 996 test) —
+selebihnya di tabel ini; 3 menumpang `TestimonialSpotlight.test.tsx`, beberapa
+menumpang `Industries.test.tsx`, dan 5 + 5 menumpang `Deployments.test.tsx` &
+`Process.test.tsx` (disebut sesudah tabel):
 
 | Berkas | Test | Menguji |
 |---|---|---|
@@ -1419,6 +1622,8 @@ beberapa menumpang `Industries.test.tsx` (disebut sesudah tabel):
 | `shared/validateTestimonial.test.ts` | 11 | aturan testimoni, jabatan WAJIB saat Live, draf cuma perlu nama |
 | `shared/validateIndustry.test.ts` | 14 | aturan sektor: foto & kalimat WAJIB saat Live, batas 40/160, draf cuma perlu nama |
 | `shared/validateVision.test.ts` | 9 | aturan visi: kalimat & foto selalu wajib (tidak ada draf), batas 400 |
+| `shared/validateDeployment.test.ts` | 15 | aturan kartu: foto/wilayah/keterangan WAJIB saat Live, batas 40/30/240, kelima kartu bawaan lolos apa adanya |
+| `shared/validateProcessStep.test.ts` | 18 | aturan langkah: judul wajib bahkan draf, kicker/penjelasan wajib saat Live, glyph tak dikenal ditolak, batas 40/18/180 |
 | `server/routes/jobs.test.ts` | 17 | CRUD, 401 tanpa login, slug bentrok, soft delete |
 | `server/routes/values.test.ts` | 20 | CRUD + reorder, daftar tak lengkap ditolak |
 | `server/routes/crew.test.ts` | 26 | CRUD, tautan sosial, nama bentrok, departemen asing |
@@ -1428,8 +1633,10 @@ beberapa menumpang `Industries.test.tsx` (disebut sesudah tabel):
 | `server/routes/testimonials.test.ts` | 20 | CRUD + reorder, nama bentrok, daftar reorder tak lengkap ditolak |
 | `server/routes/industries.test.ts` | 26 | CRUD + reorder, **batas 13 Live ditolak 422** (lewat POST maupun PUT), nama bentrok |
 | `server/routes/vision.test.ts` | 9 | GET null sebelum ada, PUT upsert (simpan kedua menimpa, bukan menambah), validasi |
+| `server/routes/deployments.test.ts` | 25 | CRUD + reorder, pasangan sektor+wilayah kembar ditolak case-insensitive (galat di `region`), kartu baru mendarat di bawah |
+| `server/routes/processSteps.test.ts` | 28 | CRUD + reorder, **batas 6 Live ditolak 422** (POST maupun PUT, `exceptId` untuk baris sendiri), ilustrasi ikut pindah bersama langkahnya, judul kembar |
 | `server/routes/auth.test.ts` | 6 | masuk pakai sandi saja, sandi salah, sesi |
-| `server/publish.test.ts` | 42 | draft tidak ikut, tulis atomik, hitungan pending 9 entitas, visi null → objek → tertimpa |
+| `server/publish.test.ts` | 42 | draft tidak ikut, tulis atomik, hitungan pending, visi null → objek → tertimpa — BELUM menyebut deployment/proses (lihat ⚠️ di bawah) |
 | `src/lib/content/store.test.ts` | 9 | content.json valid dipakai; gagal/timeout/versi salah → fallback |
 | `src/data/people.test.ts` | 17 | CMS menang atas bundle; daftar kosong dihormati; payload lama |
 | `src/data/work.test.ts` | 9 | CMS menang atas bundle; `outcome` kosong jadi `undefined` |
@@ -1438,6 +1645,8 @@ beberapa menumpang `Industries.test.tsx` (disebut sesudah tabel):
 | `src/data/testimonials.test.ts` | 9 | CMS menang atas bundle; daftar kosong dihormati |
 | `src/data/industries.test.ts` | 10 | CMS menang atas bundle; daftar kosong dihormati; payload lama tanpa field industri |
 | `src/data/vision.test.ts` | 6 | CMS menang atas bundle; **isian kosong jatuh ke cadangan PER ISIAN** |
+| `src/data/deployments.test.ts` | 9 | CMS menang atas bundle; daftar kosong dihormati; hanya isian yang dirender diteruskan (key dikunci apa adanya) |
+| `src/data/processSteps.test.ts` | 13 | glyph milik LANGKAH bukan posisi; `PROCESS_GLYPHS_BY_KEY` lengkap; daftar kosong dihormati; payload lama tanpa field ini → bundle |
 | `src/lib/contentMap.test.ts` | 11 | peta konten sinkron dengan slug & label situs, letak entri per halaman |
 
 Tiga test CMS lain menumpang `TestimonialSpotlight.test.tsx` (komponennya):
@@ -1445,6 +1654,18 @@ membaca entri dari CMS alih-alih bundle, daftar kosong = tidak dirender sama
 sekali, dan **panah hilang saat tersisa satu kutipan**. `Industries.test.tsx`
 ikut ketambahan test CMS dengan pola yang sama: section membaca sektor dari
 CMS, dan daftar kosong = seluruh section tidak dirender.
+`Deployments.test.tsx` dan `Process.test.tsx` masing-masing ketambahan 5 test
+CMS dengan pola itu juga (baca dari CMS, kosong = tidak dirender, menomori
+dari posisi) plus yang khas entitasnya: dua kartu bersektor sama beda wilayah
+tampil dua-duanya dan foto kosong = tanpa `<img>` (deployment); dua langkah
+ber-ilustrasi sama menghasilkan SVG yang identik (proses — bukti glyph milik
+langkah, bukan posisi).
+
+> ⚠️ `server/publish.test.ts` BELUM ketambahan describe untuk deployment dan
+> langkah cara kerja — dua-duanya sudah terangkut `collect()`/`pendingCount()`
+> dan terbukti lewat probe (draf tidak ikut, urutan ikut, publish menghitung),
+> tapi cakupan unit jalur publish-nya masih menumpang test entitas lama. Utang
+> kecil untuk slice berikutnya.
 
 Test server jalan di **project vitest terpisah** (`environment: "node"`), karena
 `src/test/setup.ts` menyentuh `window` dan akan melempar di sana. Semua berkas
@@ -1456,7 +1677,7 @@ tengah test tetangga.
 > terlupa membuat test tetangga saling mewarisi baris, dan gejalanya "kadang
 > gagal" tergantung urutan.
 
-**Sebelas probe end-to-end lewat Brave** (CDP, nol dependensi), semuanya hijau:
+**Tiga belas probe end-to-end lewat Brave** (CDP, nol dependensi), semuanya hijau:
 
 `scripts/probe-admin.mjs` — 13 pemeriksaan: menu sisi (grup membuka/menutup,
 melipat, menandai posisi), CRUD lowongan, draf tidak ikut Publish, Open tanpa foto
@@ -1544,6 +1765,45 @@ yang sungguhan:
 > Naikkan sekali lalu bandingkan dua nama teratas content.json" — tetangga
 > baris yang dinaikkan bisa saja draf yang tidak ikut ke berkas (§14).
 
+`scripts/probe-deployment-admin.mjs` — 18 pemeriksaan, membuka halaman depan
+"/" yang sungguhan:
+```
+✓ tidak ada batas: tombol Tambah tetap hidup di N kartu tayang
+✓ kartu draf tersimpan di baris terakhir, dan sengaja belum bernomor
+✓ pasangan sektor+wilayah kembar ditolak, alasannya mendarat di isian Wilayah
+✓ sektor yang sama dengan wilayah berbeda diterima sebagai kartu kedua
+✓ status Live tanpa foto ditolak, alasannya tampil di form
+✓ nomor di panel sama dengan nomor yang tercetak di situs
+✓ urutan kartu ikut berubah di content.json
+✓ halaman depan merender N kartu dari CMS — bernomor, lengkap kalimat & fotonya
+✓ dihapus + Publish → daftar tayang kembali persis seperti semula
+```
+
+`scripts/probe-proses-admin.mjs` — 12 langkah / 20 pemeriksaan, membuka
+halaman depan "/" yang sungguhan:
+```
+✓ daftar penuh (6/6) dan tombol Tambah ikut mati
+✓ satu tempat dipinjam dari langkah Live — tombol Tambah hidup lagi
+✓ langkah draf tersimpan dengan ilustrasi pilihannya, dan sengaja belum bernomor
+✓ langkah ke-7 ditolak server, alasannya terbaca di form
+✓ ilustrasi ikut pindah bersama langkahnya — pasangan judul→gambar utuh
+✓ nomor di panel sama dengan nomor yang tercetak di situs
+✓ halaman depan merender N kartu dari CMS, urut dan lengkap isinya
+✓ dihapus + Publish → daftar tayang kembali persis seperti semula (ilustrasi utuh)
+```
+
+> Probe proses meminjam tempat seperti probe industri (seed sudah penuh 6/6)
+> dan wajib mengembalikan pinjamannya juga saat gagal di tengah. Dua
+> kewaspadaan yang khas miliknya: pembanding "ilustrasi ikut pindah" harus
+> memilih langkah yang gambarnya BERBEDA dari yang dilewati — dua gambar
+> kembar membuat pemeriksaannya tidak menguji apa-apa — dan Naikkan ditekan
+> BERULANG sampai melewati tetangga yang TAYANG, karena sekali tekan bisa
+> cuma melewati draf dan urutan tayangnya tidak berubah (§14). Probe
+> deployment mewarisi trik kedua, plus mengenali baris lewat PASANGAN
+> sektor·wilayah — dua baris bersektor sama memang sah. Berbeda dari industri
+> (tumpukan WebGL), kartu kedua entitas ini DOM biasa, jadi yang diperiksa di
+> halaman depan kartunya sendiri, bukan daftar `sr-only` pengganti.
+
 `scripts/probe-visi-admin.mjs` — 14 pemeriksaan, membuka halaman depan "/"
 yang sungguhan:
 ```
@@ -1573,7 +1833,7 @@ yang sungguhan:
 ✓ dihapus + Publish → hilang dari content.json
 ```
 
-Enam probe entitas terakhir sengaja **membuka halaman situs yang sungguhan**
+Delapan probe entitas terakhir sengaja **membuka halaman situs yang sungguhan**
 (Work, Services, atau halaman depan), bukan berhenti di panel. Bagian yang paling gampang salah
 bukan penyimpanannya, melainkan apakah komponen situs benar-benar MEMBACA baris
 baru itu — dan §14 mencatat satu cara kegagalan yang lolos semua test unit tapi
@@ -1628,6 +1888,35 @@ Fix: nomor dihitung dari baris tayang saja, draf bertanda "—" (§11). Gotcha
 yang sama menjebak PROBE-nya: "tekan Naikkan sekali lalu bandingkan dua nama
 teratas content.json" gagal diam-diam kalau tetangga baris yang dinaikkan
 adalah draf — pembandingnya harus daftar tayang, bukan daftar panel.
+
+**🔥 Hook ber-target ref yang telanjur jalan sebelum `return null` melempar di
+LUAR render.** Lahir bersama slice cara kerja: `Process.tsx` memanggil
+`useScroll({ target: wrapRef })` lalu — begitu daftarnya kosong —
+`return null`, dan motion melempar *"Target ref is defined but not hydrated"*
+SATU FRAME kemudian, di luar render, tidak tertangkap test unit mana pun
+sampai halamannya benar-benar dibuka. Fix yang benar bukan menekan galatnya:
+komponen dipecah jadi gerbang luar (`Process`) yang tanpa hook dan isi
+(`ProcessSection`) yang memegang semua hook — nol langkah = nol hook (§10c).
+Pola ini berlaku untuk TIAP seksi ber-hook motion yang sejak masuk CMS boleh
+menyusut ke nol.
+
+**Gambar yang dicari lewat kunci yang bukan milik barisnya akan bertukar
+diam-diam.** Dua wujudnya dibayar di dua slice Home yang sama: peta
+`SECTOR_IMAGE` deployment berkunci NAMA sektor (ganti "Hospitality" jadi
+"Hotels & Resorts" = jatuh ke foto default), dan `PROCESS_GLYPHS[i]` berkunci
+POSISI baris (pindahkan baris = dua langkah bertukar gambar). Dua-duanya tanpa
+galat, dan dua-duanya baru jadi bug begitu editor BISA mengganti nama dan
+memindahkan baris — kodenya benar selama datanya literal. Fix: gambar jadi
+kolom milik barisnya (`photo_id` / `glyph`, §4b), dan probe proses
+membandingkan peta judul→ilustrasi sebelum/sesudah pindah (§13).
+
+**Indeks unik parsial atas PASANGAN kolom butuh mengecualikan yang separuh
+kosong.** `deployments_sector_region_alive` versi pertama (migrasi 0009) cuma
+ber-`where deleted_at is null`; dua draf bersektor sama yang wilayahnya masih
+kosong — keadaan yang SAH untuk draf — saling menabrak dan dijawab 500, karena
+penjaga route memang sengaja melewatkan pasangan separuh kosong. Migrasi 0011
+menulis ulang indeksnya dengan `and region <> ''`, menyamakan pendapat kedua
+penjaga (§4b).
 
 **Rute yang sah menurut penjaga umum bisa tetap salah untuk entitas yang
 bentuknya lain.** `#/visi/baru` lolos pemeriksaan `siap()` (visi memang siap)
@@ -1701,14 +1990,14 @@ mirip sandi yang masuk git adalah fixture test `"sandi-yang-panjang"` di
 - cron `pg_dump`
 - `CF_ZONE_ID` + `CF_PURGE_TOKEN` diisi supaya purge otomatis jalan
 
-**Tiga entitas konten lain** menyusul dengan pola §16 — semuanya masih
-berstatus `belum` di peta konten: deployment dan cara kerja (Home); tautan
-sosial (seluruh situs). Halaman **Work dan Services sudah selesai seluruhnya**,
-dan di **Home tinggal dua entitas itu** — industri dan visi sekarang berasal
-dari panel.
+**Satu entitas konten tersisa** — tautan sosial (grup "Seluruh situs") —
+menyusul dengan pola §16. Keempat halaman navbar **sudah selesai seluruhnya**:
+Home genap bersama deployment dan cara kerja.
 
 **Selisih kecil yang diketahui:** kalimat konfirmasi Publish belum menyebut
-jumlah sektor industri (§9a).
+jumlah langkah cara kerja (§9a — selisih serupa milik industri sudah dibayar
+slice deployment), dan `server/publish.test.ts` belum ketambahan describe
+deployment/cara kerja (§13).
 
 **Di luar cakupan, permanen:** teks yang terikat tata letak — wordmark
 `COGNITI.ID` dengan lebar `7.342` di `Contact.tsx`, `HEADING_LINES` di
@@ -1720,7 +2009,7 @@ sampai ada yang benar-benar membutuhkannya.
 
 ## §16 Resep menambah entitas berikutnya
 
-Urutan yang sudah terbukti **sembilan kali**, dipakai ulang apa adanya:
+Urutan yang sudah terbukti **sebelas kali**, dipakai ulang apa adanya:
 
 1. Tipe + validasi di `shared/` (dipakai server & admin sekaligus)
 2. Tabel di `server/db/schema.ts` → `bun run db:generate` → `db:migrate`
@@ -1774,7 +2063,22 @@ pembaca situs dengan cadangan **per isian** (§10a). Probe-nya juga wajib
 memulihkan isi semula bahkan saat gagal di tengah — entitas tunggal tidak bisa
 dibersihkan dengan menghapus baris uji (§13).
 
-**Butuh batas jumlah baris tayang?** Ikuti pola industri: tegakkan di ROUTE
-dengan 422 berkalimat, bukan trigger database (§4b); matikan tombol Tambah di
+**Butuh batas jumlah baris tayang?** Sudah ada dua preseden dengan alasan yang
+berbeda — 13 industri (geometri) dan 6 langkah cara kerja (panjang halaman):
+tegakkan di ROUTE
+dengan 422 berkalimat, bukan trigger database (§4b); taruh kalimatnya sebagai
+konstanta di `shared/` supaya panel mengucapkan kalimat yang sama; matikan
+tombol Tambah di
 panel saat penuh; dan kalau ada nomor yang tercetak di situs, hitung dari
 baris tayang saja (§14).
+
+**Gambarnya pilihan tetap dari kode, bukan unggahan?** Ikuti pola glyph cara
+kerja: enum di database (nama yang belum punya komponennya mustahil
+tersimpan), nilai deskriptif-fungsional, peta komponen bertipe
+`Record<Key, …>` supaya nilai baru menolak compile sampai gambarnya ada, dan
+radio bernama-gambar di form — bukan `PemilihFoto` (§4b). Kuncinya harus milik
+BARIS, bukan posisi atau nama yang bisa diganti editor (§14).
+
+**Seksinya memakai hook motion ber-target ref?** Pecah gerbang daftar-kosong
+ke komponen LUAR yang tanpa hook, seperti `Process`/`ProcessSection` —
+`return null` sesudah hook-nya jalan melempar di luar render (§14).
