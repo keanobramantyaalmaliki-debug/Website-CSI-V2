@@ -9,7 +9,9 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
+  readFileSync,
   statSync,
+  writeFileSync,
 } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -172,6 +174,46 @@ function copyLocalModels(): Plugin {
 }
 
 /**
+ * Penjaga hasil Publish melewati build.
+ *
+ * `publish.ts` menulis content.json langsung ke dist/ (CONTENT_FILE di atas),
+ * sedangkan `vite build` mengosongkan dist/ — jadi tiap build diam-diam
+ * membuang hasil Publish terakhir, dan situs jatuh balik ke konten bundle
+ * sampai Publish ditekan sekali lagi. Rutinitas "habis build/deploy wajib
+ * Publish" itu gampang terlupa dan gagalnya tanpa galat: situs tetap tampil,
+ * cuma isinya konten lama.
+ *
+ * Plugin ini memotret isi content.json SEBELUM Vite menghapus dist
+ * (buildStart) dan menempelkannya kembali sesudah dist selesai ditulis
+ * (closeBundle). Yang dipulihkan persis hasil Publish terakhir — kalau file
+ * memang belum pernah ada (clone baru, CI), tidak ada yang dipotret dan
+ * perilaku lama (fallback bundle) tetap berlaku.
+ */
+function preserveContentJson(): Plugin {
+  let outDir = "dist";
+  let potret: Buffer | null = null;
+  return {
+    name: "preserve-content-json",
+    apply: "build",
+    configResolved(config) {
+      outDir = path.resolve(config.root, config.build.outDir);
+    },
+    buildStart() {
+      const file = path.join(outDir, "content.json");
+      potret = existsSync(file) ? readFileSync(file) : null;
+    },
+    closeBundle() {
+      if (!potret) return;
+      writeFileSync(path.join(outDir, "content.json"), potret);
+      console.log(
+        `[preserve-content-json] content.json dipulihkan ke dist/ ` +
+          `(${(potret.length / 1024).toFixed(1)} kB)`,
+      );
+    },
+  };
+}
+
+/**
  * Daftar dependensi yang WAJIB di-prebundle di ronde pertama.
  *
  * ── Kenapa ditulis manual ────────────────────────────────────────────────────
@@ -237,6 +279,7 @@ export default defineConfig({
     serveLocalModels(),
     serveContentJson(),
     copyLocalModels(),
+    preserveContentJson(),
   ],
   server: {
     port: 3000,
