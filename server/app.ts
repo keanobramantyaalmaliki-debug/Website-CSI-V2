@@ -22,6 +22,8 @@ import visionRoute from "./routes/vision";
 import workProjectsRoute from "./routes/workProjects";
 import servicesRoute from "./routes/services";
 import industriesRoute from "./routes/industries";
+import deploymentsRoute from "./routes/deployments";
+import processStepsRoute from "./routes/processSteps";
 import caseStudiesRoute from "./routes/caseStudies";
 
 export type Env = { Variables: { actor: Actor } };
@@ -76,6 +78,10 @@ app.use("/api/testimonials/*", requireLogin);
 app.use("/api/testimonials", requireLogin);
 app.use("/api/industries/*", requireLogin);
 app.use("/api/industries", requireLogin);
+app.use("/api/deployments/*", requireLogin);
+app.use("/api/deployments", requireLogin);
+app.use("/api/process-steps/*", requireLogin);
+app.use("/api/process-steps", requireLogin);
 /* Visi tidak punya route anak hari ini (cuma `GET /` dan `PUT /`), tapi
    pasangan `/*`-nya tetap dipasang seperti yang lain: itulah yang membuat
    endpoint berikutnya lahir sudah terjaga, bukan terbuka sampai ada yang
@@ -95,6 +101,8 @@ app.route("/api/case-studies", caseStudiesRoute);
 app.route("/api/services", servicesRoute);
 app.route("/api/testimonials", testimonialsRoute);
 app.route("/api/industries", industriesRoute);
+app.route("/api/deployments", deploymentsRoute);
+app.route("/api/process-steps", processStepsRoute);
 app.route("/api/vision", visionRoute);
 app.route("/api/images", imagesRoute);
 app.route("/api/publish", publishRoute);

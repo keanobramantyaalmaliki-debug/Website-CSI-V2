@@ -164,6 +164,58 @@ export const industryStateEnum = pgEnum("industry_state", ["draft", "live"]);
  */
 export const industryTierEnum = pgEnum("industry_tier", ["core", "also"]);
 
+/**
+ * Dua keadaan sebuah deployment, cocok dengan `DeploymentState` di
+ * `shared/deployment.ts`.
+ *
+ * Enum SENDIRI lagi — kedelapan, dan alasannya masih yang itu-itu juga: yang
+ * kebetulan sama hari ini tidak boleh membuat penambahan untuk satu entitas
+ * diam-diam jadi pilihan sah di form entitas yang lain.
+ */
+export const deploymentStateEnum = pgEnum("deployment_state", [
+  "draft",
+  "live",
+]);
+
+/**
+ * Dua keadaan sebuah langkah "Cara kerja", cocok dengan `ProcessStepState` di
+ * `shared/processStep.ts`.
+ *
+ * Enum SENDIRI lagi — kesembilan, dan alasannya masih yang itu-itu juga: yang
+ * kebetulan sama hari ini tidak boleh membuat penambahan untuk satu entitas
+ * diam-diam jadi pilihan sah di form entitas yang lain.
+ */
+export const processStepStateEnum = pgEnum("process_step_state", [
+  "draft",
+  "live",
+]);
+
+/**
+ * Ilustrasi garis beranimasi di kepala kartu, cocok dengan `ProcessGlyphKey`
+ * di `shared/processStep.ts`.
+ *
+ * Enum dan bukan `text`, padahal isinya nama: yang boleh dipilih PERSIS enam
+ * komponen yang digambar tangan di `src/components/motion/ProcessGlyphs.tsx`,
+ * dan nama ketujuh tidak akan ketemu komponennya — kartunya lalu tampil tanpa
+ * kepala, tanpa satu pun galat. Enum membuat keadaan itu mustahil tersimpan.
+ *
+ * Ini juga satu-satunya "gambar" di CMS yang TIDAK lewat tabel `images`, dan
+ * itu disengaja: ia bukan berkas melainkan koreografi SVG dalam kode. Tidak
+ * ada yang bisa diunggah, jadi tidak ada yang perlu disimpan.
+ *
+ * Nilainya deskriptif-fungsional ("discovery"), bukan visual ("radar") —
+ * isi kolom bertahan lebih lama daripada bentuk gambarnya, dan menggambar
+ * ulang `DiscoveryGlyph` suatu hari tidak boleh memaksa migrasi.
+ */
+export const processGlyphEnum = pgEnum("process_glyph", [
+  "discovery",
+  "strategy",
+  "design",
+  "development",
+  "testing",
+  "deployment",
+]);
+
 /** `static` = berkas yang sudah lama ada di `public/` (hasil grading ffmpeg
  *  manual); `upload` = diunggah lewat panel admin. Dibedakan supaya jelas mana
  *  yang tidak boleh dihapus dari disk oleh CMS. */
@@ -847,6 +899,210 @@ export const industries = pgTable(
   ],
 );
 
+/* ────────────────────────── deployment ────────────────────── */
+
+/**
+ * Deployment — kartu di strip "Built for real-world environments where
+ * decisions matter." di halaman depan, tepat di bawah hero.
+ *
+ * Satu baris = satu `<article>` di grid `Deployments.tsx`. Tidak ada halaman
+ * sendiri dan tidak ada slug: kartunya tidak bisa diklik, ia berhenti di situ.
+ *
+ * TIDAK ADA batas jumlah seperti `industries`. Bedanya nyata dan bukan
+ * kelalaian: batas 13 di sana lahir dari geometri tumpukan 3D, sedangkan yang
+ * ini `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` yang tinggal menambah baris
+ * ke bawah. Kartu ke-empat belas tidak merusak apa pun.
+ *
+ * TIDAK ADA kolom nomor — "01"–"05" yang tercetak di baris meta tiap kartu
+ * diturunkan dari posisi baris, dengan alasan yang sama persis seperti
+ * `services` dan `industries`.
+ *
+ * ADA kolom `photo_id`, dan itu perbaikan bug diam-diam sekaligus. Sebelum
+ * CMS, foto kartu dicari lewat peta `SECTOR_IMAGE` di `DeploymentCard.tsx`
+ * yang BERKUNCI NAMA SEKTOR. Peta seperti itu masih bisa hidup selama kelima
+ * namanya ditulis developer di berkas yang sama; begitu namanya bisa diketik
+ * editor, mengganti "Hospitality" jadi "Hotels & Resorts" akan menjatuhkan
+ * kartunya diam-diam ke foto Public Services tanpa satu pun error.
+ */
+export const deployments = pgTable(
+  "deployments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Judul kartu (`<h3>`). Contoh: "Public Services". */
+    sector: text("sector").notNull(),
+    /** Wilayah, tercetak sebaris dengan nomornya: "03 · International". Boleh
+     *  kosong hanya supaya draf bisa disimpan setengah jalan. */
+    region: text("region").notNull().default(""),
+    /** Satu-dua kalimat isi kartu. Boleh kosong hanya untuk draf. */
+    desc: text("desc").notNull().default(""),
+    /** `set null` dan bukan `cascade`, sama seperti tabel lain: menghapus
+     *  sebuah gambar tidak boleh ikut menghapus kartunya. Kartu yang tayang
+     *  WAJIB punya foto (lihat `validateDeployment.ts`). */
+    photoId: uuid("photo_id").references(() => images.id, {
+      onDelete: "set null",
+    }),
+    state: deploymentStateEnum("state").notNull().default("draft"),
+    /**
+     * Urutan kartu di grid, dibaca kiri ke kanan lalu turun.
+     *
+     * Bukan kenyamanan panel: grid CSS merender persis urutan larik yang
+     * dioperkan, dan urutan itu sekaligus menentukan nomor "01"–"05" yang
+     * tercetak di tiap kartu. Postgres tidak menjanjikan urutan baris apa pun
+     * tanpa `ORDER BY`.
+     */
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    /**
+     * Yang unik PASANGANNYA, bukan sektornya — satu-satunya indeks unik
+     * dua-kolom di CMS ini, dan bedanya dengan `industries_name_alive`
+     * disengaja.
+     *
+     * Di sana nama sektor memang identitas: dua plank "Healthcare" tidak bisa
+     * dibedakan pengunjung maupun editor. Di sini kartunya membawa wilayah di
+     * baris pertamanya, jadi "Logistics · Indonesia" dan "Logistics ·
+     * International" terbaca sebagai dua sistem yang berbeda — karena memang
+     * begitu. Menolak yang kedua berarti memaksa editor mengarang nama sektor
+     * palsu supaya bisa mencatat kenyataan.
+     *
+     * Yang tetap dijaga adalah kartu yang benar-benar kembar: sektor DAN
+     * wilayah sama persis. Itu tidak pernah disengaja, dan hasilnya dua kartu
+     * identik bersebelahan di grid yang sama.
+     *
+     * Hanya untuk baris hidup — alasan yang sama dengan `jobs_slug_alive` —
+     * DAN hanya untuk baris yang wilayahnya sudah terisi.
+     *
+     * Syarat kedua itu bukan kelonggaran, melainkan supaya indeks ini menjaga
+     * persis hal yang perlu dijaga dan tidak sekalian mengarang aturan lain.
+     * Wilayah kosong tidak mungkin tayang (`validateDeployment` mewajibkannya
+     * untuk `live`), jadi baris berwilayah kosong SELALU draf — dan dua draf
+     * yang sama-sama baru diketik sektornya bukan "kartu kembar", mereka belum
+     * kartu apa pun. Tanpa `region <> ''` di sini, editor yang menyiapkan dua
+     * kartu Logistics sekaligus akan ditolak database dengan 500, karena
+     * penjaga di `routes/deployments.ts` memang sengaja melewatkan pasangan
+     * yang separuhnya kosong. Dua penjaga yang tidak sepakat lebih buruk
+     * daripada satu penjaga yang longgar.
+     */
+    uniqueIndex("deployments_sector_region_alive")
+      .on(t.sector, t.region)
+      .where(sql`${t.deletedAt} is null and ${t.region} <> ''`),
+    index("deployments_order").on(t.sortOrder),
+  ],
+);
+
+/* ───────────────────────── cara kerja ─────────────────────── */
+
+/**
+ * Langkah "Cara kerja" — kartu putih di seksi "How We Work" halaman depan.
+ *
+ * Satu baris = satu kartu yang ditembus "tali" SVG yang menjalar mengikuti
+ * scroll di `Process.tsx`. Tidak ada halaman sendiri dan tidak ada slug:
+ * kartunya tidak bisa diklik.
+ *
+ * ‼️ ADA batas jumlah: enam langkah tayang, `MAX_LIVE_PROCESS_STEPS` di
+ * `shared/processStep.ts`. Sama seperti batas 13 di `industries`, batasnya
+ * TIDAK bisa ditulis sebagai `check` — ia aturan tingkat daftar, sementara
+ * `check` cuma melihat satu baris. Penjaganya `routes/processSteps.ts`, yang
+ * menjawab 422 berikut kalimat penjelas.
+ *
+ * Watak batasnya beda dengan `industries`, dan bedanya perlu diingat kalau
+ * suatu hari angkanya digugat: 13 di sana lahir dari geometri (plank ke-14
+ * memanjat keluar bingkai kamera), sedangkan tali di sini digambar ulang dari
+ * posisi kartu hasil ukur dan akan melayani tujuh kartu dengan rapi. Yang
+ * dijaga enam adalah panjang halaman — enam slot `min-h-[55svh]` plus landasan
+ * ekor `45svh` sudah membuat seksi ini bagian terpanjang di halaman depan.
+ *
+ * TIDAK ADA kolom nomor — "01"–"06" yang tercetak di pojok tiap kartu
+ * diturunkan dari posisi baris, dengan alasan yang sama persis seperti
+ * `services`, `industries`, dan `deployments`.
+ *
+ * TIDAK ADA `photo_id`, dan ini satu-satunya tabel konten bergambar yang
+ * begitu: "gambar"-nya `glyph` di bawah — SVG beranimasi dalam kode, bukan
+ * berkas yang bisa diunggah.
+ */
+export const processSteps = pgTable(
+  "process_steps",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Judul langkah (`<h3>`). Contoh: "Discovery". */
+    title: text("title").notNull(),
+    /** Satu kata di atas judul, dicetak KAPITAL oranye renggang oleh situs.
+     *  Yang tersimpan apa adanya seperti diketik editor — yang mengapitalkan
+     *  CSS, bukan data. Boleh kosong hanya supaya draf bisa disimpan setengah
+     *  jalan. */
+    kicker: text("kicker").notNull().default(""),
+    /** Satu-dua kalimat penjelas. Boleh kosong hanya untuk draf. */
+    desc: text("desc").notNull().default(""),
+    /**
+     * Ilustrasi kepala kartu.
+     *
+     * Disimpan sebagai kolom, dan itu perbaikan bug diam-diam sekaligus.
+     * Sebelum CMS, gambar dipasangkan menurut POSISI larik (`PROCESS_GLYPHS[i]`
+     * di `Process.tsx`). Peta seperti itu masih bisa hidup selama keenam
+     * urutannya ditulis developer di berkas yang sama; begitu editor boleh
+     * menghapus atau memindahkan langkah, "Design" naik satu baris dan
+     * tiba-tiba bergambar radar — tanpa seorang pun mengubah gambar apa pun,
+     * dan tanpa satu pun galat. Persis bug `SECTOR_IMAGE` di `deployments`,
+     * dengan posisi sebagai kunci alih-alih nama.
+     *
+     * Defaultnya `discovery` supaya migrasi punya nilai; yang menentukan
+     * pilihan sungguhannya form, dan di sana ia wajib dipilih.
+     */
+    glyph: processGlyphEnum("glyph").notNull().default("discovery"),
+    state: processStepStateEnum("state").notNull().default("draft"),
+    /**
+     * Urutan langkah, dari atas ke bawah.
+     *
+     * Bukan kenyamanan panel, dan bukan pula sekadar tata letak seperti di
+     * tabel lain: ini ALUR KERJA. "Discovery" sebelum "Design" sebelum
+     * "Deployment" adalah isi yang disampaikan seksi ini; urutan yang keliru
+     * bukan kartu yang salah tempat melainkan kalimat yang salah.
+     *
+     * Ia menentukan tiga hal tayang sekaligus — posisi kartu di sepanjang
+     * tali, nomor "01"–"06" di pojoknya, dan sisi kiri/kanan berselang-seling
+     * yang membuat talinya terbaca zig-zag. Postgres tidak menjanjikan urutan
+     * baris apa pun tanpa `ORDER BY`.
+     */
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    /**
+     * Judul unik HANYA untuk baris hidup — alasan yang sama dengan
+     * `jobs_slug_alive`.
+     *
+     * Yang dijaga di sini orangnya, bukan React (kartunya berkunci `id`): dua
+     * baris "Design" di panel tidak bisa dibedakan editor saat mengurutkan
+     * atau menghapus, dan enam langkah yang harus dibaca berurutan justru
+     * paling gampang tertukar.
+     *
+     * Ilustrasi SENGAJA tidak ikut dijaga unik, padahal jumlahnya kebetulan
+     * persis sama dengan batas langkah. Menegakkannya akan membuat aksi paling
+     * lumrah — menukar gambar dua langkah — mustahil dilakukan tanpa lebih
+     * dulu memarkir salah satunya di gambar ketiga.
+     */
+    uniqueIndex("process_steps_title_alive")
+      .on(t.title)
+      .where(sql`${t.deletedAt} is null`),
+    index("process_steps_order").on(t.sortOrder),
+  ],
+);
+
 /* ──────────────────────────── visi ────────────────────────── */
 
 /**
@@ -1051,6 +1307,10 @@ export const serviceSubsRelations = relations(serviceSubs, ({ one }) => ({
     fields: [serviceSubs.serviceId],
     references: [services.id],
   }),
+}));
+
+export const deploymentsRelations = relations(deployments, ({ one }) => ({
+  photo: one(images, { fields: [deployments.photoId], references: [images.id] }),
 }));
 
 export const industriesRelations = relations(industries, ({ one }) => ({

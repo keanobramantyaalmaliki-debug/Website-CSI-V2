@@ -10,12 +10,14 @@
 import type { CrewMember } from "@shared/crew";
 import type { Job } from "@shared/job";
 import type { Industry } from "@shared/industry";
+import type { Deployment } from "@shared/deployment";
 import type { Value } from "@shared/value";
 import type { WorkProject } from "@shared/workProject";
 import type { CaseStudy } from "@shared/caseStudy";
 import type { Service } from "@shared/service";
 import type { Testimonial } from "@shared/testimonial";
 import type { Vision } from "@shared/vision";
+import type { ProcessStep } from "@shared/processStep";
 import type { CrewFieldErrors, CrewInput } from "@shared/validateCrew";
 import type { JobFieldErrors, JobInput } from "@shared/validateJob";
 import type { ValueFieldErrors, ValueInput } from "@shared/validateValue";
@@ -23,6 +25,10 @@ import type {
   IndustryFieldErrors,
   IndustryInput,
 } from "@shared/validateIndustry";
+import type {
+  DeploymentFieldErrors,
+  DeploymentInput,
+} from "@shared/validateDeployment";
 import type {
   WorkProjectFieldErrors,
   WorkProjectInput,
@@ -37,6 +43,10 @@ import type {
 } from "@shared/validateTestimonial";
 import type { ServiceFieldErrors, ServiceInput } from "@shared/validateService";
 import type { VisionFieldErrors, VisionInput } from "@shared/validateVision";
+import type {
+  ProcessStepFieldErrors,
+  ProcessStepInput,
+} from "@shared/validateProcessStep";
 
 export type JobRecord = Job & {
   updatedAt: string;
@@ -53,6 +63,20 @@ export type ValueRecord = Value & {
 };
 
 export type IndustryRecord = Industry & {
+  updatedAt: string;
+  publishedAt: string | null;
+  /** Ada perubahan yang belum ikut Publish. */
+  unpublished: boolean;
+};
+
+export type DeploymentRecord = Deployment & {
+  updatedAt: string;
+  publishedAt: string | null;
+  /** Ada perubahan yang belum ikut Publish. */
+  unpublished: boolean;
+};
+
+export type ProcessStepRecord = ProcessStep & {
   updatedAt: string;
   publishedAt: string | null;
   /** Ada perubahan yang belum ikut Publish. */
@@ -138,6 +162,8 @@ export type FieldErrors = JobFieldErrors &
   ServiceFieldErrors &
   TestimonialFieldErrors &
   IndustryFieldErrors &
+  DeploymentFieldErrors &
+  ProcessStepFieldErrors &
   VisionFieldErrors;
 
 async function minta<T>(path: string, init: RequestInit = {}): Promise<Hasil<T>> {
@@ -260,6 +286,76 @@ export const hapusIndustri = (id: string) =>
 export const urutkanIndustri = (ids: string[]) =>
   minta<{ industries: IndustryRecord[] }>(
     "/api/industries/urutkan",
+    kirimJson("POST", { ids }),
+  );
+
+/* ── deployment (Home → Built for real-world environments) ──────────── */
+
+export const ambilDeployment = () =>
+  minta<{ deployments: DeploymentRecord[] }>("/api/deployments");
+
+export const ambilSatuDeployment = (id: string) =>
+  minta<{ deployment: DeploymentRecord }>(`/api/deployments/${id}`);
+
+export const buatDeployment = (input: DeploymentInput) =>
+  minta<{ deployment: DeploymentRecord }>(
+    "/api/deployments",
+    kirimJson("POST", input),
+  );
+
+export const simpanDeployment = (id: string, input: DeploymentInput) =>
+  minta<{ deployment: DeploymentRecord }>(
+    `/api/deployments/${id}`,
+    kirimJson("PUT", input),
+  );
+
+export const hapusDeployment = (id: string) =>
+  minta<{ ok: true; deleted: string }>(`/api/deployments/${id}`, {
+    method: "DELETE",
+  });
+
+/** SELURUH daftar id dalam urutan barunya, seperti nilai dan industri. Di sini
+ *  urutan menentukan dua hal sekaligus: posisi kartu di grid DAN nomor
+ *  "01"–"05" yang tercetak di kartunya — nomor itu tidak pernah disimpan,
+ *  situs menurunkannya dari posisi baris. */
+export const urutkanDeployment = (ids: string[]) =>
+  minta<{ deployments: DeploymentRecord[] }>(
+    "/api/deployments/urutkan",
+    kirimJson("POST", { ids }),
+  );
+
+/* ── cara kerja (Home → How We Work) ────────────────────────────────── */
+
+export const ambilProses = () =>
+  minta<{ steps: ProcessStepRecord[] }>("/api/process-steps");
+
+export const ambilSatuProses = (id: string) =>
+  minta<{ step: ProcessStepRecord }>(`/api/process-steps/${id}`);
+
+export const buatProses = (input: ProcessStepInput) =>
+  minta<{ step: ProcessStepRecord }>(
+    "/api/process-steps",
+    kirimJson("POST", input),
+  );
+
+export const simpanProses = (id: string, input: ProcessStepInput) =>
+  minta<{ step: ProcessStepRecord }>(
+    `/api/process-steps/${id}`,
+    kirimJson("PUT", input),
+  );
+
+export const hapusProses = (id: string) =>
+  minta<{ ok: true; deleted: string }>(`/api/process-steps/${id}`, {
+    method: "DELETE",
+  });
+
+/** SELURUH daftar id dalam urutan barunya, seperti nilai dan industri. Urutan
+ *  di sini bukan sekadar tata letak: ia alur kerja yang dibaca dari atas ke
+ *  bawah SEKALIGUS penentu nomor "01"–"06" di kartunya — nomor itu tidak
+ *  pernah disimpan, situs menurunkannya dari posisi baris. */
+export const urutkanProses = (ids: string[]) =>
+  minta<{ steps: ProcessStepRecord[] }>(
+    "/api/process-steps/urutkan",
     kirimJson("POST", { ids }),
   );
 
@@ -450,6 +546,9 @@ export const tayangkan = () =>
     caseStudies: number;
     services: number;
     testimonials: number;
+    industries: number;
+    deployments: number;
+    processSteps: number;
     /* Bukan cacah — visi selalu tepat satu. `false` berarti situs masih
        memakai cadangan bundle karena barisnya belum ada. */
     vision: boolean;

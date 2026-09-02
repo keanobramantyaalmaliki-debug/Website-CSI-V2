@@ -31,11 +31,14 @@ import { FALLBACK_CASE_STUDIES } from "../../src/data/caseStudiesFallback";
 import { FALLBACK_TESTIMONIALS } from "../../src/data/testimonialsFallback";
 import { FALLBACK_SERVICES } from "../../src/data/servicesFallback";
 import { FALLBACK_INDUSTRIES } from "../../src/data/industriesFallback";
+import { FALLBACK_DEPLOYMENTS } from "../../src/data/deploymentsFallback";
 import { FALLBACK_VISION } from "../../src/data/visionFallback";
+import { FALLBACK_PROCESS_STEPS } from "../../src/data/processStepsFallback";
 import { db, sql } from "./client";
 import {
   crewMembers,
   crewSocials,
+  deployments,
   images,
   industries,
   jobCopy,
@@ -43,6 +46,7 @@ import {
   jobSkills,
   jobs,
   peopleValues,
+  processSteps,
   services,
   serviceSubs,
   workProjects,
@@ -644,6 +648,72 @@ async function seedIndustries() {
 }
 
 /**
+ * Kartu deployment di halaman depan.
+ *
+ * Gerbangnya punya sendiri (`count > 0` di tabelnya) dengan alasan yang sama
+ * seperti `seedValues`: database yang sudah berisi lowongan tapi belum berisi
+ * deployment adalah keadaan yang normal, dan gerbang bersama akan melewatkan
+ * yang kedua diam-diam.
+ *
+ * Foto tiap kartu URL Unsplash, bukan berkas di `public/` — persis seperti
+ * sektor industri, dan `source: "static"` dipakai dengan alasan yang sama.
+ */
+async function seedDeployments() {
+  const [{ count }] = await db
+    .select({ count: raw<number>`count(*)::int` })
+    .from(deployments);
+
+  if (count > 0) {
+    console.log(`Tabel deployments sudah berisi ${count} baris — dilewati.`);
+    return;
+  }
+
+  await db.transaction(async (tx) => {
+    for (const [index, item] of FALLBACK_DEPLOYMENTS.entries()) {
+      let photoId: string | null = null;
+      if (item.image) {
+        const [row] = await tx
+          .insert(images)
+          .values({
+            path: item.image,
+            source: "static" as const,
+            originalName: null,
+          })
+          .onConflictDoNothing({ target: images.path })
+          .returning({ id: images.id });
+
+        /* `onConflictDoNothing` tidak mengembalikan baris kalau path-nya sudah
+           terdaftar, jadi baris lamanya dicari — sama seperti di `seedValues`. */
+        photoId =
+          row?.id ??
+          (
+            await tx
+              .select({ id: images.id })
+              .from(images)
+              .where(eq(images.path, item.image))
+          )[0]?.id ??
+          null;
+      }
+
+      await tx.insert(deployments).values({
+        sector: item.sector,
+        region: item.region,
+        desc: item.desc,
+        photoId,
+        state: "live",
+        sortOrder: index,
+        /* Sudah tayang hari ini — lihat alasan yang sama di seed lowongan. */
+        publishedAt: new Date(),
+      });
+    }
+  });
+
+  console.log(
+    `Seed selesai: ${FALLBACK_DEPLOYMENTS.length} deployment masuk ke database.`,
+  );
+}
+
+/**
  * Seksi Visi di halaman depan.
  *
  * Satu baris, bukan daftar — jadi gerbangnya tetap `count > 0` seperti yang
@@ -708,6 +778,53 @@ async function seedVision() {
   console.log("Seed selesai: visi masuk ke database.");
 }
 
+/**
+ * Langkah "How We Work" di halaman depan.
+ *
+ * Gerbang isinya sendiri, alasan yang sama dengan `seedValues`.
+ *
+ * Semua masuk sebagai `live`: keenamnya memang sudah tayang hari ini — dan
+ * angka 6 itu persis `MAX_LIVE_PROCESS_STEPS`, jadi seed ini mengisi seksinya
+ * sampai penuh, sama seperti seed industri. Langkah ke-7 lewat panel akan
+ * ditolak `routes/processSteps.ts` sampai ada yang dijadikan draft atau
+ * dihapus.
+ *
+ * `glyph` ikut ditulis dari literal, bukan dihitung dari `index`: ilustrasinya
+ * MILIK langkahnya, supaya menghapus atau menukar urutan tidak menggeser
+ * gambar diam-diam seperti dulu waktu `PROCESS_GLYPHS[i]` yang menentukan.
+ */
+async function seedProcessSteps() {
+  const [{ count }] = await db
+    .select({ count: raw<number>`count(*)::int` })
+    .from(processSteps);
+
+  if (count > 0) {
+    console.log(`Tabel process_steps sudah berisi ${count} baris — dilewati.`);
+    return;
+  }
+
+  await db.transaction(async (tx) => {
+    for (const [index, step] of FALLBACK_PROCESS_STEPS.entries()) {
+      await tx.insert(processSteps).values({
+        title: step.title,
+        kicker: step.kicker,
+        desc: step.desc,
+        glyph: step.glyph,
+        state: "live",
+        /* Urutan literal = urutan yang tayang; nomor "01"–"06" di kartunya
+           dihitung dari posisi ini saat render, bukan disimpan. */
+        sortOrder: index,
+        /* Sudah tayang hari ini — lihat alasan yang sama di seed lowongan. */
+        publishedAt: new Date(),
+      });
+    }
+  });
+
+  console.log(
+    `Seed selesai: ${FALLBACK_PROCESS_STEPS.length} langkah cara kerja masuk ke database.`,
+  );
+}
+
 await seedJobs();
 await seedValues();
 await seedCrew();
@@ -716,5 +833,7 @@ await seedCaseStudies();
 await seedServices();
 await seedTestimonials();
 await seedIndustries();
+await seedDeployments();
 await seedVision();
+await seedProcessSteps();
 await sql.end();

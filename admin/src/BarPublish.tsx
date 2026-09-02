@@ -39,6 +39,8 @@ export function BarPublish({
       caseStudies,
       services,
       testimonials,
+      industries,
+      deployments,
       vision,
       warning,
     } = hasil.data;
@@ -57,6 +59,8 @@ export function BarPublish({
       [caseStudies, "case study"],
       [services, "layanan"],
       [testimonials, "testimoni"],
+      [industries, "sektor"],
+      [deployments, "kartu deployment"],
     ] as const;
     const isi = [
       ...bagian.filter(([n]) => n > 0).map(([n, nama]) => `${n} ${nama}`),

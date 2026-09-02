@@ -29,7 +29,7 @@ export async function resetDb(): Promise<void> {
       people_values, crew_socials, crew_members,
       work_project_tags, work_projects,
       case_study_scopes, case_studies, service_subs, services,
-      testimonials, industries, vision, images, users
+      testimonials, industries, deployments, vision, process_steps, images, users
     restart identity cascade
   `);
 }
@@ -171,6 +171,18 @@ export function industryBody(over: Record<string, unknown> = {}) {
   };
 }
 
+/** Bentuk kartu deployment minimal yang lolos validasi `live`. */
+export function deploymentBody(over: Record<string, unknown> = {}) {
+  return {
+    sector: "Logistics",
+    region: "Indonesia",
+    desc: "Setiap pengiriman terpantau dari asal sampai tujuan.",
+    image: "/deployments/logistics.webp",
+    state: "live",
+    ...over,
+  };
+}
+
 /** Bentuk visi minimal yang lolos validasi. Tanpa `state`: visi memang tidak
  *  punya keadaan draft/live — seksinya selalu tayang. */
 export function visionBody(over: Record<string, unknown> = {}) {
@@ -188,6 +200,18 @@ export function testimonialBody(over: Record<string, unknown> = {}) {
     quote: "Laporan yang dulu dua minggu sekarang selesai hari itu juga.",
     name: "Ratna Wijaya",
     role: "Head of IT, Dinas Komunikasi & Informatika",
+    state: "live",
+    ...over,
+  };
+}
+
+/** Bentuk langkah cara kerja minimal yang lolos validasi `live`. */
+export function processStepBody(over: Record<string, unknown> = {}) {
+  return {
+    title: "Discovery",
+    kicker: "UNDERSTAND",
+    desc: "Kami memetakan kebutuhan, pengguna, dan sistem yang sudah berjalan.",
+    glyph: "discovery",
     state: "live",
     ...over,
   };

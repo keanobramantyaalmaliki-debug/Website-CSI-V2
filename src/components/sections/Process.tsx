@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   motion,
   useMotionValueEvent,
@@ -9,48 +9,10 @@ import {
   useTransform,
 } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
-import { PROCESS_GLYPHS } from "@/components/motion/ProcessGlyphs";
+import { PROCESS_GLYPHS_BY_KEY } from "@/components/motion/ProcessGlyphs";
+import { processSteps, type ProcessStepContent } from "@/data/processSteps";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
-
-const STEPS: { num: string; kicker: string; title: string; desc: string }[] = [
-  {
-    num: "01",
-    kicker: "UNDERSTAND",
-    title: "Discovery",
-    desc: "We map your current workflows, pain points, and goals before writing a line of code.",
-  },
-  {
-    num: "02",
-    kicker: "PLAN",
-    title: "Strategy & Planning",
-    desc: "Scope, architecture, and timeline locked in, so the build has a clear target.",
-  },
-  {
-    num: "03",
-    kicker: "SHAPE",
-    title: "Design",
-    desc: "Interfaces and flows prototyped and tested with real users before development starts.",
-  },
-  {
-    num: "04",
-    kicker: "BUILD",
-    title: "Development",
-    desc: "Engineers build in short, reviewable cycles. Nothing lands without a second pair of eyes.",
-  },
-  {
-    num: "05",
-    kicker: "VERIFY",
-    title: "Testing & QA",
-    desc: "Automated and manual checks against real-world edge cases, not just the happy path.",
-  },
-  {
-    num: "06",
-    kicker: "LAUNCH",
-    title: "Deployment & Support",
-    desc: "Shipped with monitoring in place, and a team that stays on for what comes after launch.",
-  },
-];
 
 /**
  * Sejak 23 Agu (malam) daftar teks + panel sticky diganti "tali" SVG yang
@@ -300,19 +262,28 @@ function buildRope(
 
 function ProcessCard({
   step,
-  Glyph,
+  num,
   play,
   reduced,
   setRef,
   side,
 }: {
-  step: (typeof STEPS)[number];
-  Glyph: (typeof PROCESS_GLYPHS)[number];
+  step: ProcessStepContent;
+  /** "01"–"06", diturunkan dari posisi baris oleh pemanggil — bukan kolom
+   *  tersimpan. Lihat `shared/processStep.ts`. */
+  num: string;
   play: boolean;
   reduced: boolean;
   setRef: (el: HTMLDivElement | null) => void;
   side: "start" | "end";
 }) {
+  /* Gambar dicari lewat NAMA yang dibawa langkahnya, bukan lewat posisinya di
+     larik seperti sebelum CMS (`PROCESS_GLYPHS[i]`). Bedanya baru terasa saat
+     editor memindahkan atau menghapus satu langkah: dengan posisi sebagai
+     kunci, "Design" naik satu baris dan tiba-tiba bergambar radar tanpa satu
+     pun galat. */
+  const Glyph = PROCESS_GLYPHS_BY_KEY[step.glyph];
+
   return (
     <div
       className={`flex min-h-[55svh] items-center px-1 sm:px-[6%] lg:px-[12%] ${
@@ -357,7 +328,7 @@ function ProcessCard({
             transition={{ duration: 0.35, delay: play ? 0.45 : 0 }}
           >
             <span className="absolute top-4 left-5 text-xs tabular-nums text-zinc-400">
-              {step.num}
+              {num}
             </span>
             <div className="mx-auto h-20 w-20 text-zinc-900 sm:h-28 sm:w-28">
               <Glyph play={play} reduced={reduced} />
@@ -376,7 +347,39 @@ function ProcessCard({
   );
 }
 
+/**
+ * Nol langkah = seksinya tidak ada sama sekali — judul, tali, dan landasan
+ * ekornya sekalian. Merender judul "How We Work" di atas ruang kosong
+ * sepanjang setengah layar jauh lebih buruk daripada tidak merender apa pun.
+ *
+ * AMAN untuk jarak mobile, dan itu diperiksa sebelum diputuskan: seksi ini
+ * `pt-0 sm:pt-32` TANPA `pb` sama sekali, jadi ia tidak menjatah celah apa
+ * pun. Celah 80px ke tetangga bawahnya (Industries) dijatah `pb-20` milik
+ * Deployments di atasnya, dan itu tetap berlaku persis sama saat seksi ini
+ * hilang. Bandingkan dengan seksi Visi, yang justru WAJIB selalu render karena
+ * celahnya cuma dijatah dari satu tempat.
+ *
+ * Gerbangnya ditaruh di komponen LUAR, bukan sebagai `return null` di tengah
+ * `ProcessSection`, dan itu bukan selera: hook `useScroll` di dalam sana
+ * memegang `wrapRef` sebagai target. Kalau komponennya dipanggil lalu keluar
+ * sebelum merender, ref itu tidak pernah menempel dan motion melempar
+ * "Target ref is defined but not hydrated" satu frame kemudian — galat yang
+ * jatuhnya di luar render, jadi tidak ketahuan sampai halamannya dibuka.
+ * Dengan pemisahan ini, tak satu pun hook seksi itu ikut berjalan saat
+ * daftarnya kosong.
+ */
 export default function Process() {
+  /* ⚠️ DI DALAM komponen, bukan di ruang modul — `content.json` baru mendarat
+     sesudah `loadContent()` di `main.tsx`, jadi `const STEPS = processSteps()`
+     di kepala berkas akan membekukan isi cadangan selamanya tanpa satu pun
+     galat. `[]` aman: isinya tidak berubah lagi setelah muat pertama. */
+  const steps = useMemo(() => processSteps(), []);
+
+  if (steps.length === 0) return null;
+  return <ProcessSection steps={steps} />;
+}
+
+function ProcessSection({ steps }: { steps: ProcessStepContent[] }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -523,11 +526,16 @@ export default function Process() {
           </svg>
         )}
 
-        {STEPS.map((step, i) => (
+        {steps.map((step, i) => (
           <ProcessCard
-            key={step.num}
+            /* Berkunci JUDUL, bukan indeks: judul unik antar langkah hidup
+               (dijaga `process_steps_title_alive`), dan indeks sebagai key
+               membuat React memakai ulang kartu yang salah saat urutannya
+               berubah — kartu yang sudah menggembung tetap menggembung
+               sementara isinya berganti. */
+            key={step.title}
             step={step}
-            Glyph={PROCESS_GLYPHS[i]}
+            num={String(i + 1).padStart(2, "0")}
             play={lit > i}
             reduced={reduced}
             setRef={(el) => {

@@ -75,14 +75,18 @@ export const CONTENT_PAGES: readonly ContentPage[] = [
         key: "deployment",
         label: "Deployment",
         summary: "Sistem yang sudah berjalan, dikelompokkan per sektor dan wilayah.",
-        status: "belum",
+        status: "siap",
         approxCount: 5,
       },
       {
         key: "proses",
         label: "Cara kerja",
         summary: "Langkah dari obrolan pertama sampai serah terima.",
-        status: "belum",
+        status: "siap",
+        /* Angka yang sekaligus BATAS, seperti 13 di industri — tapi alasannya
+           beda: bukan geometri melainkan panjang halaman. "How We Work" sudah
+           jadi seksi terpanjang di halaman depan, dan ilustrasi yang tersedia
+           memang cuma enam. Ditegakkan `routes/processSteps.ts`. */
         approxCount: 6,
       },
       {

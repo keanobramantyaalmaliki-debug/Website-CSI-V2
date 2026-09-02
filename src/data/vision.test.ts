@@ -14,6 +14,8 @@ const kosong = {
   services: [],
   testimonials: [],
   industries: [],
+  deployments: [],
+  processSteps: [],
   vision: null,
 };
 

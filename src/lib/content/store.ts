@@ -29,6 +29,8 @@ import type { CaseStudy } from "@shared/caseStudy";
 import type { Testimonial } from "@shared/testimonial";
 import type { Service } from "@shared/service";
 import type { Industry } from "@shared/industry";
+import type { Deployment } from "@shared/deployment";
+import type { ProcessStep } from "@shared/processStep";
 import type { Vision } from "@shared/vision";
 
 /**
@@ -217,6 +219,55 @@ export function contentTestimonials(): Testimonial[] | null {
  */
 export function contentIndustries(): Industry[] | null {
   const rows = content?.industries;
+  return Array.isArray(rows) ? rows : null;
+}
+
+/**
+ * Kartu "Built for real-world environments…" halaman depan dari CMS, atau
+ * `null` kalau harus memakai isi bundle.
+ *
+ * Diperiksa terpisah dengan alasan yang sama seperti pembaca-pembaca di atas:
+ * `content.json` yang ditulis sebelum deployment masuk CMS adalah berkas sehat
+ * yang cuma belum punya bagian ini.
+ *
+ * Daftar KOSONG dihormati apa adanya — seluruh section lalu tidak dirender
+ * sama sekali, judul dan kartu ajakan kontaknya sekalian. Yang menanganinya
+ * `Deployments.tsx`.
+ *
+ * Menghilang seluruhnya AMAN untuk jarak mobile, dan itu perlu diperiksa
+ * sebelum diputuskan: section ini `pt-0 pb-20`, tetangga atasnya CsiHero
+ * `pb-20`, tetangga bawahnya Process `pt-0`. Begitu ia hilang, `pb-20` CsiHero
+ * bertemu `pt-0` Process dan celahnya tetap 80px. Bandingkan dengan seksi Visi
+ * di bawah, yang justru tidak boleh hilang karena celahnya cuma dijatah dari
+ * satu tempat.
+ */
+export function contentDeployments(): Deployment[] | null {
+  const rows = content?.deployments;
+  return Array.isArray(rows) ? rows : null;
+}
+
+/**
+ * Langkah "How We Work" dari CMS, atau `null` kalau harus memakai isi bundle.
+ *
+ * Diperiksa terpisah dengan alasan yang sama seperti pembaca-pembaca di atas:
+ * `content.json` yang ditulis sebelum entitas ini ada tetap sah, bagian inilah
+ * yang belum ada di dalamnya — jadi yang jatuh ke bundle cuma seksi ini, bukan
+ * seluruh situs.
+ *
+ * Daftar KOSONG dihormati apa adanya — seluruh section lalu tidak dirender
+ * sama sekali, judul, tali SVG, dan landasan ekornya sekalian. Yang
+ * menanganinya `Process.tsx`.
+ *
+ * Menghilang seluruhnya AMAN untuk jarak mobile, dan itu perlu diperiksa
+ * sebelum diputuskan: section ini `pt-0 sm:pt-32` tanpa `pb` sama sekali,
+ * jadi ia tidak menjatah celah apa pun. Yang menjatah 80px ke tetangga
+ * bawahnya (Industries) adalah `pb-20` milik Deployments di atasnya, dan itu
+ * tetap berlaku persis sama saat seksi ini tidak ada. Bandingkan dengan seksi
+ * Visi di bawah, yang justru tidak boleh hilang karena celahnya cuma dijatah
+ * dari satu tempat.
+ */
+export function contentProcessSteps(): ProcessStep[] | null {
+  const rows = content?.processSteps;
   return Array.isArray(rows) ? rows : null;
 }
 

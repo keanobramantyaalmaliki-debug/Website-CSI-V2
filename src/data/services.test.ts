@@ -24,6 +24,8 @@ const kosong = {
   caseStudies: [],
   testimonials: [],
   industries: [],
+  deployments: [],
+  processSteps: [],
 };
 
 describe("FALLBACK_SERVICES", () => {

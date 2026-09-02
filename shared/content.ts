@@ -28,6 +28,8 @@ import type { CaseStudy } from "./caseStudy";
 import type { Testimonial } from "./testimonial";
 import type { Service } from "./service";
 import type { Industry } from "./industry";
+import type { Deployment } from "./deployment";
+import type { ProcessStep } from "./processStep";
 import type { Vision } from "./vision";
 
 export type ContentPayload = {
@@ -74,6 +76,36 @@ export type ContentPayload = {
    * sini. Kurang dari itu aman berapa pun, sampai kosong.
    */
   industries: Industry[];
+  /**
+   * Kartu "Built for real-world environments…" di halaman depan yang `live`
+   * saja, sudah urut sesuai `sortOrder`.
+   *
+   * Situs bergantung pada urutannya lewat dua jalur sekaligus, sama seperti
+   * `industries`: grid CSS merender persis urutan larik ini, dan urutan itu
+   * juga menentukan nomor "01"–"05" yang tercetak di baris meta tiap kartu.
+   *
+   * Tidak ada batas panjang. Grid-nya tinggal menambah baris ke bawah, jadi
+   * kartu ke-empat belas tidak merusak apa pun — beda dari `industries` yang
+   * dibatasi geometri tumpukan 3D-nya.
+   */
+  deployments: Deployment[];
+  /**
+   * Langkah "How We Work" di halaman depan yang `live` saja, sudah urut sesuai
+   * `sortOrder`.
+   *
+   * Urutannya paling menentukan dari semua field di sini, dan bukan karena
+   * tata letak: larik ini DIBACA sebagai kalimat. "Discovery" sebelum "Design"
+   * sebelum "Deployment" adalah isi yang disampaikan seksinya; larik yang
+   * tertukar bukan kartu yang salah tempat melainkan cerita yang salah. Ia
+   * sekaligus menentukan nomor "01"–"06" di pojok kartu dan sisi kiri/kanan
+   * berselang-seling yang membuat tali SVG-nya terbaca zig-zag.
+   *
+   * Panjangnya PALING BANYAK 6 (`MAX_LIVE_PROCESS_STEPS`), ditegakkan
+   * `routes/processSteps.ts` jauh sebelum sampai ke sini. Beda dari batas 13
+   * `industries` yang lahir dari geometri, yang ini menjaga panjang halaman —
+   * dan seperti di sana, kurang dari itu aman berapa pun sampai kosong.
+   */
+  processSteps: ProcessStep[];
   /**
    * Seksi Visi di halaman depan. SATU objek, bukan larik — dan satu-satunya
    * field di sini yang bisa bernilai `null`.

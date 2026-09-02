@@ -6,31 +6,34 @@ import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import DeploymentRevealImage from "@/components/sections/DeploymentRevealImage";
 
 export type DeploymentData = {
+  /** "01"–"05". DITURUNKAN dari posisi kartu oleh `Deployments.tsx`, bukan
+   *  disimpan di CMS — lihat `shared/deployment.ts`. */
   num: string;
   sector: string;
   region: string;
   desc: string;
+  /**
+   * Foto latar kartu, DIOPER PER KARTU.
+   *
+   * Dulu di sini ada peta `SECTOR_IMAGE` berkunci nama sektor plus
+   * `DEFAULT_IMAGE`. Peta itu dicabut saat deployment masuk CMS, dan bukan
+   * cuma karena datanya pindah: begitu nama sektor bisa diketik editor,
+   * mengganti "Hospitality" jadi "Hotels & Resorts" akan menjatuhkan kartunya
+   * diam-diam ke foto Public Services — tanpa satu pun error. Kunci berupa
+   * teks bebas yang diketik orang lain memang tidak bisa dipakai begitu.
+   *
+   * Boleh kosong: `<img>`-nya lalu tidak dirender sama sekali (bukan
+   * `src=""`, yang di beberapa peramban justru meminta ulang halamannya
+   * sendiri). Kartu yang TAYANG wajib punya foto — dijaga
+   * `validateDeployment.ts` — jadi kosong praktis cuma terjadi kalau isi
+   * cadangan bundle suatu hari dipangkas.
+   */
+  image: string;
 };
-
-const SECTOR_IMAGE: Record<string, string> = {
-  "Public Services":
-    "https://images.unsplash.com/photo-1756227584303-f1400daaa69d?w=900&q=80&auto=format&fit=crop",
-  Infrastructure:
-    "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=900&q=80&auto=format&fit=crop",
-  Logistics:
-    "https://images.unsplash.com/photo-1645736315000-6f788915923b?w=900&q=80&auto=format&fit=crop",
-  Hospitality:
-    "https://images.unsplash.com/photo-1758193783649-13371d7fb8dd?w=900&q=80&auto=format&fit=crop",
-  Communities:
-    "https://images.unsplash.com/photo-1691724414154-8b1551e7b292?w=900&q=80&auto=format&fit=crop",
-};
-
-const DEFAULT_IMAGE = SECTOR_IMAGE["Public Services"];
 
 export default function DeploymentCard({ d }: { d: DeploymentData }) {
   const reduced = !!useReducedMotion();
   const coarse = useCoarsePointer();
-  const image = SECTOR_IMAGE[d.sector] ?? DEFAULT_IMAGE;
 
   return (
     <FadeUpItem
@@ -40,11 +43,11 @@ export default function DeploymentCard({ d }: { d: DeploymentData }) {
       {/* 1. Foto — selalu ter-mount, diredam saat diam.
           Desktop (penunjuk presisi) memakai hover CSS. Layar sentuh tidak punya
           hover, jadi reveal-nya diikat ke scroll — lihat DeploymentRevealImage. */}
-      {coarse ? (
-        <DeploymentRevealImage src={image} reduced={reduced} />
+      {!d.image ? null : coarse ? (
+        <DeploymentRevealImage src={d.image} reduced={reduced} />
       ) : (
         <img
-          src={image}
+          src={d.image}
           alt=""
           loading="lazy"
           className={`absolute inset-0 h-full w-full object-cover opacity-40 grayscale transition-[filter,opacity,transform] duration-500 group-hover:opacity-100 group-hover:grayscale-0 ${reduced ? "" : "group-hover:scale-[1.03]"}`}

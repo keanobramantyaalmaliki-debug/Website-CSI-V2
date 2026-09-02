@@ -20,9 +20,11 @@ import { useCallback, useEffect, useState } from "react";
 
 import {
   ambilCrew,
+  ambilDeployment,
   ambilIndustri,
   ambilLowongan,
   ambilNilai,
+  ambilProses,
   ambilProyek,
   ambilCaseStudy,
   ambilLayanan,
@@ -32,9 +34,11 @@ import {
   siapaAku,
   statusPublish,
   type CrewRecord,
+  type DeploymentRecord,
   type IndustryRecord,
   type JobRecord,
   type Pengguna,
+  type ProcessStepRecord,
   type ValueRecord,
   type WorkProjectRecord,
   type CaseStudyRecord,
@@ -45,17 +49,21 @@ import {
 import { BarPublish } from "./BarPublish";
 import { Beranda } from "./Beranda";
 import { DaftarCrew } from "./DaftarCrew";
+import { DaftarDeployment } from "./DaftarDeployment";
 import { DaftarIndustri } from "./DaftarIndustri";
 import { DaftarLowongan } from "./DaftarLowongan";
 import { DaftarNilai } from "./DaftarNilai";
+import { DaftarProses } from "./DaftarProses";
 import { DaftarProyek } from "./DaftarProyek";
 import { DaftarCaseStudy } from "./DaftarCaseStudy";
 import { DaftarLayanan } from "./DaftarLayanan";
 import { DaftarTestimoni } from "./DaftarTestimoni";
 import { FormCrew } from "./FormCrew";
+import { FormDeployment } from "./FormDeployment";
 import { FormIndustri } from "./FormIndustri";
 import { FormLowongan } from "./FormLowongan";
 import { FormNilai } from "./FormNilai";
+import { FormProses } from "./FormProses";
 import { FormProyek } from "./FormProyek";
 import { FormCaseStudy } from "./FormCaseStudy";
 import { FormLayanan } from "./FormLayanan";
@@ -126,6 +134,8 @@ export function App() {
   const [layanan, setLayanan] = useState<ServiceRecord[]>([]);
   const [testimoni, setTestimoni] = useState<TestimonialRecord[]>([]);
   const [industri, setIndustri] = useState<IndustryRecord[]>([]);
+  const [deployment, setDeployment] = useState<DeploymentRecord[]>([]);
+  const [proses, setProses] = useState<ProcessStepRecord[]>([]);
   /* `null` di sini berarti dua hal sekaligus — belum diambil, atau barisnya
      memang belum ada di database. Keduanya ditampilkan sama di beranda
      ("belum terisi"), jadi tidak perlu dibedakan. */
@@ -163,6 +173,8 @@ export function App() {
       hLayanan,
       hTestimoni,
       hIndustri,
+      hDeployment,
+      hProses,
       hVisi,
       hPending,
     ] = await Promise.all([
@@ -174,6 +186,8 @@ export function App() {
       ambilLayanan(),
       ambilTestimoni(),
       ambilIndustri(),
+      ambilDeployment(),
+      ambilProses(),
       ambilVisi(),
       statusPublish(),
     ]);
@@ -189,6 +203,8 @@ export function App() {
       hLayanan,
       hTestimoni,
       hIndustri,
+      hDeployment,
+      hProses,
       hVisi,
     ].find((h) => !h.ok);
     if (gagal && !gagal.ok) {
@@ -206,6 +222,8 @@ export function App() {
     if (hLayanan.ok) setLayanan(hLayanan.data.services);
     if (hTestimoni.ok) setTestimoni(hTestimoni.data.testimonials);
     if (hIndustri.ok) setIndustri(hIndustri.data.industries);
+    if (hDeployment.ok) setDeployment(hDeployment.data.deployments);
+    if (hProses.ok) setProses(hProses.data.steps);
     if (hVisi.ok) setVisi(hVisi.data.vision);
     if (hPending.ok) setPending(hPending.data.pending);
   }, []);
@@ -302,6 +320,20 @@ export function App() {
       "sektor",
       "Belum ada sektor.",
     ),
+    deployment: ringkas(
+      deployment.length,
+      deployment.filter((d) => d.state === "draft").length,
+      deployment.filter((d) => d.unpublished).length,
+      "kartu",
+      "Belum ada kartu.",
+    ),
+    proses: ringkas(
+      proses.length,
+      proses.filter((s) => s.state === "draft").length,
+      proses.filter((s) => s.unpublished).length,
+      "langkah",
+      "Belum ada langkah.",
+    ),
     /* Tidak lewat `ringkas()`: yang itu menghitung baris dan menyebut draf,
        dan visi tidak punya keduanya — jumlahnya selalu satu, dan tidak ada
        keadaan draft. Yang berguna diketahui editor cuma dua: sudah terisi
@@ -370,6 +402,32 @@ export function App() {
                `#/visi/ubah/<id>` yang bisa dituju. */
             rute.entitas === "visi" ? (
               <FormVisi onSelesai={selesai} />
+            ) : rute.entitas === "deployment" ? (
+              <DaftarDeployment
+                daftar={deployment}
+                onBaru={() => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/baru`);
+                }}
+                onUbah={(id) => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/ubah/${id}`);
+                }}
+                onBerubah={selesai}
+              />
+            ) : rute.entitas === "proses" ? (
+              <DaftarProses
+                daftar={proses}
+                onBaru={() => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/baru`);
+                }}
+                onUbah={(id) => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/ubah/${id}`);
+                }}
+                onBerubah={selesai}
+              />
             ) : rute.entitas === "industri" ? (
               <DaftarIndustri
                 daftar={industri}
@@ -475,6 +533,20 @@ export function App() {
                 onBerubah={selesai}
               />
             )
+          ) : rute.entitas === "deployment" ? (
+            <FormDeployment
+              key={rute.id ?? "baru"}
+              id={rute.id}
+              onSelesai={selesai}
+              onBatal={() => pergi(`/${rute.entitas}`)}
+            />
+          ) : rute.entitas === "proses" ? (
+            <FormProses
+              key={rute.id ?? "baru"}
+              id={rute.id}
+              onSelesai={selesai}
+              onBatal={() => pergi(`/${rute.entitas}`)}
+            />
           ) : rute.entitas === "industri" ? (
             <FormIndustri
               key={rute.id ?? "baru"}

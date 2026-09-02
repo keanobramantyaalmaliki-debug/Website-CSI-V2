@@ -21,6 +21,8 @@ import type { CaseStudy } from "@shared/caseStudy";
 import type { Testimonial } from "@shared/testimonial";
 import type { Service } from "@shared/service";
 import type { Industry } from "@shared/industry";
+import type { Deployment } from "@shared/deployment";
+import type { ProcessStep } from "@shared/processStep";
 import type { Vision } from "@shared/vision";
 
 import { record, type Actor } from "./audit";
@@ -28,7 +30,9 @@ import { db } from "./db/client";
 import {
   caseStudies,
   crewMembers,
+  deployments,
   industries,
+  processSteps,
   jobs,
   peopleValues,
   testimonials,
@@ -45,6 +49,8 @@ import { listCaseStudies } from "./caseStudiesRepo";
 import { listTestimonials } from "./testimonialsRepo";
 import { listServices } from "./servicesRepo";
 import { listIndustries } from "./industriesRepo";
+import { listDeployments } from "./deploymentsRepo";
+import { listProcessSteps } from "./processStepsRepo";
 import { getVision } from "./visionRepo";
 
 /**
@@ -69,6 +75,8 @@ async function collect(): Promise<ContentPayload> {
     serviceRows,
     testimonialRows,
     industryRows,
+    deploymentRows,
+    processStepRows,
     visionRow,
   ] = await Promise.all([
     listJobs({ includeDrafts: false }),
@@ -79,6 +87,8 @@ async function collect(): Promise<ContentPayload> {
     listServices({ includeDrafts: false }),
     listTestimonials({ includeDrafts: false }),
     listIndustries({ includeDrafts: false }),
+    listDeployments({ includeDrafts: false }),
+    listProcessSteps({ includeDrafts: false }),
     /* Tanpa `includeDrafts`: visi tidak punya keadaan draft/live sama
        sekali. Satu-satunya isi yang ada adalah isi yang tayang. */
     getVision(),
@@ -124,6 +134,15 @@ async function collect(): Promise<ContentPayload> {
       industry,
   );
 
+  const publicDeployments: Deployment[] = deploymentRows.map(
+    ({ updatedAt: _u, publishedAt: _p, unpublished: _n, ...deployment }) =>
+      deployment,
+  );
+
+  const publicProcessSteps: ProcessStep[] = processStepRows.map(
+    ({ updatedAt: _u, publishedAt: _p, unpublished: _n, ...step }) => step,
+  );
+
   /* `null` diteruskan apa adanya kalau barisnya belum ada — situs tahu
      artinya "pakai isi bundle". Lihat catatan di `shared/content.ts`. */
   const publicVision: Vision | null = visionRow
@@ -141,6 +160,8 @@ async function collect(): Promise<ContentPayload> {
     services: publicServices,
     testimonials: publicTestimonials,
     industries: publicIndustries,
+    deployments: publicDeployments,
+    processSteps: publicProcessSteps,
     vision: publicVision,
   };
 }
@@ -209,6 +230,8 @@ export type PublishResult = {
   services: number;
   testimonials: number;
   industries: number;
+  deployments: number;
+  processSteps: number;
   /** Bukan cacah baris seperti tetangganya — visi selalu tepat satu. Yang
    *  dilaporkan: apakah isinya datang dari CMS, atau situs masih memakai
    *  cadangan bundle karena barisnya belum ada. */
@@ -239,6 +262,8 @@ export async function publish(actor: Actor): Promise<PublishResult> {
   await db.update(services).set({ publishedAt: now });
   await db.update(testimonials).set({ publishedAt: now });
   await db.update(industries).set({ publishedAt: now });
+  await db.update(deployments).set({ publishedAt: now });
+  await db.update(processSteps).set({ publishedAt: now });
   /* Tanpa `where`: tabelnya memang cuma boleh punya satu baris, dijaga
      CHECK `vision_satu_baris`. Kalau barisnya belum ada, ini tidak
      menyentuh apa pun dan itu jawaban yang benar. */
@@ -259,6 +284,8 @@ export async function publish(actor: Actor): Promise<PublishResult> {
       services: payload.services.length,
       testimonials: payload.testimonials.length,
       industries: payload.industries.length,
+      deployments: payload.deployments.length,
+      processSteps: payload.processSteps.length,
       vision: payload.vision !== null,
       generatedAt: payload.generatedAt,
     },
@@ -273,6 +300,8 @@ export async function publish(actor: Actor): Promise<PublishResult> {
     services: payload.services.length,
     testimonials: payload.testimonials.length,
     industries: payload.industries.length,
+    deployments: payload.deployments.length,
+    processSteps: payload.processSteps.length,
     vision: payload.vision !== null,
     generatedAt: payload.generatedAt,
     warning,
@@ -325,6 +354,8 @@ export async function pendingCount(): Promise<number> {
     serviceRows,
     testimonialRows,
     industryRows,
+    deploymentRows,
+    processStepRows,
     visionRows,
   ] = await Promise.all([
     db
@@ -383,6 +414,20 @@ export async function pendingCount(): Promise<number> {
         deletedAt: industries.deletedAt,
       })
       .from(industries),
+    db
+      .select({
+        updatedAt: deployments.updatedAt,
+        publishedAt: deployments.publishedAt,
+        deletedAt: deployments.deletedAt,
+      })
+      .from(deployments),
+    db
+      .select({
+        updatedAt: processSteps.updatedAt,
+        publishedAt: processSteps.publishedAt,
+        deletedAt: processSteps.deletedAt,
+      })
+      .from(processSteps),
     /**
      * `deletedAt: null` dipetakan tetap, karena tabelnya memang tidak punya
      * kolomnya — seksi Visi tidak bisa dihapus, `pt-20 pb-20` miliknya
@@ -412,6 +457,8 @@ export async function pendingCount(): Promise<number> {
     ...serviceRows,
     ...testimonialRows,
     ...industryRows,
+    ...deploymentRows,
+    ...processStepRows,
     ...visionRows,
   ].filter(menunggu).length;
 }
