@@ -28,7 +28,8 @@ export async function resetDb(): Promise<void> {
       audit_log, sessions, job_copy_bullets, job_copy, job_skills, jobs,
       people_values, crew_socials, crew_members,
       work_project_tags, work_projects,
-      case_study_scopes, case_studies, images, users
+      case_study_scopes, case_studies, service_subs, services,
+      testimonials, images, users
     restart identity cascade
   `);
 }
@@ -142,6 +143,28 @@ export function crewBody(over: Record<string, unknown> = {}) {
     category: "Developer",
     photo: "/people/bagas.webp",
     social: [{ platform: "linkedin", url: "https://linkedin.com/in/bagas" }],
+    state: "live",
+    ...over,
+  };
+}
+
+/** Bentuk layanan minimal yang lolos validasi `live`. */
+export function serviceBody(over: Record<string, unknown> = {}) {
+  return {
+    title: "Cloud Solutions",
+    desc: "Infrastruktur cloud yang aman dan skalabel.",
+    subs: ["Cloud Migration", "Serverless"],
+    state: "live",
+    ...over,
+  };
+}
+
+/** Bentuk testimoni minimal yang lolos validasi `live`. */
+export function testimonialBody(over: Record<string, unknown> = {}) {
+  return {
+    quote: "Laporan yang dulu dua minggu sekarang selesai hari itu juga.",
+    name: "Ratna Wijaya",
+    role: "Head of IT, Dinas Komunikasi & Informatika",
     state: "live",
     ...over,
   };

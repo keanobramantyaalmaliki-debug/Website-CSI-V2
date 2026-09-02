@@ -31,7 +31,8 @@ export function BarPublish({
       return;
     }
 
-    const { jobs, values, crew, projects, caseStudies, warning } = hasil.data;
+    const { jobs, values, crew, projects, caseStudies, testimonials, warning } =
+      hasil.data;
 
     /* Semua entitas disebut, bukan cuma lowongan. Kalimat ini dulu berhenti di
        "N lowongan" karena lowongan penghuni pertamanya, dan sesudah entitas
@@ -45,6 +46,7 @@ export function BarPublish({
       [crew, "orang"],
       [projects, "proyek"],
       [caseStudies, "case study"],
+      [testimonials, "testimoni"],
     ] as const;
     const isi = bagian
       .filter(([n]) => n > 0)

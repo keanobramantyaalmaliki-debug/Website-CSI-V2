@@ -18,6 +18,8 @@ import type { Job } from "@shared/job";
 import type { Value } from "@shared/value";
 import type { WorkProject } from "@shared/workProject";
 import type { CaseStudy } from "@shared/caseStudy";
+import type { Testimonial } from "@shared/testimonial";
+import type { Service } from "@shared/service";
 
 import { record, type Actor } from "./audit";
 import { db } from "./db/client";
@@ -26,6 +28,8 @@ import {
   crewMembers,
   jobs,
   peopleValues,
+  testimonials,
+  services,
   workProjects,
 } from "./db/schema";
 import { env } from "./env";
@@ -34,6 +38,8 @@ import { listJobs } from "./jobsRepo";
 import { listValues } from "./valuesRepo";
 import { listWorkProjects } from "./workProjectsRepo";
 import { listCaseStudies } from "./caseStudiesRepo";
+import { listTestimonials } from "./testimonialsRepo";
+import { listServices } from "./servicesRepo";
 
 /**
  * `dist/` — hasil build Vite, yang disajikan `serve` di produksi.
@@ -48,14 +54,23 @@ export const CONTENT_PATH = path.resolve(process.cwd(), "dist", "content.json");
 /** Hanya yang tayang. `draft` tidak pernah ikut — itu yang membuat tombol
  *  Publish aman ditekan kapan saja meski ada lowongan lain yang setengah jadi. */
 async function collect(): Promise<ContentPayload> {
-  const [jobRows, valueRows, crewRows, projectRows, studyRows] =
-    await Promise.all([
-      listJobs({ includeDrafts: false }),
-      listValues({ includeDrafts: false }),
-      listCrew({ includeDrafts: false }),
-      listWorkProjects({ includeDrafts: false }),
-      listCaseStudies({ includeDrafts: false }),
-    ]);
+  const [
+    jobRows,
+    valueRows,
+    crewRows,
+    projectRows,
+    studyRows,
+    serviceRows,
+    testimonialRows,
+  ] = await Promise.all([
+    listJobs({ includeDrafts: false }),
+    listValues({ includeDrafts: false }),
+    listCrew({ includeDrafts: false }),
+    listWorkProjects({ includeDrafts: false }),
+    listCaseStudies({ includeDrafts: false }),
+    listServices({ includeDrafts: false }),
+    listTestimonials({ includeDrafts: false }),
+  ]);
 
   const publicJobs: Job[] = jobRows.map(
     ({ updatedAt: _u, publishedAt: _p, unpublished: _n, ...job }) => job,
@@ -82,6 +97,16 @@ async function collect(): Promise<ContentPayload> {
     ({ updatedAt: _u, publishedAt: _p, unpublished: _n, ...study }) => study,
   );
 
+  const publicServices: Service[] = serviceRows.map(
+    ({ updatedAt: _u, publishedAt: _p, unpublished: _n, ...service }) =>
+      service,
+  );
+
+  const publicTestimonials: Testimonial[] = testimonialRows.map(
+    ({ updatedAt: _u, publishedAt: _p, unpublished: _n, ...testimonial }) =>
+      testimonial,
+  );
+
   return {
     version: CONTENT_VERSION,
     generatedAt: new Date().toISOString(),
@@ -90,6 +115,8 @@ async function collect(): Promise<ContentPayload> {
     crew: publicCrew,
     projects: publicProjects,
     caseStudies: publicCaseStudies,
+    services: publicServices,
+    testimonials: publicTestimonials,
   };
 }
 
@@ -154,6 +181,8 @@ export type PublishResult = {
   crew: number;
   projects: number;
   caseStudies: number;
+  services: number;
+  testimonials: number;
   generatedAt: string;
   warning: string | null;
 };
@@ -177,6 +206,8 @@ export async function publish(actor: Actor): Promise<PublishResult> {
   await db.update(crewMembers).set({ publishedAt: now });
   await db.update(workProjects).set({ publishedAt: now });
   await db.update(caseStudies).set({ publishedAt: now });
+  await db.update(services).set({ publishedAt: now });
+  await db.update(testimonials).set({ publishedAt: now });
 
   const warning = await purgeCloudflare();
 
@@ -190,6 +221,8 @@ export async function publish(actor: Actor): Promise<PublishResult> {
       crew: payload.crew.length,
       projects: payload.projects.length,
       caseStudies: payload.caseStudies.length,
+      services: payload.services.length,
+      testimonials: payload.testimonials.length,
       generatedAt: payload.generatedAt,
     },
   });
@@ -200,6 +233,8 @@ export async function publish(actor: Actor): Promise<PublishResult> {
     crew: payload.crew.length,
     projects: payload.projects.length,
     caseStudies: payload.caseStudies.length,
+    services: payload.services.length,
+    testimonials: payload.testimonials.length,
     generatedAt: payload.generatedAt,
     warning,
   };
@@ -242,44 +277,65 @@ function menunggu(r: Stamps): boolean {
  *  Satu angka untuk SEMUA entitas: yang ditanyakan editor adalah "apa masih
  *  ada yang perlu saya publish", bukan "berapa di tabel mana". */
 export async function pendingCount(): Promise<number> {
-  const [jobRows, valueRows, crewRows, projectRows, studyRows] =
-    await Promise.all([
-      db
-        .select({
-          updatedAt: jobs.updatedAt,
-          publishedAt: jobs.publishedAt,
-          deletedAt: jobs.deletedAt,
-        })
-        .from(jobs),
-      db
-        .select({
-          updatedAt: peopleValues.updatedAt,
-          publishedAt: peopleValues.publishedAt,
-          deletedAt: peopleValues.deletedAt,
-        })
-        .from(peopleValues),
-      db
-        .select({
-          updatedAt: crewMembers.updatedAt,
-          publishedAt: crewMembers.publishedAt,
-          deletedAt: crewMembers.deletedAt,
-        })
-        .from(crewMembers),
-      db
-        .select({
-          updatedAt: workProjects.updatedAt,
-          publishedAt: workProjects.publishedAt,
-          deletedAt: workProjects.deletedAt,
-        })
-        .from(workProjects),
-      db
-        .select({
-          updatedAt: caseStudies.updatedAt,
-          publishedAt: caseStudies.publishedAt,
-          deletedAt: caseStudies.deletedAt,
-        })
-        .from(caseStudies),
-    ]);
+  const [
+    jobRows,
+    valueRows,
+    crewRows,
+    projectRows,
+    studyRows,
+    serviceRows,
+    testimonialRows,
+  ] = await Promise.all([
+    db
+      .select({
+        updatedAt: jobs.updatedAt,
+        publishedAt: jobs.publishedAt,
+        deletedAt: jobs.deletedAt,
+      })
+      .from(jobs),
+    db
+      .select({
+        updatedAt: peopleValues.updatedAt,
+        publishedAt: peopleValues.publishedAt,
+        deletedAt: peopleValues.deletedAt,
+      })
+      .from(peopleValues),
+    db
+      .select({
+        updatedAt: crewMembers.updatedAt,
+        publishedAt: crewMembers.publishedAt,
+        deletedAt: crewMembers.deletedAt,
+      })
+      .from(crewMembers),
+    db
+      .select({
+        updatedAt: workProjects.updatedAt,
+        publishedAt: workProjects.publishedAt,
+        deletedAt: workProjects.deletedAt,
+      })
+      .from(workProjects),
+    db
+      .select({
+        updatedAt: caseStudies.updatedAt,
+        publishedAt: caseStudies.publishedAt,
+        deletedAt: caseStudies.deletedAt,
+      })
+      .from(caseStudies),
+    db
+      .select({
+        updatedAt: services.updatedAt,
+        publishedAt: services.publishedAt,
+        deletedAt: services.deletedAt,
+      })
+      .from(services),
+    db
+      .select({
+        updatedAt: testimonials.updatedAt,
+        publishedAt: testimonials.publishedAt,
+        deletedAt: testimonials.deletedAt,
+      })
+      .from(testimonials),
+  ]);
 
   return [
     ...jobRows,
@@ -287,5 +343,7 @@ export async function pendingCount(): Promise<number> {
     ...crewRows,
     ...projectRows,
     ...studyRows,
+    ...serviceRows,
+    ...testimonialRows,
   ].filter(menunggu).length;
 }

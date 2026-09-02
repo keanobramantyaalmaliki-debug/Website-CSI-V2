@@ -1,7 +1,9 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import TestimonialSpotlight from "./TestimonialSpotlight";
+import { __resetContent, __setContent } from "@/lib/content/store";
+import type { ContentPayload } from "@shared/content";
 
 // jsdom lacks IntersectionObserver; motion's whileInView/useInView need it.
 class IntersectionObserverStub {
@@ -64,5 +66,65 @@ describe("TestimonialSpotlight", () => {
     await within(active()).findByText(/sari kusuma/i);
     await user.click(next);
     expect(await within(active()).findByText(/ratna wijaya/i)).toBeInTheDocument();
+  });
+});
+
+/* Sejak isinya datang dari CMS, daftarnya bisa berbentuk yang literal array di
+   dalam komponen tidak pernah bisa: nol entri, atau satu. Keduanya memakai
+   `count` sebagai angka — `(i + dir + count) % count` — dan yang nol
+   menghasilkan NaN. */
+const payload = (testimonials: unknown[]): ContentPayload =>
+  ({
+    version: 1,
+    generatedAt: new Date().toISOString(),
+    jobs: [],
+    values: [],
+    crew: [],
+    projects: [],
+    services: [],
+    caseStudies: [],
+    testimonials,
+  }) as ContentPayload;
+
+const dariCms = (over: Record<string, unknown> = {}) => ({
+  id: "a",
+  quote: "Kutipan dari CMS.",
+  name: "Nama Satu",
+  role: "Jabatan Satu",
+  state: "live",
+  sortOrder: 0,
+  ...over,
+});
+
+describe("TestimonialSpotlight dengan isi dari CMS", () => {
+  afterEach(() => __resetContent());
+
+  it("reads its entries from the CMS instead of the bundle", () => {
+    __setContent(payload([dariCms({ name: "Nama CMS" }), dariCms({ id: "b", name: "Nama Kedua" })]));
+    render(<TestimonialSpotlight />);
+    expect(within(active()).getByText(/nama cms/i)).toBeInTheDocument();
+    expect(screen.queryByText(/ratna wijaya/i)).not.toBeInTheDocument();
+  });
+
+  /* Editor yang menghapus semua kutipannya memang meminta bloknya hilang —
+     bukan halaman yang roboh karena `entries[NaN]`. */
+  it("renders nothing at all when the CMS list is empty", () => {
+    __setContent(payload([]));
+    const { container } = render(<TestimonialSpotlight />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  /* Satu kutipan = tidak ada yang bisa diputar; panah yang tidak mengubah apa
+     pun lebih buruk daripada panah yang tidak ada. */
+  it("hides both arrows when only one testimonial is left", () => {
+    __setContent(payload([dariCms()]));
+    render(<TestimonialSpotlight />);
+    expect(within(active()).getByText(/nama satu/i)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /previous testimonial/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /next testimonial/i }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -24,6 +24,8 @@ import {
   ambilNilai,
   ambilProyek,
   ambilCaseStudy,
+  ambilLayanan,
+  ambilTestimoni,
   keluar,
   siapaAku,
   statusPublish,
@@ -33,6 +35,8 @@ import {
   type ValueRecord,
   type WorkProjectRecord,
   type CaseStudyRecord,
+  type TestimonialRecord,
+  type ServiceRecord,
 } from "./api";
 import { BarPublish } from "./BarPublish";
 import { Beranda } from "./Beranda";
@@ -41,11 +45,15 @@ import { DaftarLowongan } from "./DaftarLowongan";
 import { DaftarNilai } from "./DaftarNilai";
 import { DaftarProyek } from "./DaftarProyek";
 import { DaftarCaseStudy } from "./DaftarCaseStudy";
+import { DaftarLayanan } from "./DaftarLayanan";
+import { DaftarTestimoni } from "./DaftarTestimoni";
 import { FormCrew } from "./FormCrew";
 import { FormLowongan } from "./FormLowongan";
 import { FormNilai } from "./FormNilai";
 import { FormProyek } from "./FormProyek";
 import { FormCaseStudy } from "./FormCaseStudy";
+import { FormLayanan } from "./FormLayanan";
+import { FormTestimoni } from "./FormTestimoni";
 import { Masuk } from "./Masuk";
 import { Sidebar } from "./Sidebar";
 import { TombolTema } from "./Tema";
@@ -92,6 +100,8 @@ export function App() {
   const [crew, setCrew] = useState<CrewRecord[]>([]);
   const [proyek, setProyek] = useState<WorkProjectRecord[]>([]);
   const [cerita, setCerita] = useState<CaseStudyRecord[]>([]);
+  const [layanan, setLayanan] = useState<ServiceRecord[]>([]);
+  const [testimoni, setTestimoni] = useState<TestimonialRecord[]>([]);
   const [pending, setPending] = useState(0);
   const [pesan, setPesan] = useState<string | null>(null);
   const [galat, setGalat] = useState<string | null>(null);
@@ -116,19 +126,37 @@ export function App() {
        tayang"), jadi mengambil per-halaman berarti beranda memulai hidupnya
        dengan angka kosong yang lalu berubah sendiri. Daftarnya pendek — ini
        beberapa request kecil, bukan tabel raksasa. */
-    const [hJobs, hValues, hCrew, hProyek, hCerita, hPending] =
-      await Promise.all([
-        ambilLowongan(),
-        ambilNilai(),
-        ambilCrew(),
-        ambilProyek(),
-        ambilCaseStudy(),
-        statusPublish(),
-      ]);
+    const [
+      hJobs,
+      hValues,
+      hCrew,
+      hProyek,
+      hCerita,
+      hLayanan,
+      hTestimoni,
+      hPending,
+    ] = await Promise.all([
+      ambilLowongan(),
+      ambilNilai(),
+      ambilCrew(),
+      ambilProyek(),
+      ambilCaseStudy(),
+      ambilLayanan(),
+      ambilTestimoni(),
+      statusPublish(),
+    ]);
 
     /* Sesi kedaluwarsa cukup dilihat dari SATU permintaan mana pun: kalau
        cookie-nya tidak berlaku lagi, semuanya dibalas 401 bersamaan. */
-    const gagal = [hJobs, hValues, hCrew, hProyek, hCerita].find((h) => !h.ok);
+    const gagal = [
+      hJobs,
+      hValues,
+      hCrew,
+      hProyek,
+      hCerita,
+      hLayanan,
+      hTestimoni,
+    ].find((h) => !h.ok);
     if (gagal && !gagal.ok) {
       if (gagal.perluMasuk) setUser(null);
       else setGalat(gagal.pesan);
@@ -141,6 +169,8 @@ export function App() {
     if (hCrew.ok) setCrew(hCrew.data.crew);
     if (hProyek.ok) setProyek(hProyek.data.projects);
     if (hCerita.ok) setCerita(hCerita.data.studies);
+    if (hLayanan.ok) setLayanan(hLayanan.data.services);
+    if (hTestimoni.ok) setTestimoni(hTestimoni.data.testimonials);
     if (hPending.ok) setPending(hPending.data.pending);
   }, []);
 
@@ -215,6 +245,20 @@ export function App() {
       "case study",
       "Belum ada case study.",
     ),
+    layanan: ringkas(
+      layanan.length,
+      layanan.filter((s) => s.state === "draft").length,
+      layanan.filter((s) => s.unpublished).length,
+      "layanan",
+      "Belum ada layanan.",
+    ),
+    testimoni: ringkas(
+      testimoni.length,
+      testimoni.filter((t) => t.state === "draft").length,
+      testimoni.filter((t) => t.unpublished).length,
+      "testimoni",
+      "Belum ada testimoni.",
+    ),
   };
 
   if (user === undefined) return <div className="bungkus">Memuat…</div>;
@@ -269,7 +313,33 @@ export function App() {
                vs `ValueRecord[]`) — dan yang hilang begitu semuanya dijejalkan
                ke satu peta adalah pemeriksaan TypeScript yang menangkap
                ketidakcocokan itu. */
-            rute.entitas === "case-study" ? (
+            rute.entitas === "layanan" ? (
+              <DaftarLayanan
+                daftar={layanan}
+                onBaru={() => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/baru`);
+                }}
+                onUbah={(id) => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/ubah/${id}`);
+                }}
+                onBerubah={selesai}
+              />
+            ) : rute.entitas === "testimoni" ? (
+              <DaftarTestimoni
+                daftar={testimoni}
+                onBaru={() => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/baru`);
+                }}
+                onUbah={(id) => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/ubah/${id}`);
+                }}
+                onBerubah={selesai}
+              />
+            ) : rute.entitas === "case-study" ? (
               <DaftarCaseStudy
                 daftar={cerita}
                 onBaru={() => {
@@ -335,6 +405,20 @@ export function App() {
                 onBerubah={selesai}
               />
             )
+          ) : rute.entitas === "layanan" ? (
+            <FormLayanan
+              key={rute.id ?? "baru"}
+              id={rute.id}
+              onSelesai={selesai}
+              onBatal={() => pergi(`/${rute.entitas}`)}
+            />
+          ) : rute.entitas === "testimoni" ? (
+            <FormTestimoni
+              key={rute.id ?? "baru"}
+              id={rute.id}
+              onSelesai={selesai}
+              onBatal={() => pergi(`/${rute.entitas}`)}
+            />
           ) : rute.entitas === "case-study" ? (
             <FormCaseStudy
               key={rute.id ?? "baru"}

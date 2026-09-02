@@ -36,6 +36,20 @@
       "when": 1788252603887,
       "tag": "0004_right_triathlon",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788315416171,
+      "tag": "0005_calm_monster_badoon",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788315584190,
+      "tag": "0006_furry_fenris",
+      "breakpoints": true
     }
   ]
 }

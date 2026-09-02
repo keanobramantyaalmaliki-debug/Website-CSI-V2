@@ -28,6 +28,8 @@ import { FALLBACK_CREW } from "../../src/data/crewFallback";
 import { FALLBACK_VALUES } from "../../src/data/valuesFallback";
 import { FALLBACK_WORK_PROJECTS } from "../../src/data/workProjectsFallback";
 import { FALLBACK_CASE_STUDIES } from "../../src/data/caseStudiesFallback";
+import { FALLBACK_TESTIMONIALS } from "../../src/data/testimonialsFallback";
+import { FALLBACK_SERVICES } from "../../src/data/servicesFallback";
 import { db, sql } from "./client";
 import {
   crewMembers,
@@ -38,9 +40,12 @@ import {
   jobSkills,
   jobs,
   peopleValues,
+  services,
+  serviceSubs,
   workProjects,
   caseStudies,
   caseStudyScopes,
+  testimonials,
   workProjectTags,
 } from "./schema";
 
@@ -466,9 +471,109 @@ async function seedCaseStudies() {
   );
 }
 
+/**
+ * Daftar layanan di halaman Services.
+ *
+ * Gerbang isinya sendiri, alasan yang sama dengan `seedValues`: database yang
+ * sudah pernah di-seed lowongan tidak boleh membuat layanan dilewati
+ * diam-diam.
+ *
+ * Tidak ada urusan gambar di sini — layanan memang tidak punya foto; yang
+ * tayang cuma teks di sabuk 3D.
+ */
+async function seedServices() {
+  const [{ count }] = await db
+    .select({ count: raw<number>`count(*)::int` })
+    .from(services);
+
+  if (count > 0) {
+    console.log(`Tabel services sudah berisi ${count} baris — dilewati.`);
+    return;
+  }
+
+  await db.transaction(async (tx) => {
+    for (const [index, layanan] of FALLBACK_SERVICES.entries()) {
+      const [row] = await tx
+        .insert(services)
+        .values({
+          title: layanan.title,
+          desc: layanan.desc,
+          /* Kesembilannya sudah tayang hari ini — masuk sebagai `draft` akan
+             MENGOSONGKAN sabuk layanan pada publish pertama. */
+          state: "live",
+          /* Urutan literal = urutan sabuk (dan daftar sr-only) yang tayang
+             hari ini. Mengurutkannya ulang menurut abjad saat pindah ke CMS
+             akan terbaca sebagai bug. */
+          sortOrder: index,
+          publishedAt: new Date(),
+        })
+        .returning({ id: services.id });
+
+      if (layanan.subs.length) {
+        await tx.insert(serviceSubs).values(
+          layanan.subs.map((label, position) => ({
+            serviceId: row.id,
+            position,
+            label,
+          })),
+        );
+      }
+    }
+  });
+
+  console.log(
+    `Seed selesai: ${FALLBACK_SERVICES.length} layanan masuk ke database.`,
+  );
+}
+
+/**
+ * Testimoni klien di dasar halaman Services.
+ *
+ * Gerbang isinya sendiri, alasan yang sama dengan `seedValues`: database yang
+ * sudah pernah di-seed lowongan tidak boleh membuat testimoni dilewati
+ * diam-diam.
+ *
+ * Tidak ada urusan foto di sini — tabelnya memang tidak punya kolomnya, karena
+ * komponennya menggambar ikon orang yang sama untuk setiap kutipan dan tidak
+ * punya satu pun `<img>`.
+ */
+async function seedTestimonials() {
+  const [{ count }] = await db
+    .select({ count: raw<number>`count(*)::int` })
+    .from(testimonials);
+
+  if (count > 0) {
+    console.log(`Tabel testimonials sudah berisi ${count} baris — dilewati.`);
+    return;
+  }
+
+  await db.transaction(async (tx) => {
+    for (const [index, t] of FALLBACK_TESTIMONIALS.entries()) {
+      await tx.insert(testimonials).values({
+        quote: t.quote,
+        name: t.name,
+        role: t.role,
+        /* Ketiganya memang sudah tayang hari ini — masuk sebagai `draft` akan
+           MENGOSONGKAN blok testimoni pada publish pertama. */
+        state: "live",
+        /* Urutan literal = urutan yang tayang; yang pertama adalah kutipan
+           yang terlihat saat halaman dibuka. */
+        sortOrder: index,
+        publishedAt: new Date(),
+      });
+    }
+  });
+
+  console.log(
+    `Seed selesai: ${FALLBACK_TESTIMONIALS.length} testimoni masuk ke database.`,
+  );
+}
+
 await seedJobs();
 await seedValues();
 await seedCrew();
 await seedWorkProjects();
 await seedCaseStudies();
+await seedServices();
+await seedTestimonials();
 await sql.end();

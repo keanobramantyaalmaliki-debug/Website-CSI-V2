@@ -112,6 +112,31 @@ export const workProjectStateEnum = pgEnum("work_project_state", [
  */
 export const caseStudyStateEnum = pgEnum("case_study_state", ["draft", "live"]);
 
+/**
+ * Dua keadaan sebuah layanan, cocok dengan `ServiceState` di
+ * `shared/service.ts`.
+ *
+ * Enum SENDIRI lagi — kelimanya, dan alasannya tidak berubah: yang kebetulan
+ * sama hari ini tidak boleh membuat penambahan untuk satu entitas diam-diam
+ * jadi pilihan sah di form entitas yang lain.
+ */
+export const serviceStateEnum = pgEnum("service_state", ["draft", "live"]);
+
+/**
+ * Dua keadaan sebuah testimoni, cocok dengan `TestimonialState` di
+ * `shared/testimonial.ts`.
+ *
+ * Enum SENDIRI lagi — keenam, dan alasannya tetap tidak berubah. Di sini
+ * ada satu keadaan yang benar-benar mungkin menyusul dan cuma masuk akal untuk
+ * entitas ini: izin memakai kutipan seorang klien bisa dicabut sementara.
+ * Kalau enumnya menumpang `value_state`, keadaan itu akan diam-diam jadi
+ * pilihan sah di form nilai juga.
+ */
+export const testimonialStateEnum = pgEnum("testimonial_state", [
+  "draft",
+  "live",
+]);
+
 /** `static` = berkas yang sudah lama ada di `public/` (hasil grading ffmpeg
  *  manual); `upload` = diunggah lewat panel admin. Dibedakan supaya jelas mana
  *  yang tidak boleh dihapus dari disk oleh CMS. */
@@ -563,6 +588,149 @@ export const caseStudyScopes = pgTable(
   (t) => [primaryKey({ columns: [t.studyId, t.position] })],
 );
 
+/* ───────────────────────── testimoni ──────────────────────── */
+
+/* ─────────────────────────── layanan ──────────────────────── */
+
+/**
+ * Daftar layanan di halaman Services — satu baris per judul yang lewat di
+ * sabuk teks 3D `ServicesTicker.tsx`.
+ *
+ * Baris yang sama tayang DUA KALI dalam bentuk berbeda: sebagai judul
+ * oversized di sabuk (yang `aria-hidden`, jadi tidak terbaca mesin apa pun),
+ * dan sebagai satu `<li>` di daftar `sr-only` di bawahnya. Yang kedua itulah
+ * satu-satunya halaman Services yang sampai ke pembaca layar dan mesin
+ * pencari — sebabnya `desc` wajib untuk baris yang tayang, lihat
+ * `shared/validateService.ts`.
+ *
+ * TIDAK ADA kolom nomor, dan itu bukan kelupaan. Kode lama menyimpan "01"–"09"
+ * di sebelah judulnya, tapi nomor itu tidak pernah dicetak ke layar — ia cuma
+ * jadi `key` React. Menyimpannya berarti dua sumber kebenaran untuk satu hal
+ * (nomor dan `sort_order`) yang pasti melenceng begitu editor memindahkan satu
+ * baris. Kalau suatu hari nomornya memang mau ditampilkan, ia diturunkan dari
+ * posisi baris, bukan diketik ulang.
+ */
+export const services = pgTable(
+  "services",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    /** Satu kalimat penjelas, khusus daftar `sr-only`. Boleh kosong hanya
+     *  supaya draf bisa disimpan setengah jalan. */
+    desc: text("desc").notNull().default(""),
+    state: serviceStateEnum("state").notNull().default("draft"),
+    /**
+     * Urutan layanan di sabuk, searah putaran.
+     *
+     * Bukan kenyamanan: sabuknya melingkar tanpa awal yang terlihat, tapi
+     * daftar `sr-only` dibaca lurus dari atas ke bawah — jadi urutan inilah
+     * yang didengar pemakai pembaca layar, dan yang dibaca mesin pencari.
+     * Postgres tidak menjanjikan urutan baris apa pun tanpa `ORDER BY`.
+     */
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    /** Judul unik HANYA untuk baris hidup — alasan yang sama dengan
+     *  `jobs_slug_alive`. Judulnya dipakai sebagai `key` React di dua tempat
+     *  (item sabuk dan `<li>` sr-only) sejak nomornya tidak lagi disimpan. */
+    uniqueIndex("services_title_alive")
+      .on(t.title)
+      .where(sql`${t.deletedAt} is null`),
+    index("services_order").on(t.sortOrder),
+  ],
+);
+
+/**
+ * Rincian sebuah layanan ("Jenna.ai", "Knowledge Assistants", …).
+ *
+ * Tabel anak dengan `position` eksplisit, sama seperti `work_project_tags`:
+ * rinciannya dirangkai berurutan ke dalam satu baris `sr-only`, dan Postgres
+ * tidak menjanjikan urutan baris apa pun tanpa `ORDER BY`.
+ */
+export const serviceSubs = pgTable(
+  "service_subs",
+  {
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    label: text("label").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.serviceId, t.position] })],
+);
+
+/**
+ * Kutipan klien di dasar halaman Services — satu baris per kutipan di
+ * `TestimonialSpotlight.tsx`.
+ *
+ * ⚠️ JANGAN disatukan dengan `case_studies.quote`. Keduanya sama-sama kalimat
+ * di dalam tanda kutip, dan di situlah kemiripannya berhenti: yang di case
+ * study adalah kutipan MASALAH kliennya, kalimat pembuka cerita tanpa nama
+ * siapa pun; yang di sini pujian bernama dan berjabatan yang butuh izin orang
+ * sungguhan sebelum tayang. Menyatukannya berarti satu tabel yang separuh
+ * barisnya selalu tanpa nama.
+ *
+ * TIDAK ADA kolom foto, dan itu bukan kelupaan. Situs menggambar ikon orang
+ * abu-abu (`UserRound`) untuk SEMUA testimoni — tidak ada satu pun `<img>` di
+ * komponennya. Kolom foto di sini akan tersimpan rapi lalu tidak pernah
+ * dirender, persis jebakan yang dijelaskan panjang lebar di `crew_members`
+ * soal kolom urutan. Kalau suatu hari wajah klien memang mau ditampilkan,
+ * yang diubah lebih dulu adalah situsnya.
+ */
+export const testimonials = pgTable(
+  "testimonials",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Kalimat kutipannya, tanpa tanda kutip — situs yang menambahkannya. */
+    quote: text("quote").notNull().default(""),
+    name: text("name").notNull(),
+    /** Jabatan berikut tempatnya, satu baris. */
+    role: text("role").notNull().default(""),
+    state: testimonialStateEnum("state").notNull().default("draft"),
+    /**
+     * Urutan putaran kutipan.
+     *
+     * Yang paling atas BUKAN sekadar yang pertama di daftar: ia satu-satunya
+     * yang terlihat saat halaman dibuka, karena sisanya baru muncul kalau
+     * pengunjung menekan panah. Postgres tidak menjanjikan urutan baris apa
+     * pun tanpa `ORDER BY`.
+     */
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    /**
+     * Nama unik HANYA untuk baris hidup — alasan yang sama dengan
+     * `crew_members_name_alive`, dan pemakainya juga sama: nama inilah `key`
+     * React tiap entri di sizer tak terlihat (`key={e.name}`). Dua testimoni
+     * atas nama orang yang sama membuat React memakai ulang node yang salah,
+     * dan yang terlihat bukan error melainkan tinggi blok yang salah ukur.
+     *
+     * Klien yang sama memberi testimoni kedua adalah kejadian yang wajar —
+     * yang lama diubah, atau namanya dibedakan dengan konteksnya.
+     */
+    uniqueIndex("testimonials_name_alive")
+      .on(t.name)
+      .where(sql`${t.deletedAt} is null`),
+    index("testimonials_order").on(t.sortOrder),
+  ],
+);
+
 /* ──────────────────────── akun & sesi ─────────────────────── */
 
 export const users = pgTable("users", {
@@ -689,6 +857,17 @@ export const caseStudyScopesRelations = relations(caseStudyScopes, ({ one }) => 
   study: one(caseStudies, {
     fields: [caseStudyScopes.studyId],
     references: [caseStudies.id],
+  }),
+}));
+
+export const servicesRelations = relations(services, ({ many }) => ({
+  subs: many(serviceSubs),
+}));
+
+export const serviceSubsRelations = relations(serviceSubs, ({ one }) => ({
+  service: one(services, {
+    fields: [serviceSubs.serviceId],
+    references: [services.id],
   }),
 }));
 

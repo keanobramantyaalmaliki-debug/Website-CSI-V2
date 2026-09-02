@@ -26,6 +26,8 @@ const kosong = {
   values: [],
   crew: [],
   projects: [],
+  services: [],
+  testimonials: [],
 };
 
 describe("FALLBACK_CASE_STUDIES", () => {

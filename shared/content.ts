@@ -25,6 +25,8 @@ import type { CrewMember } from "./crew";
 import type { Value } from "./value";
 import type { WorkProject } from "./workProject";
 import type { CaseStudy } from "./caseStudy";
+import type { Testimonial } from "./testimonial";
+import type { Service } from "./service";
 
 export type ContentPayload = {
   version: 1;
@@ -45,6 +47,17 @@ export type ContentPayload = {
    *  Tetangga `projects` di halaman yang sama, tapi entitas yang berbeda:
    *  yang itu daftar kartu, yang ini bacaan. */
   caseStudies: CaseStudy[];
+  /** Layanan halaman Services yang `live` saja, sudah urut sesuai
+   *  `sortOrder`. Situs bergantung pada urutannya lewat jalur yang tidak
+   *  terlihat: sabuk 3D-nya melingkar tanpa awal, tapi daftar `sr-only` di
+   *  bawahnya dibaca lurus dari atas ke bawah oleh pembaca layar dan mesin
+   *  pencari. */
+  services: Service[];
+  /** Kutipan klien di dasar halaman Services yang `live` saja, sudah urut
+   *  sesuai `sortOrder` — dan situs bergantung pada urutannya: yang pertama
+   *  adalah kutipan yang TERLIHAT saat halaman dibuka, sisanya baru muncul
+   *  kalau pengunjung menekan panah. */
+  testimonials: Testimonial[];
 };
 
 export const CONTENT_VERSION = 1 as const;

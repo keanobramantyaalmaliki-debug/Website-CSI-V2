@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronLeft, ChevronRight, UserRound } from "lucide-react";
+
+import { testimonials, type TestimonialContent } from "@/data/testimonials";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -12,31 +14,12 @@ const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
  * text line (repeating gradient stepped at `1lh`, so the rules track line
  * wrapping at any width) and prev/next arrows cycling the entries.
  *
- * All entries are fabricated placeholders so the layout reads as filled
- * content during review, not real endorsements: names/roles/agencies are
- * invented clients, not actual people.
- * TODO(content): replace with actual client quotes + names/roles/companies.
+ * Isinya datang dari CMS (`src/data/testimonials.ts`), yang jatuh ke
+ * `testimonialsFallback.ts` kalau `content.json` belum/tidak terbaca. Isi
+ * bawaannya masih tiga kutipan karangan — nama, jabatan, dan instansinya bukan
+ * orang sungguhan — dan menggantinya dengan testimoni klien asli sekarang
+ * pekerjaan panel admin, bukan pekerjaan kode.
  */
-const TESTIMONIALS: { quote: string; name: string; role: string }[] = [
-  {
-    quote:
-      "Cogniti rebuilt the systems we’d been patching together for years. What used to take a week of manual work now happens in an afternoon.",
-    name: "Ratna Wijaya",
-    role: "Head of IT, Dinas Komunikasi & Informatika",
-  },
-  {
-    quote:
-      "They didn’t just ship the platform, they sat with our staff until every workflow made sense to the people actually using it.",
-    name: "Budi Hartono",
-    role: "Operations Director, PT Nusantara Logistik",
-  },
-  {
-    quote:
-      "Three legacy systems, one dashboard. Our reporting cycle went from two weeks to same-day.",
-    name: "Sari Kusuma",
-    role: "Kepala Bagian Program, Pemerintah Kabupaten",
-  },
-];
 
 /* Hairline per baris teks: gradient berulang setinggi `1lh`, garis 1px di
    dasar tiap baris. `lh` mengikuti line-height terkomputasi elemen, jadi
@@ -54,7 +37,7 @@ function Entry({
   t,
   center = false,
 }: {
-  t: (typeof TESTIMONIALS)[number];
+  t: TestimonialContent;
   center?: boolean;
 }) {
   return (
@@ -94,8 +77,14 @@ export default function TestimonialSpotlight() {
      arah basi satu klik sebelumnya. */
   const [[index, direction], setIndex] = useState<[number, number]>([0, 0]);
   const reduced = useReducedMotion();
-  const count = TESTIMONIALS.length;
-  const t = TESTIMONIALS[index];
+
+  /* Di dalam komponen lewat `useMemo`, BUKAN konstanta modul: daftarnya baru
+     ada sesudah `loadContent()`. Lihat peringatan lengkapnya di
+     `src/data/testimonials.ts`. */
+  const entries = useMemo(() => testimonials(), []);
+
+  const count = entries.length;
+  const t = entries[index];
 
   const step = (dir: 1 | -1) => setIndex(([i]) => [(i + dir + count) % count, dir]);
 
@@ -104,6 +93,18 @@ export default function TestimonialSpotlight() {
     center: { opacity: 1, x: 0 },
     exit: (d: number) => ({ opacity: 0, x: reduced ? 0 : d * -32 }),
   };
+
+  /**
+   * Daftar CMS boleh menyusut sampai NOL — sesuatu yang literal array di sini
+   * tidak pernah bisa. Tanpa gerbang ini `(i + dir + 0) % 0` menghasilkan NaN,
+   * `entries[NaN]` undefined, dan blok ini roboh membawa seluruh halaman.
+   * Editor yang menghapus semua kutipannya memang meminta bloknya hilang.
+   */
+  if (count === 0) return null;
+
+  /* Satu kutipan = tidak ada yang bisa diputar. Panahnya disembunyikan
+     ketimbang dibiarkan jadi tombol yang tidak mengubah apa pun. */
+  const berputar = count > 1;
 
   return (
     <motion.div
@@ -120,15 +121,27 @@ export default function TestimonialSpotlight() {
       viewport={{ once: true }}
       transition={{ duration: 0.5, ease: EASE, delay: 0.1 }}
     >
-      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 sm:gap-8">
-        <button
-          type="button"
-          aria-label="Previous testimonial"
-          onClick={() => step(-1)}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/[0.08] text-zinc-400 transition-colors hover:border-accent/40 hover:text-accent"
-        >
-          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-        </button>
+      {/* Kolom panah dilepas bareng tombolnya saat cuma ada satu kutipan —
+          kalau grid tiga kolomnya dipertahankan, yang tersisa adalah dua
+          celah kosong selebar tombol yang menggeser kutipan keluar dari
+          tengah halaman. */}
+      <div
+        className={
+          berputar
+            ? "grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 sm:gap-8"
+            : "grid grid-cols-1 items-center"
+        }
+      >
+        {berputar && (
+          <button
+            type="button"
+            aria-label="Previous testimonial"
+            onClick={() => step(-1)}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/[0.08] text-zinc-400 transition-colors hover:border-accent/40 hover:text-accent"
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
 
         {/* Tinggi DIKUNCI: sizer tak terlihat merender SEMUA entri menumpuk
             di satu sel grid, jadi tinggi kolom tengah selalu = entri
@@ -137,7 +150,7 @@ export default function TestimonialSpotlight() {
             aktif dirender absolute di atas sizer. */}
         <div className="relative">
           <div className="invisible grid" aria-hidden="true">
-            {TESTIMONIALS.map((e) => (
+            {entries.map((e) => (
               <div key={e.name} className="col-start-1 row-start-1">
                 <Entry t={e} />
               </div>
@@ -169,14 +182,16 @@ export default function TestimonialSpotlight() {
           </div>
         </div>
 
-        <button
-          type="button"
-          aria-label="Next testimonial"
-          onClick={() => step(1)}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/[0.08] text-zinc-400 transition-colors hover:border-accent/40 hover:text-accent"
-        >
-          <ChevronRight className="h-4 w-4" aria-hidden="true" />
-        </button>
+        {berputar && (
+          <button
+            type="button"
+            aria-label="Next testimonial"
+            onClick={() => step(1)}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/[0.08] text-zinc-400 transition-colors hover:border-accent/40 hover:text-accent"
+          >
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
       </div>
     </motion.div>
   );

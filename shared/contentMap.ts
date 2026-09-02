@@ -111,7 +111,7 @@ export const CONTENT_PAGES: readonly ContentPage[] = [
         key: "layanan",
         label: "Layanan",
         summary: "Daftar layanan yang bisa dibuka satu per satu, beserta rinciannya.",
-        status: "belum",
+        status: "siap",
         approxCount: 9,
       },
       {
@@ -119,7 +119,7 @@ export const CONTENT_PAGES: readonly ContentPage[] = [
         label: "Testimoni",
         summary:
           "Kutipan klien di dasar halaman, berganti lewat panah — masing-masing dengan nama dan jabatannya.",
-        status: "belum",
+        status: "siap",
         approxCount: 3,
       },
     ],

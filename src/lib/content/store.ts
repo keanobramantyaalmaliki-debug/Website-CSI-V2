@@ -26,6 +26,8 @@ import type { Job } from "@shared/job";
 import type { Value } from "@shared/value";
 import type { WorkProject } from "@shared/workProject";
 import type { CaseStudy } from "@shared/caseStudy";
+import type { Testimonial } from "@shared/testimonial";
+import type { Service } from "@shared/service";
 
 /**
  * Batas tunggu.
@@ -160,6 +162,41 @@ export function contentWorkProjects(): WorkProject[] | null {
  */
 export function contentCaseStudies(): CaseStudy[] | null {
   const rows = content?.caseStudies;
+  return Array.isArray(rows) ? rows : null;
+}
+
+/**
+ * Daftar layanan halaman Services dari CMS, atau `null` kalau harus memakai isi
+ * bundle.
+ *
+ * Diperiksa terpisah dengan alasan yang sama seperti pembaca-pembaca di atas:
+ * `content.json` yang ditulis sebelum layanan masuk CMS adalah berkas sehat
+ * yang cuma belum punya bagian ini.
+ *
+ * Daftar KOSONG dihormati apa adanya — sabuk 3D berikut daftar sr-only-nya lalu
+ * tidak dirender sama sekali, dan itu memang yang diminta editor yang menghapus
+ * semua layanannya. Yang tidak boleh terjadi adalah sembilan layanan lama hidup
+ * kembali sesudah Publish tanpa cara menghapusnya.
+ */
+export function contentServices(): Service[] | null {
+  const rows = content?.services;
+  return Array.isArray(rows) ? rows : null;
+}
+
+/**
+ * Kutipan klien halaman Services dari CMS, atau `null` kalau harus memakai isi
+ * bundle.
+ *
+ * Diperiksa terpisah dengan alasan yang sama seperti pembaca-pembaca di atas:
+ * `content.json` yang ditulis sebelum testimoni masuk CMS adalah berkas sehat
+ * yang cuma belum punya bagian ini.
+ *
+ * Daftar KOSONG dihormati apa adanya — blok testimoni lalu tidak dirender sama
+ * sekali di dasar halaman Services, dan itu memang yang diminta editor yang
+ * menghapus semua kutipannya.
+ */
+export function contentTestimonials(): Testimonial[] | null {
+  const rows = content?.testimonials;
   return Array.isArray(rows) ? rows : null;
 }
 

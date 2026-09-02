@@ -31,6 +31,7 @@ const {
   loginAsEditor,
   projectBody,
   resetDb,
+  testimonialBody,
   valueBody,
 } = await import("./test/helpers");
 
@@ -89,6 +90,15 @@ const buatCerita = async (over: Record<string, unknown> = {}) => {
     body: JSON.stringify(caseStudyBody(over)),
   });
   return (await json<{ study: { id: string; title: string } }>(res)).study;
+};
+
+const buatTestimoni = async (over: Record<string, unknown> = {}) => {
+  const res = await api("/api/testimonials", {
+    method: "POST",
+    body: JSON.stringify(testimonialBody(over)),
+  });
+  return (await json<{ testimonial: { id: string; name: string } }>(res))
+    .testimonial;
 };
 
 const bacaContent = async () =>
@@ -383,6 +393,70 @@ describe("case study ikut ke content.json", () => {
   });
 });
 
+describe("testimoni ikut ke content.json", () => {
+  it("hanya yang tayang, dan urutannya urutan panah", async () => {
+    await buatTestimoni({ name: "Ratna Wijaya" });
+    await buatTestimoni({ name: "Budi Hartono" });
+    await buatTestimoni({ name: "Masih Digodok", state: "draft" });
+
+    const hasil = await publish(aktor);
+    expect(hasil.testimonials).toBe(2);
+
+    const isi = await bacaContent();
+    /* Urutannya yang diuji, jadi tanpa `.sort()`: yang pertama adalah kutipan
+       yang terlihat saat halaman Services dibuka, sisanya baru muncul kalau
+       pengunjung menekan panah. */
+    expect(isi.testimonials.map((t: { name: string }) => t.name)).toEqual([
+      "Ratna Wijaya",
+      "Budi Hartono",
+    ]);
+  });
+
+  it("tidak membocorkan kolom yang cuma urusan admin", async () => {
+    await buatTestimoni();
+    await publish(aktor);
+
+    const [testimonial] = (await bacaContent()).testimonials;
+    expect(testimonial).not.toHaveProperty("updatedAt");
+    expect(testimonial).not.toHaveProperty("publishedAt");
+    expect(testimonial).not.toHaveProperty("unpublished");
+    expect(Object.keys(testimonial).sort()).toEqual([
+      "id",
+      "name",
+      "quote",
+      "role",
+      "sortOrder",
+      "state",
+    ]);
+  });
+
+  it("testimoni yang dihapus lenyap di publish berikutnya", async () => {
+    const testimonial = await buatTestimoni();
+    await publish(aktor);
+    expect((await bacaContent()).testimonials).toHaveLength(1);
+
+    await api(`/api/testimonials/${testimonial.id}`, { method: "DELETE" });
+    await publish(aktor);
+    expect((await bacaContent()).testimonials).toHaveLength(0);
+  });
+
+  it("menyusun ulang urutan mengganti kutipan yang terlihat duluan", async () => {
+    const a = await buatTestimoni({ name: "Ratna Wijaya" });
+    const b = await buatTestimoni({ name: "Budi Hartono" });
+    await publish(aktor);
+
+    await api("/api/testimonials/urutkan", {
+      method: "POST",
+      body: JSON.stringify({ ids: [b.id, a.id] }),
+    });
+    await publish(aktor);
+
+    expect(
+      (await bacaContent()).testimonials.map((t: { name: string }) => t.name),
+    ).toEqual(["Budi Hartono", "Ratna Wijaya"]);
+  });
+});
+
 describe("badge perubahan belum tayang", () => {
   it("nol sesudah publish", async () => {
     await buat();
@@ -450,10 +524,11 @@ describe("badge perubahan belum tayang", () => {
     await buatNilai();
     await buatProyek();
     await buatCerita();
+    await buatTestimoni();
     /* Kalau `pendingCount` lupa satu tabel, angkanya tetap masuk akal di layar
        (cuma lebih kecil) dan tidak ada yang gagal — sampai editor menyunting
        nilai, melihat badge 0, dan menyimpulkan tidak perlu menekan Publish. */
-    expect(await pendingCount()).toBe(4);
+    expect(await pendingCount()).toBe(5);
 
     await publish(aktor);
     expect(await pendingCount()).toBe(0);
@@ -481,6 +556,7 @@ describe("endpoint publish", () => {
     await buatNilai();
     await buatProyek();
     await buatCerita();
+    await buatTestimoni();
 
     const res = await api("/api/publish", { method: "POST" });
     const body = await json<{
@@ -488,6 +564,7 @@ describe("endpoint publish", () => {
       values: number;
       projects: number;
       caseStudies: number;
+      testimonials: number;
       generatedAt: string;
     }>(res);
 
@@ -499,6 +576,7 @@ describe("endpoint publish", () => {
     expect(body.values).toBe(1);
     expect(body.projects).toBe(1);
     expect(body.caseStudies).toBe(1);
+    expect(body.testimonials).toBe(1);
     expect(body.generatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 
     const isi = await bacaContent();
@@ -506,6 +584,7 @@ describe("endpoint publish", () => {
     expect(isi.values).toHaveLength(1);
     expect(isi.projects).toHaveLength(1);
     expect(isi.caseStudies).toHaveLength(1);
+    expect(isi.testimonials).toHaveLength(1);
   });
 
   it("GET /api/publish/status memberi angka badge", async () => {

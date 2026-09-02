@@ -50,7 +50,13 @@ import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
  * (lihat `settled`). Diam = 0 draw call, tanpa gerbang inView.
  */
 
-export type TickerItem = { num: string; title: string };
+/** Judulnya SEKALIGUS identitasnya — tidak ada field nomor. Nomor "01"–"09"
+ *  yang dulu ada di sini cuma pernah dipakai sebagai `key` React dan tidak
+ *  sekali pun dicetak, jadi ia dibuang saat layanan pindah ke CMS (2 Sep):
+ *  menyimpan nomor di sebelah urutan berarti dua sumber kebenaran yang pasti
+ *  melenceng begitu editor memindahkan satu baris. Judul layanan unik —
+ *  dijaga indeks `services_title_alive`. */
+export type TickerItem = { title: string };
 
 /** Unit dunia per piksel wheel. Slot desktop ≈ 3,2 unit → satu item ≈ 650 px
  *  putaran wheel. Ini kenop "licin"-nya: versi pertama terasa terlalu deras,
@@ -180,7 +186,7 @@ function TickerBelt({
       <group ref={beltRef}>
       {items.map((item, i) => (
         <group
-          key={item.num}
+          key={item.title}
           ref={(el) => {
             itemRefs.current[i] = el;
           }}

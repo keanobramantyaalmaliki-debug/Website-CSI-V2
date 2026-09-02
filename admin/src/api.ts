@@ -12,6 +12,8 @@ import type { Job } from "@shared/job";
 import type { Value } from "@shared/value";
 import type { WorkProject } from "@shared/workProject";
 import type { CaseStudy } from "@shared/caseStudy";
+import type { Service } from "@shared/service";
+import type { Testimonial } from "@shared/testimonial";
 import type { CrewFieldErrors, CrewInput } from "@shared/validateCrew";
 import type { JobFieldErrors, JobInput } from "@shared/validateJob";
 import type { ValueFieldErrors, ValueInput } from "@shared/validateValue";
@@ -23,6 +25,11 @@ import type {
   CaseStudyFieldErrors,
   CaseStudyInput,
 } from "@shared/validateCaseStudy";
+import type {
+  TestimonialFieldErrors,
+  TestimonialInput,
+} from "@shared/validateTestimonial";
+import type { ServiceFieldErrors, ServiceInput } from "@shared/validateService";
 
 export type JobRecord = Job & {
   updatedAt: string;
@@ -32,6 +39,13 @@ export type JobRecord = Job & {
 };
 
 export type ValueRecord = Value & {
+  updatedAt: string;
+  publishedAt: string | null;
+  /** Ada perubahan yang belum ikut Publish. */
+  unpublished: boolean;
+};
+
+export type TestimonialRecord = Testimonial & {
   updatedAt: string;
   publishedAt: string | null;
   /** Ada perubahan yang belum ikut Publish. */
@@ -53,6 +67,13 @@ export type WorkProjectRecord = WorkProject & {
 };
 
 export type CaseStudyRecord = CaseStudy & {
+  updatedAt: string;
+  publishedAt: string | null;
+  /** Ada perubahan yang belum ikut Publish. */
+  unpublished: boolean;
+};
+
+export type ServiceRecord = Service & {
   updatedAt: string;
   publishedAt: string | null;
   /** Ada perubahan yang belum ikut Publish. */
@@ -90,7 +111,9 @@ export type FieldErrors = JobFieldErrors &
   ValueFieldErrors &
   CrewFieldErrors &
   WorkProjectFieldErrors &
-  CaseStudyFieldErrors;
+  CaseStudyFieldErrors &
+  ServiceFieldErrors &
+  TestimonialFieldErrors;
 
 async function minta<T>(path: string, init: RequestInit = {}): Promise<Hasil<T>> {
   let res: Response;
@@ -278,6 +301,68 @@ export function unggahGambar(file: File) {
   return minta<{ image: ImageRow }>("/api/images", { method: "POST", body: form });
 }
 
+/* ── layanan (Services → sabuk layanan) ─────────────────────────────── */
+
+export const ambilLayanan = () => minta<{ services: ServiceRecord[] }>("/api/services");
+
+export const ambilSatuLayanan = (id: string) =>
+  minta<{ service: ServiceRecord }>(`/api/services/${id}`);
+
+export const buatLayanan = (input: ServiceInput) =>
+  minta<{ service: ServiceRecord }>("/api/services", kirimJson("POST", input));
+
+export const simpanLayanan = (id: string, input: ServiceInput) =>
+  minta<{ service: ServiceRecord }>(
+    `/api/services/${id}`,
+    kirimJson("PUT", input),
+  );
+
+export const hapusLayanan = (id: string) =>
+  minta<{ ok: true; deleted: string }>(`/api/services/${id}`, {
+    method: "DELETE",
+  });
+
+/** Kirim SELURUH daftar id dalam urutan barunya. Server menolak daftar yang
+ *  tidak menyebut semua layanan — lihat `reorderServices` di server. */
+export const urutkanLayanan = (ids: string[]) =>
+  minta<{ services: ServiceRecord[] }>(
+    "/api/services/urutkan",
+    kirimJson("POST", { ids }),
+  );
+
+/* ── testimoni (Services → kutipan klien) ───────────────────────────── */
+
+export const ambilTestimoni = () =>
+  minta<{ testimonials: TestimonialRecord[] }>("/api/testimonials");
+
+export const ambilSatuTestimoni = (id: string) =>
+  minta<{ testimonial: TestimonialRecord }>(`/api/testimonials/${id}`);
+
+export const buatTestimoni = (input: TestimonialInput) =>
+  minta<{ testimonial: TestimonialRecord }>(
+    "/api/testimonials",
+    kirimJson("POST", input),
+  );
+
+export const simpanTestimoni = (id: string, input: TestimonialInput) =>
+  minta<{ testimonial: TestimonialRecord }>(
+    `/api/testimonials/${id}`,
+    kirimJson("PUT", input),
+  );
+
+export const hapusTestimoni = (id: string) =>
+  minta<{ ok: true; deleted: string }>(`/api/testimonials/${id}`, {
+    method: "DELETE",
+  });
+
+/** Kirim SELURUH daftar id dalam urutan barunya. Server menolak daftar yang
+ *  tidak menyebut semua testimoni — lihat `reorderTestimonials` di server. */
+export const urutkanTestimoni = (ids: string[]) =>
+  minta<{ testimonials: TestimonialRecord[] }>(
+    "/api/testimonials/urutkan",
+    kirimJson("POST", { ids }),
+  );
+
 /* ── publish ────────────────────────────────────────────────────────── */
 
 export const statusPublish = () =>
@@ -290,6 +375,8 @@ export const tayangkan = () =>
     crew: number;
     projects: number;
     caseStudies: number;
+    services: number;
+    testimonials: number;
     generatedAt: string;
     warning: string | null;
   }>(
