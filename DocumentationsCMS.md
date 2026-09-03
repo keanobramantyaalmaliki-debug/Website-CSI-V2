@@ -4,7 +4,7 @@ Dokumentasi CMS buatan sendiri untuk **cogniti.id**: Postgres + API + panel admi
 berbahasa Indonesia. Dokumentasi situsnya (3D, section, performa) ada di berkas
 terpisah, `Documentations.md` — dua berkas ini sengaja tidak dicampur.
 
-Terakhir diupdate: **2 September 2026**.
+Terakhir diupdate: **3 September 2026**.
 
 **Status ringkas:** **KONTEN SELESAI SELURUHNYA — dua belas entitas, semuanya
 terverifikasi di lokal.** Lowongan, nilai ("What We Stand For"), dan crew ("The
@@ -53,6 +53,12 @@ hapus-lalu-sisipnya bergabung dalam satu transaksi (§6a); ia juga slice
 pertama yang MENGHAPUS sebuah berkas data situs (`src/data/socials.ts` — menu
 HP navbar kini membaca daftar sosial yang sama dari CMS, §10c), dan yang
 mengganti nama kelompok panel: "Seluruh situs" jadi "Footer" (§11a).
+
+Satu perubahan 3 September bukan entitas melainkan **fondasi**: Postgres pindah
+dari Postgres.app ke **Docker** (colima, container `cogniti-postgres`), dan
+karena jam VM Docker boleh beda dari jam host, semua cap waktu yang dulu diisi
+`new Date()` dari Node kini lewat `dbNow()` = `` sql`now()` `` — jam database
+sendiri (§12, dua gotcha barunya di §14).
 
 ---
 
@@ -162,6 +168,7 @@ Website CSI V2/
 │   ├── app.ts / index.ts        rakit app · buka port
 │   ├── db/schema.ts             24 tabel Drizzle
 │   ├── db/migrations/           SQL hasil drizzle-kit (0000 → 0012)
+│   ├── db/now.ts                dbNow() = sql`now()` — jam DB, bukan jam host (§14)
 │   ├── db/seed.ts               isi DB dari literal repo, sekali jalan per tabel
 │   ├── jobsRepo.ts              transaksi 4 tabel
 │   ├── valuesRepo.ts            satu baris + reorder
@@ -1092,10 +1099,13 @@ dari situs. Urutannya juga penting — induk lebih dulu, karena
 
 Dua detail yang gampang terlewat, berlaku untuk semua entitas:
 
-- **`updatedAt` diisi manual saat UPDATE.** Postgres tidak menyentuh
-  `default now()` saat UPDATE, hanya saat INSERT. Lupa baris itu = badge "belum
-  terpublish" tidak pernah menyala dan editor mengira perubahannya sudah sampai
-  ke pengunjung.
+- **`updatedAt` diisi manual saat UPDATE — dan isinya `dbNow()`, bukan
+  `new Date()`.** Postgres tidak menyentuh `default now()` saat UPDATE, hanya
+  saat INSERT; lupa baris itu = badge "belum terpublish" tidak pernah menyala
+  dan editor mengira perubahannya sudah sampai ke pengunjung. Dan sejak Postgres
+  jalan di Docker, nilai isinya wajib `dbNow()` dari `server/db/now.ts` — jam
+  Node dan jam database boleh berbeda, dan campuran keduanya di kolom yang
+  saling dibandingkan melahirkan badge abadi (§14).
 - **Baris baru mendarat di tempat yang masuk akal.** Lowongan baru mendapat
   `sortOrder = min - 1` sehingga muncul di ATAS daftar — editor baru saja
   mengetiknya. Nilai baru justru mendarat di BAWAH, karena di sana urutannya
@@ -1806,7 +1816,8 @@ menggandakan setiap panggilan API di dev, dan panel ini banyak sekali memanggil 
 ## §12 Menjalankan di lokal
 
 ```
-localhost:5432   Postgres (Postgres.app 17, db cogniti_dev + cogniti_test)
+127.0.0.1:5432   Postgres 17 di Docker — colima, container cogniti-postgres
+                 (stack "cogniti-db" di Portainer; db cogniti_dev + cogniti_test)
 localhost:3001   bun run server:dev      API
 localhost:3000   bun run dev             situs
 localhost:5174   bun run admin:dev       panel admin
@@ -1814,11 +1825,21 @@ localhost:5174   bun run admin:dev       panel admin
 
 ```bash
 cp .env.example .env          # lalu isi DATABASE_URL & SESSION_SECRET
-bun run db:up                 # nyalakan Postgres.app cluster
+bun run db:up                 # colima start + docker start cogniti-postgres
 bun run db:migrate            # jalankan migrasi
 bun run db:seed               # isi dari literal repo (sekali, per tabel)
 bun run user:create           # bikin akun editor
 ```
+
+Dua skrip pendamping, dua-duanya lewat `docker exec` karena psql tidak lagi
+terpasang di host: `bun run db:psql` (psql interaktif di dalam container) dan
+`bun run db:dump` (pg_dump ke stdout, arahkan sendiri ke berkas). Kredensial
+stack-nya dicatat di `~/.cogniti-stack-credentials` (di luar git).
+
+**Host di `DATABASE_URL` WAJIB `127.0.0.1`, bukan `localhost`.** Port-forward
+Docker cuma mengikat IPv4, sedangkan `localhost` di macOS dipetakan ke `::1`
+lebih dulu — pakai `localhost` berarti koneksi ditolak padahal databasenya
+hidup dan `docker ps` terlihat sehat.
 
 `.env` yang dibutuhkan: `DATABASE_URL`, `TEST_DATABASE_URL`, `SESSION_SECRET`,
 `PORT`, dan opsional `CF_ZONE_ID` + `CF_PURGE_TOKEN`. **`.env` tidak pernah masuk
@@ -2233,6 +2254,30 @@ diklik mouse.
 mati, proxy Vite membalas 500 dengan badan HTML, dan panel menampilkan "Ada yang
 salah" — editor lalu mencari kesalahannya di isian. `admin/src/api.ts` sekarang
 punya cabang khusus: *"Server sedang tidak bisa dihubungi. Coba lagi sebentar lagi."*
+
+**🔥 Jam database ≠ jam host — kolom waktu tidak boleh dicampur dua sumbernya.**
+Lahir saat Postgres pindah ke Docker: jam VM colima bisa bergeser dari jam
+macOS, jadi kolom yang default-nya `now()` (jam DB, saat INSERT) yang lalu
+di-UPDATE dengan `new Date()` (jam Node) menghasilkan perbandingan antar
+kolom yang bohong. Dua wujud gejalanya: badge "belum terpublish" menyala
+ABADI (`updatedAt` jam host selalu lebih muda dari `publishedAt` jam DB) dan
+`updated_at` yang terlihat MUNDUR sesudah disimpan. Fix: `server/db/now.ts`
+mengekspor `dbNow()` = `` sql`now()` ``, dipakai 12 repo + `publish.ts` +
+`seed.ts` — satu-satunya sumber waktu untuk kolom yang saling dibandingkan
+adalah database sendiri. Jangan tergoda "menyamakan jam VM": itu menambal
+gejala dan kalah oleh drift berikutnya.
+
+**🔥 Env shell yang ter-export mengalahkan `.env` — dan warisannya awet.**
+`loadEnv(mode, dir, "")` (prefix kosong) memberi `process.env` prioritas di
+atas berkas `.env`, jadi `DATABASE_URL`/`TEST_DATABASE_URL` yang pernah
+di-export di sebuah terminal membuat SEMUA proses yang lahir dari terminal itu
+— server dev, vitest, bahkan sesi Claude — diam-diam memukul database lama,
+sementara `.env`-nya sudah benar. Ketahuan saat test menghapus isi database
+yang salah. Fix-nya dua lapis: `unset DATABASE_URL TEST_DATABASE_URL` di
+terminal peluncur (lalu restart proses yang mewarisinya — env proses dibaca
+sekali saat lahir), dan buktikan lewat `pg_stat_activity` di container bahwa
+koneksinya benar-benar mendarat di DB yang dimaksud, bukan lewat "tidak ada
+galat".
 
 **`.env` jangan pernah ter-commit.** Sebelum staging, diperiksa bahwa `.env`,
 `uploads/`, dan `dist-admin/` semuanya terabaikan, dan bahwa satu-satunya string
