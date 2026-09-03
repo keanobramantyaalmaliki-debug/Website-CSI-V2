@@ -92,7 +92,7 @@ describe("membuat langkah", () => {
     expect(body.step.kicker).toBe("UNDERSTAND");
     expect(body.step.glyph).toBe("discovery");
     expect(body.step.state).toBe("live");
-    /* Belum pernah dipublish, jadi badge "belum tayang" harus menyala sejak
+    /* Belum pernah dipublish, jadi badge "belum terpublish" harus menyala sejak
        detik pertama. */
     expect(body.step.publishedAt).toBeNull();
     expect(body.step.unpublished).toBe(true);

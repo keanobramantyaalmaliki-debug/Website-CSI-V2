@@ -343,7 +343,7 @@ async function main() {
   await jalan(`__klik("Simpan")`);
   await tunggu(`!!document.querySelector("table")`, "kembali ke daftar");
   await jalan(BEKAL);
-  await tunggu(`__teks().includes("perubahan belum tayang")`, "angka belum tayang");
+  await tunggu(`__teks().includes("perubahan belum terpublish")`, "angka belum terpublish");
   await jalan(`__klik("Publish")`);
   await tunggu(`__teks().includes("Sudah tayang")`, "kabar publish");
 

@@ -13,9 +13,8 @@ import { hapusCaseStudy, urutkanCaseStudy, type CaseStudyRecord } from "./api";
 import { Kabar, Konfirmasi, tanggal } from "./ui";
 
 /* Nama status memakai nilai yang tersimpan di database apa adanya, dan sengaja
-   BUKAN kata "tayang" — kata itu sudah punya arti lain di panel ini (sudah
-   sampai ke pengunjung atau belum). Sebuah cerita bisa saja Live TAPI belum
-   tayang. */
+   BUKAN kata "tayang" — kata itu sudah punya arti lain di panel ini (tampil
+   di situs). Sebuah cerita bisa saja Live TAPI belum terpublish. */
 const NAMA_STATUS: Record<CaseStudyRecord["state"], string> = {
   draft: "Draft",
   live: "Live",
@@ -142,11 +141,13 @@ export function DaftarCaseStudy({
                   >
                     {NAMA_STATUS[study.state]}
                   </span>
+                </td>
+                <td>
+                  {tanggal(study.updatedAt)}
                   {study.unpublished ? (
-                    <div className="petunjuk">belum tayang</div>
+                    <div className="belum-terpublish">belum terpublish</div>
                   ) : null}
                 </td>
-                <td>{tanggal(study.updatedAt)}</td>
                 <td style={{ whiteSpace: "nowrap" }}>
                   <button
                     type="button"

@@ -129,10 +129,10 @@ describe("PUT /api/vision", () => {
     expect(body.errors.photo).toBeTruthy();
   });
 
-  /* Badge "belum tayang" hidup dari `updatedAt > publishedAt`. Lupa menaikkan
+  /* Badge "belum terpublish" hidup dari `updatedAt > publishedAt`. Lupa menaikkan
      `updatedAt` di repo = badge tidak pernah menyala, dan editor menyimpan lalu
      pulang tanpa menekan Publish. */
-  it("menaikkan updatedAt sehingga tandanya belum tayang", async () => {
+  it("menaikkan updatedAt sehingga tandanya belum terpublish", async () => {
     const { body } = await simpan();
     expect(body.vision?.unpublished).toBe(true);
     expect(body.vision?.publishedAt).toBeNull();

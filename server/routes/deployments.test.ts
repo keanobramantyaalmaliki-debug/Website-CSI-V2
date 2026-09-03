@@ -95,7 +95,7 @@ describe("membuat kartu", () => {
     expect(body.deployment.region).toBe("Indonesia");
     expect(body.deployment.image).toBe("/deployments/logistics.webp");
     expect(body.deployment.state).toBe("live");
-    /* Belum pernah dipublish, jadi badge "belum tayang" harus menyala sejak
+    /* Belum pernah dipublish, jadi badge "belum terpublish" harus menyala sejak
        detik pertama. */
     expect(body.deployment.publishedAt).toBeNull();
     expect(body.deployment.unpublished).toBe(true);

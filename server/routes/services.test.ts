@@ -86,7 +86,7 @@ describe("membuat layanan", () => {
     expect(body.service.title).toBe("Cloud Solutions");
     expect(body.service.subs).toEqual(["Cloud Migration", "Serverless"]);
     expect(body.service.state).toBe("live");
-    /* Belum pernah dipublish, jadi badge "belum tayang" harus menyala sejak
+    /* Belum pernah dipublish, jadi badge "belum terpublish" harus menyala sejak
        detik pertama. */
     expect(body.service.publishedAt).toBeNull();
     expect(body.service.unpublished).toBe(true);

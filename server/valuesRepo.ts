@@ -23,7 +23,7 @@ import { images, peopleValues } from "./db/schema";
 export type ValueRecord = Value & {
   updatedAt: string;
   publishedAt: string | null;
-  /** `updatedAt > publishedAt` — inilah yang dihitung badge "belum tayang". */
+  /** `updatedAt > publishedAt` — inilah yang dihitung badge "belum terpublish". */
   unpublished: boolean;
 };
 
@@ -162,7 +162,7 @@ export async function updateValue(
       photoId,
       state: input.state,
       /* WAJIB manual: Postgres tidak menyentuh `default now()` saat UPDATE.
-         Lupa baris ini = badge "belum tayang" tidak pernah menyala. */
+         Lupa baris ini = badge "belum terpublish" tidak pernah menyala. */
       updatedAt: new Date(),
     })
     .where(eq(peopleValues.id, id));
@@ -210,21 +210,38 @@ export async function reorderValues(ids: string[]): Promise<ValueRecord[] | null
      dengan yang baru — urutan hasilnya tidak sama dengan yang mana pun dari
      kedua versi, dan itu justru bentuk kerusakan yang paling sulit dibaca. */
   const semua = await db
-    .select({ id: peopleValues.id })
+    .select({ id: peopleValues.id, sortOrder: peopleValues.sortOrder })
     .from(peopleValues)
     .where(isNull(peopleValues.deletedAt));
 
   if (alive.length !== ids.length || semua.length !== ids.length) return null;
 
-  const now = new Date();
-  await db.transaction(async (tx) => {
-    for (const [position, id] of ids.entries()) {
-      await tx
-        .update(peopleValues)
-        .set({ sortOrder: position, updatedAt: now })
-        .where(eq(peopleValues.id, id));
-    }
-  });
+  /* Yang dinaikkan `updatedAt`-nya HANYA baris yang posisinya benar-benar
+     bergeser. Panel mengirim SELURUH daftar id tiap kali panah ditekan, jadi
+     menyetel cap waktu ke semuanya membuat satu ketukan panah terbaca sebagai
+     "5 perubahan belum terpublish" padahal yang pindah cuma dua. Angka di bar
+     publish adalah satu-satunya isyarat bahwa ada yang perlu ditayangkan;
+     angka yang rutin melebih-lebihkan berhenti dibaca, dan editor lalu
+     melewatkan perubahan yang sungguhan.
+
+     Keadaan akhir tabelnya sama persis dengan versi yang menulis semua baris:
+     yang dilewati memang sudah memegang `sortOrder` yang dituju. */
+  const posisiSekarang = new Map(semua.map((r) => [r.id, r.sortOrder]));
+  const bergeser = [...ids.entries()].filter(
+    ([position, id]) => posisiSekarang.get(id) !== position,
+  );
+
+  if (bergeser.length > 0) {
+    const now = new Date();
+    await db.transaction(async (tx) => {
+      for (const [position, id] of bergeser) {
+        await tx
+          .update(peopleValues)
+          .set({ sortOrder: position, updatedAt: now })
+          .where(eq(peopleValues.id, id));
+      }
+    });
+  }
 
   return listValues({ includeDrafts: true });
 }

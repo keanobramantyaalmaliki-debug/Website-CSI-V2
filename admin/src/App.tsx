@@ -1,6 +1,6 @@
 /**
  * Rangka panel: gerbang sesi, rute, dan satu sumber kebenaran untuk daftar
- * lowongan + angka "belum tayang".
+ * lowongan + angka "belum terpublish".
  *
  * Rutenya lewat hash (`#/`, `#/lowongan`, `#/lowongan/baru`,
  * `#/lowongan/ubah/<id>`) dan bukan History API dengan sengaja: `#` tidak
@@ -160,7 +160,7 @@ export function App() {
   }, []);
 
   /** Ambil ulang daftar + angka publish dari server. Sengaja tidak pernah
-   *  menebak keduanya di sisi klien: angka "belum tayang" dihitung dari
+   *  menebak keduanya di sisi klien: angka "belum terpublish" dihitung dari
    *  perbandingan waktu di database, dan tebakan lokal akan meleset begitu ada
    *  orang kedua yang ikut mengedit. */
   const muat = useCallback(async () => {
@@ -270,7 +270,7 @@ export function App() {
       ? kosong
       : `${jumlah} ${satuan}` +
         (draf > 0 ? `, ${draf} masih draf` : "") +
-        (belumTayang > 0 ? `, ${belumTayang} belum tayang` : "");
+        (belumTayang > 0 ? `, ${belumTayang} belum terpublish` : "");
 
   const keterangan: Record<string, string> = {
     lowongan: ringkas(
@@ -350,7 +350,7 @@ export function App() {
     visi:
       visi === null
         ? "Belum terisi, situs memakai kalimat bawaan."
-        : "Terisi" + (visi.unpublished ? ", belum tayang" : ""),
+        : "Terisi" + (visi.unpublished ? ", belum terpublish" : ""),
     /* Alasan sama seperti visi — satu baris, tanpa draf. Bedanya jumlah
        tautan sosialnya disebut: itu satu-satunya bagian footer yang bisa
        bertambah dan berkurang, jadi angkanya memberi tahu sesuatu. */
@@ -358,7 +358,7 @@ export function App() {
       footer === null
         ? "Belum terisi, situs memakai isi bawaan."
         : `Terisi, ${footer.socials.length} tautan sosial` +
-          (footer.unpublished ? ", belum tayang" : ""),
+          (footer.unpublished ? ", belum terpublish" : ""),
   };
 
   if (user === undefined) return <div className="bungkus">Memuat…</div>;

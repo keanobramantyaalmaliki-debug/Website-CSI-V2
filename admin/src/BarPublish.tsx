@@ -1,5 +1,5 @@
 /**
- * Bar menetap di bawah layar: berapa yang belum tayang, dan tombolnya.
+ * Bar menetap di bawah layar: berapa yang belum terpublish, dan tombolnya.
  *
  * Menetap karena inilah satu-satunya langkah yang mudah terlupa. Menyimpan
  * terasa seperti selesai, padahal pengunjung belum melihat apa pun sampai
@@ -77,7 +77,7 @@ export function BarPublish({
     ].join(", ");
 
     onSelesai(
-      `Sudah tayang: ${isi || "tidak ada apa pun yang"} sekarang terlihat pengunjung.` +
+      `Sudah terpublish: ${isi || "tidak ada apa pun yang"} sekarang terlihat pengunjung.` +
         /* Purge cache yang gagal TIDAK membatalkan publish — berkasnya sudah
            benar di server. Yang perlu diketahui editor cuma kenapa
            perubahannya mungkin belum kelihatan beberapa menit. */
@@ -92,10 +92,10 @@ export function BarPublish({
           {galat ? (
             <strong>{galat}</strong>
           ) : pending === 0 ? (
-            "Semua perubahan sudah tayang."
+            "Semua perubahan sudah terpublish."
           ) : (
             <strong>
-              {pending} perubahan belum tayang
+              {pending} perubahan belum terpublish
             </strong>
           )}
         </span>

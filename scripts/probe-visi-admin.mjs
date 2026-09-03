@@ -229,7 +229,7 @@ async function main() {
   /* Dinyalakan tepat sebelum simpan yang pertama. Dipakai `finally` di bawah
      untuk memutuskan apakah masih ada yang perlu dikembalikan — mengembalikan
      baris yang belum pernah disentuh cuma akan menaikkan `updatedAt` dan
-     menyalakan badge "belum tayang" tanpa ada yang berubah. */
+     menyalakan badge "belum terpublish" tanpa ada yang berubah. */
   let kotor = false;
 
   const pulihkan = async () => {
@@ -338,14 +338,14 @@ async function main() {
   lapor("kalimat kosong ditolak di form, baris yang tayang tidak tersentuh");
   await potret("3-galat");
 
-  /* 7 — simpan kalimat baru → badge belum tayang menyala → Publish */
+  /* 7 — simpan kalimat baru → badge belum terpublish menyala → Publish */
   kotor = true;
   await jalan(`__isi("Kalimat visi", ${JSON.stringify(KALIMAT)})`);
   await jalan(`__klik("Simpan")`);
   await tunggu(`__teks().includes("Visi tersimpan")`, "kabar tersimpan");
   await jalan(BEKAL);
-  await tunggu(`__teks().includes("perubahan belum tayang")`, "badge belum tayang");
-  lapor("menyimpan visi menyalakan badge 'belum tayang'");
+  await tunggu(`__teks().includes("perubahan belum terpublish")`, "badge belum terpublish");
+  lapor("menyimpan visi menyalakan badge 'belum terpublish'");
 
   /* Tersimpan ≠ tayang: sebelum Publish, content.json wajib masih berisi
      kalimat lama. Ini gerbang yang sama dengan entitas lain, cuma tanpa

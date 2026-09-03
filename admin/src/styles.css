@@ -246,6 +246,25 @@ label {
   margin: 0 0 6px;
 }
 
+/* Catatan bahwa suntingan terakhir belum sampai ke pengunjung. Tempatnya di
+   kolom "Terakhir diubah", menempel di bawah tanggalnya. Dulu ia berdiri di
+   kolom Status, persis di bawah penanda "Live", dan dua label bertumpuk itu
+   terbaca saling membantah padahal keduanya benar dan bicara soal dua hal
+   yang berbeda: "Live" adalah status baris ini, yang satunya adalah nasib
+   suntingannya. Di bawah tanggal, subjeknya tidak bisa salah baca lagi, yang
+   belum terpublish adalah perubahan bertanggal itu.
+   Kata "terpublish", bukan "tayang": ia menunjuk tombol Publish di bar bawah,
+   satu-satunya cara memindahkan keadaan ini, sekaligus melepaskan kata
+   "tayang" untuk arti yang satunya lagi di panel ini (tampil di situs).
+   nowrap karena kolomnya sempit: dipatahkan jadi "belum" / "terpublish", ia
+   kembali terbaca sebagai label kedua, bukan keterangan. */
+.belum-terpublish {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--redup);
+  white-space: nowrap;
+}
+
 input[type="text"],
 input[type="email"],
 input[type="password"],

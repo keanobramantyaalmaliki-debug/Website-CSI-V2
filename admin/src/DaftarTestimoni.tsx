@@ -15,8 +15,8 @@ import { Kabar, Konfirmasi, tanggal } from "./ui";
 
 /* Sama seperti daftar yang lain: nama status memakai nilai yang tersimpan di
    database apa adanya, dan sengaja BUKAN kata "tayang" — kata itu sudah punya
-   arti lain di panel ini (sudah sampai ke pengunjung atau belum). Sebuah
-   testimoni bisa saja Live TAPI belum tayang. */
+   arti lain di panel ini (tampil di situs). Sebuah
+   testimoni bisa saja Live TAPI belum terpublish. */
 const NAMA_STATUS: Record<TestimonialRecord["state"], string> = {
   draft: "Draft",
   live: "Live",
@@ -153,11 +153,13 @@ export function DaftarTestimoni({
                   >
                     {NAMA_STATUS[testimoni.state]}
                   </span>
+                </td>
+                <td>
+                  {tanggal(testimoni.updatedAt)}
                   {testimoni.unpublished ? (
-                    <div className="petunjuk">belum tayang</div>
+                    <div className="belum-terpublish">belum terpublish</div>
                   ) : null}
                 </td>
-                <td>{tanggal(testimoni.updatedAt)}</td>
                 <td style={{ whiteSpace: "nowrap" }}>
                   <button
                     type="button"

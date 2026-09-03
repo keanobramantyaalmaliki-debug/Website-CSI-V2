@@ -20,7 +20,7 @@
  *   endpoint tersendiri.
  *
  * Yang tetap sama dengan repo lain: route tidak menulis SQL, dan `updatedAt`
- * dinaikkan manual supaya badge "belum tayang" menyala.
+ * dinaikkan manual supaya badge "belum terpublish" menyala.
  */
 
 import { asc, eq, sql } from "drizzle-orm";
@@ -44,7 +44,7 @@ const ROW_ID = 1;
 export type FooterRecord = Footer & {
   updatedAt: string;
   publishedAt: string | null;
-  /** `updatedAt > publishedAt` — inilah yang dihitung badge "belum tayang". */
+  /** `updatedAt > publishedAt` — inilah yang dihitung badge "belum terpublish". */
   unpublished: boolean;
 };
 
@@ -148,7 +148,7 @@ export async function saveFooter(input: FooterInput): Promise<FooterRecord> {
           address: sql`excluded.address`,
           copyright: sql`excluded.copyright`,
           /* WAJIB manual: Postgres tidak menyentuh `default now()` saat
-             UPDATE. Lupa baris ini = badge "belum tayang" tidak pernah
+             UPDATE. Lupa baris ini = badge "belum terpublish" tidak pernah
              menyala. */
           updatedAt: sql`excluded.updated_at`,
         },

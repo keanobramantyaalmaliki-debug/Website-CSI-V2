@@ -15,8 +15,8 @@ import { Kabar, Konfirmasi, tanggal } from "./ui";
 
 /* Sama seperti di daftar lowongan: nama status memakai nilai yang tersimpan di
    database apa adanya, dan sengaja BUKAN kata "tayang" — kata itu sudah punya
-   arti lain di panel ini (sudah sampai ke pengunjung atau belum). Sebuah nilai
-   bisa saja Live TAPI belum tayang. */
+   arti lain di panel ini (tampil di situs). Sebuah nilai
+   bisa saja Live TAPI belum terpublish. */
 const NAMA_STATUS: Record<ValueRecord["state"], string> = {
   draft: "Draft",
   live: "Live",
@@ -138,11 +138,13 @@ export function DaftarNilai({
                   >
                     {NAMA_STATUS[value.state]}
                   </span>
+                </td>
+                <td>
+                  {tanggal(value.updatedAt)}
                   {value.unpublished ? (
-                    <div className="petunjuk">belum tayang</div>
+                    <div className="belum-terpublish">belum terpublish</div>
                   ) : null}
                 </td>
-                <td>{tanggal(value.updatedAt)}</td>
                 <td style={{ whiteSpace: "nowrap" }}>
                   <button
                     type="button"

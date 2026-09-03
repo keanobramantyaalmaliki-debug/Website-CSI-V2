@@ -92,7 +92,7 @@ describe("membuat sektor", () => {
     expect(body.industry.image).toBe("/industries/healthcare.webp");
     expect(body.industry.tier).toBe("also");
     expect(body.industry.state).toBe("live");
-    /* Belum pernah dipublish, jadi badge "belum tayang" harus menyala sejak
+    /* Belum pernah dipublish, jadi badge "belum terpublish" harus menyala sejak
        detik pertama. */
     expect(body.industry.publishedAt).toBeNull();
     expect(body.industry.unpublished).toBe(true);

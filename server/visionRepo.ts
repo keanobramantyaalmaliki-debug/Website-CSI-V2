@@ -15,7 +15,7 @@
  * - **Tidak ada `reorderVision`.** Tidak ada yang bisa diurutkan.
  *
  * Yang tetap sama dengan repo lain: route tidak menulis SQL, dan `updatedAt`
- * dinaikkan manual supaya badge "belum tayang" menyala.
+ * dinaikkan manual supaya badge "belum terpublish" menyala.
  */
 
 import { eq, sql } from "drizzle-orm";
@@ -35,7 +35,7 @@ const ROW_ID = 1;
 export type VisionRecord = Vision & {
   updatedAt: string;
   publishedAt: string | null;
-  /** `updatedAt > publishedAt` — inilah yang dihitung badge "belum tayang". */
+  /** `updatedAt > publishedAt` — inilah yang dihitung badge "belum terpublish". */
   unpublished: boolean;
 };
 
@@ -124,7 +124,7 @@ export async function saveVision(input: VisionInput): Promise<VisionRecord> {
         statement: sql`excluded.statement`,
         photoId: sql`excluded.photo_id`,
         /* WAJIB manual: Postgres tidak menyentuh `default now()` saat UPDATE.
-           Lupa baris ini = badge "belum tayang" tidak pernah menyala. */
+           Lupa baris ini = badge "belum terpublish" tidak pernah menyala. */
         updatedAt: sql`excluded.updated_at`,
       },
     });

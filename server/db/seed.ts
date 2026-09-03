@@ -125,7 +125,7 @@ async function seedJobs() {
           sortOrder: index,
           /* Seluruh isi ini SUDAH tayang sekarang, jadi ditandai terpublish.
              Tanpa ini, badge admin akan menyambut editor dengan "7 perubahan
-             belum tayang" padahal dia belum menyentuh apa pun. */
+             belum terpublish" padahal dia belum menyentuh apa pun. */
           publishedAt: new Date(),
         })
         .returning({ id: jobs.id });

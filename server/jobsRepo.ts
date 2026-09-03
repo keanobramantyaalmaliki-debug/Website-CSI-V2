@@ -39,7 +39,7 @@ import {
 export type JobRecord = Job & {
   updatedAt: string;
   publishedAt: string | null;
-  /** `updatedAt > publishedAt` — inilah yang dihitung badge "belum tayang". */
+  /** `updatedAt > publishedAt` — inilah yang dihitung badge "belum terpublish". */
   unpublished: boolean;
 };
 
@@ -292,7 +292,7 @@ export async function updateJob(
         photoId,
         askGithub: input.askGithub,
         /* WAJIB diisi manual — Postgres tidak menyentuh `default now()` saat
-           UPDATE, hanya saat INSERT. Lupa baris ini = badge "belum tayang"
+           UPDATE, hanya saat INSERT. Lupa baris ini = badge "belum terpublish"
            tidak pernah menyala dan editor mengira perubahannya sudah tayang. */
         updatedAt: new Date(),
       })

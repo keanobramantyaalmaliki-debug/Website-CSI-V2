@@ -26,7 +26,7 @@ import { deployments, images } from "./db/schema";
 export type DeploymentRecord = Deployment & {
   updatedAt: string;
   publishedAt: string | null;
-  /** `updatedAt > publishedAt` — inilah yang dihitung badge "belum tayang". */
+  /** `updatedAt > publishedAt` — inilah yang dihitung badge "belum terpublish". */
   unpublished: boolean;
 };
 
@@ -163,7 +163,7 @@ export async function updateDeployment(
       photoId,
       state: input.state,
       /* WAJIB manual: Postgres tidak menyentuh `default now()` saat UPDATE.
-         Lupa baris ini = badge "belum tayang" tidak pernah menyala. */
+         Lupa baris ini = badge "belum terpublish" tidak pernah menyala. */
       updatedAt: new Date(),
     })
     .where(eq(deployments.id, id));
@@ -208,21 +208,38 @@ export async function reorderDeployments(
   /* Daftar yang tidak menyebut SEMUA baris hidup ditolak bulat-bulat — lihat
      alasannya di `reorderValues()`. */
   const semua = await db
-    .select({ id: deployments.id })
+    .select({ id: deployments.id, sortOrder: deployments.sortOrder })
     .from(deployments)
     .where(isNull(deployments.deletedAt));
 
   if (alive.length !== ids.length || semua.length !== ids.length) return null;
 
-  const now = new Date();
-  await db.transaction(async (tx) => {
-    for (const [position, id] of ids.entries()) {
-      await tx
-        .update(deployments)
-        .set({ sortOrder: position, updatedAt: now })
-        .where(eq(deployments.id, id));
-    }
-  });
+  /* Yang dinaikkan `updatedAt`-nya HANYA baris yang posisinya benar-benar
+     bergeser. Panel mengirim SELURUH daftar id tiap kali panah ditekan, jadi
+     menyetel cap waktu ke semuanya membuat satu ketukan panah terbaca sebagai
+     "5 perubahan belum terpublish" padahal yang pindah cuma dua. Angka di bar
+     publish adalah satu-satunya isyarat bahwa ada yang perlu ditayangkan;
+     angka yang rutin melebih-lebihkan berhenti dibaca, dan editor lalu
+     melewatkan perubahan yang sungguhan.
+
+     Keadaan akhir tabelnya sama persis dengan versi yang menulis semua baris:
+     yang dilewati memang sudah memegang `sortOrder` yang dituju. */
+  const posisiSekarang = new Map(semua.map((r) => [r.id, r.sortOrder]));
+  const bergeser = [...ids.entries()].filter(
+    ([position, id]) => posisiSekarang.get(id) !== position,
+  );
+
+  if (bergeser.length > 0) {
+    const now = new Date();
+    await db.transaction(async (tx) => {
+      for (const [position, id] of bergeser) {
+        await tx
+          .update(deployments)
+          .set({ sortOrder: position, updatedAt: now })
+          .where(eq(deployments.id, id));
+      }
+    });
+  }
 
   return listDeployments({ includeDrafts: true });
 }

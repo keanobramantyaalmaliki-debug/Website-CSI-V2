@@ -329,7 +329,7 @@ pengecualiannya** — dua-duanya entitas tunggal, lihat §4b):
    tidak boleh terkunci selamanya, dan orang yang kembali bergabung adalah
    kejadian yang wajar.
 4. **Empat cap waktu yang sama** — `created_at`, `updated_at`, `published_at`,
-   `deleted_at`. Badge "belum tayang" (§9) dihitung dari tiga yang terakhir,
+   `deleted_at`. Badge "belum terpublish" (§9) dihitung dari tiga yang terakhir,
    dengan rumus yang ditulis SEKALI untuk semua entitas.
 5. **`audit_log.snapshot` menyimpan isi LENGKAP saat hapus.** Kalau hapusnya
    keliru, catatan ini yang membuat isinya bisa disusun kembali tanpa membongkar
@@ -463,7 +463,7 @@ TIDAK ada di sini:
 - **`deleted_at`** — visi tidak bisa dihapus, cuma diganti kalimatnya; kolom
   yang selamanya `null` cuma memberi kesan ada jalur hapus yang tidak ada.
 
-`published_at` TETAP ada: badge "belum tayang" bekerja dari perbandingan cap
+`published_at` TETAP ada: badge "belum terpublish" bekerja dari perbandingan cap
 waktu dan tidak peduli entitasnya tunggal atau daftar — justru badge itu
 satu-satunya yang memberi tahu editor bahwa kalimat yang barusan diketik belum
 sampai ke pengunjung, karena visi tidak punya draf yang menahannya (§9a).
@@ -1094,7 +1094,8 @@ Dua detail yang gampang terlewat, berlaku untuk semua entitas:
 
 - **`updatedAt` diisi manual saat UPDATE.** Postgres tidak menyentuh
   `default now()` saat UPDATE, hanya saat INSERT. Lupa baris itu = badge "belum
-  tayang" tidak pernah menyala dan editor mengira perubahannya sudah tayang.
+  terpublish" tidak pernah menyala dan editor mengira perubahannya sudah sampai
+  ke pengunjung.
 - **Baris baru mendarat di tempat yang masuk akal.** Lowongan baru mendapat
   `sortOrder = min - 1` sehingga muncul di ATAS daftar — editor baru saja
   mengetiknya. Nilai baru justru mendarat di BAWAH, karena di sana urutannya
@@ -1127,8 +1128,28 @@ bulat-bulat (422): yang tidak disebut akan tertinggal di `sortOrder` lamanya dan
 bertabrakan dengan yang baru — urutan hasilnya tidak sama dengan yang mana pun
 dari kedua versi, dan itu justru bentuk kerusakan yang paling sulit dibaca.
 
-Reorder **menaikkan `updatedAt`** semua baris yang ikut. Memindahkan panel adalah
-perubahan yang tayang, jadi badge "belum tayang" harus menyala.
+Reorder **menaikkan `updatedAt`, tapi cuma pada baris yang posisinya
+benar-benar berubah**. Memindahkan panel adalah perubahan yang tayang, jadi badge
+"belum terpublish" memang harus menyala — tapi cuma untuk yang pindah.
+
+Ini dulu tidak begitu, dan akibatnya kelihatan sampai ke bar bawah. Karena
+endpoint ini menerima SELURUH daftar id (alasannya di atas), versi pertamanya
+menulis ulang `sortOrder` semua baris yang disebut dan menaikkan `updatedAt`
+semuanya sekalian. Menukar dua baris teratas dari lima berarti lima baris
+bertanda belum terpublish, padahal tiga di bawahnya tidak bergerak
+semilimeter pun. Lebih buruk lagi: membuka layar daftar lalu menekan
+Naikkan-Turunkan sampai urutannya kembali seperti semula tetap meninggalkan
+angka di bar, dan editor melihat "5 perubahan belum terpublish" untuk sesuatu
+yang tidak dia ubah — lalu berhenti mempercayai angka itu.
+
+Sekarang tiap repo membaca dulu `sortOrder` yang sedang tersimpan, membandingkan
+dengan posisi di daftar kiriman, dan cuma menulis baris yang selisih. Kalau tidak
+ada yang selisih, transaksinya tidak dibuka sama sekali: mengirim ulang urutan
+yang sama bukan perubahan, dan sekarang memang tidak dihitung sebagai perubahan.
+Kedelapan repo memakai bentuk yang sama persis, dan dua test di
+`server/publish.test.ts` menguncinya dari sisi yang paling berarti, yaitu angka
+yang dilihat editor: "yang tidak bergeser tidak ikut dihitung" dan "urutan yang
+dikirim ulang tanpa berubah bukan perubahan sama sekali".
 
 Endpoint terpisah dan bukan isian di form, karena isian berarti meminta editor
 mengarang angka `sortOrder` padahal yang dia lihat adalah tumpukan panel.
@@ -1285,7 +1306,7 @@ tiga baris yang tidak dipakai.
 menulis ke sana berarti perubahan baru tayang setelah `bun run build` berikutnya.
 Menulis ke `dist/` membuat perubahan tayang seketika.
 
-### §9a Badge "N perubahan belum tayang"
+### §9a Badge "N perubahan belum terpublish"
 
 `GET /api/publish/status` mengembalikan **satu angka untuk semua entitas**: yang
 ditanyakan editor adalah "apa masih ada yang perlu saya publish", bukan "berapa
@@ -1302,7 +1323,7 @@ selalu menaikkan `updatedAt` induk — mengubah tautan pun menyalakan badge.) Ka
 perbaikan seperti yang di bawah akan diperbaiki di satu tempat dan tetap salah di
 tempat lain.
 
-- **Baris yang DIHAPUS ikut dihitung** selama penghapusannya sendiri belum tayang
+- **Baris yang DIHAPUS ikut dihitung** selama penghapusannya sendiri belum terpublish
   (`deletedAt > publishedAt`). Isinya masih terlihat pengunjung sampai publish
   berikutnya. Tanpa ini editor menghapus sesuatu, melihat badge tetap nol, dan
   menyimpulkan tidak perlu menekan Publish — sementara yang dihapus masih tayang.
@@ -1319,6 +1340,40 @@ disebut namanya saja, tanpa angka** — keduanya bukan cacah baris melainkan
 ada/tidak ada, dan "1 visi" akan terbaca seolah visi kedua mungkin ada;
 `PublishResult.vision` dan `.footer` karena itu bertipe `boolean`, bukan
 `number`.
+
+Angka di bar menjawab "apa masih ada yang perlu saya publish". Yang menjawab
+"yang mana" adalah tanda **"belum terpublish"** di tiap baris daftar. Tempatnya
+di kolom **"Terakhir diubah"**, menempel di bawah tanggalnya — bukan di kolom
+"Status", tempat ia dulu berdiri.
+
+Pemindahannya bukan soal estetika, dan pertanyaannya datang dari editor yang
+memakai panel ini: kenapa baris Deployment bertanda `Live` tapi di bawahnya
+tertulis belum tayang? Di kolom Status kedua label berdiri bertumpuk, dan dua
+label setara di satu sel terbaca sebagai dua pernyataan yang saling membantah.
+Padahal keduanya benar dan bicara soal dua hal yang berbeda: `Live` adalah
+status baris ini, yang satunya adalah nasib suntingan terakhirnya. Yang salah
+cuma kedekatannya. Di bawah tanggal, subjeknya tidak bisa salah baca lagi, yang
+belum terpublish adalah perubahan bertanggal itu.
+
+Kata **"terpublish", bukan "tayang"**, dan itu sekaligus melunasi satu tabrakan
+kata yang sudah lama ada di panel ini. Sebuah lowongan bisa saja `Open` TAPI
+suntingannya belum sampai ke pengunjung; selama kedua keadaan itu memakai kata
+"tayang", kalimat apa pun tentang keduanya tidak bisa dibaca. Sekarang panel
+punya tiga hal berbeda untuk dikatakan, dan ketiganya punya katanya sendiri
+sendiri:
+
+| Kata | Artinya | Muncul di |
+|---|---|---|
+| `Live` / `Draft` / `Open` / `Closed` | status baris ini | penanda kolom Status |
+| tayang | tampil di situs untuk pengunjung | kalimat penjelas, kolom "#" |
+| terpublish | suntingannya sudah sampai ke pengunjung | tanda per baris, bar Publish |
+
+Kata "terpublish" dipilih karena ia menunjuk tombol Publish di bar bawah,
+satu-satunya cara memindahkan keadaan itu. Penggantiannya menyapu SEMUA kalimat
+di sumbu ini sekaligus, bukan cuma tanda per barisnya: bar bawah, kalimat
+konfirmasi sesudah Publish, dan tiga kalimat status di beranda. Setengah panel
+yang bilang "belum tayang" sementara setengahnya bilang "belum terpublish" akan
+terbaca seolah keduanya hal yang berbeda.
 
 > ⚠️ Selisih "kalimat konfirmasi belum menyebut entitas baru" pernah tersisa
 > DUA slice berturut-turut (industri, lalu langkah cara kerja) dan sekarang
@@ -1551,7 +1606,7 @@ Bahasa Indonesia, hitam-putih, tanpa animasi, tanpa framework UI.
 | Layar | Isi |
 |---|---|
 | `Masuk` | satu isian kata sandi, fokus otomatis. Tidak ada tautan daftar — akun dibuat lewat `bun run user:create` |
-| `Beranda` | peta konten situs: empat halaman navbar + isinya, masing-masing dengan kalimat status hidup ("3 nilai, 1 belum tayang") |
+| `Beranda` | peta konten situs: empat halaman navbar + isinya, masing-masing dengan kalimat status hidup ("3 nilai, 1 belum terpublish") |
 | `Sidebar` | menu sisi yang bisa dilipat, urutannya mengikuti urutan di situs |
 | `DaftarLowongan` | Judul · Departemen · Status · Terakhir diubah |
 | `FormLowongan` | judul, departemen, status, ringkasan, keahlian, foto, tab EN/ID, saklar GitHub, slug di bagian lanjutan |
@@ -1576,7 +1631,7 @@ Bahasa Indonesia, hitam-putih, tanpa animasi, tanpa framework UI.
 | `FormVisi` | kalimat visi + foto — TANPA daftar di depannya, tanpa Tambah/Hapus/Naikkan/Draft (§4b); `#/visi` langsung membuka form |
 | `FormFooter` | surel, alamat, baris hak cipta, dan daftar tautan sosial (tulisan + alamat per baris, urutan baris = urutan tampil) — TANPA daftar di depannya juga (§4b); `#/footer` langsung membuka form; baris tautan yang dua-duanya kosong dibuang saat simpan (§5b) |
 | `PemilihFoto` | grid foto lama + unggah baru — dipakai delapan form yang bergambar (§8), label & petunjuknya bisa diganti per form |
-| `BarPublish` | menetap di bawah: "N perubahan belum tayang" + tombol Publish |
+| `BarPublish` | menetap di bawah: "N perubahan belum terpublish" + tombol Publish |
 | `Tema` | tombol terang/gelap di kepala panel (§11a) |
 
 Yang bikin ramah non-teknis: **tidak ada Markdown, tidak ada field JSON, tidak ada
@@ -1585,6 +1640,11 @@ lanjutan), dan setiap galat validasi muncul di sebelah isiannya dalam bahasa
 Indonesia. Hapus selalu lewat dialog `Konfirmasi` yang **menyebut nama barisnya**,
 dan pesan sesudahnya menjelaskan apa yang belum terjadi:
 *"…Barisnya baru hilang dari situs setelah kamu menekan Publish."*
+
+Kolom **"Status"** di semua layar daftar isinya satu penanda saja: status baris
+itu (`Live`/`Draft`, atau `Open`/`Closed` untuk lowongan). Tanda "belum
+terpublish" TIDAK ikut di sana, tempatnya di kolom "Terakhir diubah" di bawah
+tanggalnya — alasannya di §9a.
 
 ### §11a Beranda dari peta konten, bukan daftar tabel
 
@@ -1626,8 +1686,8 @@ sisi merendernya sebagai SATU baris yang langsung membuka layarnya — sederajat
 dengan "Beranda", bukan judul berpanah yang harus dibuka dulu. Panah yang
 membuka satu anak bernama sama dengan induknya ("Footer ▸ Footer") cuma
 menambah ketukan tanpa memberi tahu apa pun. Kalimat statusnya di beranda juga
-bukan `ringkas()`: "Belum terisi — situs memakai isi bawaan." atau "Terisi,
-N tautan sosial(, belum tayang)" — tautan sosial disebut karena cuma itu
+bukan `ringkas()`: "Belum terisi, situs memakai isi bawaan." atau "Terisi,
+N tautan sosial(, belum terpublish)" — tautan sosial disebut karena cuma itu
 bagian footer yang bisa berubah jumlahnya.
 
 > ⚠️ Peta ini pernah SALAH, dan salahnya cuma ketahuan karena dibaca manusia:
@@ -1656,8 +1716,8 @@ rantai pemilihan komponen — form LOWONGAN, di alamat yang menjanjikan visi.
 Keduanya kini dinormalkan ke layar `#/visi`, dan `#/footer/…` diperlakukan
 sama. Kalimat status visi di beranda
 juga tidak lewat `ringkas()`: jumlahnya selalu satu dan tidak ada draf, jadi
-yang dilaporkan cuma "Belum terisi — situs memakai kalimat bawaan." atau
-"Terisi(, belum tayang)".
+yang dilaporkan cuma "Belum terisi, situs memakai kalimat bawaan." atau
+"Terisi(, belum terpublish)".
 
 **Kolom "#" di `DaftarIndustri`, `DaftarDeployment`, dan `DaftarProses`
 menghitung baris TAYANG saja** — draf tampil
@@ -1810,7 +1870,7 @@ menumpang `Industries.test.tsx`, dan 5 + 5 menumpang `Deployments.test.tsx` &
 | `server/routes/deployments.test.ts` | 25 | CRUD + reorder, pasangan sektor+wilayah kembar ditolak case-insensitive (galat di `region`), kartu baru mendarat di bawah |
 | `server/routes/processSteps.test.ts` | 28 | CRUD + reorder, **batas 6 Live ditolak 422** (POST maupun PUT, `exceptId` untuk baris sendiri), ilustrasi ikut pindah bersama langkahnya, judul kembar |
 | `server/routes/auth.test.ts` | 6 | masuk pakai sandi saja, sandi salah, sesi |
-| `server/publish.test.ts` | 48 | draft tidak ikut, tulis atomik, hitungan pending, visi null → objek → tertimpa, kaki halaman ikut (kolom payload-nya dikunci apa adanya, socials kosong = `[]` bukan hilang) — BELUM menyebut deployment/proses (lihat ⚠️ di bawah) |
+| `server/publish.test.ts` | 50 | draft tidak ikut, tulis atomik, hitungan pending, **reorder cuma menghitung baris yang bergeser** (dan urutan yang dikirim ulang apa adanya bukan perubahan sama sekali, §6b), visi null → objek → tertimpa, kaki halaman ikut (kolom payload-nya dikunci apa adanya, socials kosong = `[]` bukan hilang) — BELUM menyebut deployment/proses (lihat ⚠️ di bawah) |
 | `src/lib/content/store.test.ts` | 9 | content.json valid dipakai; gagal/timeout/versi salah → fallback |
 | `src/data/people.test.ts` | 17 | CMS menang atas bundle; daftar kosong dihormati; payload lama |
 | `src/data/work.test.ts` | 9 | CMS menang atas bundle; `outcome` kosong jadi `undefined` |
@@ -1874,7 +1934,7 @@ ditolak, hapus + Publish → hilang dari `content.json`, nol galat konsol.
 ✓ status Live tanpa foto ditolak, alasannya tampil di form
 ✓ nilai tayang masuk content.json lengkap dengan foto
 ✓ Naikkan menukar baris dengan tetangganya di layar
-✓ memindahkan baris menyalakan badge "belum tayang"
+✓ memindahkan baris menyalakan badge 'belum terpublish'
 ```
 
 `scripts/probe-crew-admin.mjs` — 12 pemeriksaan:
@@ -1993,7 +2053,7 @@ yang sungguhan:
 ✓ menu sisi membuka form visi langsung, tanpa daftar, dan menandai posisinya
 ✓ tidak ada Tambah/Hapus/Naikkan maupun pilihan Draft-Live
 ✓ kalimat kosong ditolak di form, baris yang tayang tidak tersentuh
-✓ menyimpan visi menyalakan badge 'belum tayang'
+✓ menyimpan visi menyalakan badge 'belum terpublish'
 ✓ simpan kedua menimpa baris yang sama — tetap satu visi
 ✓ #/visi/baru dan #/visi/ubah/1 tetap mendarat di form visi
 ✓ halaman depan merender visi dari CMS (kalimat & foto terukur)
@@ -2241,8 +2301,10 @@ Urutan yang sudah terbukti **dua belas kali**, dipakai ulang apa adanya:
 11. **`bun run build`** — bukan cuma `tsc` dan `vitest` (§14)
 
 **Butuh urutan manual?** Ikuti pola nilai: endpoint `POST /urutkan` sendiri yang
-menerima seluruh daftar id, reorder menaikkan `updatedAt`, dan baris baru mendarat
-di bawah (§6b). **Tapi tanyakan dulu apakah situsnya memang membaca urutan itu** —
+menerima seluruh daftar id, reorder menaikkan `updatedAt` **cuma pada baris yang
+posisinya benar-benar berubah**, dan baris baru mendarat di bawah (§6b).
+Menaikkan `updatedAt` semua baris yang disebut adalah bentuk yang salah, dan
+salahnya terlihat sebagai angka palsu di bar Publish. **Tapi tanyakan dulu apakah situsnya memang membaca urutan itu** —
 kalau tidak, tombolnya cuma akan berbohong ke editor (§4b). Daftarkan
 `POST /urutkan` **sebelum** `POST /:id`: Hono mencocokkan rute sesuai urutan
 pendaftaran, dan yang belakangan tidak akan pernah terpanggil.

@@ -98,7 +98,7 @@ describe("membuat case study", () => {
     expect(body.study.image).toBe("/work/citizen-portal.webp");
     expect(body.study.scope).toEqual(["Web Platform", "Staff Training"]);
     expect(body.study.state).toBe("live");
-    /* Belum pernah dipublish, jadi badge "belum tayang" harus menyala sejak
+    /* Belum pernah dipublish, jadi badge "belum terpublish" harus menyala sejak
        detik pertama. */
     expect(body.study.publishedAt).toBeNull();
     expect(body.study.unpublished).toBe(true);

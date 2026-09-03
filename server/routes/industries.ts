@@ -92,7 +92,7 @@ async function jagaBatasTayang(
   const lain = await countLiveIndustries(exceptId);
   if (lain < MAX_LIVE_INDUSTRIES) return null;
 
-  return `Sudah ada ${MAX_LIVE_INDUSTRIES} sektor yang tampil, dan itu batasnya — tumpukan 3D di halaman depan cuma muat sebanyak itu. Jadikan salah satu sektor lain "Draft" atau hapus dulu, baru sektor ini bisa ditampilkan.`;
+  return `Sudah ada ${MAX_LIVE_INDUSTRIES} sektor yang tampil, dan itu batasnya. Tumpukan 3D di halaman depan cuma muat sebanyak itu. Jadikan salah satu sektor lain "Draft" atau hapus dulu, baru sektor ini bisa ditampilkan.`;
 }
 
 /** Memeriksa satu sektor sekaligus dua aturan tingkat daftar (nama kembar,

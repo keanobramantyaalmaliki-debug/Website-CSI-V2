@@ -26,7 +26,7 @@ import { Kabar, Konfirmasi, tanggal } from "./ui";
 
 /* Sama seperti daftar yang lain: nama status memakai nilai yang tersimpan di
    database apa adanya, dan sengaja BUKAN kata "tayang" — kata itu sudah punya
-   arti lain di panel ini (sudah sampai ke pengunjung atau belum). */
+   arti lain di panel ini (tampil di situs). */
 const NAMA_STATUS: Record<IndustryRecord["state"], string> = {
   draft: "Draft",
   live: "Live",
@@ -209,11 +209,13 @@ export function DaftarIndustri({
                   >
                     {NAMA_STATUS[sektor.state]}
                   </span>
+                </td>
+                <td>
+                  {tanggal(sektor.updatedAt)}
                   {sektor.unpublished ? (
-                    <div className="petunjuk">belum tayang</div>
+                    <div className="belum-terpublish">belum terpublish</div>
                   ) : null}
                 </td>
-                <td>{tanggal(sektor.updatedAt)}</td>
                 <td style={{ whiteSpace: "nowrap" }}>
                   <button
                     type="button"

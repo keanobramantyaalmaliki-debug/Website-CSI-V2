@@ -91,7 +91,7 @@ describe("membuat proyek", () => {
     expect(body.project.image).toBe("/work/citizen-portal.webp");
     expect(body.project.tags).toEqual(["React", "Node.js"]);
     expect(body.project.state).toBe("live");
-    /* Belum pernah dipublish, jadi badge "belum tayang" harus menyala sejak
+    /* Belum pernah dipublish, jadi badge "belum terpublish" harus menyala sejak
        detik pertama. */
     expect(body.project.publishedAt).toBeNull();
     expect(body.project.unpublished).toBe(true);

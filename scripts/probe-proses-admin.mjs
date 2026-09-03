@@ -459,7 +459,7 @@ async function main() {
     /* 8 — jadikan Live, lalu Publish */
     await jalan(BEKAL);
     await ubahStatus(NAMA, "Live");
-    await tunggu(`__teks().includes("perubahan belum tayang")`, "angka belum tayang");
+    await tunggu(`__teks().includes("perubahan belum terpublish")`, "angka belum terpublish");
     await jalan(`__klik("Publish")`);
     await tunggu(`__teks().includes("Sudah tayang")`, "kabar publish");
 
@@ -584,8 +584,8 @@ async function main() {
     /* Memindahkan baris adalah perubahan yang menunggu Publish, sama seperti
        menyunting isinya — kalau badge-nya diam, editor menutup panel dengan
        yakin urutan barunya sudah tayang padahal belum. */
-    await tunggu(`__teks().includes("perubahan belum tayang")`, "badge menyala setelah pindah");
-    lapor("memindahkan baris menyalakan badge 'belum tayang'");
+    await tunggu(`__teks().includes("perubahan belum terpublish")`, "badge menyala setelah pindah");
+    lapor("memindahkan baris menyalakan badge 'belum terpublish'");
 
     await jalan(`__klik("Publish")`);
     await tunggu(`__teks().includes("Sudah tayang")`, "kabar publish");

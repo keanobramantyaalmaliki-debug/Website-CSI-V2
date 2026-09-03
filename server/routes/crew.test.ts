@@ -275,7 +275,7 @@ describe("PUT /api/crew/:id", () => {
   });
 
   /* Postgres tidak menyentuh `default now()` saat UPDATE. Kalau `updatedAt`
-     tidak diisi manual di repo, badge "belum tayang" tidak pernah menyala dan
+     tidak diisi manual di repo, badge "belum terpublish" tidak pernah menyala dan
      editor mengira perubahannya sudah tayang. */
   it("menaikkan updatedAt supaya badge belum-tayang menyala", async () => {
     const { body } = await create();

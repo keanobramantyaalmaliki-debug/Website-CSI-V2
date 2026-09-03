@@ -33,7 +33,7 @@ type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 export type CaseStudyRecord = CaseStudy & {
   updatedAt: string;
   publishedAt: string | null;
-  /** `updatedAt > publishedAt` — inilah yang dihitung badge "belum tayang". */
+  /** `updatedAt > publishedAt` — inilah yang dihitung badge "belum terpublish". */
   unpublished: boolean;
 };
 
@@ -231,7 +231,7 @@ export async function updateCaseStudy(
         photoId,
         state: input.state,
         /* WAJIB manual: Postgres tidak menyentuh `default now()` saat UPDATE.
-           Lupa baris ini = badge "belum tayang" tidak pernah menyala. */
+           Lupa baris ini = badge "belum terpublish" tidak pernah menyala. */
         updatedAt: new Date(),
       })
       .where(eq(caseStudies.id, id));
@@ -283,21 +283,38 @@ export async function reorderCaseStudies(
   /* Daftar yang tidak menyebut SEMUA baris hidup ditolak bulat-bulat — lihat
      alasannya di `reorderValues`. */
   const semua = await db
-    .select({ id: caseStudies.id })
+    .select({ id: caseStudies.id, sortOrder: caseStudies.sortOrder })
     .from(caseStudies)
     .where(isNull(caseStudies.deletedAt));
 
   if (alive.length !== ids.length || semua.length !== ids.length) return null;
 
-  const now = new Date();
-  await db.transaction(async (tx) => {
-    for (const [position, id] of ids.entries()) {
-      await tx
-        .update(caseStudies)
-        .set({ sortOrder: position, updatedAt: now })
-        .where(eq(caseStudies.id, id));
-    }
-  });
+  /* Yang dinaikkan `updatedAt`-nya HANYA baris yang posisinya benar-benar
+     bergeser. Panel mengirim SELURUH daftar id tiap kali panah ditekan, jadi
+     menyetel cap waktu ke semuanya membuat satu ketukan panah terbaca sebagai
+     "5 perubahan belum terpublish" padahal yang pindah cuma dua. Angka di bar
+     publish adalah satu-satunya isyarat bahwa ada yang perlu ditayangkan;
+     angka yang rutin melebih-lebihkan berhenti dibaca, dan editor lalu
+     melewatkan perubahan yang sungguhan.
+
+     Keadaan akhir tabelnya sama persis dengan versi yang menulis semua baris:
+     yang dilewati memang sudah memegang `sortOrder` yang dituju. */
+  const posisiSekarang = new Map(semua.map((r) => [r.id, r.sortOrder]));
+  const bergeser = [...ids.entries()].filter(
+    ([position, id]) => posisiSekarang.get(id) !== position,
+  );
+
+  if (bergeser.length > 0) {
+    const now = new Date();
+    await db.transaction(async (tx) => {
+      for (const [position, id] of bergeser) {
+        await tx
+          .update(caseStudies)
+          .set({ sortOrder: position, updatedAt: now })
+          .where(eq(caseStudies.id, id));
+      }
+    });
+  }
 
   return listCaseStudies({ includeDrafts: true });
 }

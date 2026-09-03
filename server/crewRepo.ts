@@ -30,7 +30,7 @@ type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 export type CrewRecord = CrewMember & {
   updatedAt: string;
   publishedAt: string | null;
-  /** `updatedAt > publishedAt` — inilah yang dihitung badge "belum tayang". */
+  /** `updatedAt > publishedAt` — inilah yang dihitung badge "belum terpublish". */
   unpublished: boolean;
 };
 
@@ -216,7 +216,7 @@ export async function updateCrew(
         photoId,
         state: input.state,
         /* WAJIB manual: Postgres tidak menyentuh `default now()` saat UPDATE.
-           Lupa baris ini = badge "belum tayang" tidak pernah menyala. */
+           Lupa baris ini = badge "belum terpublish" tidak pernah menyala. */
         updatedAt: new Date(),
       })
       .where(eq(crewMembers.id, id));

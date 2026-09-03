@@ -19,8 +19,8 @@ import { Kabar, Konfirmasi, tanggal } from "./ui";
 
 /* Sama seperti daftar lowongan dan nilai: nama status memakai nilai yang
    tersimpan di database apa adanya, dan sengaja BUKAN kata "tayang" — kata itu
-   sudah punya arti lain di panel ini (sudah sampai ke pengunjung atau belum).
-   Seorang anggota bisa saja Live TAPI belum tayang. */
+   sudah punya arti lain di panel ini (tampil di situs).
+   Seorang anggota bisa saja Live TAPI belum terpublish. */
 const NAMA_STATUS: Record<CrewRecord["state"], string> = {
   draft: "Draft",
   live: "Live",
@@ -120,11 +120,13 @@ export function DaftarCrew({
                   >
                     {NAMA_STATUS[member.state]}
                   </span>
+                </td>
+                <td>
+                  {tanggal(member.updatedAt)}
                   {member.unpublished ? (
-                    <div className="petunjuk">belum tayang</div>
+                    <div className="belum-terpublish">belum terpublish</div>
                   ) : null}
                 </td>
-                <td>{tanggal(member.updatedAt)}</td>
                 <td style={{ whiteSpace: "nowrap" }}>
                   <button
                     type="button"

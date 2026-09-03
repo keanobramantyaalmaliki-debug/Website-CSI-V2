@@ -26,8 +26,8 @@
  * "ditutup", ia dipakai atau dicabut.
  *
  * Namanya sengaja BUKAN "tayang". Kata itu sudah punya arti lain di panel ini
- * — sudah sampai ke pengunjung atau belum (badge "belum tayang", tombol
- * Publish) — dan sebuah nilai bisa saja Live TAPI belum tayang.
+ * — sudah sampai ke pengunjung atau belum (badge "belum terpublish", tombol
+ * Publish) — dan sebuah nilai bisa saja Live TAPI belum terpublish.
  */
 export type ValueState = "draft" | "live";
 

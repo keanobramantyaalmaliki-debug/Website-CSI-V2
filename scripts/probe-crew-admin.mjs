@@ -303,7 +303,7 @@ async function main() {
   await jalan(`__klik("Simpan")`);
   await tunggu(`!!document.querySelector("table")`, "kembali ke daftar");
   await jalan(BEKAL);
-  await tunggu(`__teks().includes("perubahan belum tayang")`, "angka belum tayang");
+  await tunggu(`__teks().includes("perubahan belum terpublish")`, "angka belum terpublish");
 
   /* Foto sengaja dibiarkan kosong — kotak tanpa foto punya tampilan sendiri
      yang memang dirancang, dan itu isi empat dari tiga belas baris hari ini.

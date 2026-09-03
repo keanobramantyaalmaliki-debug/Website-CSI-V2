@@ -88,7 +88,7 @@ describe("membuat testimoni", () => {
     expect(body.testimonial.name).toBe("Ratna Wijaya");
     expect(body.testimonial.role).toContain("Head of IT");
     expect(body.testimonial.state).toBe("live");
-    /* Belum pernah dipublish, jadi badge "belum tayang" harus menyala sejak
+    /* Belum pernah dipublish, jadi badge "belum terpublish" harus menyala sejak
        detik pertama. */
     expect(body.testimonial.publishedAt).toBeNull();
     expect(body.testimonial.unpublished).toBe(true);

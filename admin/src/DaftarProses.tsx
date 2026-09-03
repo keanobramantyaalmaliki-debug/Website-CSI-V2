@@ -27,7 +27,7 @@ import { Kabar, Konfirmasi, tanggal } from "./ui";
 
 /* Sama seperti daftar yang lain: nama status memakai nilai yang tersimpan di
    database apa adanya, dan sengaja BUKAN kata "tayang" — kata itu sudah punya
-   arti lain di panel ini (sudah sampai ke pengunjung atau belum). */
+   arti lain di panel ini (tampil di situs). */
 const NAMA_STATUS: Record<ProcessStepRecord["state"], string> = {
   draft: "Draft",
   live: "Live",
@@ -208,11 +208,13 @@ export function DaftarProses({
                   >
                     {NAMA_STATUS[langkah.state]}
                   </span>
+                </td>
+                <td>
+                  {tanggal(langkah.updatedAt)}
                   {langkah.unpublished ? (
-                    <div className="petunjuk">belum tayang</div>
+                    <div className="belum-terpublish">belum terpublish</div>
                   ) : null}
                 </td>
-                <td>{tanggal(langkah.updatedAt)}</td>
                 <td style={{ whiteSpace: "nowrap" }}>
                   <button
                     type="button"

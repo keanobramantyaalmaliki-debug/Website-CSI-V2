@@ -267,7 +267,7 @@ export const jobs = pgTable(
       .notNull()
       .defaultNow(),
     /** Kapan baris ini terakhir ikut terangkut ke `content.json`.
-     *  `updatedAt > publishedAt` = inilah "perubahan belum tayang". */
+     *  `updatedAt > publishedAt` = inilah "perubahan belum terpublish". */
     publishedAt: timestamp("published_at", { withTimezone: true }),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
@@ -754,7 +754,7 @@ export const serviceSubs = pgTable(
  * di dalam tanda kutip, dan di situlah kemiripannya berhenti: yang di case
  * study adalah kutipan MASALAH kliennya, kalimat pembuka cerita tanpa nama
  * siapa pun; yang di sini pujian bernama dan berjabatan yang butuh izin orang
- * sungguhan sebelum tayang. Menyatukannya berarti satu tabel yang separuh
+ * sungguhan sebelum terpublish. Menyatukannya berarti satu tabel yang separuh
  * barisnya selalu tanpa nama.
  *
  * TIDAK ADA kolom foto, dan itu bukan kelupaan. Situs menggambar ikon orang
@@ -1128,7 +1128,7 @@ export const processSteps = pgTable(
  *   tombol hapus, kolomnya tidak akan pernah terisi; kolom yang selalu `null`
  *   cuma memberi kesan ada jalur hapus yang sebenarnya tidak ada.
  *
- * `publishedAt` TETAP ada: badge "belum tayang" bekerja dari perbandingan cap
+ * `publishedAt` TETAP ada: badge "belum terpublish" bekerja dari perbandingan cap
  * waktu dan tidak peduli entitasnya tunggal atau daftar.
  */
 export const vision = pgTable(

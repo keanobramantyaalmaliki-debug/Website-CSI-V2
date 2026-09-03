@@ -4,7 +4,7 @@
  * Peta halaman situs sekarang tinggal di menu sisi dan selalu kelihatan, jadi
  * layar ini TIDAK mengulanginya. Yang tersisa untuknya adalah pekerjaan: apa
  * yang bisa diubah sekarang, dan bagaimana keadaannya — berapa lowongan, ada
- * berapa yang masih draf, ada berapa yang belum tayang. Mengulang menu di sini
+ * berapa yang masih draf, ada berapa yang belum terpublish. Mengulang menu di sini
  * berarti dua daftar identik bersebelahan, dan yang di sebelah kiri jadi ikut
  * tidak dipercaya.
  */

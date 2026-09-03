@@ -177,10 +177,10 @@ describe("PUT /api/footer", () => {
     expect(await db.select().from(footerSocials)).toHaveLength(2);
   });
 
-  /* Badge "belum tayang" hidup dari `updatedAt > publishedAt`. Postgres tidak
+  /* Badge "belum terpublish" hidup dari `updatedAt > publishedAt`. Postgres tidak
      menyentuh `default now()` saat UPDATE, jadi lupa menaikkannya sendiri di
      repo = badge tidak pernah menyala. */
-  it("menaikkan updatedAt sehingga tandanya belum tayang", async () => {
+  it("menaikkan updatedAt sehingga tandanya belum terpublish", async () => {
     const { body } = await simpan();
     expect(body.footer?.unpublished).toBe(true);
     expect(body.footer?.publishedAt).toBeNull();

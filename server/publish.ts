@@ -269,7 +269,7 @@ export async function publish(actor: Actor): Promise<PublishResult> {
   await writeAtomic(payload);
 
   /* Tandai SESUDAH berkasnya benar-benar tertulis. Menandai lebih dulu lalu
-     gagal menulis akan membuat badge "belum tayang" padam untuk perubahan yang
+     gagal menulis akan membuat badge "belum terpublish" padam untuk perubahan yang
      sebenarnya tidak pernah tayang.
 
      TERMASUK baris yang sudah dihapus, dan itu bukan kelalaian: penghapusan
@@ -337,7 +337,7 @@ export async function publish(actor: Actor): Promise<PublishResult> {
 }
 
 /**
- * Apakah satu baris punya perubahan yang belum tayang?
+ * Apakah satu baris punya perubahan yang belum terpublish?
  *
  * Cukup tiga cap waktu, jadi aturannya sama untuk semua entitas dan ditulis
  * sekali di sini. Kalau tiap entitas menyalin aturan ini, perbaikan seperti
@@ -369,7 +369,7 @@ function menunggu(r: Stamps): boolean {
   return !r.publishedAt || r.updatedAt > r.publishedAt;
 }
 
-/** Berapa banyak perubahan yang belum tayang — angka di badge bar publish.
+/** Berapa banyak perubahan yang belum terpublish — angka di badge bar publish.
  *  Satu angka untuk SEMUA entitas: yang ditanyakan editor adalah "apa masih
  *  ada yang perlu saya publish", bukan "berapa di tabel mana". */
 export async function pendingCount(): Promise<number> {

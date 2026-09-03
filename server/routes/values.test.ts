@@ -86,7 +86,7 @@ describe("membuat nilai", () => {
     expect(body.value.title).toBe("Craft First");
     expect(body.value.photo).toBe("/people/craft-first.webp");
     expect(body.value.state).toBe("live");
-    /* Belum pernah dipublish, jadi badge "belum tayang" harus menyala sejak
+    /* Belum pernah dipublish, jadi badge "belum terpublish" harus menyala sejak
        detik pertama. */
     expect(body.value.publishedAt).toBeNull();
     expect(body.value.unpublished).toBe(true);

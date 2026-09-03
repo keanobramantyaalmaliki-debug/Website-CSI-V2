@@ -667,7 +667,7 @@ describe("kaki halaman ikut ke content.json", () => {
   });
 });
 
-describe("badge perubahan belum tayang", () => {
+describe("badge perubahan belum terpublish", () => {
   it("nol sesudah publish", async () => {
     await buat();
     expect(await pendingCount()).toBe(1);
@@ -706,7 +706,7 @@ describe("badge perubahan belum tayang", () => {
     /* Baris terhapus dulu tidak pernah ikut ditandai `publishedAt`, jadi ia
        tetap dihitung selamanya: setiap lowongan yang pernah dihapus menambah
        satu ke badge, permanen, dan angkanya cuma bisa naik. Editor melihat
-       "10 perubahan belum tayang" tanpa pernah menyentuh apa pun — dan begitu
+       "10 perubahan belum terpublish" tanpa pernah menyentuh apa pun — dan begitu
        angka itu berbohong sekali, ia tidak berguna lagi untuk seterusnya. */
     expect(await pendingCount()).toBe(0);
   });
@@ -779,6 +779,41 @@ describe("badge perubahan belum tayang", () => {
     /* Dua-duanya `updatedAt`-nya maju: urutan itu isi bersama, bukan properti
        satu baris. */
     expect(await pendingCount()).toBe(2);
+  });
+
+  it("yang tidak bergeser tidak ikut dihitung", async () => {
+    const a = await buatNilai({ title: "Craft First" });
+    const b = await buatNilai({ title: "Partnership" });
+    const c = await buatNilai({ title: "Long-Term Thinking" });
+    const d = await buatNilai({ title: "Curiosity" });
+    await publish(aktor);
+    expect(await pendingCount()).toBe(0);
+
+    /* Panel mengirim SELURUH daftar id tiap kali panah ditekan, bukan sepasang
+       id yang bertukar — jadi tanpa penjagaan ini satu ketukan panah menandai
+       keempat baris sekaligus. Itu persis yang terjadi 3 Sep 2026: lima kartu
+       deployment terbaca "5 perubahan belum terpublish" padahal yang bergeser cuma
+       dua, dan badge yang melebih-lebihkan berhenti dibaca. */
+    await api("/api/values/urutkan", {
+      method: "POST",
+      body: JSON.stringify({ ids: [a.id, b.id, d.id, c.id] }),
+    });
+    expect(await pendingCount()).toBe(2);
+  });
+
+  it("urutan yang dikirim ulang tanpa berubah bukan perubahan sama sekali", async () => {
+    const a = await buatNilai({ title: "Craft First" });
+    const b = await buatNilai({ title: "Partnership" });
+    await publish(aktor);
+
+    /* Menyeret sebuah baris lalu menjatuhkannya kembali ke tempat semula tetap
+       mengirim daftar lengkap. Tidak ada yang berubah bagi pengunjung, jadi
+       tidak ada yang perlu ditayangkan. */
+    await api("/api/values/urutkan", {
+      method: "POST",
+      body: JSON.stringify({ ids: [a.id, b.id] }),
+    });
+    expect(await pendingCount()).toBe(0);
   });
 });
 

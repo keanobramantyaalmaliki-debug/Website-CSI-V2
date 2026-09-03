@@ -12,11 +12,13 @@ import { hapusLowongan, type JobRecord } from "./api";
 import { Kabar, Konfirmasi, tanggal } from "./ui";
 
 /* Bahasa Inggris, sama persis dengan nilai yang tersimpan di database.
-   "Tayang" dulu dipakai untuk `open`, dan itu bertabrakan dengan arti "tayang"
-   yang satunya di panel ini — sudah sampai ke pengunjung atau belum (badge
-   "belum tayang" di bawahnya, dan tombol Publish). Satu lowongan bisa saja
-   Open TAPI belum tayang; dengan kata yang sama untuk keduanya, kalimat itu
-   jadi tidak bisa dibaca. */
+   "Tayang" dulu dipakai untuk `open`, dan itu bertabrakan dengan sumbu yang
+   satunya di panel ini: sudah sampai ke pengunjung atau belum. Satu lowongan
+   bisa saja Open TAPI belum sampai ke pengunjung; dengan kata yang sama untuk
+   keduanya, kalimat itu jadi tidak bisa dibaca. Sumbu kedua itu sekarang
+   memakai kata "terpublish" (catatan "belum terpublish" di kolom "Terakhir
+   diubah", dan tombol Publish), jadi ketiganya sudah punya kata sendiri
+   sendiri. */
 const NAMA_STATUS: Record<JobRecord["state"], string> = {
   draft: "Draft",
   open: "Open",
@@ -107,11 +109,13 @@ export function DaftarLowongan({
                   >
                     {NAMA_STATUS[job.state]}
                   </span>
+                </td>
+                <td>
+                  {tanggal(job.updatedAt)}
                   {job.unpublished ? (
-                    <div className="petunjuk">belum tayang</div>
+                    <div className="belum-terpublish">belum terpublish</div>
                   ) : null}
                 </td>
-                <td>{tanggal(job.updatedAt)}</td>
                 <td style={{ whiteSpace: "nowrap" }}>
                   <button
                     type="button"
