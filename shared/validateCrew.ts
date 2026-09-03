@@ -73,7 +73,7 @@ function socialError(list: CrewSocial[]): string | null {
       return "Ada tautan yang platform-nya belum dipilih.";
 
     if (seen.has(item.platform))
-      return `Platform "${item.platform}" ditulis dua kali — cukup satu tautan per platform.`;
+      return `Platform "${item.platform}" ditulis dua kali, cukup satu tautan per platform.`;
     seen.add(item.platform);
 
     const url = item.url.trim();

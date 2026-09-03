@@ -86,7 +86,7 @@ export function validateDeployment(
 
   if (blank(input.sector)) errors.sector = "Sektor belum diisi.";
   else if (input.sector.length > MAX.sector)
-    errors.sector = `Sektor kepanjangan (maksimal ${MAX.sector} karakter) — judul sepanjang ini mendorong isi kartu keluar kotaknya.`;
+    errors.sector = `Sektor kepanjangan (maksimal ${MAX.sector} karakter), judul sepanjang ini mendorong isi kartu keluar kotaknya.`;
 
   if (!DEPLOYMENT_STATES.includes(input.state))
     errors.state = "Status deployment belum dipilih.";
@@ -100,11 +100,11 @@ export function validateDeployment(
      bukan seperti keterangan yang sengaja dikosongkan. */
   if (blank(input.region)) errors.region = "Wilayah belum diisi.";
   else if (input.region.length > MAX.region)
-    errors.region = `Wilayah kepanjangan (maksimal ${MAX.region} karakter) — baris nomornya cuma muat sesegini.`;
+    errors.region = `Wilayah kepanjangan (maksimal ${MAX.region} karakter), baris nomornya cuma muat sesegini.`;
 
   if (blank(input.desc)) errors.desc = "Keterangan belum diisi.";
   else if (input.desc.length > MAX.desc)
-    errors.desc = `Keterangan kepanjangan (maksimal ${MAX.desc} karakter) — lebih dari ini, bagian atas kartu terpotong.`;
+    errors.desc = `Keterangan kepanjangan (maksimal ${MAX.desc} karakter). Lebih dari ini, bagian atas kartu terpotong.`;
 
   /**
    * Foto WAJIB untuk kartu yang tayang.
@@ -115,7 +115,7 @@ export function validateDeployment(
    * antara mereka ia terbaca seperti gambar yang gagal dimuat.
    */
   if (blank(input.image))
-    errors.image = "Foto belum dipilih — kartu yang tampil butuh foto.";
+    errors.image = "Foto belum dipilih, kartu yang tampil butuh foto.";
 
   return errors;
 }

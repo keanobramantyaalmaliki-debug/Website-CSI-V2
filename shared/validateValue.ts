@@ -58,7 +58,7 @@ export function validateValue(input: ValueInput): ValueFieldErrors {
 
   if (blank(input.title)) errors.title = "Judul nilai belum diisi.";
   else if (input.title.length > MAX.title)
-    errors.title = `Judul kepanjangan (maksimal ${MAX.title} karakter) — di layar lebar judul ini dirender sangat besar.`;
+    errors.title = `Judul kepanjangan (maksimal ${MAX.title} karakter), di layar lebar judul ini dirender sangat besar.`;
 
   if (!VALUE_STATES.includes(input.state))
     errors.state = "Status nilai belum dipilih.";
@@ -84,7 +84,7 @@ export function validateValue(input: ValueInput): ValueFieldErrors {
    * meneriakkannya.
    */
   if (blank(input.photo))
-    errors.photo = "Foto belum dipilih — nilai yang tampil butuh foto.";
+    errors.photo = "Foto belum dipilih, nilai yang tampil butuh foto.";
 
   return errors;
 }

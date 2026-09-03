@@ -83,7 +83,7 @@ function detailError(copy: Job["detail"], lang: JobLang): string | null {
   for (const [heading, items] of lists) {
     const filled = items.filter((item) => !blank(item));
     if (filled.length === 0)
-      return `Daftar "${heading}" ${label} masih kosong — isi minimal satu poin.`;
+      return `Daftar "${heading}" ${label} masih kosong, isi minimal satu poin.`;
     if (filled.length > MAX.bullets)
       return `Daftar "${heading}" ${label} terlalu panjang (maksimal ${MAX.bullets} poin).`;
     const tooLong = filled.find((item) => item.length > MAX.bullet);
@@ -132,7 +132,7 @@ export function validateJob(input: JobInput): JobFieldErrors {
     errors.overview = `Ringkasan kepanjangan (maksimal ${MAX.overview} karakter).`;
 
   if (blank(input.photo))
-    errors.photo = "Foto belum dipilih — lowongan yang tayang butuh foto.";
+    errors.photo = "Foto belum dipilih, lowongan yang tayang butuh foto.";
 
   const skills = input.skills.filter((skill) => !blank(skill));
   if (skills.length === 0) errors.skills = "Isi minimal satu keahlian.";

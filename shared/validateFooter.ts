@@ -103,7 +103,7 @@ function socialsError(list: FooterSocial[]): string | null {
     if (blank(label))
       return `Tautan ke-${nomor} belum ada tulisannya. Isi namanya (misalnya "Instagram"), atau hapus barisnya.`;
     if (label.length > MAX.label)
-      return `Tulisan tautan ke-${nomor} kepanjangan (maksimal ${MAX.label} karakter) — yang tercetak di kaki halaman cuma satu kata.`;
+      return `Tulisan tautan ke-${nomor} kepanjangan (maksimal ${MAX.label} karakter), yang tercetak di kaki halaman cuma satu kata.`;
 
     if (blank(href))
       return `Alamat tautan "${label}" masih kosong. Isi alamatnya, atau hapus barisnya.`;
@@ -148,14 +148,14 @@ export function validateFooter(input: FooterInput): FooterFieldErrors {
      yang menempelkannya sudah punya alamat yang benar, tinggal buang awalannya. */
   else if (/^mailto:/i.test(email))
     errors.email =
-      'Buang "mailto:" di depannya — cukup alamatnya saja, situs yang membuatnya bisa diklik.';
+      'Buang "mailto:" di depannya. Cukup alamatnya saja, situs yang membuatnya bisa diklik.';
   else if (!SURAT.test(email))
     errors.email =
-      'Surelnya belum berbentuk alamat — tulis alamatnya saja, misalnya "hello@cogniti.id" (tanpa "mailto:").';
+      'Surelnya belum berbentuk alamat. Tulis alamatnya saja, misalnya "hello@cogniti.id" (tanpa "mailto:").';
 
   if (blank(input.address)) errors.address = "Alamat belum diisi.";
   else if (input.address.length > MAX.address)
-    errors.address = `Alamat kepanjangan (maksimal ${MAX.address} karakter) — kaki halaman cuma menyediakan satu baris untuknya.`;
+    errors.address = `Alamat kepanjangan (maksimal ${MAX.address} karakter), kaki halaman cuma menyediakan satu baris untuknya.`;
 
   if (blank(input.copyright)) errors.copyright = "Baris hak cipta belum diisi.";
   else if (input.copyright.length > MAX.copyright)
@@ -167,10 +167,10 @@ export function validateFooter(input: FooterInput): FooterFieldErrors {
      bagian nama. */
   else if (/(^|\s)(19|20)\d{2}(\s|$|,|\.)/.test(input.copyright))
     errors.copyright =
-      "Tahunnya jangan ikut ditulis — situs sudah menambahkan “©” berikut tahun berjalan sendiri di depan baris ini, dan tahun yang diketik akan basi tiap 1 Januari.";
+      "Tahunnya jangan ikut ditulis. Situs sudah menambahkan “©” berikut tahun berjalan sendiri di depan baris ini, dan tahun yang diketik akan basi tiap 1 Januari.";
   else if (input.copyright.includes("©"))
     errors.copyright =
-      "Lambang © jangan ikut ditulis — situs sudah menambahkannya sendiri di depan baris ini.";
+      "Lambang © jangan ikut ditulis. Situs sudah menambahkannya sendiri di depan baris ini.";
 
   const sosial = socialsError(input.socials);
   if (sosial) errors.socials = sosial;

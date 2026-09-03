@@ -83,7 +83,7 @@ export const CONTENT_PAGES: readonly ContentPage[] = [
     key: "home",
     label: "Home",
     path: "/",
-    summary: "Halaman depan — yang dilihat pengunjung paling pertama.",
+    summary: "Halaman depan, yang dilihat pengunjung paling pertama.",
     entries: [
       {
         key: "deployment",
@@ -128,7 +128,7 @@ export const CONTENT_PAGES: readonly ContentPage[] = [
     key: "services",
     label: "Services",
     path: "/services",
-    summary: "Bedah layanan — satu-satunya tempat rincian layanan ditulis.",
+    summary: "Bedah layanan, satu-satunya tempat rincian layanan ditulis.",
     entries: [
       {
         key: "layanan",
@@ -141,7 +141,7 @@ export const CONTENT_PAGES: readonly ContentPage[] = [
         key: "testimoni",
         label: "Testimoni",
         summary:
-          "Kutipan klien di dasar halaman, berganti lewat panah — masing-masing dengan nama dan jabatannya.",
+          "Kutipan klien di dasar halaman, berganti lewat panah, masing-masing dengan nama dan jabatannya.",
         status: "siap",
         approxCount: 3,
       },
@@ -151,7 +151,7 @@ export const CONTENT_PAGES: readonly ContentPage[] = [
     key: "work",
     label: "Work",
     path: "/work",
-    summary: "Bukti kerja — proyek yang sudah selesai.",
+    summary: "Bukti kerja, proyek yang sudah selesai.",
     /* ⚠️ Testimoni TIDAK di sini. Case study punya kutipan juga, tapi itu
        kutipan MASALAH kliennya (pembuka cerita, tanpa nama siapa pun) —
        bukan pujian. Kutipan klien sungguhan yang bernama dan berjabatan
@@ -171,7 +171,7 @@ export const CONTENT_PAGES: readonly ContentPage[] = [
         key: "case-study",
         label: "Case study",
         summary:
-          "Proyek yang dibahas panjang — latar masalah, apa yang dikerjakan, dan lingkup pekerjaannya.",
+          "Proyek yang dibahas panjang: latar masalah, apa yang dikerjakan, dan lingkup pekerjaannya.",
         status: "siap",
         approxCount: 2,
       },
@@ -181,7 +181,7 @@ export const CONTENT_PAGES: readonly ContentPage[] = [
     key: "people",
     label: "People",
     path: "/people",
-    summary: "Orang-orangnya — tim, nilai yang dipegang, dan lowongan yang dibuka.",
+    summary: "Orang-orangnya: tim, nilai yang dipegang, dan lowongan yang dibuka.",
     entries: [
       {
         key: "nilai",
@@ -227,7 +227,7 @@ export const FOOTER_GROUP: ContentPage = {
   key: "footer",
   label: "Footer",
   path: "/",
-  summary: "Kaki halaman — muncul di dasar semua halaman sekaligus, bukan cuma di satu.",
+  summary: "Kaki halaman, muncul di dasar semua halaman sekaligus, bukan cuma di satu.",
   /* Isinya cuma dirinya sendiri, jadi menu sisi menampilkannya sebagai satu
      baris langsung. Lihat catatan `langsung` di atas. */
   langsung: true,
@@ -243,7 +243,7 @@ export const FOOTER_GROUP: ContentPage = {
          Instagram di sini mengubah keduanya, dan lebih baik tahu di depan
          daripada menemukannya sesudah tayang. */
       summary:
-        "Surel, alamat, baris hak cipta, dan tautan sosial di dasar halaman — tautan sosialnya dipakai menu HP di navbar juga.",
+        "Surel, alamat, baris hak cipta, dan tautan sosial di dasar halaman. Tautan sosialnya dipakai menu HP di navbar juga.",
       status: "siap",
       /* Satu, dan selamanya satu: kaki halaman satu baris di database,
          dijaga CHECK `footer_satu_baris`. Tautan sosialnya yang bisa

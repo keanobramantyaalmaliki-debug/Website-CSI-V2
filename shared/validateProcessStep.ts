@@ -128,6 +128,6 @@ export function isProcessStepPublishable(input: ProcessStepInput): boolean {
  * kalimat, tidak ada versi yang tertinggal saat angkanya suatu hari diubah.
  */
 export const PESAN_BATAS_PROSES =
-  `Sudah ada ${MAX_LIVE_PROCESS_STEPS} langkah yang tampil, dan itu batasnya — ` +
-  `seksi "How We Work" sudah jadi bagian terpanjang di halaman depan. ` +
+  `Sudah ada ${MAX_LIVE_PROCESS_STEPS} langkah yang tampil, dan itu batasnya. ` +
+  `Seksi "How We Work" sudah jadi bagian terpanjang di halaman depan. ` +
   `Turunkan dulu satu langkah jadi draf, atau hapus yang sudah tidak dipakai.`;

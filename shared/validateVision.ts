@@ -70,7 +70,7 @@ export function validateVision(input: VisionInput): VisionFieldErrors {
 
   if (blank(input.statement)) errors.statement = "Kalimat visinya belum diisi.";
   else if (input.statement.length > MAX.statement)
-    errors.statement = `Kalimat visi kepanjangan (maksimal ${MAX.statement} karakter) — kalimat ini dirender sangat besar, dan yang panjang mendorong fotonya keluar layar.`;
+    errors.statement = `Kalimat visi kepanjangan (maksimal ${MAX.statement} karakter). Kalimat ini dirender sangat besar, dan yang panjang mendorong fotonya keluar layar.`;
 
   /**
    * Foto WAJIB, alasannya sama dengan foto nilai.
@@ -83,7 +83,7 @@ export function validateVision(input: VisionInput): VisionFieldErrors {
    * kontak.
    */
   if (blank(input.photo))
-    errors.photo = "Foto belum dipilih — seksi Visi butuh foto di bawah kalimatnya.";
+    errors.photo = "Foto belum dipilih, seksi Visi butuh foto di bawah kalimatnya.";
 
   return errors;
 }

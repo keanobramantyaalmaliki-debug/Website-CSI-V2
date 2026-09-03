@@ -75,7 +75,7 @@ function tagsError(tags: string[]): string | null {
 
     const kunci = tag.trim().toLowerCase();
     if (seen.has(kunci))
-      return `Label "${tag.trim()}" ditulis dua kali — cukup satu.`;
+      return `Label "${tag.trim()}" ditulis dua kali, cukup satu.`;
     seen.add(kunci);
   }
   return null;
@@ -138,7 +138,7 @@ export function validateWorkProject(
    * ikon "gambar rusak" bawaan peramban, di kartu terdepan halaman Work.
    */
   if (blank(input.image))
-    errors.image = "Gambar belum dipilih — kartu proyek seluruhnya gambar, jadi tanpa itu tidak ada yang bisa ditampilkan.";
+    errors.image = "Gambar belum dipilih. Kartu proyek seluruhnya gambar, jadi tanpa itu tidak ada yang bisa ditampilkan.";
 
   /* `outcome` SENGAJA tidak wajib. `CaseGrid.tsx` sudah menggerbanginya
      (`{activeProject.outcome && …}`), berikut garis pemisah di atasnya, jadi

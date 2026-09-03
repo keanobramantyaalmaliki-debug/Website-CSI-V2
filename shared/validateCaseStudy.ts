@@ -124,7 +124,7 @@ function scopeError(scope: string[]): string | null {
 
     const kunci = label.trim().toLowerCase();
     if (seen.has(kunci))
-      return `Lingkup "${label.trim()}" ditulis dua kali — cukup satu.`;
+      return `Lingkup "${label.trim()}" ditulis dua kali, cukup satu.`;
     seen.add(kunci);
   }
   return null;
@@ -201,7 +201,7 @@ export function validateCaseStudy(input: CaseStudyInput): CaseStudyFieldErrors {
      lurus tanpa gerbang, jadi daftar kosong tayang sebagai satu kata yang
      tidak menerangkan apa pun. */
   if (input.scope.length === 0) {
-    errors.scope = "Lingkup pekerjaan belum diisi — tulis minimal satu.";
+    errors.scope = "Lingkup pekerjaan belum diisi, tulis minimal satu.";
   } else {
     const masalah = scopeError(input.scope);
     if (masalah) errors.scope = masalah;
@@ -218,7 +218,7 @@ export function validateCaseStudy(input: CaseStudyInput): CaseStudyFieldErrors {
    */
   if (blank(input.image))
     errors.image =
-      "Gambar belum dipilih — gambarnya sekaligus tombol untuk membuka cerita, jadi tanpa itu tidak ada yang bisa ditampilkan.";
+      "Gambar belum dipilih. Gambarnya sekaligus tombol untuk membuka cerita, jadi tanpa itu tidak ada yang bisa ditampilkan.";
 
   return errors;
 }

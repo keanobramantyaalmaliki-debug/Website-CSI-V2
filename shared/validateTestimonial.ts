@@ -80,7 +80,7 @@ export function validateTestimonial(
 
   if (blank(input.quote)) errors.quote = "Kutipannya belum diisi.";
   else if (input.quote.length > MAX.quote)
-    errors.quote = `Kutipan kepanjangan (maksimal ${MAX.quote} karakter) — kutipan terpanjang menentukan tinggi blok untuk semua testimoni, termasuk yang pendek.`;
+    errors.quote = `Kutipan kepanjangan (maksimal ${MAX.quote} karakter). Kutipan terpanjang menentukan tinggi blok untuk semua testimoni, termasuk yang pendek.`;
 
   /**
    * Jabatan WAJIB untuk yang tayang.
@@ -92,7 +92,7 @@ export function validateTestimonial(
    * merapat.
    */
   if (blank(input.role))
-    errors.role = "Jabatan belum diisi — nama tanpa jabatan membuat testimoninya kehilangan bobot.";
+    errors.role = "Jabatan belum diisi, nama tanpa jabatan membuat testimoninya kehilangan bobot.";
   else if (input.role.length > MAX.role)
     errors.role = `Jabatan kepanjangan (maksimal ${MAX.role} karakter).`;
 

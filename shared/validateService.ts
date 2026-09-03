@@ -69,7 +69,7 @@ function subsError(subs: string[]): string | null {
 
     const kunci = sub.trim().toLowerCase();
     if (seen.has(kunci))
-      return `Rincian "${sub.trim()}" ditulis dua kali — cukup satu.`;
+      return `Rincian "${sub.trim()}" ditulis dua kali, cukup satu.`;
     seen.add(kunci);
   }
   return null;
@@ -108,7 +108,7 @@ export function validateService(input: ServiceInput): ServiceFieldErrors {
    */
   if (blank(input.desc))
     errors.desc =
-      "Penjelasan belum diisi — ini satu-satunya teks layanan yang terbaca pembaca layar dan mesin pencari.";
+      "Penjelasan belum diisi, ini satu-satunya teks layanan yang terbaca pembaca layar dan mesin pencari.";
   else if (input.desc.length > MAX.desc)
     errors.desc = `Penjelasan kepanjangan (maksimal ${MAX.desc} karakter). Cukup satu kalimat.`;
 

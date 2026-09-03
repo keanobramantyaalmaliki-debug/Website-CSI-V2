@@ -76,7 +76,7 @@ export function validateIndustry(input: IndustryInput): IndustryFieldErrors {
 
   if (blank(input.name)) errors.name = "Nama sektor belum diisi.";
   else if (input.name.length > MAX.name)
-    errors.name = `Nama sektor kepanjangan (maksimal ${MAX.name} karakter) — nama sepanjang ini terpotong di navigasi versi HP.`;
+    errors.name = `Nama sektor kepanjangan (maksimal ${MAX.name} karakter), nama sepanjang ini terpotong di navigasi versi HP.`;
 
   /* Bobot diperiksa bahkan untuk draft: tidak seperti isian teks, ia tidak
      punya keadaan "belum diisi" yang masuk akal — form selalu mengirim salah
@@ -93,7 +93,7 @@ export function validateIndustry(input: IndustryInput): IndustryFieldErrors {
 
   if (blank(input.desc)) errors.desc = "Kalimat penjelas belum diisi.";
   else if (input.desc.length > MAX.desc)
-    errors.desc = `Kalimat penjelas kepanjangan (maksimal ${MAX.desc} karakter) — isinya satu kalimat, bukan paragraf.`;
+    errors.desc = `Kalimat penjelas kepanjangan (maksimal ${MAX.desc} karakter). Isinya satu kalimat, bukan paragraf.`;
 
   /**
    * Foto WAJIB untuk sektor yang tayang.
@@ -104,7 +104,7 @@ export function validateIndustry(input: IndustryInput): IndustryFieldErrors {
    * dan tidak ada yang meneriakkannya.
    */
   if (blank(input.image))
-    errors.image = "Foto belum dipilih — sektor yang tampil butuh foto.";
+    errors.image = "Foto belum dipilih, sektor yang tampil butuh foto.";
 
   return errors;
 }
