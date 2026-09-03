@@ -17,6 +17,7 @@ import type { Job, JobCopy, JobLang } from "@shared/job";
 import type { JobInput } from "@shared/validateJob";
 
 import { db, type Db } from "./db/client";
+import { dbNow } from "./db/now";
 
 /**
  * Tipe handle di dalam `db.transaction(...)`.
@@ -294,7 +295,7 @@ export async function updateJob(
         /* WAJIB diisi manual — Postgres tidak menyentuh `default now()` saat
            UPDATE, hanya saat INSERT. Lupa baris ini = badge "belum terpublish"
            tidak pernah menyala dan editor mengira perubahannya sudah tayang. */
-        updatedAt: new Date(),
+        updatedAt: dbNow(),
       })
       .where(eq(jobs.id, id));
 
@@ -312,7 +313,7 @@ export async function softDeleteJob(id: string): Promise<JobRecord | null> {
 
   await db
     .update(jobs)
-    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .set({ deletedAt: dbNow(), updatedAt: dbNow() })
     .where(eq(jobs.id, id));
 
   return existing;

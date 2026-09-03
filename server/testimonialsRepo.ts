@@ -19,6 +19,7 @@ import type { Testimonial } from "@shared/testimonial";
 import type { TestimonialInput } from "@shared/validateTestimonial";
 
 import { db } from "./db/client";
+import { dbNow } from "./db/now";
 import { testimonials } from "./db/schema";
 
 /** Sama seperti `Testimonial`, plus kolom yang hanya berguna di panel admin dan
@@ -128,7 +129,7 @@ export async function updateTestimonial(
       state: input.state,
       /* WAJIB manual: Postgres tidak menyentuh `default now()` saat UPDATE.
          Lupa baris ini = badge "belum terpublish" tidak pernah menyala. */
-      updatedAt: new Date(),
+      updatedAt: dbNow(),
     })
     .where(eq(testimonials.id, id));
 
@@ -145,7 +146,7 @@ export async function softDeleteTestimonial(
 
   await db
     .update(testimonials)
-    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .set({ deletedAt: dbNow(), updatedAt: dbNow() })
     .where(eq(testimonials.id, id));
 
   return existing;
@@ -199,7 +200,7 @@ export async function reorderTestimonials(
   );
 
   if (bergeser.length > 0) {
-    const now = new Date();
+    const now = dbNow();
     await db.transaction(async (tx) => {
       for (const [position, id] of bergeser) {
         await tx

@@ -20,6 +20,7 @@ import type { ProcessStep } from "@shared/processStep";
 import type { ProcessStepInput } from "@shared/validateProcessStep";
 
 import { db } from "./db/client";
+import { dbNow } from "./db/now";
 import { processSteps } from "./db/schema";
 
 /** Sama seperti `ProcessStep`, plus kolom yang hanya berguna di panel admin dan
@@ -133,7 +134,7 @@ export async function updateProcessStep(
       state: input.state,
       /* WAJIB manual: Postgres tidak menyentuh `default now()` saat UPDATE.
          Lupa baris ini = badge "belum terpublish" tidak pernah menyala. */
-      updatedAt: new Date(),
+      updatedAt: dbNow(),
     })
     .where(eq(processSteps.id, id));
 
@@ -150,7 +151,7 @@ export async function softDeleteProcessStep(
 
   await db
     .update(processSteps)
-    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .set({ deletedAt: dbNow(), updatedAt: dbNow() })
     .where(eq(processSteps.id, id));
 
   return existing;
@@ -205,7 +206,7 @@ export async function reorderProcessSteps(
   );
 
   if (bergeser.length > 0) {
-    const now = new Date();
+    const now = dbNow();
     await db.transaction(async (tx) => {
       for (const [position, id] of bergeser) {
         await tx

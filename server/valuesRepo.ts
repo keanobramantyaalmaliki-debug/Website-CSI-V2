@@ -16,6 +16,7 @@ import type { Value } from "@shared/value";
 import type { ValueInput } from "@shared/validateValue";
 
 import { db } from "./db/client";
+import { dbNow } from "./db/now";
 import { images, peopleValues } from "./db/schema";
 
 /** Sama seperti `Value`, plus kolom yang hanya berguna di panel admin dan
@@ -163,7 +164,7 @@ export async function updateValue(
       state: input.state,
       /* WAJIB manual: Postgres tidak menyentuh `default now()` saat UPDATE.
          Lupa baris ini = badge "belum terpublish" tidak pernah menyala. */
-      updatedAt: new Date(),
+      updatedAt: dbNow(),
     })
     .where(eq(peopleValues.id, id));
 
@@ -178,7 +179,7 @@ export async function softDeleteValue(id: string): Promise<ValueRecord | null> {
 
   await db
     .update(peopleValues)
-    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .set({ deletedAt: dbNow(), updatedAt: dbNow() })
     .where(eq(peopleValues.id, id));
 
   return existing;
@@ -232,7 +233,7 @@ export async function reorderValues(ids: string[]): Promise<ValueRecord[] | null
   );
 
   if (bergeser.length > 0) {
-    const now = new Date();
+    const now = dbNow();
     await db.transaction(async (tx) => {
       for (const [position, id] of bergeser) {
         await tx

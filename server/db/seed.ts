@@ -36,6 +36,7 @@ import { FALLBACK_VISION } from "../../src/data/visionFallback";
 import { FALLBACK_PROCESS_STEPS } from "../../src/data/processStepsFallback";
 import { FALLBACK_FOOTER } from "../../src/data/footerFallback";
 import { db, sql } from "./client";
+import { dbNow } from "./now";
 import {
   crewMembers,
   crewSocials,
@@ -126,7 +127,7 @@ async function seedJobs() {
           /* Seluruh isi ini SUDAH tayang sekarang, jadi ditandai terpublish.
              Tanpa ini, badge admin akan menyambut editor dengan "7 perubahan
              belum terpublish" padahal dia belum menyentuh apa pun. */
-          publishedAt: new Date(),
+          publishedAt: dbNow(),
         })
         .returning({ id: jobs.id });
 
@@ -232,7 +233,7 @@ async function seedValues() {
         state: "live",
         sortOrder: index,
         /* Sudah tayang hari ini — lihat alasan yang sama di seed lowongan. */
-        publishedAt: new Date(),
+        publishedAt: dbNow(),
       });
     }
   });
@@ -299,7 +300,7 @@ async function seedCrew() {
           photoId,
           state: "live",
           /* Sudah tayang hari ini — lihat alasan yang sama di seed lowongan. */
-          publishedAt: new Date(),
+          publishedAt: dbNow(),
         })
         .returning({ id: crewMembers.id });
 
@@ -384,7 +385,7 @@ async function seedWorkProjects() {
              sebagai bug. */
           sortOrder: index,
           /* Sudah tayang hari ini — lihat alasan yang sama di seed lowongan. */
-          publishedAt: new Date(),
+          publishedAt: dbNow(),
         })
         .returning({ id: workProjects.id });
 
@@ -461,7 +462,7 @@ async function seedCaseStudies() {
           state: "live",
           /* Urutan literal = urutan blok yang tayang hari ini. */
           sortOrder: index,
-          publishedAt: new Date(),
+          publishedAt: dbNow(),
         })
         .returning({ id: caseStudies.id });
 
@@ -516,7 +517,7 @@ async function seedServices() {
              hari ini. Mengurutkannya ulang menurut abjad saat pindah ke CMS
              akan terbaca sebagai bug. */
           sortOrder: index,
-          publishedAt: new Date(),
+          publishedAt: dbNow(),
         })
         .returning({ id: services.id });
 
@@ -570,7 +571,7 @@ async function seedTestimonials() {
         /* Urutan literal = urutan yang tayang; yang pertama adalah kutipan
            yang terlihat saat halaman dibuka. */
         sortOrder: index,
-        publishedAt: new Date(),
+        publishedAt: dbNow(),
       });
     }
   });
@@ -640,7 +641,7 @@ async function seedIndustries() {
         state: "live",
         sortOrder: index,
         /* Sudah tayang hari ini — lihat alasan yang sama di seed lowongan. */
-        publishedAt: new Date(),
+        publishedAt: dbNow(),
       });
     }
   });
@@ -706,7 +707,7 @@ async function seedDeployments() {
         state: "live",
         sortOrder: index,
         /* Sudah tayang hari ini — lihat alasan yang sama di seed lowongan. */
-        publishedAt: new Date(),
+        publishedAt: dbNow(),
       });
     }
   });
@@ -774,7 +775,7 @@ async function seedVision() {
       statement: FALLBACK_VISION.statement,
       photoId,
       /* Sudah tayang hari ini — lihat alasan yang sama di seed lowongan. */
-      publishedAt: new Date(),
+      publishedAt: dbNow(),
     });
   });
 
@@ -816,7 +817,7 @@ async function seedFooter() {
       address: FALLBACK_FOOTER.address,
       copyright: FALLBACK_FOOTER.copyright,
       /* Sudah tayang hari ini — lihat alasan yang sama di seed lowongan. */
-      publishedAt: new Date(),
+      publishedAt: dbNow(),
     });
 
     if (FALLBACK_FOOTER.socials.length) {
@@ -873,7 +874,7 @@ async function seedProcessSteps() {
            dihitung dari posisi ini saat render, bukan disimpan. */
         sortOrder: index,
         /* Sudah tayang hari ini — lihat alasan yang sama di seed lowongan. */
-        publishedAt: new Date(),
+        publishedAt: dbNow(),
       });
     }
   });

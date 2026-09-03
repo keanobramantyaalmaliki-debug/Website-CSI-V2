@@ -20,6 +20,7 @@ import type { WorkProject } from "@shared/workProject";
 import type { WorkProjectInput } from "@shared/validateWorkProject";
 
 import { db, type Db } from "./db/client";
+import { dbNow } from "./db/now";
 import { images, workProjects, workProjectTags } from "./db/schema";
 
 /** Handle di dalam `db.transaction(...)` — lihat catatan tipe yang sama di
@@ -225,7 +226,7 @@ export async function updateWorkProject(
         state: input.state,
         /* WAJIB manual: Postgres tidak menyentuh `default now()` saat UPDATE.
            Lupa baris ini = badge "belum terpublish" tidak pernah menyala. */
-        updatedAt: new Date(),
+        updatedAt: dbNow(),
       })
       .where(eq(workProjects.id, id));
 
@@ -245,7 +246,7 @@ export async function softDeleteWorkProject(
 
   await db
     .update(workProjects)
-    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .set({ deletedAt: dbNow(), updatedAt: dbNow() })
     .where(eq(workProjects.id, id));
 
   return existing;
@@ -298,7 +299,7 @@ export async function reorderWorkProjects(
   );
 
   if (bergeser.length > 0) {
-    const now = new Date();
+    const now = dbNow();
     await db.transaction(async (tx) => {
       for (const [position, id] of bergeser) {
         await tx

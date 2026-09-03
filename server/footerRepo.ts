@@ -28,6 +28,7 @@ import type { Footer, FooterSocial } from "@shared/footer";
 import type { FooterInput } from "@shared/validateFooter";
 
 import { db, type Db } from "./db/client";
+import { dbNow } from "./db/now";
 import { footer, footerSocials } from "./db/schema";
 
 /** Handle di dalam `db.transaction(...)` — lihat catatan tipe yang sama di
@@ -132,7 +133,7 @@ async function writeSocials(tx: Tx, socials: FooterSocial[]) {
  * kepadanya.
  */
 export async function saveFooter(input: FooterInput): Promise<FooterRecord> {
-  const now = new Date();
+  const now = dbNow();
   const email = input.email.trim();
   const address = input.address.trim();
   const copyright = input.copyright.trim();

@@ -19,6 +19,7 @@ import type { Service } from "@shared/service";
 import type { ServiceInput } from "@shared/validateService";
 
 import { db, type Db } from "./db/client";
+import { dbNow } from "./db/now";
 import { services, serviceSubs } from "./db/schema";
 
 /** Handle di dalam `db.transaction(...)` — lihat catatan tipe yang sama di
@@ -179,7 +180,7 @@ export async function updateService(
         state: input.state,
         /* WAJIB manual: Postgres tidak menyentuh `default now()` saat UPDATE.
            Lupa baris ini = badge "belum terpublish" tidak pernah menyala. */
-        updatedAt: new Date(),
+        updatedAt: dbNow(),
       })
       .where(eq(services.id, id));
 
@@ -199,7 +200,7 @@ export async function softDeleteService(
 
   await db
     .update(services)
-    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .set({ deletedAt: dbNow(), updatedAt: dbNow() })
     .where(eq(services.id, id));
 
   return existing;
@@ -253,7 +254,7 @@ export async function reorderServices(
   );
 
   if (bergeser.length > 0) {
-    const now = new Date();
+    const now = dbNow();
     await db.transaction(async (tx) => {
       for (const [position, id] of bergeser) {
         await tx

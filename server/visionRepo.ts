@@ -23,6 +23,7 @@ import type { Vision } from "@shared/vision";
 import type { VisionInput } from "@shared/validateVision";
 
 import { db } from "./db/client";
+import { dbNow } from "./db/now";
 import { images, vision } from "./db/schema";
 
 /** Nomor baris satu-satunya. Dijaga juga di tingkat database lewat CHECK
@@ -113,7 +114,7 @@ async function resolvePhotoId(path: string): Promise<string | null> {
 export async function saveVision(input: VisionInput): Promise<VisionRecord> {
   const photoId = await resolvePhotoId(input.photo);
   const statement = input.statement.trim();
-  const now = new Date();
+  const now = dbNow();
 
   await db
     .insert(vision)

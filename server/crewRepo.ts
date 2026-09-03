@@ -19,6 +19,7 @@ import type { CrewMember, CrewSocial } from "@shared/crew";
 import type { CrewInput } from "@shared/validateCrew";
 
 import { db, type Db } from "./db/client";
+import { dbNow } from "./db/now";
 import { crewMembers, crewSocials, images } from "./db/schema";
 
 /** Handle di dalam `db.transaction(...)` — lihat catatan tipe yang sama di
@@ -217,7 +218,7 @@ export async function updateCrew(
         state: input.state,
         /* WAJIB manual: Postgres tidak menyentuh `default now()` saat UPDATE.
            Lupa baris ini = badge "belum terpublish" tidak pernah menyala. */
-        updatedAt: new Date(),
+        updatedAt: dbNow(),
       })
       .where(eq(crewMembers.id, id));
 
@@ -235,7 +236,7 @@ export async function softDeleteCrew(id: string): Promise<CrewRecord | null> {
 
   await db
     .update(crewMembers)
-    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .set({ deletedAt: dbNow(), updatedAt: dbNow() })
     .where(eq(crewMembers.id, id));
 
   return existing;

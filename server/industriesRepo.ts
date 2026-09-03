@@ -15,6 +15,7 @@ import type { Industry } from "@shared/industry";
 import type { IndustryInput } from "@shared/validateIndustry";
 
 import { db } from "./db/client";
+import { dbNow } from "./db/now";
 import { images, industries } from "./db/schema";
 
 /** Sama seperti `Industry`, plus kolom yang hanya berguna di panel admin dan
@@ -162,7 +163,7 @@ export async function updateIndustry(
       state: input.state,
       /* WAJIB manual: Postgres tidak menyentuh `default now()` saat UPDATE.
          Lupa baris ini = badge "belum terpublish" tidak pernah menyala. */
-      updatedAt: new Date(),
+      updatedAt: dbNow(),
     })
     .where(eq(industries.id, id));
 
@@ -179,7 +180,7 @@ export async function softDeleteIndustry(
 
   await db
     .update(industries)
-    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .set({ deletedAt: dbNow(), updatedAt: dbNow() })
     .where(eq(industries.id, id));
 
   return existing;
@@ -228,7 +229,7 @@ export async function reorderIndustries(
   );
 
   if (bergeser.length > 0) {
-    const now = new Date();
+    const now = dbNow();
     await db.transaction(async (tx) => {
       for (const [position, id] of bergeser) {
         await tx

@@ -28,6 +28,7 @@ import type { Footer } from "@shared/footer";
 
 import { record, type Actor } from "./audit";
 import { db } from "./db/client";
+import { dbNow } from "./db/now";
 import {
   caseStudies,
   crewMembers,
@@ -277,7 +278,7 @@ export async function publish(actor: Actor): Promise<PublishResult> {
      ditulis sudah tidak memuatnya lagi. Dulu klausa `isNull(deletedAt)` di sini
      membuat baris terhapus tidak pernah bisa ditandai — badge-nya menghitung
      penghapusan yang sudah lama tayang, selamanya, dan angkanya cuma bisa naik. */
-  const now = new Date();
+  const now = dbNow();
   await db.update(jobs).set({ publishedAt: now });
   await db.update(peopleValues).set({ publishedAt: now });
   await db.update(crewMembers).set({ publishedAt: now });

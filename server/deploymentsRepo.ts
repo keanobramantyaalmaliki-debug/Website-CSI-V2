@@ -19,6 +19,7 @@ import type { Deployment } from "@shared/deployment";
 import type { DeploymentInput } from "@shared/validateDeployment";
 
 import { db } from "./db/client";
+import { dbNow } from "./db/now";
 import { deployments, images } from "./db/schema";
 
 /** Sama seperti `Deployment`, plus kolom yang hanya berguna di panel admin dan
@@ -164,7 +165,7 @@ export async function updateDeployment(
       state: input.state,
       /* WAJIB manual: Postgres tidak menyentuh `default now()` saat UPDATE.
          Lupa baris ini = badge "belum terpublish" tidak pernah menyala. */
-      updatedAt: new Date(),
+      updatedAt: dbNow(),
     })
     .where(eq(deployments.id, id));
 
@@ -181,7 +182,7 @@ export async function softDeleteDeployment(
 
   await db
     .update(deployments)
-    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .set({ deletedAt: dbNow(), updatedAt: dbNow() })
     .where(eq(deployments.id, id));
 
   return existing;
@@ -230,7 +231,7 @@ export async function reorderDeployments(
   );
 
   if (bergeser.length > 0) {
-    const now = new Date();
+    const now = dbNow();
     await db.transaction(async (tx) => {
       for (const [position, id] of bergeser) {
         await tx
