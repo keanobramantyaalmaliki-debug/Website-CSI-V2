@@ -213,6 +213,74 @@ function preserveContentJson(): Plugin {
   };
 }
 
+/* Port panel admin saat dev. Env override cuma untuk skrip test yang perlu
+   menyalakan instance kedua tanpa menyentuh :5174 yang sedang dipakai —
+   pemakaian sehari-hari dan produksi tidak mengenalnya sama sekali. */
+const ADMIN_DEV_PORT = Number(process.env.ADMIN_DEV_PORT ?? 5174);
+
+/**
+ * Menyalakan panel admin dari dalam dev server situs.
+ *
+ * Janji fitur "satu port" adalah :3000/admin — tapi proxy /admin di bawah
+ * hanya hidup kalau ada yang menjawab di :5174, dan sebelum plugin ini itu
+ * berarti MENGINGAT untuk menjalankan `bun run admin:dev` di terminal kedua.
+ * Lupa satu itu dan :3000/admin menjawab 503 — persis kegagalan pertama yang
+ * ditemui waktu fitur ini dicoba. Sekarang `bun dev` membawa panelnya sendiri:
+ * satu perintah, dua app Vite, satu port.
+ *
+ * `bun run admin:dev` manual tetap dihormati: kalau :5174 sudah ditempati,
+ * plugin mundur dan proxy memakai yang sudah ada. strictPort di sini wajib —
+ * tanpa itu instance kedua diam-diam pindah ke :5175 dan proxy tetap menembak
+ * :5174 milik orang lain.
+ *
+ * Vitest ikut memuat config ini (project "situs"), jadi ada penjaga VITEST
+ * supaya setiap worker test tidak ikut menyeret server panel.
+ */
+function bootAdminPanel(): Plugin {
+  return {
+    name: "boot-admin-panel",
+    apply: "serve",
+    async configureServer(server) {
+      if (process.env.VITEST) return;
+      const { createServer } = await import("vite");
+      const log = server.config.logger;
+      /* Edit vite.config.ts → Vite me-restart server situs: admin lama baru
+         ditutup lewat event "close" di bawah, dan penutupannya asinkron. Coba
+         beberapa kali sebelum menyimpulkan port-nya memang milik proses lain. */
+      for (let percobaan = 1; percobaan <= 5; percobaan++) {
+        const admin = await createServer({
+          configFile: fileURLToPath(new URL("admin/vite.config.ts", import.meta.url)),
+          server: {
+            port: ADMIN_DEV_PORT,
+            strictPort: true,
+            hmr: { protocol: "ws", host: "localhost", port: ADMIN_DEV_PORT },
+          },
+        });
+        try {
+          await admin.listen();
+          server.httpServer?.once("close", () => void admin.close());
+          log.info(
+            `[boot-admin-panel] panel admin ikut menyala di :${ADMIN_DEV_PORT} — buka lewat /admin`,
+          );
+          return;
+        } catch (err) {
+          await admin.close();
+          if (!/EADDRINUSE|already in use/i.test(String(err))) {
+            /* Bukan soal port (config panel rusak, dsb.) → bilang keras-keras
+               tapi biarkan situsnya tetap jalan; /admin jatuh ke pesan 503. */
+            log.error(`[boot-admin-panel] panel admin gagal menyala: ${String(err)}`);
+            return;
+          }
+          if (percobaan < 5) await new Promise((r) => setTimeout(r, 300));
+        }
+      }
+      log.info(
+        `[boot-admin-panel] :${ADMIN_DEV_PORT} sudah ditempati (admin:dev manual?) — memakai yang sudah ada`,
+      );
+    },
+  };
+}
+
 /**
  * Daftar dependensi yang WAJIB di-prebundle di ronde pertama.
  *
@@ -280,6 +348,7 @@ export default defineConfig({
     serveContentJson(),
     copyLocalModels(),
     preserveContentJson(),
+    bootAdminPanel(),
   ],
   server: {
     port: 3000,
@@ -299,7 +368,7 @@ export default defineConfig({
          (`:3000/admin`) sama persis dengan yang nanti dibuka di server dan
          tidak ada jalur yang baru dijalani pertama kali saat deploy. */
       "/admin": {
-        target: "http://localhost:5174",
+        target: `http://localhost:${ADMIN_DEV_PORT}`,
         changeOrigin: false,
         /* `/admin` telanjang, tanpa garis miring penutup. Vite dev menolaknya
            dengan 404 "did you mean /admin/?" karena `base` panel memang
@@ -314,15 +383,17 @@ export default defineConfig({
            lewat sini tidak dijawab sebagai HTML. */
         ws: true,
         configure(proxy) {
-          /* `bun run admin:dev` tidak jalan → jawab dengan kalimatnya, bukan
-             dengan galat proxy mentah yang menyebut ECONNREFUSED tanpa
-             menyebut apa yang harus dinyalakan. */
+          /* Panel tidak menjawab → jawab dengan kalimatnya, bukan dengan galat
+             proxy mentah yang menyebut ECONNREFUSED tanpa menyebut apa yang
+             harus dinyalakan. Normalnya bootAdminPanel sudah menyalakannya,
+             jadi mendarat di sini berarti boot-nya gagal (lihat log). */
           proxy.on("error", (_err, _req, res) => {
             if (!("writeHead" in res)) return;
             res.writeHead(503, { "Content-Type": "text/plain; charset=utf-8" });
             res.end(
-              "Panel admin tidak menjawab di :5174.\n" +
-                "Nyalakan dulu: bun run admin:dev\n",
+              `Panel admin tidak menjawab di :${ADMIN_DEV_PORT}.\n` +
+                "Biasanya ia ikut menyala bersama `bun dev` — cek log dev server,\n" +
+                "atau nyalakan manual: bun run admin:dev\n",
             );
           });
         },
