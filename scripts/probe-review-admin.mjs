@@ -15,7 +15,7 @@
  *   • tombol "Review" duduk PERSIS di sebelah Publish, di bilah yang sama —
  *     di situlah pertanyaannya muncul, satu detik sebelum tombolnya ditekan;
  *   • "Review" juga ada di dasar menu sisi, di luar grup konten mana pun;
- *   • `#/review` bertahan sesudah halaman dimuat ulang — pola rute generik
+ *   • `/admin/review` bertahan sesudah halaman dimuat ulang — pola rute generik
  *     `^/([a-z-]+)$` menolaknya lewat `siap()`, jadi tanpa cabang khusus ia
  *     mendarat di Beranda dan alamatnya berbohong;
  *   • yang belum ditekan Publish MUNCUL di sini (kebalikan Riwayat), dan
@@ -354,7 +354,7 @@ async function main() {
 
   bersihkan = async () => {
     if (!kotor) return;
-    await send("Page.navigate", { url: "http://localhost:5174/admin/#/nilai" });
+    await send("Page.navigate", { url: "http://localhost:5174/admin/nilai" });
     await tunggu(`!!document.querySelector(".sisi")`, "panel admin lagi");
     await jalan(BEKAL);
     await bukaNilai();
@@ -436,11 +436,15 @@ async function main() {
   await potret("1-kosong");
   lapor("tidak ada yang menunggu: layar Review bilang semuanya sudah terpublish");
 
-  /* 5 — `#/review` bertahan sesudah muat ulang. Ini yang akan jatuh ke
+  /* 5 — `/admin/review` bertahan sesudah muat ulang. Ini yang akan jatuh ke
      Beranda kalau cabang khususnya di `bacaRute` hilang: "review" bukan entri
      konten, jadi penjaga `siap()` menolaknya. */
-  sama(await jalan(`location.hash`), "#/review", "hash sesudah membuka Review");
-  await send("Page.navigate", { url: "http://localhost:5174/admin/#/review" });
+  sama(
+    await jalan(`location.pathname`),
+    "/admin/review",
+    "alamat sesudah membuka Review",
+  );
+  await send("Page.navigate", { url: "http://localhost:5174/admin/review" });
   await send("Page.reload");
   /* Ditunggu SAMPAI dokumen barunya berdiri: dokumen lama masih ada beberapa
      puluh milidetik sesudah `Page.reload` dijawab, dan judul yang dicari
@@ -455,7 +459,7 @@ async function main() {
     "review bertahan sesudah muat ulang",
   );
   await jalan(BEKAL);
-  lapor("#/review bertahan sesudah halaman dimuat ulang, tidak jatuh ke Beranda");
+  lapor("/admin/review bertahan sesudah halaman dimuat ulang, tidak jatuh ke Beranda");
 
   /* 6 — buat satu nilai, JANGAN dipublish. Inilah kebalikan gerbang Riwayat:
      yang belum tayang justru yang harus muncul. */
@@ -566,16 +570,16 @@ async function main() {
   await jalan(`__bukaForm(0)`);
   await tunggu(`!!document.querySelector("form")`, "form nilai terbuka dari Review");
   await jalan(BEKAL);
-  const hash = await jalan(`location.hash`);
-  if (!/^#\/nilai\/ubah\/.+/.test(hash)) {
-    throw new Error(`tombol Buka mendarat di alamat yang salah: ${hash}`);
+  const alamatBuka = await jalan(`location.pathname`);
+  if (!/^\/admin\/nilai\/ubah\/.+/.test(alamatBuka)) {
+    throw new Error(`tombol Buka mendarat di alamat yang salah: ${alamatBuka}`);
   }
   const judulForm = await jalan(
     `document.querySelector('form input')?.value ?? ""`,
   );
   sama(judulForm, JUDUL_BARU, "isian judul di form yang dibuka dari Review");
   await potret("5-buka-form");
-  lapor(`tombol "Buka" mendarat tepat di form nilai itu (${hash})`);
+  lapor(`tombol "Buka" mendarat tepat di form nilai itu (${alamatBuka})`);
 
   /* 10 — penghapusan yang belum dipublish. Kalimatnya sengaja beda dari
      Riwayat: di sana "isi terakhirnya masih bisa dilihat", di sini yang perlu

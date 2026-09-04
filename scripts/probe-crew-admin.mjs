@@ -269,7 +269,7 @@ async function main() {
 
   /* 4 — Publish selagi draf: tidak boleh ikut terangkut */
   await jalan(`__klik("Publish")`);
-  await tunggu(`__teks().includes("Sudah tayang")`, "kabar publish");
+  await tunggu(`__teks().includes("Sudah terpublish")`, "kabar publish");
   const isiDraf = await (await fetch("http://localhost:3000/content.json")).json();
   if ((isiDraf.crew ?? []).some((m) => m.name === NAMA)) {
     throw new Error("draf ikut masuk content.json — gerbang state bocor");
@@ -314,7 +314,7 @@ async function main() {
   lapor("Live tanpa foto diterima — kotak kosong memang dirancang begitu");
 
   await jalan(`__klik("Publish")`);
-  await tunggu(`__teks().includes("Sudah tayang")`, "kabar publish");
+  await tunggu(`__teks().includes("Sudah terpublish")`, "kabar publish");
   const isiTayang = await (await fetch("http://localhost:3000/content.json")).json();
   const terbit = (isiTayang.crew ?? []).find((m) => m.name === NAMA);
   if (!terbit) throw new Error("anggota Live tidak ada di content.json");
@@ -338,7 +338,7 @@ async function main() {
   lapor("halaman People membaca crew dari content.json, bukan dari bundel");
 
   /* 8 — hapus, publish, hilang — dari content.json DAN dari halamannya. */
-  await send("Page.navigate", { url: "http://localhost:5174/admin/#/crew" });
+  await send("Page.navigate", { url: "http://localhost:5174/admin/crew" });
   await tunggu(`!!document.querySelector("table")`, "kembali ke panel", 120);
   await jalan(BEKAL);
   await jalan(`__baris(${q(NAMA)}).querySelectorAll("button")[1].click()`);
@@ -350,7 +350,7 @@ async function main() {
   await tunggu(`!__baris(${q(NAMA)})`, "baris hilang dari daftar");
   await jalan(BEKAL);
   await jalan(`__klik("Publish")`);
-  await tunggu(`__teks().includes("Sudah tayang")`, "kabar publish");
+  await tunggu(`__teks().includes("Sudah terpublish")`, "kabar publish");
   const isiAkhir = await (await fetch("http://localhost:3000/content.json")).json();
   if ((isiAkhir.crew ?? []).some((m) => m.name === NAMA)) {
     throw new Error("anggota terhapus masih ada di content.json");

@@ -299,8 +299,9 @@ async function main() {
 
   /* 5 — form: isian, tabel, dan dialog ikut gelap. Ini yang paling sering
      tertinggal, karena ketiganya digambar sebagian oleh peramban. */
-  await jalan(`location.hash = "/lowongan"`);
+  await send("Page.navigate", { url: "http://localhost:5174/admin/lowongan" });
   await sleep(600);
+  await tunggu(`!!document.querySelector("main tbody tr")`, "daftar lowongan");
   await jalan(BEKAL);
   const daftarGelap = await jalan(`({
     tabel: __warna("td", "borderBottomColor"),
@@ -330,8 +331,9 @@ async function main() {
   /* 5b — dialog konfirmasi. Satu-satunya tempat yang dulu menulis warna
      langsung (`rgba(0,0,0,.4)` untuk tirainya), jadi satu-satunya tempat yang
      paling mungkin tertinggal di tema terang. */
-  await jalan(`location.hash = "/lowongan"`);
+  await send("Page.navigate", { url: "http://localhost:5174/admin/lowongan" });
   await sleep(600);
+  await tunggu(`!!document.querySelector("main tbody tr")`, "daftar lowongan lagi");
   await jalan(BEKAL);
   await jalan(`[...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "Hapus").click()`);
   await sleep(400);

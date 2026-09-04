@@ -182,40 +182,50 @@ async function main() {
   await jalan(BEKAL);
   await potret("2-beranda");
 
-  /* 1b — menu menaruh lowongan di halaman yang benar.
-     Yang diuji bukan CSS-nya melainkan janji menunya: kalau di situs lowongan
-     ada di halaman People, di panel juga. Peta yang menyimpang bikin editor
-     mencari di grup yang salah, dan tidak ada yang meneriakkannya. */
+  /* 1b — grup pertama yang punya isi siap (kini Home — GRUP_AWAL di
+     Sidebar.tsx bergeser sendiri mengikuti contentMap) terbuka sendiri saat
+     panel dibuka, dan menu menaruh lowongan di halaman yang benar: kalau di
+     situs lowongan ada di halaman People, di panel juga. Peta yang menyimpang
+     bikin editor mencari di grup yang salah, dan tidak ada yang
+     meneriakkannya. */
+  const homeAwal = await jalan(`__anak("Home").join(" | ")`);
+  if (!homeAwal.includes("Industri")) {
+    throw new Error(`grup awal (Home) tidak terbuka sendiri: ${homeAwal}`);
+  }
+  await jalan(`__bukaGrup("People")`);
   const anakPeople = await jalan(`__anak("People").join(" | ")`);
   if (!anakPeople.includes("Lowongan")) {
     throw new Error(`Lowongan tidak ada di dalam grup People: ${anakPeople}`);
   }
   lapor("menu sisi menaruh Lowongan di dalam People");
 
-  /* 1c — grup dibuka/ditutup, dan hanya satu terbuka pada satu waktu.
-     Diuji lewat perilakunya, bukan lewat kelas CSS: yang dijanjikan ke Keano
-     adalah "diklik → turunannya muncul", dan itu yang diperiksa. */
-  const homeSebelum = await jalan(`__anak("Home").length`);
-  if (homeSebelum !== 0) throw new Error("grup Home sudah terbuka sebelum diklik");
-  await jalan(`__bukaGrup("Home")`);
-  const homeSesudah = await jalan(`__anak("Home").join(" | ")`);
-  if (!homeSesudah.includes("Industri")) {
-    throw new Error(`grup Home tidak memunculkan turunannya: ${homeSesudah}`);
-  }
-  if ((await jalan(`__anak("People").length`)) !== 0) {
-    throw new Error("dua grup terbuka sekaligus — People tidak ikut menutup");
+  /* 1c — hanya satu grup terbuka pada satu waktu. Diuji lewat perilakunya,
+     bukan lewat kelas CSS: yang dijanjikan ke Keano adalah "diklik →
+     turunannya muncul, yang lama menutup", dan itu yang diperiksa (People
+     baru saja dibuka di 1b, jadi Home yang tadinya terbuka harus tertutup). */
+  if ((await jalan(`__anak("Home").length`)) !== 0) {
+    throw new Error("dua grup terbuka sekaligus — Home tidak ikut menutup");
   }
   lapor("grup diklik → turunannya muncul, grup sebelumnya menutup");
 
-  /* 1d — konten yang belum bisa diubah tetap terdaftar, dengan penandanya.
-     Disembunyikan = editor mencari sesuatu yang memang belum ada. */
-  await jalan(`__bukaGrup("People")`);
-  const jumlahBelum = await jalan(
-    `[...document.querySelectorAll(".sisi-item.mati")]
-       .filter((el) => el.textContent.includes("Belum tersedia")).length`,
+  /* 1d — dulu di sini ada penanda "Belum tersedia" untuk konten yang belum
+     ber-CMS. Sejak footer & judul seksi masuk SEMUA entri siap, jadi yang
+     dijaga sekarang kebalikannya: tidak ada entri mati yang tersisa, dan
+     keempat anak People hadir semuanya sebagai tombol hidup. (Aturan
+     menampilkan entri mati tetap ada di Sidebar.tsx untuk entitas yang lahir
+     nanti.) */
+  const jumlahMati = await jalan(
+    `document.querySelectorAll(".sisi-item.mati").length`,
   );
-  if (jumlahBelum < 1) throw new Error("tidak ada penanda 'Belum tersedia' di menu sisi");
-  lapor(`menu sisi mendaftar ${jumlahBelum} konten yang belum bisa diubah (grup People)`);
+  if (jumlahMati !== 0) {
+    throw new Error(`masih ada ${jumlahMati} entri "Belum tersedia" padahal semua siap`);
+  }
+  for (const nama of ["Nilai", "Crew", "Lowongan", "Judul seksi"]) {
+    if (!anakPeople.includes(nama)) {
+      throw new Error(`${nama} hilang dari grup People: ${anakPeople}`);
+    }
+  }
+  lapor("tidak ada lagi entri 'Belum tersedia' — semua konten panel hidup");
 
   /* 1e — tombol lipat yang menumpang di garis pemisah.
      Diperiksa karena satu-satunya jalan kembali dari keadaan terlipat adalah
@@ -312,7 +322,7 @@ async function main() {
 
   /* 3 — publish selagi masih draf: tidak boleh ikut terangkut */
   await jalan(`__klik("Publish")`);
-  await tunggu(`__teks().includes("Sudah tayang")`, "kabar publish");
+  await tunggu(`__teks().includes("Sudah terpublish")`, "kabar publish");
   const isiDraf = await (await fetch("http://localhost:3000/content.json")).json();
   if (isiDraf.jobs.some((j) => j.title === JUDUL)) {
     throw new Error("draf ikut masuk content.json — gerbang state bocor");
@@ -345,7 +355,7 @@ async function main() {
   await jalan(BEKAL);
   await tunggu(`__teks().includes("perubahan belum terpublish")`, "angka belum terpublish");
   await jalan(`__klik("Publish")`);
-  await tunggu(`__teks().includes("Sudah tayang")`, "kabar publish");
+  await tunggu(`__teks().includes("Sudah terpublish")`, "kabar publish");
 
   const isiTayang = await (await fetch("http://localhost:3000/content.json")).json();
   const terbit = isiTayang.jobs.find((j) => j.title === JUDUL);
@@ -373,7 +383,7 @@ async function main() {
   );
   await jalan(BEKAL);
   await jalan(`__klik("Publish")`);
-  await tunggu(`__teks().includes("Sudah tayang")`, "kabar publish");
+  await tunggu(`__teks().includes("Sudah terpublish")`, "kabar publish");
   const isiAkhir = await (await fetch("http://localhost:3000/content.json")).json();
   if (isiAkhir.jobs.some((j) => j.title === JUDUL)) {
     throw new Error("lowongan terhapus masih ada di content.json");

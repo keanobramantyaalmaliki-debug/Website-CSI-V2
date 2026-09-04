@@ -11,8 +11,8 @@
  *   • tiap kelompok halaman punya anak menu "Judul seksi", dan daftarnya
  *     memuat seksi halaman itu urut seperti di situs, bukan urut abjad;
  *   • tidak ada "+ Tambah", "Hapus", "Naikkan", maupun kolom Status;
- *   • `#/judul-home/baru` tidak membuka form LOWONGAN, lubang yang sama yang
- *     dulu ditambal `tanpaDaftar()` untuk `#/visi/baru`;
+ *   • `/admin/judul-home/baru` tidak membuka form LOWONGAN, lubang yang sama
+ *     yang dulu ditambal `tanpaDaftar()` untuk alamat liar visi;
  *   • isian subteks cuma muncul di seksi yang memang menampilkannya, jadi
  *     tidak ada tempat mengetik kalimat yang tak akan pernah tampil;
  *   • membatalkan lewat layar Review menulis balik judul lama TANPA menghapus
@@ -614,19 +614,22 @@ async function main() {
   await potret("7-riwayat");
 
   /* 12 — alamat yang tidak punya layar. `judul-home` berstatus siap, jadi
-     `#/judul-home/baru` lolos penjaga rute; tanpa `tanpaTambah()` ia jatuh ke
-     rantai form dan membuka form LOWONGAN di alamat judul seksi. */
-  await jalan(`location.hash = "/judul-home/baru"`);
+     `/admin/judul-home/baru` lolos penjaga rute; tanpa `tanpaTambah()` ia
+     jatuh ke rantai form dan membuka form LOWONGAN di alamat judul seksi. */
+  await send("Page.navigate", {
+    url: "http://localhost:5174/admin/judul-home/baru",
+  });
   await sleep(700);
+  await tunggu(`!!document.querySelector(".sisi")`, "panel sesudah alamat liar");
   await jalan(BEKAL);
   const judulLayar = await jalan(`__judulLayar()`);
   if (/lowongan/i.test(judulLayar) || (await jalan(`__adaIsian("Tipe")`))) {
-    throw new Error(`#/judul-home/baru membuka layar lain: "${judulLayar}"`);
+    throw new Error(`/admin/judul-home/baru membuka layar lain: "${judulLayar}"`);
   }
   if (!(await jalan(`!!document.querySelector("main tbody tr")`))) {
-    throw new Error(`#/judul-home/baru tidak jatuh ke daftarnya: "${judulLayar}"`);
+    throw new Error(`/admin/judul-home/baru tidak jatuh ke daftarnya: "${judulLayar}"`);
   }
-  lapor("#/judul-home/baru jatuh ke daftar judul seksi, bukan form lowongan");
+  lapor("/admin/judul-home/baru jatuh ke daftar judul seksi, bukan form lowongan");
 
   /* 13 — kembalikan judul semula lewat panel, seperti editor sungguhan. */
   await pulihkan();
