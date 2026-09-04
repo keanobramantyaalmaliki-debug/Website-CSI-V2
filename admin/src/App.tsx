@@ -21,6 +21,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ambilCrew,
   ambilDeployment,
+  ambilJudulSeksi,
   ambilFooter,
   ambilIndustri,
   ambilLowongan,
@@ -41,6 +42,7 @@ import {
   type JobRecord,
   type Pengguna,
   type ProcessStepRecord,
+  type SectionTextRecord,
   type ValueRecord,
   type WorkProjectRecord,
   type CaseStudyRecord,
@@ -53,6 +55,7 @@ import { Beranda } from "./Beranda";
 import { DaftarCrew } from "./DaftarCrew";
 import { DaftarDeployment } from "./DaftarDeployment";
 import { DaftarIndustri } from "./DaftarIndustri";
+import { DaftarJudulSeksi } from "./DaftarJudulSeksi";
 import { DaftarLowongan } from "./DaftarLowongan";
 import { DaftarNilai } from "./DaftarNilai";
 import { DaftarProses } from "./DaftarProses";
@@ -64,6 +67,7 @@ import { FormCrew } from "./FormCrew";
 import { FormDeployment } from "./FormDeployment";
 import { FormFooter } from "./FormFooter";
 import { FormIndustri } from "./FormIndustri";
+import { FormJudulSeksi } from "./FormJudulSeksi";
 import { FormLowongan } from "./FormLowongan";
 import { FormNilai } from "./FormNilai";
 import { FormProses } from "./FormProses";
@@ -79,6 +83,12 @@ import { Sidebar } from "./Sidebar";
 import { TombolTema } from "./Tema";
 import { Kabar } from "./ui";
 import { findEntry } from "@shared/contentMap";
+import {
+  SECTION_TEXT_META,
+  SECTION_TEXT_PAGES,
+  sectionTextRoute,
+  type SectionTextPage,
+} from "@shared/sectionText";
 
 type Rute =
   | { nama: "beranda" }
@@ -104,6 +114,33 @@ function tanpaDaftar(key: string): boolean {
   return key === "visi" || key === "footer";
 }
 
+/**
+ * Rute panel Judul seksi (`judul-home`, …) ke halaman situsnya.
+ *
+ * Diturunkan dari `SECTION_TEXT_PAGES`, bukan ditulis empat kali: halaman
+ * kelima suatu hari cukup ditambahkan di kontrak bersama, dan panel ini ikut
+ * tanpa disunting.
+ */
+const HALAMAN_JUDUL = new Map<string, SectionTextPage>(
+  SECTION_TEXT_PAGES.map((halaman) => [sectionTextRoute(halaman), halaman]),
+);
+
+/**
+ * Entitas yang punya daftar TAPI barisnya tidak bisa ditambah — Judul seksi.
+ * Sebelas barisnya lahir dari seed dan tidak pernah bertambah, jadi
+ * `#/judul-home/baru` tidak menjanjikan apa pun.
+ *
+ * Dibiarkan lolos bukan sekadar tidak berguna: lubangnya persis yang ditambal
+ * `tanpaDaftar()` untuk `#/visi/baru` — rantai pemilihan komponen di bawah
+ * berakhir di form lowongan, jadi alamat itu akan membuka form LOWONGAN.
+ *
+ * Beda dari `tanpaDaftar()`, bentuk `/ubah/<id>`-nya TETAP sah: itulah cara
+ * layar Riwayat dan Review menautkan satu baris.
+ */
+function tanpaTambah(key: string): boolean {
+  return HALAMAN_JUDUL.has(key);
+}
+
 function bacaRute(): Rute {
   const h = window.location.hash.replace(/^#/, "");
 
@@ -124,7 +161,7 @@ function bacaRute(): Rute {
 
   const baru = /^\/([a-z-]+)\/baru$/.exec(h);
   if (baru && siap(baru[1]))
-    return tanpaDaftar(baru[1])
+    return tanpaDaftar(baru[1]) || tanpaTambah(baru[1])
       ? { nama: "daftar", entitas: baru[1] }
       : { nama: "form", entitas: baru[1], id: null };
 
@@ -156,6 +193,9 @@ export function App() {
   const [industri, setIndustri] = useState<IndustryRecord[]>([]);
   const [deployment, setDeployment] = useState<DeploymentRecord[]>([]);
   const [proses, setProses] = useState<ProcessStepRecord[]>([]);
+  /* SEBELAS baris sekaligus, keempat halaman bercampur: satu permintaan
+     melayani empat layar, dan masing-masing menyaring miliknya sendiri. */
+  const [judulSeksi, setJudulSeksi] = useState<SectionTextRecord[]>([]);
   /* `null` di sini berarti dua hal sekaligus — belum diambil, atau barisnya
      memang belum ada di database. Keduanya ditampilkan sama di beranda
      ("belum terisi"), jadi tidak perlu dibedakan. */
@@ -197,6 +237,7 @@ export function App() {
       hIndustri,
       hDeployment,
       hProses,
+      hJudul,
       hVisi,
       hFooter,
       hPending,
@@ -211,6 +252,7 @@ export function App() {
       ambilIndustri(),
       ambilDeployment(),
       ambilProses(),
+      ambilJudulSeksi(),
       ambilVisi(),
       ambilFooter(),
       statusPublish(),
@@ -229,6 +271,7 @@ export function App() {
       hIndustri,
       hDeployment,
       hProses,
+      hJudul,
       hVisi,
       hFooter,
     ].find((h) => !h.ok);
@@ -249,6 +292,7 @@ export function App() {
     if (hIndustri.ok) setIndustri(hIndustri.data.industries);
     if (hDeployment.ok) setDeployment(hDeployment.data.deployments);
     if (hProses.ok) setProses(hProses.data.steps);
+    if (hJudul.ok) setJudulSeksi(hJudul.data.sectionTexts);
     if (hVisi.ok) setVisi(hVisi.data.vision);
     if (hFooter.ok) setFooter(hFooter.data.footer);
     if (hPending.ok) setPending(hPending.data.pending);
@@ -384,7 +428,33 @@ export function App() {
         ? "Belum terisi, situs memakai isi bawaan."
         : `Terisi, ${footer.socials.length} tautan sosial` +
           (footer.unpublished ? ", belum terpublish" : ""),
+    /* Empat entri sekaligus, satu per halaman. Juga tidak lewat `ringkas()`:
+       jumlah bagiannya tetap, jadi angkanya bukan kabar melainkan pengingat
+       ada berapa yang bisa dibuka, dan tidak ada keadaan draf. */
+    ...Object.fromEntries(
+      SECTION_TEXT_PAGES.map((halaman) => {
+        const baris = judulSeksi.filter(
+          (row) => SECTION_TEXT_META[row.key].halaman === halaman,
+        );
+        const belum = baris.filter((row) => row.unpublished).length;
+        return [
+          sectionTextRoute(halaman),
+          baris.length === 0
+            ? "Belum terisi, situs memakai kalimat bawaan."
+            : `${baris.length} bagian` +
+              (belum > 0 ? `, ${belum} belum terpublish` : ""),
+        ];
+      }),
+    ),
   };
+
+  /* Halaman Judul seksi yang sedang dibuka, atau null kalau rutenya bukan
+     salah satu dari empat itu. Dihitung sekali di sini supaya dua cabang
+     render di bawah (daftar dan form) tidak masing-masing memaksa tipe. */
+  const halamanJudul =
+    rute.nama === "daftar" || rute.nama === "form"
+      ? (HALAMAN_JUDUL.get(rute.entitas) ?? null)
+      : null;
 
   if (user === undefined) return <div className="bungkus">Memuat…</div>;
   if (user === null) return <Masuk onMasuk={(u) => setUser(u)} />;
@@ -476,7 +546,16 @@ export function App() {
                LANGSUNG formnya. Ditangkap di cabang "daftar" karena itulah
                bentuk hash-nya (`#/visi`) — tidak ada `#/visi/baru` maupun
                `#/visi/ubah/<id>` yang bisa dituju. */
-            rute.entitas === "visi" ? (
+            halamanJudul ? (
+              <DaftarJudulSeksi
+                halaman={halamanJudul}
+                daftar={judulSeksi}
+                onUbah={(id) => {
+                  setPesan(null);
+                  pergi(`/${rute.entitas}/ubah/${id}`);
+                }}
+              />
+            ) : rute.entitas === "visi" ? (
               <FormVisi onSelesai={selesai} />
             ) : rute.entitas === "footer" ? (
               /* Footer, alasan sama: `#/footer` langsung formnya. */
@@ -612,6 +691,17 @@ export function App() {
                 onBerubah={selesai}
               />
             )
+          ) : halamanJudul ? (
+            <FormJudulSeksi
+              /* `rute.id` tidak pernah null di sini — `tanpaTambah()` sudah
+                 membelokkan `/baru` ke daftar. Fallback string kosong ada
+                 semata untuk menyempitkan tipe, dan kalau toh tersentuh
+                 formnya bilang barisnya tidak ada alih-alih diam. */
+              key={rute.id ?? ""}
+              id={rute.id ?? ""}
+              onSelesai={selesai}
+              onBatal={() => pergi(`/${rute.entitas}`)}
+            />
           ) : rute.entitas === "deployment" ? (
             <FormDeployment
               key={rute.id ?? "baru"}

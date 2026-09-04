@@ -30,6 +30,7 @@ const kosong = {
   industries: [],
   deployments: [],
   processSteps: [],
+  sectionTexts: [],
 };
 
 describe("FALLBACK_INDUSTRIES", () => {

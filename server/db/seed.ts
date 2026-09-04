@@ -35,6 +35,7 @@ import { FALLBACK_DEPLOYMENTS } from "../../src/data/deploymentsFallback";
 import { FALLBACK_VISION } from "../../src/data/visionFallback";
 import { FALLBACK_PROCESS_STEPS } from "../../src/data/processStepsFallback";
 import { FALLBACK_FOOTER } from "../../src/data/footerFallback";
+import { FALLBACK_SECTION_TEXTS } from "../../src/data/sectionTextsFallback";
 import { db, sql } from "./client";
 import { dbNow } from "./now";
 import {
@@ -51,6 +52,7 @@ import {
   jobs,
   peopleValues,
   processSteps,
+  sectionTexts,
   services,
   serviceSubs,
   workProjects,
@@ -884,6 +886,45 @@ async function seedProcessSteps() {
   );
 }
 
+/**
+ * Judul & subteks sebelas seksi situs.
+ *
+ * Beda dari seed lain: yang dipindahkan ke sini bukan sebuah daftar konten,
+ * melainkan kalimat yang selama ini ditulis langsung di dalam JSX. Setelah
+ * seed, `CsiHero.tsx` dan sepuluh kawannya membaca dari CMS, dan
+ * `sectionTextsFallback.ts` tinggal jadi jaring pengaman.
+ *
+ * Gerbangnya sama seperti yang lain: sekali tabelnya berisi, skrip ini tidak
+ * pernah menyentuhnya lagi. Menimpa judul yang sudah disunting editor dengan
+ * literal repo persis kerusakan yang gerbang ini cegah.
+ */
+async function seedSectionTexts() {
+  const [{ count }] = await db
+    .select({ count: raw<number>`count(*)::int` })
+    .from(sectionTexts);
+
+  if (count > 0) {
+    console.log(`Tabel section_texts sudah berisi ${count} baris, dilewati.`);
+    return;
+  }
+
+  const isi = Object.entries(FALLBACK_SECTION_TEXTS);
+
+  await db.transaction(async (tx) => {
+    for (const [key, teks] of isi) {
+      await tx.insert(sectionTexts).values({
+        key: key as (typeof sectionTexts.$inferInsert)["key"],
+        heading: teks.heading,
+        subheading: teks.subheading,
+        /* Sudah tayang hari ini — lihat alasan yang sama di seed lowongan. */
+        publishedAt: dbNow(),
+      });
+    }
+  });
+
+  console.log(`Seed selesai: ${isi.length} judul seksi masuk ke database.`);
+}
+
 await seedJobs();
 await seedValues();
 await seedCrew();
@@ -896,4 +937,5 @@ await seedDeployments();
 await seedVision();
 await seedProcessSteps();
 await seedFooter();
+await seedSectionTexts();
 await sql.end();

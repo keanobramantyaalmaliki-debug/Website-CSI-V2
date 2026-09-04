@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import IndustriesStack from "@/components/canvas/IndustriesStack";
 import { industries } from "@/data/industries";
+import { sectionText } from "@/data/sectionTexts";
 
 /**
  * Sejak 23 Agu galeri kolom expanding diganti tumpukan plank 3D
@@ -31,6 +32,9 @@ export default function Industries() {
      membeku sebelum `loadContent()` selesai, jadi halaman menampilkan daftar
      cadangan tanpa satu pun galat yang memberitahu. */
   const daftar = useMemo(() => industries(), []);
+  /* Judulnya `sr-only`, jadi baris ganda tidak berarti apa-apa di sini dan
+     validator sudah menguncinya ke satu baris. Yang dipakai teks utuhnya. */
+  const judul = useMemo(() => sectionText("industries").heading, []);
 
   /* Daftar boleh kosong — editor berhak mendraftkan semuanya. Tanpa gerbang
      ini yang tayang adalah strip putih setinggi layar berisi tumpukan nol
@@ -46,7 +50,7 @@ export default function Industries() {
        viewport ≤1920px shell tidak mengubah apa pun: strip tetap full-bleed
        tanpa radius, nyatu dengan kartu Process di atasnya. */
     <section id="industries" className="section-shell relative z-10 overflow-x-clip">
-      <h2 className="sr-only">Built Across Sectors</h2>
+      <h2 className="sr-only">{judul}</h2>
       <IndustriesStack industries={daftar} />
       {/* Plank di canvas bukan DOM (strip-nya aria-hidden) — daftar sektor
           yang terbaca mesin & AT hidup di sini, pola sr-only yang sama

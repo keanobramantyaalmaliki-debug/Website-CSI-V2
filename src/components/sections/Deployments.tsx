@@ -7,6 +7,7 @@ import DeploymentCta from "@/components/sections/DeploymentCta";
 import LineMask from "@/components/motion/LineMask";
 import { FadeUpList } from "@/components/motion/FadeUp";
 import { deployments } from "@/data/deployments";
+import { sectionHeading } from "@/data/sectionTexts";
 
 export default function Deployments() {
   /* Dipanggil DI DALAM komponen, bukan di ruang modul. `deployments()` membaca
@@ -15,6 +16,7 @@ export default function Deployments() {
      menampilkan isi cadangan bundle selamanya TANPA satu pun error —
      lihat memori `cms-data-module-scope-gotcha`. */
   const kartu = useMemo(() => deployments(), []);
+  const baris = useMemo(() => sectionHeading("deployments"), []);
 
   /* Daftar kosong = section hilang seluruhnya, dan itu aman untuk aturan
      jarak 80px: section ini `pt-0 pb-20`, CsiHero di atasnya sudah `pb-20`,
@@ -47,9 +49,14 @@ export default function Deployments() {
           tampilan diamnya tidak berubah sedikit pun. Eyebrow "DEPLOYMENTS"
           sudah dihapus lebih dulu 18 Agu (judulnya menyebut isinya sendiri). */}
       <h2 className="relative max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
-        <LineMask>
-          Built for real-world environments where decisions matter.
-        </LineMask>
+        {/* Satu `LineMask` per baris judul, tersusul 60ms — idiom yang sama
+            dengan MeetingLead. Judul satu baris tetap lewat map ini dan
+            menghasilkan markup yang persis sama seperti sebelumnya. */}
+        {baris.map((line, i) => (
+          <LineMask key={i} delay={i * 0.06}>
+            {line}
+          </LineMask>
+        ))}
       </h2>
 
       {/* Deployment cards with stagger entrance */}

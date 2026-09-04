@@ -32,6 +32,7 @@ import type { Deployment } from "./deployment";
 import type { ProcessStep } from "./processStep";
 import type { Vision } from "./vision";
 import type { Footer } from "./footer";
+import type { SectionText } from "./sectionText";
 
 export type ContentPayload = {
   version: 1;
@@ -135,6 +136,20 @@ export type ContentPayload = {
    * cadangan bundle.
    */
   footer: Footer | null;
+  /**
+   * Judul (dan subteks) sebelas seksi situs.
+   *
+   * LARIK, bukan objek berkunci: bentuknya ikut `SECTION_TEXT_KEYS` yang bisa
+   * bertambah, dan larik membuat `content.json` lama yang belum punya seksi
+   * baru tetap terbaca apa adanya. Yang membaca mencarinya per `key`, jadi
+   * urutan di sini tidak mengikat apa pun.
+   *
+   * Larik kosong BUKAN berarti "semua judul dihapus" — judul tidak bisa
+   * dihapus (lihat `shared/sectionText.ts`). Ia berarti CMS-nya belum bicara,
+   * dan situs memakai cadangan bundle. Sama untuk seksi yang tidak ada di
+   * larik: cadangannya per-isian, bukan per-seksi.
+   */
+  sectionTexts: SectionText[];
 };
 
 export const CONTENT_VERSION = 1 as const;

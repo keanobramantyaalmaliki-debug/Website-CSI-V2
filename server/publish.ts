@@ -25,6 +25,7 @@ import type { Deployment } from "@shared/deployment";
 import type { ProcessStep } from "@shared/processStep";
 import type { Vision } from "@shared/vision";
 import type { Footer } from "@shared/footer";
+import type { SectionText } from "@shared/sectionText";
 
 import { record, type Actor } from "./audit";
 import { db } from "./db/client";
@@ -37,6 +38,7 @@ import {
   industries,
   processSteps,
   jobs,
+  sectionTexts,
   peopleValues,
   testimonials,
   services,
@@ -56,6 +58,7 @@ import { listDeployments } from "./deploymentsRepo";
 import { listProcessSteps } from "./processStepsRepo";
 import { getVision } from "./visionRepo";
 import { getFooter } from "./footerRepo";
+import { listSectionTexts } from "./sectionTextRepo";
 
 /**
  * `dist/` — hasil build Vite, yang disajikan `serve` di produksi.
@@ -83,6 +86,7 @@ async function collect(): Promise<ContentPayload> {
     processStepRows,
     visionRow,
     footerRow,
+    sectionTextRows,
   ] = await Promise.all([
     listJobs({ includeDrafts: false }),
     listValues({ includeDrafts: false }),
@@ -101,6 +105,9 @@ async function collect(): Promise<ContentPayload> {
        draft/live. Ia ikut setiap halaman, jadi satu-satunya isi yang ada
        adalah isi yang tayang. */
     getFooter(),
+    /* Tanpa `includeDrafts`: judul seksi tidak punya keadaan draft/live.
+       Seksi berjudul tanpa judul bukan draft, ia cacat. */
+    listSectionTexts(),
   ]);
 
   const publicJobs: Job[] = jobRows.map(
@@ -169,6 +176,12 @@ async function collect(): Promise<ContentPayload> {
       }
     : null;
 
+  /* `id` ikut dibuang bersama kolom admin: ia lahir cuma supaya riwayat
+     punya `entity_id` bertipe uuid, dan situs mengalamati seksi lewat `key`. */
+  const publicSectionTexts: SectionText[] = sectionTextRows.map(
+    ({ id: _i, updatedAt: _u, publishedAt: _p, unpublished: _n, ...teks }) => teks,
+  );
+
   return {
     version: CONTENT_VERSION,
     generatedAt: new Date().toISOString(),
@@ -184,6 +197,7 @@ async function collect(): Promise<ContentPayload> {
     processSteps: publicProcessSteps,
     vision: publicVision,
     footer: publicFooter,
+    sectionTexts: publicSectionTexts,
   };
 }
 
@@ -261,6 +275,10 @@ export type PublishResult = {
    *  satu. Yang dilaporkan apakah isinya datang dari CMS, atau situs masih
    *  memakai cadangan bundle karena barisnya belum ada. */
   footer: boolean;
+  /** Cacah baris lagi seperti tetangga di atas visi, bukan boolean: seksi
+   *  berjudul memang sebelas, dan angka yang kurang dari itu adalah kabar
+   *  berguna (seed belum lengkap, sebagian seksi masih pakai judul cadangan). */
+  sectionTexts: number;
   generatedAt: string;
   warning: string | null;
 };
@@ -295,6 +313,9 @@ export async function publish(actor: Actor): Promise<PublishResult> {
   await db.update(vision).set({ publishedAt: now });
   /* Tanpa `where` juga, alasan sama: dijaga CHECK `footer_satu_baris`. */
   await db.update(footer).set({ publishedAt: now });
+  /* Tanpa `where` juga, tapi alasannya beda: barisnya sebelas, dan publish
+     memang menayangkan kesebelasnya sekaligus. */
+  await db.update(sectionTexts).set({ publishedAt: now });
 
   const warning = await purgeCloudflare();
 
@@ -315,6 +336,7 @@ export async function publish(actor: Actor): Promise<PublishResult> {
       processSteps: payload.processSteps.length,
       vision: payload.vision !== null,
       footer: payload.footer !== null,
+      sectionTexts: payload.sectionTexts.length,
       generatedAt: payload.generatedAt,
     },
   });
@@ -332,6 +354,7 @@ export async function publish(actor: Actor): Promise<PublishResult> {
     processSteps: payload.processSteps.length,
     vision: payload.vision !== null,
     footer: payload.footer !== null,
+    sectionTexts: payload.sectionTexts.length,
     generatedAt: payload.generatedAt,
     warning,
   };
@@ -387,6 +410,7 @@ export async function pendingCount(): Promise<number> {
     processStepRows,
     visionRows,
     footerRows,
+    sectionTextRows,
   ] = await Promise.all([
     db
       .select({
@@ -491,6 +515,15 @@ export async function pendingCount(): Promise<number> {
       })
       .from(footer)
       .then((rows) => rows.map((r) => ({ ...r, deletedAt: null }))),
+    /* `deletedAt: null` dipetakan tetap, alasan sama seperti visi dan kaki
+       halaman: tabel ini tidak punya kolomnya karena tidak ada jalur hapus. */
+    db
+      .select({
+        updatedAt: sectionTexts.updatedAt,
+        publishedAt: sectionTexts.publishedAt,
+      })
+      .from(sectionTexts)
+      .then((rows) => rows.map((r) => ({ ...r, deletedAt: null }))),
   ]);
 
   return [
@@ -506,5 +539,6 @@ export async function pendingCount(): Promise<number> {
     ...processStepRows,
     ...visionRows,
     ...footerRows,
+    ...sectionTextRows,
   ].filter(menunggu).length;
 }

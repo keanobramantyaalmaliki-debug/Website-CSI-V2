@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import TestimonialSpotlight from "@/components/sections/TestimonialSpotlight";
 import LineMask from "@/components/motion/LineMask";
 import ServicesTicker from "@/components/canvas/ServicesTicker";
+import { sectionHeading, sectionSubheading } from "@/data/sectionTexts";
 import { services } from "@/data/services";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -29,6 +30,8 @@ export default function Office() {
      isi cadangan selamanya tanpa satu pun error. Lihat catatan lengkapnya di
      `src/data/services.ts`. */
   const daftar = useMemo(() => services(), []);
+  const baris = useMemo(() => sectionHeading("services-lead"), []);
+  const paragraf = useMemo(() => sectionSubheading("services-lead"), []);
 
   return (
     <section
@@ -51,23 +54,27 @@ export default function Office() {
             skalanya harus terbaca setara (20 Agu). Eyebrow "Services" dicabut
             bersamaan: navbar sudah menyebut nama halamannya. */}
         <h2 className="max-w-5xl text-4xl font-semibold tracking-tight text-zinc-100 sm:text-6xl lg:text-7xl">
-          <LineMask>Where Software Becomes Intelligence.</LineMask>
+          {baris.map((line, i) => (
+            <LineMask key={i} delay={i * 0.06}>
+              {line}
+            </LineMask>
+          ))}
         </h2>
 
         {/* Overview — [what we build] + [impact on audience] + [who we serve, X to Y] */}
-        <motion.p
-          /* mt mobile 18px = standar judul→subteks 28 Agu (PeopleIntro);
-             ≥sm kembali 24px. */
-          className="mt-[18px] max-w-2xl text-base leading-relaxed text-zinc-400 sm:mt-6 sm:text-lg"
-          initial={{ opacity: 0, y: 8 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
-        >
-          We build the software, AI, and cloud infrastructure that turn
-          complex operations into decisions your team can act on for
-          government agencies and enterprises across Indonesia.
-        </motion.p>
+        {paragraf.length > 0 && (
+          <motion.p
+            /* mt mobile 18px = standar judul→subteks 28 Agu (PeopleIntro);
+               ≥sm kembali 24px. */
+            className="mt-[18px] max-w-2xl text-base leading-relaxed text-zinc-400 sm:mt-6 sm:text-lg"
+            initial={{ opacity: 0, y: 8 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
+          >
+            {paragraf[0]}
+          </motion.p>
+        )}
       </div>
 
       {/* Panel putih ala Lusion — satu-satunya bidang terang di halaman,

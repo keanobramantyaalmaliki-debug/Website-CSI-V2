@@ -48,6 +48,7 @@ export function BarPublish({
       industries,
       deployments,
       processSteps,
+      sectionTexts,
       vision,
       footer,
       warning,
@@ -70,6 +71,11 @@ export function BarPublish({
       [industries, "sektor"],
       [deployments, "kartu deployment"],
       [processSteps, "langkah cara kerja"],
+      /* Angkanya, seperti bagian lain di daftar ini, adalah berapa yang
+         sekarang tayang — bukan berapa yang barusan berubah. Untuk judul
+         seksi itu selalu sebelas, dan memang begitu maksudnya: seksi berjudul
+         tanpa judul bukan keadaan yang boleh ada. */
+      [sectionTexts, "judul seksi"],
     ] as const;
     const isi = [
       ...bagian.filter(([n]) => n > 0).map(([n, nama]) => `${n} ${nama}`),

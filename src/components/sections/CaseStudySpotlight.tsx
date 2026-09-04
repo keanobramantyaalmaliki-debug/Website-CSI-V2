@@ -6,6 +6,7 @@ import LineMask from "@/components/motion/LineMask";
 import Disclosure from "@/components/motion/Disclosure";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 import { caseStudies, type CaseStudyContent } from "@/data/caseStudies";
+import { sectionHeading } from "@/data/sectionTexts";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -133,6 +134,7 @@ export default function CaseStudySpotlight() {
      caseStudies()` di atas sana akan membeku pada isi cadangan selamanya,
      tanpa satu pun error. Lihat catatan lengkapnya di `src/data/caseStudies.ts`. */
   const items = useMemo(() => caseStudies(), []);
+  const baris = useMemo(() => sectionHeading("case-studies"), []);
 
   /* Daftar kosong = seksinya tidak ada, bukan judul "Case Studies" di atas
      ruang kosong. Editor yang menghapus semua ceritanya memang meminta itu. */
@@ -149,7 +151,11 @@ export default function CaseStudySpotlight() {
       {/* Section header */}
       <div className="mb-12">
         <h2 className="text-[clamp(1.875rem,4.5vw,2.25rem)] font-semibold tracking-tight text-zinc-100 leading-[1.05]">
-          <LineMask>Case Studies</LineMask>
+          {baris.map((line, i) => (
+            <LineMask key={i} delay={i * 0.06}>
+              {line}
+            </LineMask>
+          ))}
         </h2>
       </div>
 

@@ -221,6 +221,29 @@ export const processGlyphEnum = pgEnum("process_glyph", [
  *  yang tidak boleh dihapus dari disk oleh CMS. */
 export const imageSourceEnum = pgEnum("image_source", ["static", "upload"]);
 
+/**
+ * Sebelas seksi berjudul di situs. Cocok dengan `SECTION_TEXT_KEYS` di
+ * `shared/sectionText.ts`; kalau salah satu berubah, yang lain WAJIB ikut.
+ *
+ * Enum, bukan `text` bebas, karena kuncinya bukan data melainkan ALAMAT:
+ * `CsiHero.tsx` menyebut `"csi-hero"` secara harfiah. Kunci salah ketik yang
+ * lolos masuk database tidak akan menghasilkan galat apa pun, cuma satu seksi
+ * yang diam-diam kembali ke judul cadangannya.
+ */
+export const sectionKeyEnum = pgEnum("section_key", [
+  "csi-hero",
+  "deployments",
+  "process",
+  "industries",
+  "services-lead",
+  "work-lead",
+  "selected-work",
+  "case-studies",
+  "people-intro",
+  "the-crew",
+  "careers",
+]);
+
 /* ────────────────────────── gambar ────────────────────────── */
 
 export const images = pgTable("images", {
@@ -1257,6 +1280,53 @@ export const footerSocials = pgTable(
   },
   (t) => [primaryKey({ columns: [t.footerId, t.position] })],
 );
+
+/* ─────────────────────── judul seksi ──────────────────────── */
+
+/**
+ * Judul (dan subteks) tiap seksi situs.
+ *
+ * ‼️ BENTUK KETIGA, setelah tabel berdaftar (jobs, crew, …) dan tabel satu
+ * baris (`vision`, `footer`). Barisnya TETAP sebelas: lahir dari seed, tidak
+ * pernah bertambah, tidak pernah hilang. Editor hanya mengganti kalimatnya.
+ *
+ * Tiga kolom yang ada di tabel berdaftar sengaja TIDAK ada, dan alasannya
+ * berbeda dari `vision`:
+ *
+ * - `state` — seksi berjudul tanpa judul bukan draft, ia cacat. Judul yang
+ *   bisa didraftkan berarti seksi tayang dengan kepala kosong.
+ * - `sortOrder` — urutan seksi milik tata letak halaman, bukan data.
+ * - `deletedAt` — kuncinya dirujuk langsung oleh komponen, jadi tidak ada
+ *   jalur hapus yang boleh dibuka. Kolom yang selalu `null` cuma memberi
+ *   kesan ada pintu yang sebetulnya tidak ada.
+ *
+ * ⚠️ Kenapa `id` uuid PADAHAL `key` sudah unik dan sudah cukup buat query:
+ * `audit_log.entity_id` bertipe uuid. Tanpa id sendiri, riwayat tidak bisa
+ * membedakan perubahan judul CsiHero dari perubahan judul The Crew, dan
+ * `lag(snapshot) partition by entity, entity_id` akan membandingkan dua seksi
+ * yang berlainan. Id ini TIDAK ikut ke `content.json`.
+ */
+export const sectionTexts = pgTable("section_texts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  /** Alamat seksinya, disebut harfiah oleh komponen situs. Unik: satu seksi
+   *  satu baris, dan itulah yang membuat `onConflictDoUpdate` bisa menyimpan
+   *  tanpa membaca dulu. */
+  key: sectionKeyEnum("key").notNull().unique(),
+  /** Judulnya. `\n` memisahkan baris. Boleh kosong HANYA di tingkat database,
+   *  supaya seed dan migrasi tidak butuh nilai; yang mewajibkannya
+   *  `validateSectionText.ts`. */
+  heading: text("heading").notNull().default(""),
+  /** Subteks di bawah judul. Selalu string kosong untuk seksi yang memang
+   *  tidak punya subteks (ditegakkan validator, bukan cuma kebiasaan). */
+  subheading: text("subheading").notNull().default(""),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+});
 
 /* ──────────────────────── akun & sesi ─────────────────────── */
 

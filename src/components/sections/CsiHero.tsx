@@ -1,16 +1,20 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "motion/react";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
+import { sectionHeading, sectionSubheading } from "@/data/sectionTexts";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-const HEADING_LINES = [
-  ["Think", "beyond", "software."],
-  ["Build", "intelligence."],
-];
-
 export default function CsiHero() {
+  /* Dulu `const HEADING_LINES = [...]` di ruang modul. Sekarang judulnya
+     datang dari CMS, dan konstanta ruang modul akan dihitung SEBELUM
+     `loadContent()` selesai — hasilnya isi cadangan yang beku selamanya,
+     tanpa satu pun galat. Panjangnya di `src/data/sectionTexts.ts`. */
+  const baris = useMemo(() => sectionHeading("csi-hero"), []);
+  const paragraf = useMemo(() => sectionSubheading("csi-hero"), []);
+
   return (
     <section
       id="csi"
@@ -68,10 +72,19 @@ export default function CsiHero() {
                  judul 4 baris pada 48px juga persis 192px — "intelligence."
                  terpotong separuh. Pada 36px ia muat dengan sisa napas. */}
           <h2 className="max-w-5xl break-words text-4xl font-semibold tracking-tight text-zinc-100 sm:text-6xl lg:text-7xl">
-            {HEADING_LINES.map((line, lineIdx) => (
+            {baris.map((line, lineIdx) => (
               <span key={lineIdx} className="block">
-                {line.map((word) => (
-                  <FadeUpItem key={word} tag="div" className="mr-[0.2em] inline-block last:mr-0">
+                {/* Dipecah per spasi supaya tiap KATA jadi satu `FadeUpItem`,
+                    dan itu koreografinya: kata-katanya muncul satu per satu.
+                    `key` ikut menyertakan indeksnya karena judul dari CMS
+                    boleh mengulang kata yang sama ("Build ... build"), dan
+                    `key={word}` saja akan kembar. */}
+                {line.split(/\s+/).map((word, wordIdx) => (
+                  <FadeUpItem
+                    key={`${wordIdx}-${word}`}
+                    tag="div"
+                    className="mr-[0.2em] inline-block last:mr-0"
+                  >
                     {word}
                   </FadeUpItem>
                 ))}
@@ -85,21 +98,22 @@ export default function CsiHero() {
             yang dipakai sebagai acuan. Lebih lebar dari itu barisnya jadi
             terlalu panjang untuk dibaca; lebih sempit, paragrafnya memanjang
             jadi enam baris dan mulai terbaca seperti blok teks. */}
-        <motion.p
-          /* mt mobile 18px = standar jarak judul→subteks 28 Agu (sama dengan
-             PeopleIntro); ≥sm kembali ke angka desktop lama. */
-          className="mt-[18px] max-w-3xl text-base leading-relaxed text-zinc-400 sm:mt-8 sm:text-lg"
-          initial={{ opacity: 0, y: 8 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
-        >
-          We build intelligent digital solutions that help businesses,
-          enterprises, and governments innovate, automate, and grow. At cogniti,
-          we believe software should do more than function. It should create
-          value, simplify complexity, and empower organizations to make smarter
-          decisions.
-        </motion.p>
+        {/* Digerbangi, bukan dirender kosong: subteks yang dikosongkan editor
+            lewat CMS harus benar-benar hilang, bukan menyisakan `mt-[18px]`
+            di bawah judul. */}
+        {paragraf.length > 0 && (
+          <motion.p
+            /* mt mobile 18px = standar jarak judul→subteks 28 Agu (sama dengan
+               PeopleIntro); ≥sm kembali ke angka desktop lama. */
+            className="mt-[18px] max-w-3xl text-base leading-relaxed text-zinc-400 sm:mt-8 sm:text-lg"
+            initial={{ opacity: 0, y: 8 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
+          >
+            {paragraf[0]}
+          </motion.p>
+        )}
       </div>
     </section>
   );

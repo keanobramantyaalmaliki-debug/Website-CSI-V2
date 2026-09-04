@@ -30,7 +30,7 @@ export async function resetDb(): Promise<void> {
       work_project_tags, work_projects,
       case_study_scopes, case_studies, service_subs, services,
       testimonials, industries, deployments, vision, process_steps,
-      footer_socials, footer, images, users
+      section_texts, footer_socials, footer, images, users
     restart identity cascade
   `);
 }
@@ -208,6 +208,22 @@ export function footerBody(over: Record<string, unknown> = {}) {
       { label: "Instagram", href: "https://www.instagram.com/cogniti.id/" },
       { label: "LinkedIn", href: "https://www.linkedin.com/company/cogniti/" },
     ],
+    ...over,
+  };
+}
+
+/**
+ * Bentuk judul seksi minimal yang lolos validasi.
+ *
+ * Tanpa `key`: kunci seksinya datang dari alamat (`PUT /api/section-text/:key`),
+ * tidak pernah dari badan permintaan. Isinya sengaja pendek karena tiap seksi
+ * punya batas panjangnya sendiri, dan yang paling ketat cuma 30 karakter
+ * (`the-crew`).
+ */
+export function sectionTextBody(over: Record<string, unknown> = {}) {
+  return {
+    heading: "Judul Baru",
+    subheading: "",
     ...over,
   };
 }

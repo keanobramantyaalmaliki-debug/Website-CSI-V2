@@ -33,6 +33,8 @@ import type { Deployment } from "@shared/deployment";
 import type { ProcessStep } from "@shared/processStep";
 import type { Vision } from "@shared/vision";
 import type { Footer, FooterSocial } from "@shared/footer";
+import type { SectionText } from "@shared/sectionText";
+import { isSectionTextKey } from "@shared/sectionText";
 
 /**
  * Batas tunggu.
@@ -342,6 +344,35 @@ export function contentFooter(): Footer | null {
   }
 
   return { ...row, socials };
+}
+
+/**
+ * Judul seksi dari CMS, atau `null` kalau harus memakai isi bundle.
+ *
+ * ‼️ Larik KOSONG dikembalikan apa adanya, bukan diubah jadi `null`, dan itu
+ * beda dari kelihatannya: judul seksi tidak bisa dihapus, jadi larik kosong
+ * memang berarti "CMS belum bicara". Yang menanganinya `src/data/sectionTexts.ts`,
+ * per-isian — dan penanganan yang sama juga berlaku untuk seksi yang ADA di
+ * larik tapi judulnya kosong. Membedakan keduanya di sini cuma akan
+ * menduplikasi keputusan yang sudah diambil di satu tempat.
+ *
+ * Baris yang bentuknya salah DIBUANG, bukan menggugurkan kesepuluh judul
+ * lain — pola yang sama dengan tautan sosial kaki halaman. Termasuk baris
+ * ber-`key` asing: kunci seksi adalah alamat yang disebut komponen secara
+ * harfiah, jadi yang tidak dikenal tidak punya tempat untuk tampil.
+ */
+export function contentSectionTexts(): SectionText[] | null {
+  const rows = content?.sectionTexts;
+  if (!Array.isArray(rows)) return null;
+
+  const hasil: SectionText[] = [];
+  for (const item of rows) {
+    if (!item || typeof item !== "object") continue;
+    if (!isSectionTextKey(item.key)) continue;
+    if (typeof item.heading !== "string" || typeof item.subheading !== "string") continue;
+    hasil.push({ key: item.key, heading: item.heading, subheading: item.subheading });
+  }
+  return hasil;
 }
 
 /** Kapan konten ini dipublish — dipakai test dan pemeriksaan manual. */

@@ -20,6 +20,7 @@ import testimonialsRoute from "./routes/testimonials";
 import valuesRoute from "./routes/values";
 import visionRoute from "./routes/vision";
 import footerRoute from "./routes/footer";
+import sectionTextRoute from "./routes/sectionText";
 import workProjectsRoute from "./routes/workProjects";
 import servicesRoute from "./routes/services";
 import industriesRoute from "./routes/industries";
@@ -95,6 +96,10 @@ app.use("/api/vision", requireLogin);
    `/*`-nya dipasang untuk endpoint berikutnya. */
 app.use("/api/footer/*", requireLogin);
 app.use("/api/footer", requireLogin);
+/* Judul seksi: `GET /` dan `PUT /:key`. Pasangan `/*`-nya menjaga yang
+   ber-`:key` — tanpa baris itu, seluruh jalur tulisnya terbuka. */
+app.use("/api/section-text/*", requireLogin);
+app.use("/api/section-text", requireLogin);
 /* Riwayat cuma bisa dibaca, tapi tetap digerbangi: isinya justru catatan
    siapa mengubah apa, dan itu bukan sesuatu yang boleh dibaca tamu. */
 app.use("/api/riwayat/*", requireLogin);
@@ -120,6 +125,7 @@ app.route("/api/deployments", deploymentsRoute);
 app.route("/api/process-steps", processStepsRoute);
 app.route("/api/vision", visionRoute);
 app.route("/api/footer", footerRoute);
+app.route("/api/section-text", sectionTextRoute);
 app.route("/api/riwayat", historyRoute);
 app.route("/api/images", imagesRoute);
 app.route("/api/publish", publishRoute);

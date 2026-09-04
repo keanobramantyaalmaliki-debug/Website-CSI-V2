@@ -55,6 +55,7 @@ import {
   jobs,
   peopleValues,
   processSteps,
+  sectionTexts,
   services,
   testimonials,
   vision,
@@ -68,6 +69,7 @@ import { parseFooterInput } from "./routes/footer";
 import { parseIndustryInput } from "./routes/industries";
 import { parseJobInput } from "./routes/jobs";
 import { parseProcessStepInput } from "./routes/processSteps";
+import { parseSectionTextInput } from "./routes/sectionText";
 import { parseServiceInput } from "./routes/services";
 import { parseTestimonialInput } from "./routes/testimonials";
 import { parseValueInput } from "./routes/values";
@@ -91,6 +93,7 @@ import {
   softDeleteProcessStep,
   updateProcessStep,
 } from "./processStepsRepo";
+import { updateSectionTextById } from "./sectionTextRepo";
 import { serviceTitleTaken, softDeleteService, updateService } from "./servicesRepo";
 import { softDeleteTestimonial, testimonialNameTaken, updateTestimonial } from "./testimonialsRepo";
 import { softDeleteValue, updateValue, valueTitleTaken } from "./valuesRepo";
@@ -187,6 +190,56 @@ function tunggal<I>(cfg: {
     capUlang: () => cfg.capUlang(),
   };
 }
+
+/**
+ * Judul seksi: baris tetap yang punya uuid.
+ *
+ * Bentuk ketiga, dan bukan salah satu dari dua di atas. Bukan `berdaftar`
+ * karena barisnya tidak bisa dibuat maupun dihapus — tidak ada cabang
+ * `create`, tidak ada tanda hapus untuk dilepas, dan tidak ada nama kembar
+ * atau batas jumlah yang bisa dilanggar. Bukan `tunggal` karena satu entitas
+ * riwayat menaungi beberapa seksi sekaligus, jadi id barisnya justru yang
+ * menentukan seksi mana yang dipulihkan.
+ *
+ * `hapus` tidak akan pernah terpanggil: cabang itu hanya dimasuki peristiwa
+ * ber-aksi `create`, dan judul seksi tidak pernah mencatatnya (barisnya lahir
+ * dari `db:seed` dengan `published_at` sudah terisi, tanpa baris audit). Ia
+ * menjawab `null` supaya kalaupun suatu saat terpanggil, jawabannya "isinya
+ * sudah tidak ada" alih-alih menghapus baris yang dirujuk komponen situs.
+ */
+function berkunciTetap<I>(cfg: {
+  urai(raw: unknown): I;
+  tulis(id: string, input: I): Promise<unknown>;
+  capUlang(id: string): Promise<void>;
+}): Pemulih {
+  return {
+    berid: true,
+    halangan: () => Promise.resolve(null),
+    tulis: (raw, id) => cfg.tulis(id, cfg.urai(raw)),
+    hapus: () => Promise.resolve(null),
+    bangunkan: () => Promise.resolve(),
+    capUlang: cfg.capUlang,
+  };
+}
+
+/**
+ * Satu pemulih untuk empat entitas riwayat.
+ *
+ * `section_text_home` / `_services` / `_work` / `_people` dipisah semata-mata
+ * supaya tiap baris riwayat bisa menaut ke layar panel yang benar
+ * (`shared/riwayat.ts`). Tabelnya satu dan cara memulihkannya sama persis,
+ * jadi keempatnya menunjuk objek yang sama.
+ */
+const judulSeksi = berkunciTetap({
+  urai: parseSectionTextInput,
+  tulis: updateSectionTextById,
+  capUlang: async (id) => {
+    await db
+      .update(sectionTexts)
+      .set({ updatedAt: CAP_TERAKHIR_TAYANG })
+      .where(eq(sectionTexts.id, id));
+  },
+});
 
 const PEMULIH: Record<string, Pemulih> = {
   job: berdaftar({
@@ -447,6 +500,11 @@ const PEMULIH: Record<string, Pemulih> = {
       await db.update(footer).set({ updatedAt: CAP_TERAKHIR_TAYANG });
     },
   }),
+
+  section_text_home: judulSeksi,
+  section_text_services: judulSeksi,
+  section_text_work: judulSeksi,
+  section_text_people: judulSeksi,
 };
 
 /* ── Membatalkan ──────────────────────────────────────────────────────── */

@@ -7,6 +7,7 @@ import CaseGridMobileStack, {
   type CaseProject,
 } from "@/components/sections/CaseGridMobileStack";
 import { workProjects } from "@/data/work";
+import { sectionHeading } from "@/data/sectionTexts";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -219,6 +220,7 @@ export default function CaseGrid() {
      dihitung saat modulnya diimpor akan membeku pada isi cadangan selamanya —
      tanpa satu pun error. Lihat catatan lengkapnya di `src/data/work.ts`. */
   const projects = useMemo(() => workProjects(), []);
+  const baris = useMemo(() => sectionHeading("selected-work"), []);
   const total = projects.length;
 
   // Re-arms on every `active` change (timer tick or click) — avoids stale closures.
@@ -249,7 +251,11 @@ export default function CaseGrid() {
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-zinc-100 sm:text-3xl">
-            <LineMask>Selected Work</LineMask>
+            {baris.map((line, i) => (
+              <LineMask key={i} delay={i * 0.06}>
+                {line}
+              </LineMask>
+            ))}
           </h2>
         </div>
         <motion.span

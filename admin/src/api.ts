@@ -16,6 +16,7 @@ import type { WorkProject } from "@shared/workProject";
 import type { CaseStudy } from "@shared/caseStudy";
 import type { Service } from "@shared/service";
 import type { Testimonial } from "@shared/testimonial";
+import type { SectionText, SectionTextKey } from "@shared/sectionText";
 import type { Vision } from "@shared/vision";
 import type { Footer } from "@shared/footer";
 import type { ProcessStep } from "@shared/processStep";
@@ -44,6 +45,10 @@ import type {
   TestimonialInput,
 } from "@shared/validateTestimonial";
 import type { ServiceFieldErrors, ServiceInput } from "@shared/validateService";
+import type {
+  SectionTextFieldErrors,
+  SectionTextInput,
+} from "@shared/validateSectionText";
 import type { VisionFieldErrors, VisionInput } from "@shared/validateVision";
 import type { FooterFieldErrors, FooterInput } from "@shared/validateFooter";
 import type {
@@ -121,6 +126,22 @@ export type ServiceRecord = Service & {
   unpublished: boolean;
 };
 
+/**
+ * Judul & subteks satu seksi.
+ *
+ * Bentuk ketiga di berkas ini: PUNYA `id` seperti entitas berdaftar, tapi
+ * tanpa `state` dan tanpa `sortOrder` seperti visi. Idnya bukan untuk
+ * alamat endpoint (yang dipakai `key`), melainkan untuk menautkan baris
+ * riwayat ke barisnya lewat `audit_log.entity_id`.
+ */
+export type SectionTextRecord = SectionText & {
+  id: string;
+  updatedAt: string;
+  publishedAt: string | null;
+  /** Ada perubahan yang belum ikut Publish. */
+  unpublished: boolean;
+};
+
 /** Beda dari tetangganya di atas: tanpa `id`, karena barisnya cuma satu dan
  *  alamatnya endpoint-nya sendiri (`/api/vision`). */
 export type VisionRecord = Vision & {
@@ -177,6 +198,7 @@ export type FieldErrors = JobFieldErrors &
   DeploymentFieldErrors &
   ProcessStepFieldErrors &
   VisionFieldErrors &
+  SectionTextFieldErrors &
   FooterFieldErrors;
 
 async function minta<T>(path: string, init: RequestInit = {}): Promise<Hasil<T>> {
@@ -545,6 +567,33 @@ export const ambilVisi = () => minta<{ vision: VisionRecord | null }>("/api/visi
 export const simpanVisi = (input: VisionInput) =>
   minta<{ vision: VisionRecord }>("/api/vision", kirimJson("PUT", input));
 
+/* ── judul seksi (empat halaman) ────────────────────────────────────── */
+
+/**
+ * Dua fungsi saja, dan bukan karena barisnya satu seperti visi.
+ *
+ * Sebelas barisnya sudah ada sejak `db:seed` dan kuncinya ditutup enum, jadi
+ * yang bisa dilakukan panel cuma membacanya dan menimpa isinya. Tidak ada
+ * `buat` (seksi kedua belas berarti komponen baru di situs), tidak ada
+ * `hapus` (kuncinya dirujuk komponen), tidak ada `urutkan` (urutan seksi
+ * milik tata letak halaman).
+ *
+ * `ambilJudulSeksi()` tidak menerima halaman: yang dikembalikan SEBELAS
+ * baris sekaligus, dan penyaringan per halaman dikerjakan panel lewat
+ * `sectionTextKeys()`. Satu permintaan untuk keempat layar lebih murah
+ * daripada empat endpoint yang membaca tabel yang sama.
+ */
+export const ambilJudulSeksi = () =>
+  minta<{ sectionTexts: SectionTextRecord[] }>("/api/section-text");
+
+/** Kuncinya di ALAMAT, bukan di badan permintaan: badan cuma berisi teksnya,
+ *  jadi tidak ada cara menyimpan judul seksi A ke baris seksi B. */
+export const simpanJudulSeksi = (key: SectionTextKey, input: SectionTextInput) =>
+  minta<{ sectionText: SectionTextRecord }>(
+    `/api/section-text/${key}`,
+    kirimJson("PUT", input),
+  );
+
 /* ── kaki halaman (dasar semua halaman) ─────────────────────────────── */
 
 /**
@@ -587,6 +636,8 @@ export const tayangkan = () =>
     vision: boolean;
     /* Sama: kaki halaman selalu tepat satu. */
     footer: boolean;
+    /* Cacah lagi, bukan boolean: judul seksi ada sebelas baris. */
+    sectionTexts: number;
     generatedAt: string;
     warning: string | null;
   }>(

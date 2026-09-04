@@ -80,14 +80,18 @@ describe("bentuk peta konten", () => {
        sebelum Services, Services sebelum Work, Work sebelum People, dan di
        dalam People nilai dan crew berada di atas lowongan. */
     expect(siap).toEqual([
+      "judul-home",
       "deployment",
       "proses",
       "industri",
       "visi",
+      "judul-services",
       "layanan",
       "testimoni",
+      "judul-work",
       "selected-work",
       "case-study",
+      "judul-people",
       "nilai",
       "crew",
       "lowongan",
@@ -109,10 +113,16 @@ describe("bentuk peta konten", () => {
     const keys = (pageKey: string) =>
       CONTENT_GROUPS.find((p) => p.key === pageKey)!.entries.map((e) => e.key);
 
-    expect(keys("home")).toEqual(["deployment", "proses", "industri", "visi"]);
-    expect(keys("services")).toEqual(["layanan", "testimoni"]);
-    expect(keys("work")).toEqual(["selected-work", "case-study"]);
-    expect(keys("people")).toEqual(["nilai", "crew", "lowongan"]);
+    expect(keys("home")).toEqual([
+      "judul-home",
+      "deployment",
+      "proses",
+      "industri",
+      "visi",
+    ]);
+    expect(keys("services")).toEqual(["judul-services", "layanan", "testimoni"]);
+    expect(keys("work")).toEqual(["judul-work", "selected-work", "case-study"]);
+    expect(keys("people")).toEqual(["judul-people", "nilai", "crew", "lowongan"]);
     expect(keys("footer")).toEqual(["footer"]);
   });
 

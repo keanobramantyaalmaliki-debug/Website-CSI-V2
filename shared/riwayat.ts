@@ -67,6 +67,14 @@ export const LABEL_ENTITAS: Record<string, string> = {
   "process-step": "Cara kerja",
   vision: "Visi",
   footer: "Footer",
+  /* Empat, bukan satu. Tabelnya memang satu (`section_texts`), tapi yang
+     dijawab riwayat bukan "barisnya tinggal di tabel mana" melainkan "buka di
+     layar mana", dan judul seksi tersebar di empat layar panel. Lihat
+     `RUTE_ENTITAS` di bawah. */
+  section_text_home: "Judul seksi Home",
+  section_text_services: "Judul seksi Services",
+  section_text_work: "Judul seksi Work",
+  section_text_people: "Judul seksi People",
   image: "Gambar",
   content: "Publish",
   session: "Masuk panel",
@@ -150,6 +158,10 @@ export const LABEL_ISIAN: Record<string, string> = {
   /* Visi */
   statement: "Kalimat visi",
 
+  /* Judul seksi */
+  heading: "Judul",
+  subheading: "Subteks",
+
   /* Footer */
   address: "Alamat",
   email: "Surel",
@@ -182,6 +194,7 @@ export const LABEL_ISIAN: Record<string, string> = {
   processSteps: "Cara kerja",
   vision: "Visi",
   footer: "Footer",
+  sectionTexts: "Judul seksi",
   generatedAt: "Waktu berkas dibuat",
 
   /* Urutan: `snapshot` endpoint "/urutkan", yang memang cuma berisi daftar
@@ -341,6 +354,10 @@ export const RUTE_ENTITAS: Record<string, string> = {
   "process-step": "proses",
   vision: "visi",
   footer: "footer",
+  section_text_home: "judul-home",
+  section_text_services: "judul-services",
+  section_text_work: "judul-work",
+  section_text_people: "judul-people",
 };
 
 /**
@@ -445,7 +462,7 @@ export function judulIsi(entitas: string, ...isi: unknown[]): string {
     const wilayah = typeof o.region === "string" ? o.region.trim() : "";
     if (sektor) return potong(wilayah ? `${sektor}, ${wilayah}` : sektor);
 
-    for (const kunci of ["title", "name", "statement", "quote", "email"]) {
+    for (const kunci of ["title", "name", "statement", "heading", "quote", "email"]) {
       const v = o[kunci];
       if (typeof v === "string" && v.trim()) return potong(v);
     }

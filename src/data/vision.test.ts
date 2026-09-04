@@ -16,6 +16,7 @@ const kosong = {
   industries: [],
   deployments: [],
   processSteps: [],
+  sectionTexts: [],
   vision: null,
   footer: null,
 };

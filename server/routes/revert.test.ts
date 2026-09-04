@@ -29,6 +29,7 @@ import {
   asEditor,
   loginAsEditor,
   resetDb,
+  sectionTextBody,
   valueBody,
   visionBody,
   type Login,
@@ -315,5 +316,87 @@ describe("permintaan yang ditolak dengan pesan, bukan ditebak", () => {
     const res = await batalkan("value", a.id);
     expect(res.status).toBe(409);
     expect((await daftarNilai()).some((v) => v.id === a.id)).toBe(false);
+  });
+});
+
+/**
+ * Bentuk ketiga: berkunci tetap.
+ *
+ * Judul seksi bukan "daftar" (tidak ada yang bisa dibuat atau dihapus, jadi
+ * tidak ada cabang buang maupun bangunkan) dan bukan "tunggal" (barisnya ber-id,
+ * dan satu entitas riwayat menaungi beberapa baris sekaligus). Karena itu ia
+ * punya pemulihnya sendiri di `pemulih.ts`, dan karena itu pula ia diuji di
+ * sini: satu-satunya cabang yang boleh terjadi adalah "tulis balik isi lama".
+ */
+describe("pembatalan judul seksi", () => {
+  const simpanJudul = (key: string, over: Record<string, unknown> = {}) =>
+    api(`/api/section-text/${key}`, {
+      method: "PUT",
+      body: JSON.stringify(sectionTextBody(over)),
+    });
+
+  const daftarJudul = async () =>
+    (
+      await json<{ sectionTexts: { id: string; key: string; heading: string }[] }>(
+        await api("/api/section-text"),
+      )
+    ).sectionTexts;
+
+  /** Publish palsu untuk tabel ini: gerbang riwayat DAN cap barisnya. */
+  const publishJudul = async () => {
+    await terbitkan();
+    await sql`update section_texts set published_at = now(), updated_at = now()`;
+  };
+
+  it("mengembalikan judul ke isi yang tayang, tanpa menghapus barisnya", async () => {
+    await simpanJudul("csi-hero", { heading: "Judul tayang" });
+    await publishJudul();
+    await simpanJudul("csi-hero", { heading: "Judul salah" });
+
+    const sebelum = (await daftarJudul())[0];
+    const res = await batalkan("section_text_home", sebelum.id);
+    expect(res.status).toBe(200);
+
+    const sesudah = await daftarJudul();
+    /* Barisnya TETAP satu dan ber-id sama: pemulihan judul tidak boleh punya
+       cabang "buang yang belum pernah tayang", karena seksi tanpa judul
+       adalah seksi yang tayang dengan kepala kosong. */
+    expect(sesudah).toHaveLength(1);
+    expect(sesudah[0].id).toBe(sebelum.id);
+    expect(sesudah[0].heading).toBe("Judul tayang");
+  });
+
+  it("mematikan kedua penghitung sekaligus, bilah Publish dan layar Review", async () => {
+    await simpanJudul("csi-hero", { heading: "Judul tayang" });
+    await publishJudul();
+    await simpanJudul("csi-hero", { heading: "Judul salah" });
+
+    const { id } = (await daftarJudul())[0];
+    await batalkan("section_text_home", id);
+
+    expect(await pendingCount()).toBe(0);
+    const { tertahan } = await ambilTertahan();
+    expect(tertahan.filter((t) => t.entitas === "section_text_home")).toEqual([]);
+  });
+
+  /**
+   * Yang dijaga di sini kenapa `updateSectionTextById()` membaca kuncinya dari
+   * BARIS, bukan dari snapshot: dua seksi di halaman yang sama berbagi satu
+   * nama entitas riwayat, jadi salah baca kunci berarti pembatalan judul satu
+   * seksi menimpa judul tetangganya tanpa satu pun galat.
+   */
+  it("hanya seksi yang ditunjuk yang tersentuh, bukan tetangganya sehalaman", async () => {
+    await simpanJudul("csi-hero", { heading: "Hero tayang" });
+    await simpanJudul("deployments", { heading: "Deploy tayang" });
+    await publishJudul();
+    await simpanJudul("csi-hero", { heading: "Hero salah" });
+    await simpanJudul("deployments", { heading: "Deploy salah" });
+
+    const hero = (await daftarJudul()).find((r) => r.key === "csi-hero")!;
+    await batalkan("section_text_home", hero.id);
+
+    const sesudah = await daftarJudul();
+    expect(sesudah.find((r) => r.key === "csi-hero")?.heading).toBe("Hero tayang");
+    expect(sesudah.find((r) => r.key === "deployments")?.heading).toBe("Deploy salah");
   });
 });

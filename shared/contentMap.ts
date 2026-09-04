@@ -86,6 +86,16 @@ export const CONTENT_PAGES: readonly ContentPage[] = [
     summary: "Halaman depan, yang dilihat pengunjung paling pertama.",
     entries: [
       {
+        key: "judul-home",
+        label: "Judul seksi",
+        summary: "Judul besar tiap bagian halaman depan, termasuk kalimat pembuka di bawah kantor 3D.",
+        status: "siap",
+        /* Empat angka judul seksi (4 / 1 / 3 / 3) adalah angka MATI: baris
+           barunya lahir dari `SECTION_TEXT_KEYS`, bukan dari tombol Tambah.
+           Bertambah hanya kalau ada seksi berjudul baru di situs. */
+        approxCount: 4,
+      },
+      {
         key: "deployment",
         label: "Deployment",
         summary: "Sistem yang sudah berjalan, dikelompokkan per sektor dan wilayah.",
@@ -131,6 +141,13 @@ export const CONTENT_PAGES: readonly ContentPage[] = [
     summary: "Bedah layanan, satu-satunya tempat rincian layanan ditulis.",
     entries: [
       {
+        key: "judul-services",
+        label: "Judul seksi",
+        summary: "Judul dan paragraf pembuka halaman Services.",
+        status: "siap",
+        approxCount: 1,
+      },
+      {
         key: "layanan",
         label: "Layanan",
         summary: "Daftar layanan yang bisa dibuka satu per satu, beserta rinciannya.",
@@ -160,6 +177,13 @@ export const CONTENT_PAGES: readonly ContentPage[] = [
        buka /work sampai bawah — tidak ada wajah dan nama di sana. */
     entries: [
       {
+        key: "judul-work",
+        label: "Judul seksi",
+        summary: "Judul pembuka halaman Work, plus judul di atas dua daftar proyeknya.",
+        status: "siap",
+        approxCount: 3,
+      },
+      {
         key: "selected-work",
         label: "Selected work",
         summary:
@@ -183,6 +207,13 @@ export const CONTENT_PAGES: readonly ContentPage[] = [
     path: "/people",
     summary: "Orang-orangnya: tim, nilai yang dipegang, dan lowongan yang dibuka.",
     entries: [
+      {
+        key: "judul-people",
+        label: "Judul seksi",
+        summary: "Judul pembuka halaman People, plus judul di atas daftar orang dan lowongan.",
+        status: "siap",
+        approxCount: 3,
+      },
       {
         key: "nilai",
         label: "Nilai",

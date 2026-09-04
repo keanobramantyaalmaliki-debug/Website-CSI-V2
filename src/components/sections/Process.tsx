@@ -11,6 +11,7 @@ import {
 import LineMask from "@/components/motion/LineMask";
 import { PROCESS_GLYPHS_BY_KEY } from "@/components/motion/ProcessGlyphs";
 import { processSteps, type ProcessStepContent } from "@/data/processSteps";
+import { sectionHeading } from "@/data/sectionTexts";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -387,6 +388,16 @@ function ProcessSection({ steps }: { steps: ProcessStepContent[] }) {
   const [lit, setLit] = useState(0);
   const reduced = !!useReducedMotion();
 
+  /* `join(" ")`, bukan satu `LineMask` per baris seperti section lain, dan
+     itu bukan penyeragaman yang terlewat: geometri tali diukur DARI judul ini
+     (`useLayoutEffect` di bawah). `startY`/`textClearY` datang dari kotak h2,
+     dan `diveX` dari sebuah `Range` atas simpul teks PERTAMA di dalamnya —
+     jadi baris kedua akan membuat tali menukik memakai lebar baris pertama
+     saja, dan menyilang teksnya. Validator sudah menolak judul dua baris di
+     seksi ini (`maksBaris: 1`); baris ini penjaga keduanya, supaya judul dari
+     database lama yang terlanjur bernewline tetap jadi satu simpul teks. */
+  const judul = useMemo(() => sectionHeading("process").join(" "), []);
+
   useLayoutEffect(() => {
     const wrap = wrapRef.current;
     if (!wrap) return;
@@ -506,7 +517,7 @@ function ProcessSection({ steps }: { steps: ProcessStepContent[] }) {
         ref={headingRef}
         className="max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl"
       >
-        <LineMask>How We Work</LineMask>
+        <LineMask>{judul}</LineMask>
       </h2>
 
       <div ref={wrapRef} className="relative mt-10 sm:mt-16">

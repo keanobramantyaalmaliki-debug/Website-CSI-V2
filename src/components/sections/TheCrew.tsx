@@ -7,6 +7,7 @@ import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 import CrewAvatar from "@/components/sections/CrewAvatar";
 import TheCrewMobileCarousel from "@/components/sections/TheCrewMobileCarousel";
 import { crew } from "@/data/people";
+import { sectionHeading } from "@/data/sectionTexts";
 import type { TeamMember } from "@/data/people";
 
 /** Departemen tampil dalam urutan hierarki ini, bukan urutan abjad. */
@@ -150,6 +151,7 @@ export default function TheCrew() {
      dihitungnya, dari saat impor jadi saat render pertama. Itulah seluruh
      perbaikannya. */
   const GROUPED = useMemo(() => kelompokkan(crew()), []);
+  const baris = useMemo(() => sectionHeading("the-crew"), []);
 
   /* Dinding foto & korsel HP memakai urutan yang sama dengan daftar kiri,
      supaya hover di satu sisi menunjuk kotak yang sejajar di sisi lain. */
@@ -192,7 +194,11 @@ export default function TheCrew() {
         <div aria-hidden="true" className="hidden lg:block" />
         <div className="flex items-baseline justify-between gap-4">
           <h2 className="text-[clamp(2.5rem,6vw,5rem)] font-semibold leading-[0.95] tracking-tight text-zinc-100">
-            <LineMask>The Crew</LineMask>
+            {baris.map((line, i) => (
+              <LineMask key={i} delay={i * 0.06}>
+                {line}
+              </LineMask>
+            ))}
           </h2>
           {/* Angkanya berdiri sendiri, tanpa kata "people": pada masthead
               seperti ini angka di sebelah "The Crew" sudah terbaca sebagai
