@@ -300,7 +300,7 @@ async function main() {
 
   /* 5 — publish selagi masih draf: tidak boleh ikut terangkut */
   await jalan(`__klik("Publish")`);
-  await tunggu(`__teks().includes("Sudah tayang")`, "kabar publish");
+  await tunggu(`__teks().includes("Sudah terpublish")`, "kabar publish");
   if ((await judulTayang()).includes(JUDUL)) {
     throw new Error("draf ikut masuk content.json — gerbang state bocor");
   }
@@ -324,7 +324,7 @@ async function main() {
   await jalan(BEKAL);
   await tunggu(`__teks().includes("perubahan belum terpublish")`, "angka belum terpublish");
   await jalan(`__klik("Publish")`);
-  await tunggu(`__teks().includes("Sudah tayang")`, "kabar publish");
+  await tunggu(`__teks().includes("Sudah terpublish")`, "kabar publish");
 
   const tayang = await konten();
   const terbit = tayang.values.find((v) => v.title === JUDUL);
@@ -352,7 +352,7 @@ async function main() {
   lapor("memindahkan baris menyalakan badge 'belum terpublish'");
 
   await jalan(`__klik("Publish")`);
-  await tunggu(`__teks().includes("Sudah tayang")`, "kabar publish");
+  await tunggu(`__teks().includes("Sudah terpublish")`, "kabar publish");
   const sesudahUrut = await judulTayang();
   const posisiLama = sebelumUrut.indexOf(JUDUL);
   const posisiBaru = sesudahUrut.indexOf(JUDUL);
@@ -434,7 +434,7 @@ async function main() {
   await tunggu(`!__judul().includes(${JSON.stringify(JUDUL)})`, "baris hilang dari daftar");
   await jalan(BEKAL);
   await jalan(`__klik("Publish")`);
-  await tunggu(`__teks().includes("Sudah tayang")`, "kabar publish");
+  await tunggu(`__teks().includes("Sudah terpublish")`, "kabar publish");
   if ((await judulTayang()).includes(JUDUL)) {
     throw new Error("nilai terhapus masih ada di content.json");
   }

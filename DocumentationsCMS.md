@@ -4,7 +4,7 @@ Dokumentasi CMS buatan sendiri untuk **cogniti.id**: Postgres + API + panel admi
 berbahasa Indonesia. Dokumentasi situsnya (3D, section, performa) ada di berkas
 terpisah, `Documentations.md` — dua berkas ini sengaja tidak dicampur.
 
-Terakhir diupdate: **3 September 2026**.
+Terakhir diupdate: **4 September 2026**.
 
 **Status ringkas:** **KONTEN SELESAI SELURUHNYA — dua belas entitas, semuanya
 terverifikasi di lokal.** Lowongan, nilai ("What We Stand For"), dan crew ("The
@@ -13,17 +13,26 @@ Crew") di halaman People; **Selected work** dan **case study** di halaman Work;
 kerja** ("How We Work"), **industri** ("Built Across Sectors"), dan **visi** di
 halaman depan; dan yang terakhir **footer** — kaki halaman yang ikut SEMUA
 halaman sekaligus. Tidak ada lagi entri berstatus `belum` di panel.
-Yang tersisa cuma deploy ke VPS.
+Sesudah itu, 4 September menambah empat hal yang bukan entitas konten baru:
+**judul & subteks 11 seksi situs** ikut masuk CMS (bentuk entitas ketiga,
+"berkunci tetap" — §4b, §11), panel dapat layar **Riwayat** dan **Review**
+berikut **pembatalan perubahan per benda** (§11d), dan panel **pindah ke
+`<host>/admin`** — satu port dengan situsnya, rute path yang bisa dibookmark
+(§11c, §12, §12a); `bun dev` kini menyalakan panelnya OTOMATIS (§12).
+Yang tersisa cuma deploy ke VPS — panduan urutnya di §17.
 
-- Cabang: `feat/cms-lowongan` (`main` 31 Agu sudah di-merge masuk lewat `99937f5`)
-- Kode CMS-nya sendiri: **123 berkas, ~26.700 baris** di `shared/` + `server/` +
-  `admin/src/` (di luar SQL & snapshot migrasi) — panel adminnya saja ~7.800 baris
-- Test: `bun run test` → **98 berkas, 1.051 test hijau** (632 di antaranya milik CMS)
-- Tiga belas probe end-to-end lewat Brave: `probe-admin`, `probe-nilai-admin`,
+- Cabang: `feat/cms-lowongan`; `main` sudah memuat SEMUANYA lewat merge
+  `38c0fc7` (4 Sep) — deploy dari `main`
+- Kode CMS-nya sendiri: **145 berkas, ~33.500 baris** di `shared/` + `server/` +
+  `admin/src/` (di luar SQL & snapshot migrasi) — panel adminnya saja ~10.100 baris
+- Test: `bun run test` → **104 berkas, 1.182 test hijau** (761 di antaranya milik CMS)
+- Tujuh belas probe end-to-end lewat Brave: `probe-admin`, `probe-nilai-admin`,
   `probe-crew-admin`, `probe-proyek-admin`, `probe-case-study-admin`,
   `probe-layanan-admin`, `probe-testimoni-admin`, `probe-industri-admin`,
   `probe-visi-admin`, `probe-deployment-admin`, `probe-proses-admin`,
-  `probe-tema-admin`, `probe-job-page`
+  `probe-tema-admin`, `probe-job-page`, dan empat yang baru:
+  `probe-riwayat-admin`, `probe-review-admin`, `probe-judul-seksi-admin`,
+  `probe-admin-path`
 
 Yang berubah sejak slice pertama, selain delapan entitas baru: **masuk kini
 dengan kata sandi saja** (§7), panel punya **beranda dari peta konten situs**
@@ -59,6 +68,21 @@ dari Postgres.app ke **Docker** (colima, container `cogniti-postgres`), dan
 karena jam VM Docker boleh beda dari jam host, semua cap waktu yang dulu diisi
 `new Date()` dari Node kini lewat `dbNow()` = `` sql`now()` `` — jam database
 sendiri (§12, dua gotcha barunya di §14).
+
+Batch 4 September menutup pekerjaan pra-deploy dalam empat langkah. **Riwayat &
+Review** (§11d) menghidupkan `audit_log` yang selama ini cuma bisa dibaca lewat
+psql: Riwayat menampilkan yang SUDAH terpublish, Review menampilkan yang
+MENUNGGU — lengkap dengan banding Sebelum/Sesudah dan tombol **Batalkan** per
+benda (`server/pemulih.ts`). **Judul seksi** memindahkan 11 pasang
+judul+subteks dari literal `.tsx` ke tabel `section_texts` — bentuk entitas
+KETIGA sesudah "daftar" dan "tunggal": baris tetap, boleh diubah, tidak bisa
+ditambah/dihapus/diurutkan (§4b). **Panel pindah ke `/admin`** — build-nya
+masuk `dist/admin/` sehingga produksi tetap satu proses `serve dist/`, rutenya
+path sungguhan (`/admin/crew/ubah/<id>`) yang dijaga `public/serve.json`
+(§12a), dan **`bun dev` menyalakan panel otomatis** lewat plugin
+`bootAdminPanel` di `vite.config.ts` — satu perintah, satu port, dua app
+(§12). Terakhir, `main` menerima merge penuhnya (`38c0fc7`) supaya deploy
+tinggal menarik satu cabang.
 
 ---
 
@@ -146,9 +170,11 @@ Website CSI V2/
 │   ├── data/vision.ts           baca store, cadangan PER ISIAN (§10a)
 │   ├── data/footer.ts           baca store, cadangan PER ISIAN — dipakai
 │   │                            SiteFooter DAN menu HP navbar (§10c)
+│   ├── data/sectionTexts.ts     sectionText/-Heading/-Subheading(key) —
+│   │                            judul 11 seksi, cadangan PER ISIAN (§10b)
 │   └── data/{jobs,careerRoles,crew,values,workProjects,caseStudies,
 │             services,testimonials,industries,deployments,processSteps,
-│             vision,footer}Fallback.ts
+│             vision,footer,sectionTexts}Fallback.ts
 ├── shared/             tipe & validasi dipakai bertiga
 │   ├── content.ts               ContentPayload + CONTENT_VERSION
 │   ├── contentMap.ts            peta konten situs → beranda & menu sisi panel
@@ -163,11 +189,14 @@ Website CSI V2/
 │   ├── deployment.ts  · validateDeployment.ts
 │   ├── processStep.ts · validateProcessStep.ts (+ MAX_LIVE_PROCESS_STEPS — §4b)
 │   ├── vision.ts      · validateVision.ts
-│   └── footer.ts      · validateFooter.ts
+│   ├── footer.ts      · validateFooter.ts
+│   ├── sectionText.ts · validateSectionText.ts  (11 kunci + batas layout — §4b)
+│   └── riwayat.ts               label, banding, & pengelompokan audit_log —
+│                                dipakai panel, server, DAN pemulih (§11d)
 ├── server/             API + Postgres, proses Node terpisah
 │   ├── app.ts / index.ts        rakit app · buka port
-│   ├── db/schema.ts             24 tabel Drizzle
-│   ├── db/migrations/           SQL hasil drizzle-kit (0000 → 0012)
+│   ├── db/schema.ts             25 tabel Drizzle
+│   ├── db/migrations/           SQL hasil drizzle-kit (0000 → 0013)
 │   ├── db/now.ts                dbNow() = sql`now()` — jam DB, bukan jam host (§14)
 │   ├── db/seed.ts               isi DB dari literal repo, sekali jalan per tabel
 │   ├── jobsRepo.ts              transaksi 4 tabel
@@ -182,15 +211,17 @@ Website CSI V2/
 │   ├── processStepsRepo.ts      satu baris + reorder + hitung batas 6
 │   ├── visionRepo.ts            SATU BARIS HARFIAH — upsert, tanpa daftar (§4b)
 │   ├── footerRepo.ts            satu baris + tabel anak sosial, SATU transaksi (§6a)
+│   ├── sectionTextRepo.ts       11 baris berkunci tetap — upsert per key (§4b)
+│   ├── pemulih.ts               pembatalan per benda dari layar Review (§11d)
 │   ├── routes/{auth,jobs,values,crew,workProjects,caseStudies,
 │   │           services,testimonials,industries,deployments,processSteps,
-│   │           vision,footer,images,publish}.ts
+│   │           vision,footer,sectionText,history,revert,images,publish}.ts
 │   ├── auth.ts · audit.ts · images.ts · publish.ts · env.ts
 │   ├── createUser.ts            bikin akun editor dari terminal
 │   └── tsconfig.json            WAJIB — lihat §3a
-├── admin/              panel editor, app Vite KEDUA → dist-admin/
+├── admin/              panel editor, app Vite KEDUA → dist/admin/ (§12a)
 │   ├── index.html               + skrip anti-kedip tema (§11a)
-│   ├── vite.config.ts           root + cacheDir + base + proxy
+│   ├── vite.config.ts           root + cacheDir + base "/admin/" + proxy
 │   └── src/
 │       ├── App.tsx · Beranda.tsx · Sidebar.tsx · Masuk.tsx
 │       ├── DaftarLowongan · FormLowongan
@@ -205,6 +236,8 @@ Website CSI V2/
 │       ├── DaftarProses   · FormProses       (Cara kerja)
 │       ├── FormVisi                          (tanpa Daftar — §11)
 │       ├── FormFooter                        (tanpa Daftar juga — §11)
+│       ├── DaftarJudulSeksi · FormJudulSeksi (berkunci tetap — §4b, §11)
+│       ├── Riwayat · Review · Banding        (atas audit_log — §11d)
 │       ├── PemilihFoto · BarPublish · Tema.tsx
 │       └── ui.tsx · api.ts · styles.css
 └── uploads/            gambar unggahan (di luar git)
@@ -300,6 +333,10 @@ footer
 footer_socials      (footer_id, position) PK · label, href
                      label TEKS BEBAS, bukan enum — beda dari crew_socials (§4b)
 
+section_texts       id (uuid), key (enum section_key — 11 seksi, unique),
+                    heading, subheading, created_at, updated_at, published_at
+                    ← tanpa state, sort_order, deleted_at: berkunci tetap (§4b)
+
 images              id, path (unique), source (static|upload),
                     original_name, width, height, bytes
 users               id, email (unique), password_hash, name, deleted_at
@@ -311,7 +348,7 @@ Enum Postgres sungguhan, bukan `text` + konvensi: `job_state`, `lang`,
 `bullet_kind`, `image_source`, `value_state`, `crew_state`, `crew_category`,
 `social_platform`, `work_project_state`, `case_study_state`, `service_state`,
 `testimonial_state`, `industry_state`, `industry_tier`, `deployment_state`,
-`process_step_state`, `process_glyph`.
+`process_step_state`, `process_glyph`, `section_key`.
 
 ### §4a Pola yang dipakai ulang antar entitas
 
@@ -612,8 +649,25 @@ akan terlupa. Awalan `people_` sekaligus menjawab "nilai yang mana".
 tabel anak cuma menambah satu nilai enum; lewat kolom ia menambah kolom yang
 kosong untuk hampir semua baris.
 
+**`section_texts` bentuk entitas KETIGA: "berkunci tetap".** Sesudah "daftar"
+(lowongan dkk.) dan "tunggal" (visi, footer): baris-barisnya TETAP — 11 kunci
+dari enum `section_key`, satu per seksi situs yang judulnya bisa diubah — boleh
+disunting tapi tidak bisa ditambah, dihapus, atau diurutkan. Konsekuensi
+turunannya konsisten: tabel tanpa `state`/`sort_order`/`deleted_at`, daftar
+panel tanpa kolom Status dan tanpa tombol Tambah/Hapus/Naikkan, route tanpa
+POST/DELETE/`urutkan`, dan pemulih Riwayat dapat varian sendiri yang tidak
+pernah menghapus baris (§11d). Dua keputusan yang tidak kelihatan dari kode:
+barisnya tetap ber-`id` uuid padahal `key` sudah unik — semata karena
+`audit_log.entity_id` bertipe uuid, dan tautan "Buka" di Riwayat/Review
+dibangun dari `entity_id`; dan nama entitas auditnya EMPAT
+(`section_text_home/_services/_work/_people`), bukan satu, supaya `RUTE_ENTITAS`
+bisa mengantar ke empat menu panel yang berbeda. Batas panjang judulnya angka
+LAYOUT, bukan angka bulat — lihat komentar "intelligence." meluber di 360px di
+`CsiHero.tsx` (§5).
+
 Belajarnya kena di: relasi 1-N, PK gabungan, kolom terurut, enum, soft delete,
-unique index parsial, jsonb, dan transaksi.
+unique index parsial, jsonb, transaksi, dan window function (`lag()` di
+riwayat, §11d).
 
 ### §4c Seed sekali jalan, digerbangi PER TABEL
 
@@ -714,6 +768,16 @@ maksimal 6.
 **Cara kerja:** judul langkah 40 · kicker 18 · penjelasan 180.
 
 **Visi:** kalimat 400.
+
+**Judul seksi:** batasnya PER KUNCI, dari `SECTION_TEXT_META` di
+`shared/sectionText.ts` — bukan satu angka untuk sebelas seksi. Tiga contoh
+yang menunjukkan rentangnya: `csi-hero` judul 90 dalam maksimal **2 baris** +
+subteks 400; `the-crew` judul 30 **satu baris** tanpa subteks; `people-intro`
+satu-satunya yang subteksnya boleh 2 paragraf. Baris dihitung sungguhan
+(`maksBaris` — textarea-nya memang menerima Enter untuk judul yang patah dua),
+dan **subteks yang dikirim ke seksi ber-`adaSub: false` DITOLAK bersuara**,
+bukan dibuang diam-diam — isiannya juga tidak dirender di form, jadi kalau
+sampai terkirim itu bug pemanggil, bukan salah ketik editor (§4b).
 
 **Footer:** surel 120 · alamat 160 · baris hak cipta 160 · tulisan tautan 40 ·
 alamat tautan 400 — **tanpa batas JUMLAH tautan**, sengaja: barisnya
@@ -1007,6 +1071,20 @@ GET    /api/footer                { footer } — null kalau barisnya belum ada
 PUT    /api/footer                upsert baris 1 + tulis ulang tautan sosial;
                                   TIDAK ada POST/DELETE/urutkan/:id
 
+GET    /api/section-text          { sectionTexts } — semua 11 baris, urut
+                                  SECTION_TEXT_KEYS (bukan urutan DB)
+PUT    /api/section-text/:key     upsert per kunci — kunci di URL, BUKAN body;
+                                  404 kunci di luar enum; TIDAK ada
+                                  POST/DELETE/urutkan (berkunci tetap, §4b)
+
+GET    /api/riwayat               ?entitas=&limit=(30, maks 100)&lewati= →
+                                  { riwayat, adaLagi, jenis } — hanya yang
+                                  SUDAH terpublish (§11d)
+GET    /api/riwayat/tertahan      { tertahan, terpotong } — yang MENUNGGU
+                                  publish, maks 500 (§11d)
+POST   /api/batal                 { entitas, entitasId|null } → batalkan satu
+                                  benda; 400/404/409 dengan kalimat (§11d)
+
 GET    /api/images
 POST   /api/images           multipart → resize + WebP
 
@@ -1028,7 +1106,8 @@ tiba-tiba kosong.
 prefix `/api/jobs`, `/api/values`, `/api/crew`, `/api/projects`,
 `/api/case-studies`, `/api/services`, `/api/testimonials`, `/api/industries`,
 `/api/deployments`, `/api/process-steps`,
-`/api/vision`, `/api/footer`, `/api/images`,
+`/api/vision`, `/api/footer`, `/api/section-text`, `/api/riwayat`,
+`/api/batal`, `/api/images`,
 `/api/publish` — bukan ditempel per handler. Visi dan footer belum punya route
 anak (cuma `GET /` dan `PUT /`), tapi pasangan `/*`-nya tetap dipasang seperti
 yang lain: itulah yang membuat endpoint berikutnya lahir sudah terjaga. Penjaga yang ditempel satu per satu akan terlewat
@@ -1282,18 +1361,21 @@ nilai atau crew tersimpan tanpa `photoId`.
    sekaligus** (`Promise.all`) → rakit `ContentPayload`
    (`{ version: 1, generatedAt, jobs, values, crew, projects, caseStudies,
    services, testimonials, industries, deployments, processSteps, vision,
-   footer }`). Empat field bentuknya
+   footer, sectionTexts }`). Lima field bentuknya
    menyimpang: `industries` dan `processSteps` daftar biasa tapi panjangnya
    PALING BANYAK 13 dan 6
-   (§4b), dan `vision` serta `footer` **satu objek, bukan larik** — dua
+   (§4b), `vision` serta `footer` **satu objek, bukan larik** — dua
    satu-satunya field yang boleh `null`, artinya "barisnya belum ada di
-   database, situs pakai isi bundle".
+   database, situs pakai isi bundle" — dan `sectionTexts` daftar berkunci:
+   maksimal 11 objek `{ key, heading, subheading }`, satu per kunci, tanpa
+   status yang bisa menahannya; kunci yang belum punya baris dilewati dan
+   situs memakai cadangan per-isiannya (§4b, §10b).
 2. **Tulis atomik** ke `dist/content.json`: tulis ke `content.json.tmp-<pid>` di
    direktori yang sama, lalu `rename`. `rename` dalam satu filesystem bersifat
    atomik di tingkat OS, jadi pengunjung tidak pernah membaca berkas setengah
    tertulis.
-3. Tandai `published_at` di kedua belas tabel — **sesudah** berkasnya
-   benar-benar tertulis. (Untuk `vision` dan `footer` update-nya tanpa
+3. Tandai `published_at` di ketiga belas tabel (`section_texts` ikut) —
+   **sesudah** berkasnya benar-benar tertulis. (Untuk `vision` dan `footer` update-nya tanpa
    `where`: tabelnya memang cuma boleh punya satu baris, dan kalau barisnya
    belum ada, tidak menyentuh apa pun adalah jawaban yang benar.) Menandai lebih dulu lalu gagal menulis akan memadamkan badge "belum
    tayang" untuk perubahan yang sebenarnya tidak pernah tayang.
@@ -1474,10 +1556,19 @@ src/data/deployments.ts  deployments()
 src/data/processSteps.ts processSteps()
 src/data/vision.ts       vision()
 src/data/footer.ts       footer()
+src/data/sectionTexts.ts sectionText(key) · sectionHeading(key) · sectionSubheading(key)
 ```
 
 Semuanya memanggil `content*()`; kalau `null`, mereka mengembalikan
-`FALLBACK_*` dari `src/data/*Fallback.ts`. `footer()` (seperti `vision()`)
+`FALLBACK_*` dari `src/data/*Fallback.ts`. `sectionTexts.ts` pembaca yang
+paling banyak pemanggilnya: **sebelas komponen section** (`CsiHero`,
+`Deployments`, `Process`, `Industries`, `Office`, `MeetingLead`, `CaseGrid`,
+`CaseStudySpotlight`, `PeopleIntro`, `TheCrew`, `Careers`) memanggil
+`sectionHeading("<key>")`-nya masing-masing **dari dalam komponen lewat
+`useMemo`** — bukan konstanta modul, gotcha 🔥 di bawah berlaku persis di sini.
+Cadangannya PER ISIAN seperti visi: judul kosong dari CMS jatuh ke cadangan
+(seksi tanpa judul tidak pernah jadi keadaan yang sah), tapi **subteks kosong
+DIHORMATI** — mengosongkan subteks adalah suntingan yang sah. `footer()` (seperti `vision()`)
 **tidak pernah mengembalikan `null`** — kaki halaman ikut setiap halaman
 situs, jadi tidak ada keadaan "halaman tanpa kaki halaman" yang bisa dicapai
 lewat data. `footerFallback.ts` juga dibaca `server/db/seed.ts` dari Node,
@@ -1638,10 +1729,14 @@ Bahasa Indonesia, hitam-putih, tanpa animasi, tanpa framework UI.
 | `FormDeployment` | sektor, wilayah, keterangan, foto kartu, status — pasangan kembar ditolak di isian Wilayah (§4b) |
 | `DaftarProses` | # · Judul langkah · Ilustrasi · Status · Terakhir diubah, plus **Naikkan/Turunkan**; tombol **Tambah mati saat 6 langkah Live** (§4b) |
 | `FormProses` | judul, kicker, penjelasan, pemilih ilustrasi (radio 6 gambar bernama — "Radar", "Artboard", …), status — tanpa unggah foto |
-| `FormVisi` | kalimat visi + foto — TANPA daftar di depannya, tanpa Tambah/Hapus/Naikkan/Draft (§4b); `#/visi` langsung membuka form |
-| `FormFooter` | surel, alamat, baris hak cipta, dan daftar tautan sosial (tulisan + alamat per baris, urutan baris = urutan tampil) — TANPA daftar di depannya juga (§4b); `#/footer` langsung membuka form; baris tautan yang dua-duanya kosong dibuang saat simpan (§5b) |
+| `FormVisi` | kalimat visi + foto — TANPA daftar di depannya, tanpa Tambah/Hapus/Naikkan/Draft (§4b); `/admin/visi` langsung membuka form |
+| `FormFooter` | surel, alamat, baris hak cipta, dan daftar tautan sosial (tulisan + alamat per baris, urutan baris = urutan tampil) — TANPA daftar di depannya juga (§4b); `/admin/footer` langsung membuka form; baris tautan yang dua-duanya kosong dibuang saat simpan (§5b) |
+| `DaftarJudulSeksi` | # · Bagian · Judul · Subteks · Terakhir diubah — TANPA Tambah/Hapus/Naikkan dan TANPA kolom Status (berkunci tetap, §4b); SATU daftar per halaman navbar, entri "Judul seksi" di keempat kelompok menu |
+| `FormJudulSeksi` | textarea judul (petunjuk batas baris & huruf PER SEKSI dari `SECTION_TEXT_META`) + textarea subteks HANYA untuk seksi ber-`adaSub` (§5) |
+| `Riwayat` | perubahan yang SUDAH terpublish: Waktu · Siapa · Konten · Yang terjadi, banding Sebelum/Sesudah per baris, penyaring jenis konten, "Muat lebih banyak" per 30 (§11d) |
+| `Review` | perubahan yang MENUNGGU publish, dihitung per BENDA: banding, tombol "Buka" ke formnya, dan **Batalkan** per benda (§11d) |
 | `PemilihFoto` | grid foto lama + unggah baru — dipakai delapan form yang bergambar (§8), label & petunjuknya bisa diganti per form |
-| `BarPublish` | menetap di bawah: "N perubahan belum terpublish" + tombol Publish |
+| `BarPublish` | menetap di bawah: "N perubahan belum terpublish" + tombol **Review** di sebelah tombol **Publish** — Review sengaja TIDAK dimatikan saat 0, layar kosongnya sendiri sudah menjelaskan (§11d) |
 | `Tema` | tombol terang/gelap di kepala panel (§11a) |
 
 Yang bikin ramah non-teknis: **tidak ada Markdown, tidak ada field JSON, tidak ada
@@ -1683,12 +1778,17 @@ perlu bisa membedakan "tidak ada di panel karena belum dibuat" dari "tidak ada d
 panel karena saya tidak menemukannya"; yang kedua berakhir jadi pertanyaan ke
 developer, yang pertama tidak.
 
-Hari ini **SEMUA 12 entri berstatus `siap`** — sejak footer masuk, tidak ada
+Hari ini **SEMUA 16 entri berstatus `siap`** — sejak footer masuk tidak ada
 `belum` yang tersisa (aturan menampilkannya tetap berlaku untuk entitas yang
-mungkin lahir nanti). Keempat entri halaman Home (Deployment, Cara kerja,
-Industri, Visi) urut mengikuti urutan section di situsnya; Nilai, Crew, dan
-Lowongan di halaman People; Selected work dan Case study di halaman Work;
-Layanan dan Testimoni di halaman Services; Footer kelompoknya sendiri.
+mungkin lahir nanti), dan slice judul seksi menambah EMPAT entri berlabel sama,
+**"Judul seksi"**, satu di tiap halaman navbar (`judul-home` ▸ 4 bagian,
+`judul-services` ▸ 1, `judul-work` ▸ 3, `judul-people` ▸ 3) — dipisah per
+halaman, bukan satu entri global, karena editor mencari judul "Built Across
+Sectors" di Home, tempat ia melihatnya. Kelima entri halaman Home (Judul
+seksi, Deployment, Cara kerja, Industri, Visi) urut mengikuti urutan section di
+situsnya; Nilai, Crew, Lowongan, plus Judul seksinya di halaman People;
+Selected work, Case study, dan Judul seksi di halaman Work; Layanan,
+Testimoni, dan Judul seksi di halaman Services; Footer kelompoknya sendiri.
 
 Kelompok Footer satu-satunya yang ditandai **`langsung: true`**: isinya cuma
 dirinya sendiri (entri `footer`, berlabel sama dengan kelompoknya), jadi menu
@@ -1715,16 +1815,18 @@ bagian footer yang bisa berubah jumlahnya.
 > yang tidak ada — dan tidak ada yang meneriakkannya.
 
 `bacaRute()` memeriksa `status === "siap"` untuk **semua bentuk rute**, bukan cuma
-daftar. Sejak ada entitas kedua, `#/apa-saja/baru` yang lolos akan membuka form
-lowongan dengan alamat yang menjanjikan hal lain.
+daftar. Sejak ada entitas kedua, `/admin/apa-saja/baru` yang lolos akan membuka
+form lowongan dengan alamat yang menjanjikan hal lain.
 
 Sejak visi masuk, `bacaRute()` juga mengenal **entitas tanpa daftar**
-(`tanpaDaftar()` — kini `visi` DAN `footer`): bentuk `#/visi/baru` dan
-`#/visi/ubah/<id>` tidak punya arti untuk entitas satu baris, dan tanpa
+(`tanpaDaftar()` — kini `visi` DAN `footer`): bentuk `/admin/visi/baru` dan
+`/admin/visi/ubah/<id>` tidak punya arti untuk entitas satu baris, dan tanpa
 pengecualian ini keduanya SAH menurut penjaga `siap()` lalu jatuh ke ujung
 rantai pemilihan komponen — form LOWONGAN, di alamat yang menjanjikan visi.
-Keduanya kini dinormalkan ke layar `#/visi`, dan `#/footer/…` diperlakukan
-sama. Kalimat status visi di beranda
+Keduanya kini dinormalkan ke layar `/admin/visi`, dan `/admin/footer/…`
+diperlakukan sama; judul seksi punya pengecualian saudaranya, `tanpaTambah()` —
+`/admin/judul-home/baru` jatuh ke daftarnya, bukan ke form lowongan (§4b).
+Kalimat status visi di beranda
 juga tidak lewat `ringkas()`: jumlahnya selalu satu dan tidak ada draf, jadi
 yang dilaporkan cuma "Belum terisi, situs memakai kalimat bawaan." atau
 "Terisi(, belum terpublish)".
@@ -1793,8 +1895,20 @@ kedipan yang mau dihindari ini terjadi.
 
 ### §11c Detail lain yang gampang terlewat
 
-Rute pakai **hash** (`#/`, `#/nilai`, `#/crew/baru`, `#/lowongan/ubah/<id>`) supaya
-panel tidak butuh aturan rewrite di server mana pun.
+Rute pakai **path sungguhan** (`/admin`, `/admin/nilai`, `/admin/crew/baru`,
+`/admin/lowongan/ubah/<id>`) — sejak 4 Sep, menggantikan hash (`#/…`) yang
+dipakai sejak slice pertama. Hash dulu dipilih supaya panel tidak butuh aturan
+rewrite di server mana pun; alasan itu gugur begitu Keano minta tiap menu punya
+alamat yang bisa dibookmark dan dikirim, dan aturan rewrite-nya toh cuma empat
+baris `public/serve.json` (§12a). Mekanismenya di `App.tsx`: awalan rute
+dibaca dari `import.meta.env.BASE_URL` (= `base: "/admin/"` di
+`admin/vite.config.ts`, jadi mengubah base memindahkan seluruh panel),
+navigasi lewat `history.pushState` + pendengar `popstate` — `pushState`
+sendiri TIDAK memicu `popstate`, jadi `pergi()` menyetel rutenya langsung dan
+pendengarnya cuma untuk tombol Kembali/Maju peramban. **Alamat hash lama mati
+tanpa pengalihan**: `/admin/#/nilai` mendarat di Beranda (hash-nya diabaikan)
+— bookmark era hash cukup diketik ulang sekali, tabel pemetaan permanen untuk
+alamat internal yang umurnya empat hari bukan harga yang masuk akal.
 
 `App.tsx` memegang satu-satunya salinan daftar & jumlah pending, dan `user`-nya
 bertipe `Pengguna | undefined` — `undefined` berarti "masih bertanya ke server",
@@ -1811,6 +1925,80 @@ berlaku lagi, semuanya dibalas 401 bersamaan.
 `main.tsx` **sengaja tanpa `StrictMode`**: efek yang dipanggil dua kali akan
 menggandakan setiap panggilan API di dev, dan panel ini banyak sekali memanggil API.
 
+### §11d Riwayat, Review, dan pembatalan per benda
+
+Dua layar di dasar menu sisi, di luar semua kelompok halaman, keduanya dibaca
+dari `audit_log` yang selama ini sudah terisi tapi cuma terbaca lewat psql.
+Keduanya satu query yang sama dengan **gerbang yang dibalik**:
+
+- **Riwayat** = perubahan yang **SUDAH terpublish**: `action in
+  ('create','update','delete') and at <= (select max(at) … action='publish')`.
+  Ini aturan yang dipilih Keano: perubahan baru MUNCUL di riwayat sesudah
+  Publish ditekan — sebelum itu tempatnya di Review.
+- **Review** = kebalikannya: `max(publish.at) is null OR at > max(publish.at)`
+  — cabang `is null` eksplisit, karena `at > NULL` menghasilkan NULL dan layar
+  Review justru kosong PERSIS saat semuanya menunggu (database yang belum
+  pernah dipublish).
+
+Kolom "Sebelum" **diturunkan, bukan disimpan**: `lag(snapshot) over (partition
+by entity, entity_id order by at, id)` — baris audit lama yang ditulis sebelum
+layar ini ada ikut bisa dibandingkan, tanpa migrasi. `lag()` sengaja dihitung
+atas SELURUH tabel dulu baru disaring gerbang, supaya perubahan yang masih
+tertahan tidak memutus rantai sebelum/sesudah milik baris yang sudah tampil.
+`record()` sendiri TIDAK berubah: `login` dan `publish` tetap dicatat (masih
+dipakai untuk pertanyaan forensik), yang disaring cuma TAMPILANNYA.
+
+Empat keputusan Review yang tidak kelihatan dari kode, semuanya bermuara ke
+satu kalimat — yang dilaporkan adalah **apa yang berubah di SITUS, bukan di
+database**:
+
+1. **Sengaja tanpa angka total.** `pendingCount()` bilah Publish menghitung
+   BARIS audit; Review menghitung BENDA (satu reorder = N baris audit tapi
+   satu hal bagi editor). Dua angka bertetangga yang berselisih cuma
+   menimbulkan pertanyaan.
+2. **Yang dihapus dibandingkan dengan keadaan TAYANG, bukan draf terakhir.**
+   Sunting → sunting → hapus tanpa publish = SATU baris "dihapus" yang
+   `sebelum`-nya keadaan saat Publish terakhir; judul draf yang tidak pernah
+   tayang bukan "isi yang hilang". Kolom "Yang berubah" tetap memakai nama
+   TERBARU supaya editor mengenali pekerjaannya sendiri.
+3. **Dibuat-lalu-dihapus sebelum publish dibuang** (`kelompokkanTertahan()`):
+   pengunjung tidak pernah melihatnya, dan `menunggu()` di `publish.ts` juga
+   mengabaikannya.
+4. **Baris urutan tidak punya tombol Batalkan** — diganti kalimat "susun ulang
+   untuk membatalkan": membatalkan reorder berarti mengarang urutan "sebelum"
+   untuk SEMUA baris sekaligus, dan menyusun ulang lewat daftar sudah cukup.
+
+**Pembatalan per benda** (`POST /api/batal` → `server/pemulih.ts`; route-nya
+cuma penerjemah HTTP). Tiga bentuk pemulih mengikuti tiga bentuk entitas
+(§4b): `berdaftar`, `tunggal` (visi/footer, `entitasId: null` sah),
+`berkunciTetap` (empat entitas judul seksi — tidak pernah menghapus baris).
+Alurnya: aksi BERSIH dari `kelompokkanTertahan` menentukan cabang — `create`
+dibatalkan dengan hapus lunak (benda yang belum pernah tayang lenyap tanpa
+meninggalkan apa pun), `update`/`delete` lewat `halangan` (nama kembar, batas
+Live industri/proses — pembatalan yang menabrak aturan ditolak 409 dengan
+kalimat) → bangunkan baris (`deletedAt` dilepas) → tulis balik `sebelum` →
+`capUlang`: `updated_at = coalesce(published_at, updated_at)`, supaya angka
+bilah Publish IKUT TURUN — pembatalan yang meninggalkan badge "belum
+terpublish" akan membuat editor mem-publish untuk perubahan yang sudah ia
+batalkan. Terakhir `catat()` menulis baris audit ber-aksi **`revert`** yang
+snapshot-nya ISI HASIL PEMULIHAN — bukan penanda kosong, supaya rantai
+`lag()` di atas tetap jujur untuk baris-baris sesudahnya.
+
+Dua wart yang cuma ketahuan lewat probe, bukan test server: daftar yang
+digambar sebagai **kerangka** (kepala tabel + tbody kosong) selagi memuat
+terbaca "riwayatnya memang kosong" — tabel kini cuma digambar kalau ada
+isinya; dan Publish yang ditekan SAMBIL berdiri di layar Riwayat tidak
+menyegarkan daftarnya — `pending` dari `App.tsx` kini diteruskan sebagai prop
+dan masuk dependency effect-nya.
+
+> ⚠️ **Probe panel WAJIB menyapu jejak auditnya sendiri** — `tandaiAudit()` di
+> awal, `sapuAudit()` di `.finally` SESUDAH pemulihan panel
+> (`scripts/lib/audit.mjs`; jamnya `select now()` DATABASE, bukan jam host,
+> §14). Tanpa itu layar Riwayat dev jadi tempat sampah baris probe. Yang
+> disapu HANYA baris yang terlihat: `login` dan `publish` ditinggal — baris
+> publish adalah gerbang kedua layar ini, menyapunya membuat semua yang sudah
+> tayang terhitung "belum terpublish" selamanya.
+
 ---
 
 ## §12 Menjalankan di lokal
@@ -1819,9 +2007,24 @@ menggandakan setiap panggilan API di dev, dan panel ini banyak sekali memanggil 
 127.0.0.1:5432   Postgres 17 di Docker — colima, container cogniti-postgres
                  (stack "cogniti-db" di Portainer; db cogniti_dev + cogniti_test)
 localhost:3001   bun run server:dev      API
-localhost:3000   bun run dev             situs
-localhost:5174   bun run admin:dev       panel admin
+localhost:3000   bun run dev             situs + panel admin di /admin
+localhost:5174   (otomatis)              panel admin — ikut menyala bersama
+                                         `bun dev`; `bun run admin:dev` manual
+                                         tetap bisa dan dihormati
 ```
+
+Alamat panel sehari-hari: **`localhost:3000/admin`** — sama persis dengan yang
+nanti dibuka di server. Dua proses yang perlu dinyalakan tangan tinggal
+`server:dev` dan `dev`; plugin `bootAdminPanel` di `vite.config.ts`
+menyalakan panel admin dari DALAM dev server situs (`createServer()`
+in-process — satu proses OS, mati bersama, tidak ada yang yatim). Ini lahir
+dari kegagalan pertama fitur satu-port: `/admin` yang mengandalkan
+`bun run admin:dev` di terminal kedua menjawab **503** persis saat orang lupa
+menyalakannya. Detail yang menjaga: `strictPort` (tanpa itu instance kedua
+diam-diam pindah ke :5175 sementara proxy tetap menembak :5174),
+`EADDRINUSE` = ada `admin:dev` manual → mundur dan pakai yang sudah ada,
+penjaga `process.env.VITEST` (vitest ikut memuat config ini), dan env
+`ADMIN_DEV_PORT` untuk skrip yang butuh instance kedua tanpa menyentuh :5174.
 
 ```bash
 cp .env.example .env          # lalu isi DATABASE_URL & SESSION_SECRET
@@ -1848,18 +2051,49 @@ git**; `.env.example` masuk.
 > ⚠️ `TEST_DATABASE_URL` **isinya dihapus setiap kali test jalan.** Jangan pernah
 > diarahkan ke database dev.
 
-`vite.config.ts` situs mem-proxy `/api` dan `/uploads` ke :3001, dan
-`admin/vite.config.ts` mem-proxy `/api` + `/uploads` ke :3001 serta `/careers` +
-`/people` ke :3000. Frontend karena itu **selalu memakai path relatif** — tidak ada
-satu pun `http://localhost:3001` yang ditulis di kode. Begitu ada satu yang
-terselip, panel jalan di laptop dan mati di server, dan bedanya baru ketahuan
-setelah deploy.
+`vite.config.ts` situs mem-proxy `/api` dan `/uploads` ke :3001 serta `/admin`
+ke :5174 (plus `rewrite` untuk `/admin` telanjang — Vite menolak base tanpa
+garis miring penutup dengan 404, sementara `serve.json` produksi menerimanya),
+dan `admin/vite.config.ts` mem-proxy `/api` + `/uploads` ke :3001 serta
+`/careers` + `/people` ke :3000. Frontend karena itu **selalu memakai path
+relatif** — tidak ada satu pun `http://localhost:3001` yang ditulis di kode.
+Begitu ada satu yang terselip, panel jalan di laptop dan mati di server, dan
+bedanya baru ketahuan setelah deploy.
+
+### §12a Panel di produksi: satu folder `dist/`, empat baris rewrite
+
+Build panel masuk **ke DALAM `dist/` situs** (`outDir: "../dist/admin"` di
+`admin/vite.config.ts`), sehingga pm2 + `serve dist/` yang sudah ada
+menyajikan keduanya tanpa proses kedua dan tanpa aturan reverse proxy baru.
+Konsekuensi urutannya dijahit di `package.json`: `bun run build` = build situs
+(yang MENGOSONGKAN `dist/`) **lalu** `admin:build` — build situs yang
+dijalankan sendirian diam-diam membuang panelnya, dan `/admin` baru ketahuan
+404 saat ada yang mencoba masuk.
+
+Rute path butuh empat baris di `public/serve.json` (ikut tersalin ke `dist/`):
+
+```json
+{ "source": "/admin",        "destination": "/admin/index.html" },
+{ "source": "/admin/**",     "destination": "/admin/index.html" },
+{ "source": "/!(admin)",     "destination": "/index.html" },
+{ "source": "/!(admin)/**",  "destination": "/index.html" }
+```
+
+> 🔥 **JANGAN "menyederhanakan" dua aturan situs jadi `**`.**
+> `applyRewrites()` di serve-handler **REKURSIF**: sesudah satu aturan cocok,
+> sisa aturan diterapkan LAGI pada hasilnya — `**` akan membelokkan
+> `/admin/index.html` (hasil aturan pertama) balik ke `/index.html` situs,
+> diam-diam. Regex lookahead juga bukan jalan keluar: path-to-regexp 3.3.0
+> yang dipakai `serve` MATI saat start begitu bertemu `(?!…)`. Bentuk extglob
+> `/!(admin)` satu-satunya yang selamat dari keduanya. Dijaga
+> `src/lib/serveRewrites.invariant.test.ts` (4 test), dijalani
+> `scripts/probe-admin-path.mjs`.
 
 ---
 
 ## §13 Test & verifikasi
 
-**632 test CMS** di dalam `bun run test` (yang totalnya 98 berkas / 1.051 test) —
+**761 test CMS** di dalam `bun run test` (yang totalnya 104 berkas / 1.182 test) —
 selebihnya di tabel ini; 3 menumpang `TestimonialSpotlight.test.tsx`, beberapa
 menumpang `Industries.test.tsx`, dan 5 + 5 menumpang `Deployments.test.tsx` &
 `Process.test.tsx` (disebut sesudah tabel):
@@ -1878,6 +2112,8 @@ menumpang `Industries.test.tsx`, dan 5 + 5 menumpang `Deployments.test.tsx` &
 | `shared/validateDeployment.test.ts` | 15 | aturan kartu: foto/wilayah/keterangan WAJIB saat Live, batas 40/30/240, kelima kartu bawaan lolos apa adanya |
 | `shared/validateProcessStep.test.ts` | 18 | aturan langkah: judul wajib bahkan draf, kicker/penjelasan wajib saat Live, glyph tak dikenal ditolak, batas 40/18/180 |
 | `shared/validateFooter.test.ts` | 20 | aturan kaki halaman: selalu diperiksa penuh, `mailto:` ditolak terpisah, tahun & © ditolak (angka bukan-tahun lolos), tautan wajib `https://` tapi `http://` diterima, daftar kosong sah |
+| `shared/validateSectionText.test.ts` | 28 | batas baris & huruf PER KUNCI dari layout, subteks di seksi tanpa subteks ditolak bersuara, normalisasi `\r\n` & paragraf |
+| `shared/riwayat.test.ts` | 42 | label entitas/aksi/isian, `bandingkan()` (kolom admin diabaikan, delete vs `null`), `kelompokkanTertahan()` membuang pasangan create+delete, `barisUrutan()`, `RUTE_ENTITAS` |
 | `server/routes/jobs.test.ts` | 17 | CRUD, 401 tanpa login, slug bentrok, soft delete |
 | `server/routes/values.test.ts` | 20 | CRUD + reorder, daftar tak lengkap ditolak |
 | `server/routes/crew.test.ts` | 26 | CRUD, tautan sosial, nama bentrok, departemen asing |
@@ -1891,6 +2127,9 @@ menumpang `Industries.test.tsx`, dan 5 + 5 menumpang `Deployments.test.tsx` &
 | `server/routes/deployments.test.ts` | 25 | CRUD + reorder, pasangan sektor+wilayah kembar ditolak case-insensitive (galat di `region`), kartu baru mendarat di bawah |
 | `server/routes/processSteps.test.ts` | 28 | CRUD + reorder, **batas 6 Live ditolak 422** (POST maupun PUT, `exceptId` untuk baris sendiri), ilustrasi ikut pindah bersama langkahnya, judul kembar |
 | `server/routes/auth.test.ts` | 6 | masuk pakai sandi saja, sandi salah, sesi |
+| `server/routes/sectionText.test.ts` | 12 | GET 11 baris urut `SECTION_TEXT_KEYS`, PUT upsert per kunci (menimpa bukan menambah), 404 kunci asing, 422 + audit |
+| `server/routes/history.test.ts` | 25 | gerbang publish Riwayat (`at <= max(publish.at)`, `lag()` atas SELURUH tabel), penyaring entitas, limit/lewati/adaLagi, login & publish tak tampil |
+| `server/routes/revert.test.ts` | 18 | pembatalan per bentuk (daftar/tunggal/berkunci tetap), create = hapus lunak, halangan nama kembar & batas Live → 409, baris urutan ditolak 400, angka pending ikut turun |
 | `server/publish.test.ts` | 50 | draft tidak ikut, tulis atomik, hitungan pending, **reorder cuma menghitung baris yang bergeser** (dan urutan yang dikirim ulang apa adanya bukan perubahan sama sekali, §6b), visi null → objek → tertimpa, kaki halaman ikut (kolom payload-nya dikunci apa adanya, socials kosong = `[]` bukan hilang) — BELUM menyebut deployment/proses (lihat ⚠️ di bawah) |
 | `src/lib/content/store.test.ts` | 9 | content.json valid dipakai; gagal/timeout/versi salah → fallback |
 | `src/data/people.test.ts` | 17 | CMS menang atas bundle; daftar kosong dihormati; payload lama |
@@ -1905,6 +2144,7 @@ menumpang `Industries.test.tsx`, dan 5 + 5 menumpang `Deployments.test.tsx` &
 | `src/data/deployments.test.ts` | 9 | CMS menang atas bundle; daftar kosong dihormati; hanya isian yang dirender diteruskan (key dikunci apa adanya) |
 | `src/data/processSteps.test.ts` | 13 | glyph milik LANGKAH bukan posisi; `PROCESS_GLYPHS_BY_KEY` lengkap; daftar kosong dihormati; payload lama tanpa field ini → bundle |
 | `src/lib/contentMap.test.ts` | 12 | peta konten sinkron dengan slug & label situs, letak entri per halaman, kelompok footer ikut `CONTENT_GROUPS` |
+| `src/lib/serveRewrites.invariant.test.ts` | 4 | `public/serve.json`: aturan `/admin` berdiri SEBELUM aturan situs, extglob `!(admin)`, tanpa source bergaya regex yang mematikan `serve` (§12a) |
 
 Tiga test CMS lain menumpang `TestimonialSpotlight.test.tsx` (komponennya):
 membaca entri dari CMS alih-alih bundle, daftar kosong = tidak dirender sama
@@ -1941,7 +2181,11 @@ tengah test tetangga.
 > terlupa membuat test tetangga saling mewarisi baris, dan gejalanya "kadang
 > gagal" tergantung urutan.
 
-**Tiga belas probe end-to-end lewat Brave** (CDP, nol dependensi), semuanya hijau:
+**Tujuh belas probe end-to-end lewat Brave** (CDP, nol dependensi), semuanya
+hijau — dijalankan ulang SELURUHNYA 4 Sep sesudah panel pindah ke rute path,
+karena perpindahan itu (plus pergantian kosakata "Sudah tayang" → "Sudah
+terpublish") sempat membuat sebelas probe lama menunggu teks & alamat yang
+sudah tidak ada (§14):
 
 `scripts/probe-admin.mjs` — 13 pemeriksaan: menu sisi (grup membuka/menutup,
 melipat, menandai posisi), CRUD lowongan, draf tidak ikut Publish, Open tanpa foto
@@ -2076,7 +2320,7 @@ yang sungguhan:
 ✓ kalimat kosong ditolak di form, baris yang tayang tidak tersentuh
 ✓ menyimpan visi menyalakan badge 'belum terpublish'
 ✓ simpan kedua menimpa baris yang sama — tetap satu visi
-✓ #/visi/baru dan #/visi/ubah/1 tetap mendarat di form visi
+✓ /admin/visi/baru dan /admin/visi/ubah/1 tetap mendarat di form visi
 ✓ halaman depan merender visi dari CMS (kalimat & foto terukur)
 ✓ kalimat semula dikembalikan — halaman depan kembali seperti sebelum probe
 ```
@@ -2106,9 +2350,9 @@ ketahuan persis di langkah ini.
 > ⚠️ **Footer SATU-SATUNYA entitas tanpa probe end-to-end, dan panelnya belum
 > pernah diklik sungguhan** — saat slice-nya ditutup, sandi login dev tidak
 > ada di tangan. Jalur baca situsnya teruji (test komponen + store + publish),
-> tapi perjalanan editor sungguhan (buka `#/footer`, sunting, Simpan, Publish,
-> lihat kaki halaman berubah) belum pernah dijalankan. Utang yang harus
-> dibayar sebelum atau saat deploy.
+> tapi perjalanan editor sungguhan (buka `/admin/footer`, sunting, Simpan,
+> Publish, lihat kaki halaman berubah) belum pernah dijalankan. Utang yang
+> harus dibayar sebelum atau saat deploy.
 
 `scripts/probe-tema-admin.mjs` — 15 pemeriksaan: kedua tema diukur di daftar,
 form, dialog, dan layar masuk; **semua warna abu-abu murni** (R=G=B) diperiksa ke
@@ -2119,6 +2363,32 @@ kedipan).
 `scripts/probe-job-page.mjs` — sisi pengunjung: halaman lowongan hidup, toggle ID
 bertahan setelah refresh, tidak ada loader 3D, `office.glb` tidak ikut diunduh,
 nol draw call saat diam.
+
+`scripts/probe-riwayat-admin.mjs` — 14 pemeriksaan: menu Riwayat di dasar
+menu sisi di luar semua grup; `/admin/riwayat` bertahan sesudah muat ulang;
+perubahan TIDAK muncul sebelum Publish dan muncul sesudahnya (gerbang yang
+paling mudah terbalik arah); buat → ubah → hapus masing-masing terbaca dengan
+banding Sebelum/Sesudah yang benar; baris Masuk & Publish tidak ikut tampil;
+jejak probenya sendiri disapu (`scripts/lib/audit.mjs`).
+
+`scripts/probe-review-admin.mjs` — 20 pemeriksaan, menekan Publish
+sungguhan: layar kosong saat semuanya terpublish; perubahan tertahan muncul
+per BENDA (dua suntingan = satu baris, dibanding dari keadaan tayang); tombol
+"Buka" mendarat tepat di formnya; Batalkan mengembalikan isi DAN menurunkan
+angka bilah Publish; baris urutan tidak bertombol Batalkan; dibuat-lalu-dihapus
+tidak tampil.
+
+`scripts/probe-judul-seksi-admin.mjs` — 19 pemeriksaan: empat menu "Judul
+seksi" di empat kelompok; daftar tanpa Tambah/Hapus/Status; batas per seksi
+ditolak dengan kalimat; simpan → Publish → membuka `/` SUNGGUHAN di 360px dan
+membaca judul barunya di layar; `/admin/judul-home/baru` jatuh ke daftarnya,
+bukan form lowongan; pembatalan lewat Review mengembalikan judul semula.
+
+`scripts/probe-admin-path.mjs` — 12 pemeriksaan, kelahiran rute path (§11c,
+§12a): `:3000/admin` membuka panel bukan situs; muat ulang di `/admin/crew`
+tetap mendarat di layarnya; `/admin/crew/baru` langsung membuka form; tombol
+Back peramban mengembalikan alamat DAN layar; `/` dan `/people` tidak tersedot
+aturan `/admin`.
 
 **Uji jaring pengaman, dua-duanya sudah dijalankan:**
 - `dist/content.json` dihapus → seluruh suite `probe-job-page.mjs` tetap lolos,
@@ -2200,11 +2470,24 @@ menulis ulang indeksnya dengan `and region <> ''`, menyamakan pendapat kedua
 penjaga (§4b).
 
 **Rute yang sah menurut penjaga umum bisa tetap salah untuk entitas yang
-bentuknya lain.** `#/visi/baru` lolos pemeriksaan `siap()` (visi memang siap)
-lalu jatuh ke ujung rantai pemilihan komponen — form LOWONGAN, di alamat yang
-menjanjikan visi. Lubangnya bukan di penjaganya, tapi di asumsi bahwa semua
-entitas punya bentuk `baru`/`ubah`. Fix: `tanpaDaftar()` di `bacaRute()`
-menormalkan kedua bentuk itu ke `#/visi` (§11).
+bentuknya lain.** `/admin/visi/baru` (dulu `#/visi/baru`) lolos pemeriksaan
+`siap()` (visi memang siap) lalu jatuh ke ujung rantai pemilihan komponen —
+form LOWONGAN, di alamat yang menjanjikan visi. Lubangnya bukan di penjaganya,
+tapi di asumsi bahwa semua entitas punya bentuk `baru`/`ubah`. Fix:
+`tanpaDaftar()` di `bacaRute()` menormalkan kedua bentuk itu ke `/admin/visi`;
+judul seksi mengulang pelajaran yang sama lewat `tanpaTambah()` (§11a).
+
+**Skrip probe ikut MEMBUSUK bersama teks & rute panel.** Dua kali kejadian
+pada hari yang sama (4 Sep): panel pindah ke rute path → lima probe yang
+menavigasi lewat `location.hash` / menegaskan `location.hash` diam-diam
+menguji dunia yang sudah tidak ada; dan pergantian kosakata "Sudah tayang" →
+"Sudah terpublish" (3 Sep) ternyata TIDAK pernah menyentuh skrip probe —
+sebelas probe menunggu kalimat lama, dan probe-visi sempat gagal DI TENGAH
+dengan Publish yang sudah telanjur ditekan (kalimat probenya tertinggal
+terpublish + 2 baris audit bocor, dua-duanya harus dibersihkan tangan).
+Pelajarannya dua arah: mengganti kosakata/rute panel = **sapu skrip probe di
+commit yang sama**, dan sesudah perubahan lintas-panel jalankan ulang SEMUA
+probe, bukan cuma probe milik fitur barunya.
 
 **🔥 Dua app Vite berbagi satu `node_modules`.** Menjalankan `admin:dev` membuat
 situs di :3000 **putih total** dengan `504 (Outdated Optimize Dep)` untuk
@@ -2288,17 +2571,21 @@ mirip sandi yang masuk git adalah fixture test `"sandi-yang-panjang"` di
 
 ## §15 Yang belum dikerjakan
 
-**Langkah 10 — deploy.** Belum disentuh sama sekali:
-- Postgres di VPS + jalankan migrasi
+**Langkah 10 — deploy.** Belum disentuh sama sekali; panduan urut untuk yang
+mengerjakannya di **§17**. Ringkas yang tersisa:
+- Postgres di VPS + jalankan migrasi + seed + akun editor
 - proses API masuk pm2 (bersama `Website-CSI-V2` yang sudah ada)
-- reverse proxy `/api` → :3001 dan `/admin` → `dist-admin/`
+- reverse proxy `/api` dan `/uploads` → :3001 — SATU-SATUNYA keputusan infra
+  yang belum diambil, karena `serve` tidak bisa mem-proxy (§17); `/admin`
+  TIDAK butuh apa-apa lagi — panel ikut di `dist/admin/` (§12a)
 - cron `pg_dump`
 - `CF_ZONE_ID` + `CF_PURGE_TOKEN` diisi supaya purge otomatis jalan
 
 **Entitas konten: TIDAK ADA yang tersisa.** Keempat halaman navbar plus
-kelompok Footer selesai seluruhnya — 12 dari 12 entri panel `siap`, dan entri
-"Tautan sosial" yang dulu tercatat di sini sudah terbayar sebagai bagian dari
-slice footer (kelompok "Seluruh situs" sekalian diganti nama, §11a).
+kelompok Footer selesai seluruhnya — 16 dari 16 entri panel `siap` (12 entitas
++ 4 entri Judul seksi), dan entri "Tautan sosial" yang dulu tercatat di sini
+sudah terbayar sebagai bagian dari slice footer (kelompok "Seluruh situs"
+sekalian diganti nama, §11a).
 
 **Selisih kecil yang diketahui:** `server/publish.test.ts` belum ketambahan
 describe deployment/cara kerja (§13), dan **footer belum punya probe
@@ -2397,3 +2684,84 @@ BARIS, bukan posisi atau nama yang bisa diganti editor (§14).
 **Seksinya memakai hook motion ber-target ref?** Pecah gerbang daftar-kosong
 ke komponen LUAR yang tanpa hook, seperti `Process`/`ProcessSection` —
 `return null` sesudah hook-nya jalan melempar di luar render (§14).
+
+---
+
+## §17 Deploy ke VPS — panduan urut
+
+Ditulis untuk siapa pun yang memegang deploy (tidak harus yang menulis kode
+ini). Keadaan server HARI INI, sebelum CMS: pm2 menjalankan app
+`Website-CSI-V2` = `serve dist/` untuk `csi2.wibudev.com`, di belakang proxy
+Cloudflare (Cache Rule `/3d/*` sudah ada); `office.glb` sudah ditaruh SEKALI di
+`3d/models/` (di luar git — build GAGAL dengan sengaja kalau file ini tidak
+ada, §14). Yang ditambahkan CMS: database, satu proses API, dan aturan proxy
+untuk dua path. Kode terbaru semuanya di **`main`** (merge `38c0fc7`).
+
+**1 — Postgres.** Terserah selera server (Docker seperti di lokal, atau apt):
+buat database `cogniti` + user ber-password. Yang penting dari pengalaman
+lokal: host di `DATABASE_URL` sebaiknya `127.0.0.1`, bukan `localhost` —
+port-forward Docker cuma mengikat IPv4 (§12), dan di macOS lokal `localhost`
+jatuh ke `::1`; di VPS Linux gejalanya bisa beda, alamat eksplisit tidak
+pernah salah.
+
+**2 — `.env` di server** (tidak pernah ikut git; contoh di `.env.example`):
+`DATABASE_URL`, `SESSION_SECRET` (acak panjang), `PORT=3001`, dan — supaya
+purge cache otomatis saat Publish — `CF_ZONE_ID` + `CF_PURGE_TOKEN`.
+`TEST_DATABASE_URL` TIDAK usah diisi di server: itu khusus test, dan isinya
+DIHAPUS setiap test jalan (§12).
+
+**3 — migrasi + seed + akun.** Dari folder repo di server:
+`bun run db:migrate`, lalu `bun run db:seed` (mengisi dari literal repo,
+sekali jalan per tabel — tabel yang sudah berisi dilewati, §4c), lalu
+`bun run user:create` untuk tiap editor. Tanpa seed pun situs TIDAK rusak
+(§2: fallback bundle), tapi panel mulai dari kosong.
+
+**4 — proses API.** `bun run server:start` = `node --experimental-strip-types
+server/index.ts` — sengaja node murni, karena server produksi tidak memegang
+Bun untuk runtime (§6); daftarkan ke pm2 sebagai app kedua di samping
+`Website-CSI-V2`, contoh: `pm2 start "npm run server:start" --name cogniti-api`
+(atau tunjuk node langsung ke `server/index.ts`). API mendengarkan :3001 dan
+TIDAK boleh terekspos publik langsung — ia lewat proxy path di langkah 5.
+
+**5 — proxy `/api` dan `/uploads` → :3001.** Satu-satunya bagian yang butuh
+keputusan infra, karena `serve` CUMA pelayan berkas statis — ia tidak bisa
+meneruskan request. Dua jalan yang masuk akal, pilih satu:
+- **nginx/caddy di depan keduanya** (bentuk yang dipakai dev & dirancang
+  §12): semua path → port `serve`, kecuali `/api` dan `/uploads` → :3001.
+  `/admin` TIDAK perlu aturan — sudah dilayani `serve` dari `dist/admin/`
+  berkat `serve.json` (§12a).
+- **ganti `serve` dengan satu proses Node kecil** yang melayani `dist/` +
+  meneruskan dua path itu — lebih sedikit komponen, tapi menulis ulang
+  perilaku `serve.json` (§12a) sendiri; kalau ragu, jangan pilih ini.
+Frontend memakai path RELATIF semua (§12), jadi begitu proxy-nya benar, tidak
+ada satu pun URL yang perlu diganti di kode.
+
+**6 — build & tayang.** `bun run deploy` = `bun run build && pm2 restart
+Website-CSI-V2`. Build menggagalkan diri kalau `office.glb` tidak ada (§14 —
+itu penjaga, bukan bug), menyalinnya ke `dist/3d/models/`, membangun panel ke
+`dist/admin/` (§12a), dan MEMULIHKAN `content.json` hasil Publish terakhir ke
+`dist/` (plugin `preserveContentJson` — kecuali `dist/` dihapus total atau
+mesinnya belum pernah Publish, §14).
+
+**7 — pemeriksaan sesudah tayang**, urut dari luar ke dalam:
+- `csi2.wibudev.com/admin` → panel "Kelola Konten", BUKAN situs 3D; masuk
+  dengan sandi editor.
+- muat ulang di `/admin/crew` → tetap layar Crew (bukti rewrite §12a jalan).
+- sunting sesuatu yang terlihat (mis. kutipan testimoni) → Simpan → badge
+  "belum terpublish" menyala → **Publish** → buka situsnya: perubahan tampil.
+  Ini sekaligus MEMBAYAR utang §13: perjalanan editor footer yang belum pernah
+  diklik sungguhan — lakukan sekali di `/admin/footer`.
+- `curl -s <host>/api/jobs` TANPA cookie → 401, bukan data (bukti
+  `requireLogin` hidup di jalur proxy baru).
+- habis deploy yang mengganti `office.glb`: purge CF `/3d/*` — rutinitas lama
+  (§14 Documentations.md), bukan bawaan CMS.
+
+**8 — cron `pg_dump`** — `bun run db:dump` versi server (pg_dump langsung,
+tanpa docker exec kalau Postgres-nya native), arahkan ke berkas ber-tanggal;
+konten kini hidup di database, dan database tanpa backup adalah konten tanpa
+backup.
+
+Yang SENGAJA tidak ada di daftar: memindahkan `office.glb` (sudah di server),
+menyentuh konfigurasi CF selain purge (Cache Rule `/3d/*` sudah ada), dan
+apa pun soal `dist-admin/` — folder itu sudah tidak dipakai sejak panel pindah
+ke `dist/admin/` (§12a); kalau masih ada sisa lamanya di server, boleh dihapus.

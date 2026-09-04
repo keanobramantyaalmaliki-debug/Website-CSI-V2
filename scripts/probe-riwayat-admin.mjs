@@ -11,7 +11,7 @@
  * menanyakan apa yang muncul di Riwayat:
  *
  *   • menu sisi punya "Riwayat" di dasar, DI LUAR grup konten mana pun;
- *   • `#/riwayat` bertahan sesudah halaman dimuat ulang — pola rute generik
+ *   • `/admin/riwayat` bertahan sesudah halaman dimuat ulang — pola rute generik
  *     `^/([a-z-]+)$` menolaknya lewat `siap()`, jadi tanpa cabang khusus ia
  *     mendarat di Beranda dan alamatnya berbohong;
  *   • perubahan yang BELUM ditekan Publish belum muncul, dan muncul begitu
@@ -350,7 +350,7 @@ async function main() {
 
   bersihkan = async () => {
     if (!kotor) return;
-    await send("Page.navigate", { url: "http://localhost:5174/admin/#/nilai" });
+    await send("Page.navigate", { url: "http://localhost:5174/admin/nilai" });
     await tunggu(`!!document.querySelector(".sisi")`, "panel admin lagi");
     await jalan(BEKAL);
     await bukaNilai();
@@ -430,11 +430,15 @@ async function main() {
   await potret("1-daftar");
   lapor(`layar Riwayat terbuka, ${awal.length} baris, tanpa baris Masuk maupun Publish`);
 
-  /* 4 — `#/riwayat` bertahan sesudah muat ulang. Ini yang dulu jatuh ke
+  /* 4 — `/admin/riwayat` bertahan sesudah muat ulang. Ini yang dulu jatuh ke
      Beranda: "riwayat" bukan entri konten, jadi penjaga `siap()` di
      `bacaRute` menolaknya dan alamatnya jadi berbohong. */
-  sama(await jalan(`location.hash`), "#/riwayat", "hash sesudah membuka Riwayat");
-  await send("Page.navigate", { url: "http://localhost:5174/admin/#/riwayat" });
+  sama(
+    await jalan(`location.pathname`),
+    "/admin/riwayat",
+    "alamat sesudah membuka Riwayat",
+  );
+  await send("Page.navigate", { url: "http://localhost:5174/admin/riwayat" });
   await send("Page.loadEventFired");
   await send("Page.reload");
   /* Ditunggu SAMPAI halaman baru selesai dimuat lebih dulu, bukan langsung
@@ -453,7 +457,7 @@ async function main() {
     "riwayat bertahan sesudah muat ulang",
   );
   await jalan(BEKAL);
-  lapor("#/riwayat bertahan sesudah halaman dimuat ulang, tidak jatuh ke Beranda");
+  lapor("/admin/riwayat bertahan sesudah halaman dimuat ulang, tidak jatuh ke Beranda");
 
   /* 5 — buat satu nilai, lalu tanya riwayatnya */
   await bukaNilai();

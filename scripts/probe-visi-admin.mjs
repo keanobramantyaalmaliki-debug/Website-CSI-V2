@@ -10,7 +10,7 @@
  *
  *   • menu sisi mengantar langsung ke form, tanpa daftar di depannya;
  *   • tidak ada "+ Tambah", "Hapus", "Naikkan", maupun pilihan Draft/Live;
- *   • `#/visi/baru` dan `#/visi/ubah/1` tidak membuka form entitas lain —
+ *   • `/admin/visi/baru` dan `/admin/visi/ubah/1` tidak membuka form entitas lain —
  *     alamat itu sah menurut penjaga rute, dan tanpa pengecualian khusus ia
  *     dulu jatuh ke form LOWONGAN dengan judul "Visi" di menu sisi;
  *   • menyimpan dua kali tetap satu baris di content.json.
@@ -246,7 +246,7 @@ async function main() {
     await tunggu(`__teks().includes("Visi tersimpan")`, "kabar tersimpan (pulih)");
     await jalan(BEKAL);
     await jalan(`__klik("Publish")`);
-    await tunggu(`__teks().includes("Sudah tayang")`, "kabar publish (pulih)");
+    await tunggu(`__teks().includes("Sudah terpublish")`, "kabar publish (pulih)");
     const akhir = await visiTayang();
     if (akhir.statement !== semula.statement || akhir.photo !== semula.photo) {
       throw new Error(
@@ -356,7 +356,7 @@ async function main() {
   lapor("sebelum Publish, content.json masih berisi kalimat lama");
 
   await jalan(`__klik("Publish")`);
-  await tunggu(`__teks().includes("Sudah tayang")`, "kabar publish");
+  await tunggu(`__teks().includes("Sudah terpublish")`, "kabar publish");
   const sesudah = await visiTayang();
   if (sesudah.statement !== KALIMAT) {
     throw new Error(`content.json tidak ikut berubah: ${sesudah.statement}`);
@@ -374,7 +374,7 @@ async function main() {
   await tunggu(`__teks().includes("Visi tersimpan")`, "kabar tersimpan (kedua)");
   await jalan(BEKAL);
   await jalan(`__klik("Publish")`);
-  await tunggu(`__teks().includes("Sudah tayang")`, "kabar publish (kedua)");
+  await tunggu(`__teks().includes("Sudah terpublish")`, "kabar publish (kedua)");
   const dua = await visiTayang();
   if (Array.isArray(dua)) throw new Error("visi di content.json berbentuk daftar");
   if (dua.statement !== KALIMAT + " Dua kali.") {
@@ -383,18 +383,19 @@ async function main() {
   lapor("simpan kedua menimpa baris yang sama — tetap satu visi");
 
   /* 9 — alamat yang tidak punya layar. Dengan `visi` berstatus siap,
-     `#/visi/baru` lolos penjaga rute; tanpa pengecualian khusus ia jatuh ke
-     rantai form dan membuka form LOWONGAN di alamat visi. */
-  for (const alamat of ["/visi/baru", "/visi/ubah/1"]) {
-    await jalan(`location.hash = ${JSON.stringify(alamat)}`);
+     `/admin/visi/baru` lolos penjaga rute; tanpa pengecualian khusus ia jatuh
+     ke rantai form dan membuka form LOWONGAN di alamat visi. */
+  for (const alamat of ["/admin/visi/baru", "/admin/visi/ubah/1"]) {
+    await send("Page.navigate", { url: `http://localhost:5174${alamat}` });
     await sleep(600);
+    await tunggu(`!!document.querySelector(".sisi")`, `panel di ${alamat}`);
     await jalan(BEKAL);
     const judul = await jalan(`__judulLayar()`);
     if (judul !== "Visi") {
       throw new Error(`${alamat} membuka layar "${judul}", bukan form visi`);
     }
   }
-  lapor("#/visi/baru dan #/visi/ubah/1 tetap mendarat di form visi");
+  lapor("/admin/visi/baru dan /admin/visi/ubah/1 tetap mendarat di form visi");
 
   /* 10 — halaman depan yang sungguhan membacanya.
      Sampai langkah 9 yang terbukti baru "database → berkas". Yang berikut ini
