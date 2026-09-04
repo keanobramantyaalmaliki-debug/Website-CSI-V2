@@ -17,7 +17,7 @@
  *    pun. Alasannya sama dengan crew (§`crewMembers`): tombol yang tidak
  *    mengubah apa-apa di situs adalah tombol yang berbohong ke editor.
  * 3. **Tidak ada `id`.** Barisnya cuma satu dan panel tidak pernah perlu
- *    merujuknya — `#/visi` langsung membuka formnya, tanpa daftar di depannya.
+ *    merujuknya — `/admin/visi` langsung membuka formnya, tanpa daftar di depannya.
  *    Id-nya tetap ada di database sebagai kunci, tapi ia urusan Postgres, bukan
  *    sesuatu yang perlu menyeberang ke browser.
  *

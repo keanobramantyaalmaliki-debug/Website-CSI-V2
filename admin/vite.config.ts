@@ -27,12 +27,35 @@ export default defineConfig({
      menjawab 504 "Outdated Optimize Dep" untuk setiap dependensi. Terukur:
      menjalankan `admin:dev` membuat situs di :3000 jadi halaman putih. */
   cacheDir: resolve(DIR, "../node_modules/.vite-admin"),
-  /* Di produksi panel ini disajikan di /admin/, jadi asetnya harus dirujuk
-     dari sana — bukan dari root, yang sudah dipakai situs. */
+  /* Panel disajikan di /admin/ — satu port, satu host, satu proses dengan
+     situsnya. Karena itu asetnya harus dirujuk dari sana, bukan dari root yang
+     sudah dipakai situs. Dipakai juga oleh `App.tsx` sebagai awalan rute
+     (`import.meta.env.BASE_URL`), jadi mengubah nilai ini memindahkan alamat
+     panelnya sekaligus. */
   base: "/admin/",
-  build: { outDir: "../dist-admin", emptyOutDir: true },
+  /**
+   * Hasil build masuk ke DALAM dist/ situs, bukan ke folder sendiri.
+   *
+   * Produksi cuma menyajikan satu folder: pm2 menjalankan `serve dist/`. Selama
+   * panel tinggal di `dist-admin/`, ia butuh proses kedua atau aturan reverse
+   * proxy tersendiri untuk bisa dibuka; ditaruh di sini ia langsung terjangkau
+   * di `csi2.wibudev.com/admin` tanpa satu pun perubahan di server.
+   *
+   * ⚠️ Urutannya penting: `vite build` situs MENGOSONGKAN dist/, jadi build
+   * panel harus jalan SESUDAHNYA. Itu sebabnya `bun run build` di package.json
+   * memanggil keduanya berurutan alih-alih membiarkan `admin:build` dipanggil
+   * sendiri-sendiri — build situs yang berdiri sendiri akan diam-diam membuang
+   * panelnya, dan /admin baru ketahuan 404 saat ada yang mencoba masuk.
+   */
+  build: { outDir: "../dist/admin", emptyOutDir: true },
   server: {
     port: 5174,
+    /* HMR menembak langsung ke 5174, tidak ikut lewat :3000. Panel bisa dibuka
+       dari dua alamat saat dev — langsung di :5174/admin/ atau lewat proxy
+       situs di :3000/admin/ — dan tanpa baris ini alamat kedua membuat klien
+       HMR mencari websocket di :3000, yang sudah dipakai HMR situs. Gejalanya
+       bukan galat, melainkan panel yang berhenti memuat ulang sendiri. */
+    hmr: { protocol: "ws", host: "localhost", port: 5174 },
     proxy: {
       /* Sama seperti di situs: frontend selalu memakai path relatif, dan yang
          berbeda antara lokal dan produksi cuma siapa yang meneruskannya. */

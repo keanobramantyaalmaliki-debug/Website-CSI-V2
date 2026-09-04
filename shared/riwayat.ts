@@ -327,7 +327,7 @@ function objek(n: unknown): Record<string, unknown> {
 /* ── Perubahan yang belum terpublish ─────────────────────────────────── */
 
 /**
- * Nama entitas di database → key rute panel (`#/lowongan`, `#/nilai`, …).
+ * Nama entitas di database → key rute panel (`/admin/lowongan`, `/admin/nilai`, …).
  *
  * Dipakai layar Review untuk menawarkan "Buka": inti layar itu adalah tidak
  * perlu lagi mencari satu per satu di mana konten yang berubah tinggal, dan

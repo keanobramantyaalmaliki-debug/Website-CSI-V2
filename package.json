@@ -11,7 +11,7 @@
     "dev": "vite --port 3000",
     "server:dev": "bun run --watch server/index.ts",
     "server:start": "node --experimental-strip-types server/index.ts",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && bun run admin:build",
     "preview": "vite preview --port 3000",
     "admin:dev": "vite --config admin/vite.config.ts",
     "admin:build": "tsc --noEmit -p admin/tsconfig.json && vite build --config admin/vite.config.ts",

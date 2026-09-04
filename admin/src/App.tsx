@@ -2,17 +2,23 @@
  * Rangka panel: gerbang sesi, rute, dan satu sumber kebenaran untuk daftar
  * lowongan + angka "belum terpublish".
  *
- * Rutenya lewat hash (`#/`, `#/lowongan`, `#/lowongan/baru`,
- * `#/lowongan/ubah/<id>`) dan bukan History API dengan sengaja: `#` tidak
- * pernah sampai ke server, jadi panel ini tetap bisa dimuat ulang di URL mana
- * pun tanpa aturan rewrite di reverse proxy. Situs publiknya sendiri sudah
- * pernah kena bug itu (lihat `public/serve.json`).
+ * Rutenya PATH sungguhan di bawah `/admin` (`/admin/`, `/admin/lowongan`,
+ * `/admin/lowongan/baru`, `/admin/lowongan/ubah/<id>`) — alamat yang bisa
+ * dibaca, dibookmark, dan dikirim ke teman.
  *
- * Rutenya BERTINGKAT: `#/` adalah layar depan, dan tiap entitas hidup di
- * bawah namanya sendiri — persis seperti susunan di menu sisi. Ini yang membuat entitas
- * berikutnya (crew, nilai, industri, …) bisa menempel tanpa menyentuh apa pun
- * di sini kecuali satu baris di `bacaRute` — bukan kebetulan, itu yang
- * dituju: `#/lowongan/ubah/<id>` alih-alih `#/lowongan/<id>` supaya "baru" dan
+ * Dulu ini lewat hash, justru supaya tidak ada aturan rewrite yang perlu
+ * diurus di server. Yang membayarnya sekarang `public/serve.json`: seluruh
+ * `/admin/**` diarahkan ke `dist/admin/index.html` SEBELUM aturan SPA situs
+ * sempat menyambarnya. Perhatikan bentuk aturan situsnya di sana — `/!(admin)`,
+ * bukan `**` — dan alasannya yang tidak kelihatan: `serve` menerapkan sisa
+ * aturan sekali lagi pada hasil rewrite, jadi `**` akan membelokkan
+ * `/admin/index.html` yang baru saja benar itu balik ke situs.
+ *
+ * Rutenya BERTINGKAT: `/admin/` adalah layar depan, dan tiap entitas hidup di
+ * bawah namanya sendiri — persis seperti susunan di menu sisi. Ini yang membuat
+ * entitas berikutnya (crew, nilai, industri, …) bisa menempel tanpa menyentuh
+ * apa pun di sini kecuali satu baris di `bacaRute` — bukan kebetulan, itu yang
+ * dituju: `/lowongan/ubah/<id>` alih-alih `/lowongan/<id>` supaya "baru" dan
  * sebuah id tidak pernah bisa saling menyamar.
  */
 
@@ -103,7 +109,7 @@ type Rute =
  *
  * Bentuk `.../baru` dan `.../ubah/<id>` tidak punya arti untuk mereka, dan
  * membiarkannya lolos bukan sekadar tidak berguna: rantai pemilihan komponen
- * di bawah berakhir di form lowongan, jadi `#/visi/baru` akan membuka form
+ * di bawah berakhir di form lowongan, jadi `/admin/visi/baru` akan membuka form
  * LOWONGAN di alamat yang menjanjikan visi. Persis jenis kerusakan yang
  * dijaga pemeriksaan `siap()` di `bacaRute`, cuma dari arah lain.
  *
@@ -128,10 +134,10 @@ const HALAMAN_JUDUL = new Map<string, SectionTextPage>(
 /**
  * Entitas yang punya daftar TAPI barisnya tidak bisa ditambah — Judul seksi.
  * Sebelas barisnya lahir dari seed dan tidak pernah bertambah, jadi
- * `#/judul-home/baru` tidak menjanjikan apa pun.
+ * `/admin/judul-home/baru` tidak menjanjikan apa pun.
  *
  * Dibiarkan lolos bukan sekadar tidak berguna: lubangnya persis yang ditambal
- * `tanpaDaftar()` untuk `#/visi/baru` — rantai pemilihan komponen di bawah
+ * `tanpaDaftar()` untuk `/admin/visi/baru` — rantai pemilihan komponen di bawah
  * berakhir di form lowongan, jadi alamat itu akan membuka form LOWONGAN.
  *
  * Beda dari `tanpaDaftar()`, bentuk `/ubah/<id>`-nya TETAP sah: itulah cara
@@ -141,18 +147,39 @@ function tanpaTambah(key: string): boolean {
   return HALAMAN_JUDUL.has(key);
 }
 
+/**
+ * Awalan alamat panel, tanpa garis miring penutup ("/admin").
+ *
+ * Diambil dari `base` di admin/vite.config.ts lewat `import.meta.env.BASE_URL`,
+ * bukan ditulis ulang di sini: `base` menentukan dari mana aset dimuat, awalan
+ * ini menentukan alamat yang ditulis ke bilah alamat, dan keduanya harus selalu
+ * sama. Kalau dipisah, memindahkan panel ke alamat lain akan berhasil separuh —
+ * halamannya terbuka, asetnya 404.
+ */
+const AWALAN = import.meta.env.BASE_URL.replace(/\/+$/, "");
+
+/** "/nilai" → "/admin/nilai". Satu-satunya tempat awalan ditempelkan. */
+function alamat(ke: string): string {
+  return `${AWALAN}${ke}`;
+}
+
 function bacaRute(): Rute {
-  const h = window.location.hash.replace(/^#/, "");
+  const p = window.location.pathname;
+  /* Garis miring penutup dibuang supaya "/admin/crew/" tidak jatuh ke beranda
+     hanya karena satu karakter — alamat yang disalin orang sering membawanya. */
+  const h = p.startsWith(AWALAN)
+    ? p.slice(AWALAN.length).replace(/\/+$/, "") || "/"
+    : "/";
 
   /* Entitas yang tidak dikenal peta konten jatuh ke beranda alih-alih layar
-     kosong — hash diketik tangan atau tertinggal dari versi panel sebelumnya
+     kosong — alamat diketik tangan atau tertinggal dari versi panel sebelumnya
      tidak boleh berakhir di halaman buntu. Diperiksa untuk SEMUA bentuk rute,
-     termasuk form: sejak ada entitas kedua, `#/apa-saja/baru` yang lolos akan
+     termasuk form: sejak ada entitas kedua, `/apa-saja/baru` yang lolos akan
      membuka form lowongan dengan alamat yang menjanjikan hal lain. */
   const siap = (key: string) => findEntry(key)?.entry.status === "siap";
 
   /* Diperiksa SEBELUM pola generik di bawah: "riwayat" dan "review" bukan
-     entri konten, jadi `siap()` akan menolak keduanya dan `#/riwayat`
+     entri konten, jadi `siap()` akan menolak keduanya dan `/admin/riwayat`
      berakhir di beranda. Keduanya memang bukan konten — yang ditampilkannya
      adalah catatan tentang konten, dan karena itu pula keduanya tidak ada di
      `CONTENT_GROUPS`. */
@@ -206,10 +233,13 @@ export function App() {
   const [pesan, setPesan] = useState<string | null>(null);
   const [galat, setGalat] = useState<string | null>(null);
 
+  /* Tombol Kembali/Maju peramban. `pushState` sendiri TIDAK memicu popstate,
+     jadi `pergi()` di bawah menyetel rutenya langsung — dan popstate ini cuma
+     mengurus perpindahan yang datang dari luar React. */
   useEffect(() => {
     const dengar = () => setRute(bacaRute());
-    window.addEventListener("hashchange", dengar);
-    return () => window.removeEventListener("hashchange", dengar);
+    window.addEventListener("popstate", dengar);
+    return () => window.removeEventListener("popstate", dengar);
   }, []);
 
   useEffect(() => {
@@ -303,7 +333,11 @@ export function App() {
   }, [user, muat]);
 
   function pergi(ke: string) {
-    window.location.hash = ke;
+    /* `pushState`, bukan `location.assign`: panel ini satu aplikasi, dan memuat
+       ulang seluruh bundle tiap kali pindah menu berarti mengambil ulang
+       ketigabelas daftar di `muat()` juga. */
+    window.history.pushState(null, "", alamat(ke));
+    setRute(bacaRute());
   }
 
   /** Kembali ke daftar entitas yang barusan disunting — bukan ke beranda.
@@ -544,8 +578,8 @@ export function App() {
                ketidakcocokan itu. */
             /* Visi tidak punya daftar: satu baris, jadi layar entitasnya
                LANGSUNG formnya. Ditangkap di cabang "daftar" karena itulah
-               bentuk hash-nya (`#/visi`) — tidak ada `#/visi/baru` maupun
-               `#/visi/ubah/<id>` yang bisa dituju. */
+               bentuk alamatnya (`/admin/visi`) — tidak ada `/visi/baru` maupun
+               `/visi/ubah/<id>` yang bisa dituju. */
             halamanJudul ? (
               <DaftarJudulSeksi
                 halaman={halamanJudul}
@@ -558,7 +592,7 @@ export function App() {
             ) : rute.entitas === "visi" ? (
               <FormVisi onSelesai={selesai} />
             ) : rute.entitas === "footer" ? (
-              /* Footer, alasan sama: `#/footer` langsung formnya. */
+              /* Footer, alasan sama: `/admin/footer` langsung formnya. */
               <FormFooter onSelesai={selesai} />
             ) : rute.entitas === "deployment" ? (
               <DaftarDeployment

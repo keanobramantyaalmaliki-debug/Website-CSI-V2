@@ -291,6 +291,42 @@ export default defineConfig({
     proxy: {
       "/api": { target: "http://localhost:3001", changeOrigin: false },
       "/uploads": { target: "http://localhost:3001", changeOrigin: false },
+      /* Panel admin: satu alamat, sama seperti di produksi.
+         Di produksi panel ikut terbit di dalam dist/ (lihat outDir di
+         admin/vite.config.ts), jadi `/admin` dilayani proses yang sama dengan
+         situs. Di dev ia proses Vite tersendiri di :5174 — proxy inilah yang
+         menyamakan keduanya, supaya alamat yang dipakai sehari-hari
+         (`:3000/admin`) sama persis dengan yang nanti dibuka di server dan
+         tidak ada jalur yang baru dijalani pertama kali saat deploy. */
+      "/admin": {
+        target: "http://localhost:5174",
+        changeOrigin: false,
+        /* `/admin` telanjang, tanpa garis miring penutup. Vite dev menolaknya
+           dengan 404 "did you mean /admin/?" karena `base` panel memang
+           `/admin/`. Di produksi `serve.json` sudah memetakan `/admin` ke
+           `dist/admin/index.html`, jadi tanpa baris ini alamat yang dipakai
+           sehari-hari (`:3000/admin`) berperilaku beda dari alamat yang
+           dipakai di server. Dibetulkan di sini, bukan dengan redirect,
+           supaya alamat di bilah peramban tetap apa adanya. */
+        rewrite: (path) => (path === "/admin" ? "/admin/" : path),
+        /* HMR panel menembak langsung ke :5174 (lihat admin/vite.config.ts),
+           jadi ini bukan untuk HMR — melainkan supaya websocket apa pun yang
+           lewat sini tidak dijawab sebagai HTML. */
+        ws: true,
+        configure(proxy) {
+          /* `bun run admin:dev` tidak jalan → jawab dengan kalimatnya, bukan
+             dengan galat proxy mentah yang menyebut ECONNREFUSED tanpa
+             menyebut apa yang harus dinyalakan. */
+          proxy.on("error", (_err, _req, res) => {
+            if (!("writeHead" in res)) return;
+            res.writeHead(503, { "Content-Type": "text/plain; charset=utf-8" });
+            res.end(
+              "Panel admin tidak menjawab di :5174.\n" +
+                "Nyalakan dulu: bun run admin:dev\n",
+            );
+          });
+        },
+      },
     },
   },
   /**

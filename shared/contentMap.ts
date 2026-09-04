@@ -35,7 +35,7 @@
 export type ContentStatus = "siap" | "belum";
 
 export type ContentEntry = {
-  /** Dipakai di rute panel (`#/lowongan`) dan sebagai key React. */
+  /** Dipakai di rute panel (`/admin/lowongan`) dan sebagai key React. */
   key: string;
   /** Nama yang dilihat editor. Bahasa Indonesia, bukan nama tabel. */
   label: string;
