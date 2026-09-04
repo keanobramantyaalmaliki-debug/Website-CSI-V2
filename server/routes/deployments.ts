@@ -42,7 +42,7 @@ const asText = (v: unknown): string => (typeof v === "string" ? v : "");
 /** JSON mentah → `DeploymentInput`. Semua isian dipaksa ke bentuknya, tidak
  *  dipercaya: satu `null` di tempat string sudah cukup membuat `.trim()`
  *  melempar dan endpoint membalas 500 tanpa keterangan berguna. */
-function parseDeploymentInput(raw: unknown): DeploymentInput {
+export function parseDeploymentInput(raw: unknown): DeploymentInput {
   const body = (raw ?? {}) as Record<string, unknown>;
 
   /* Status boleh jatuh ke "draft" karena itu keadaan paling aman — yang tidak

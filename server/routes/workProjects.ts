@@ -42,7 +42,7 @@ const asTextList = (v: unknown): string[] =>
 
 /** JSON mentah → `WorkProjectInput`. Semua isian dipaksa ke bentuknya, tidak
  *  dipercaya — lihat alasan yang sama di `routes/values.ts`. */
-function parseWorkProjectInput(raw: unknown): WorkProjectInput {
+export function parseWorkProjectInput(raw: unknown): WorkProjectInput {
   const body = (raw ?? {}) as Record<string, unknown>;
 
   const state = WORK_PROJECT_STATES.includes(body.state as WorkProjectState)

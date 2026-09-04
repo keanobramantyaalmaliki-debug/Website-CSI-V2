@@ -49,7 +49,7 @@ const asText = (v: unknown): string => (typeof v === "string" ? v : "");
 /** JSON mentah → `ProcessStepInput`. Semua isian dipaksa ke bentuknya, tidak
  *  dipercaya: satu `null` di tempat string sudah cukup membuat `.trim()`
  *  melempar dan endpoint membalas 500 tanpa keterangan berguna. */
-function parseProcessStepInput(raw: unknown): ProcessStepInput {
+export function parseProcessStepInput(raw: unknown): ProcessStepInput {
   const body = (raw ?? {}) as Record<string, unknown>;
 
   const state = PROCESS_STEP_STATES.includes(body.state as ProcessStepState)

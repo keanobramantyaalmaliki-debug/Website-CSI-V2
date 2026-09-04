@@ -389,6 +389,83 @@ tr.draf td {
   color: var(--dasar);
 }
 
+/* ── riwayat ────────────────────────────────────────────────────────── */
+
+.riwayat-saring {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--redup);
+}
+
+/* Baris perbandingan menempel pada baris yang membukanya: garis atasnya
+   dihapus supaya keduanya terbaca sebagai satu blok, bukan dua baris tabel
+   yang kebetulan bersebelahan. */
+.riwayat-isi > td {
+  border-top: 0;
+  background: var(--abu);
+  padding: 12px;
+}
+
+table.banding {
+  border: 1px solid var(--garis);
+  background: var(--dasar);
+  /* Lebar kolom ditentukan di muka, bukan oleh isinya. Dengan tata letak
+     otomatis, kolom yang isinya kebetulan lebih panjang jadi lebih lebar —
+     dan di tabel yang seluruh gunanya membandingkan dua sisi, lebar yang
+     tidak sama membuat sisi yang lebih banyak berubah terlihat lebih penting
+     padahal yang beda cuma jumlah hurufnya. */
+  table-layout: fixed;
+}
+
+table.banding th,
+table.banding td {
+  font-size: 14px;
+  vertical-align: top;
+  /* Ketiga kolomnya berdampingan dan isinya panjang. Garis tegak inilah yang
+     membuat mata tahu di mana "sebelum" berhenti dan "sesudah" mulai — tanpa
+     itu dua blok teks abu-abu bersebelahan terbaca seperti satu paragraf. */
+  border-right: 1px solid var(--garis);
+}
+
+table.banding th:last-child,
+table.banding td:last-child {
+  border-right: 0;
+}
+
+/* `pre` untuk menjaga baris bernomor yang dibentuk `nilaiJadiTeks`, tapi
+   TANPA perilaku `pre` yang lain: teks panjang tetap harus melipat, kalau
+   tidak satu paragraf penjelasan akan memaksa seluruh tabel melebar dan
+   memunculkan bilah gulir mendatar di halaman. */
+table.banding pre {
+  margin: 0;
+  font: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Isi lama diredupkan, isi baru ditegaskan. Ini satu-satunya petunjuk arah
+   yang ada: kedua kolom berisi teks yang bentuknya sama persis, dan tanpa
+   beda tebal, membaca mana yang menggantikan mana bergantung pada judul
+   kolom saja. */
+.banding-lama {
+  color: var(--redup);
+}
+
+.banding-baru {
+  color: var(--teks);
+  font-weight: 600;
+}
+
+/* Penanda sel yang memang kosong, bukan teks yang kebetulan pendek. */
+.banding-lama span,
+.banding-baru span {
+  color: var(--redup);
+  font-weight: 400;
+  font-style: italic;
+}
+
 /* ── tab bahasa ─────────────────────────────────────────────────────── */
 
 .tab {
@@ -465,6 +542,15 @@ tr.draf td {
   gap: 12px;
   align-items: center;
   justify-content: space-between;
+}
+
+/* Review + Publish berdampingan, dan tetap berdampingan saat barnya melipat
+   di layar sempit: keduanya satu keputusan ("lihat dulu, lalu tayangkan"),
+   bukan dua tujuan yang berjauhan. */
+.bar-tombol {
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
 /* ── dialog konfirmasi ──────────────────────────────────────────────── */
@@ -645,6 +731,14 @@ details[open] summary {
 
 .sisi button.aktif:hover {
   background: var(--teks);
+}
+
+/* Riwayat bukan salah satu halaman situs, jadi ia dipisah dari daftar di
+   atasnya alih-alih menyambung sebagai baris keenam. */
+.sisi-pisah {
+  border-top: 1px solid var(--garis);
+  margin-top: 8px;
+  padding-top: 8px;
 }
 
 .sisi-item.mati {

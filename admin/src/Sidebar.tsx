@@ -38,10 +38,14 @@ export function Sidebar({
   aktif,
   onBeranda,
   onBuka,
+  onReview,
+  onRiwayat,
 }: {
   aktif: string | null;
   onBeranda: () => void;
   onBuka: (key: string) => void;
+  onReview: () => void;
+  onRiwayat: () => void;
 }) {
   const [terbuka, setTerbuka] = useState<string | null>(() => grupDari(aktif) ?? GRUP_AWAL);
   const [ringkas, setRingkas] = useState(false);
@@ -139,6 +143,36 @@ export function Sidebar({
               </li>
             );
           })}
+
+          {/* Review dan Riwayat berdiri sendiri di dasar, dipisah garis, dan
+              sengaja TIDAK masuk `CONTENT_GROUPS`: daftar itu adalah peta
+              halaman situs dan dijaga tetap sama dengan navbar oleh
+              `src/lib/contentMap.test.ts`. Keduanya tidak punya halaman di
+              situs — yang ditampilkannya adalah catatan tentang panel ini
+              sendiri, sederajat dengan "Beranda" di atas.
+
+              Urutannya mengikuti urutan waktu: Review menjawab apa yang akan
+              tayang, Riwayat apa yang sudah. */}
+          <li className="sisi-pisah">
+            <button
+              type="button"
+              className={aktif === "review" ? "sisi-judul aktif" : "sisi-judul"}
+              aria-current={aktif === "review" ? "page" : undefined}
+              onClick={onReview}
+            >
+              <span>Review</span>
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              className={aktif === "riwayat" ? "sisi-judul aktif" : "sisi-judul"}
+              aria-current={aktif === "riwayat" ? "page" : undefined}
+              onClick={onRiwayat}
+            >
+              <span>Riwayat</span>
+            </button>
+          </li>
         </ul>
       )}
 

@@ -38,7 +38,7 @@ const asTextList = (v: unknown): string[] =>
 
 /** JSON mentah → `CaseStudyInput`. Semua isian dipaksa ke bentuknya, tidak
  *  dipercaya — lihat alasan yang sama di `routes/values.ts`. */
-function parseCaseStudyInput(raw: unknown): CaseStudyInput {
+export function parseCaseStudyInput(raw: unknown): CaseStudyInput {
   const body = (raw ?? {}) as Record<string, unknown>;
 
   const state = CASE_STUDY_STATES.includes(body.state as CaseStudyState)

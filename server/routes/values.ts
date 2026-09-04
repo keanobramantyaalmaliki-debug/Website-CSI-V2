@@ -30,7 +30,7 @@ const asText = (v: unknown): string => (typeof v === "string" ? v : "");
 /** JSON mentah → `ValueInput`. Semua isian dipaksa ke bentuknya, tidak
  *  dipercaya: satu `null` di tempat string sudah cukup membuat `.trim()`
  *  melempar dan endpoint membalas 500 tanpa keterangan berguna. */
-function parseValueInput(raw: unknown): ValueInput {
+export function parseValueInput(raw: unknown): ValueInput {
   const body = (raw ?? {}) as Record<string, unknown>;
 
   const state = VALUE_STATES.includes(body.state as ValueState)

@@ -26,6 +26,8 @@ import industriesRoute from "./routes/industries";
 import deploymentsRoute from "./routes/deployments";
 import processStepsRoute from "./routes/processSteps";
 import caseStudiesRoute from "./routes/caseStudies";
+import historyRoute from "./routes/history";
+import revertRoute from "./routes/revert";
 
 export type Env = { Variables: { actor: Actor } };
 
@@ -93,10 +95,18 @@ app.use("/api/vision", requireLogin);
    `/*`-nya dipasang untuk endpoint berikutnya. */
 app.use("/api/footer/*", requireLogin);
 app.use("/api/footer", requireLogin);
+/* Riwayat cuma bisa dibaca, tapi tetap digerbangi: isinya justru catatan
+   siapa mengubah apa, dan itu bukan sesuatu yang boleh dibaca tamu. */
+app.use("/api/riwayat/*", requireLogin);
+app.use("/api/riwayat", requireLogin);
 app.use("/api/images/*", requireLogin);
 app.use("/api/images", requireLogin);
 app.use("/api/publish/*", requireLogin);
 app.use("/api/publish", requireLogin);
+/* Digerbangi sama seperti route konten yang lain, bukan seperti riwayat:
+   pembatalan MENULIS ke tabel konten. */
+app.use("/api/batal/*", requireLogin);
+app.use("/api/batal", requireLogin);
 
 app.route("/api/jobs", jobsRoute);
 app.route("/api/values", valuesRoute);
@@ -110,8 +120,10 @@ app.route("/api/deployments", deploymentsRoute);
 app.route("/api/process-steps", processStepsRoute);
 app.route("/api/vision", visionRoute);
 app.route("/api/footer", footerRoute);
+app.route("/api/riwayat", historyRoute);
 app.route("/api/images", imagesRoute);
 app.route("/api/publish", publishRoute);
+app.route("/api/batal", revertRoute);
 
 /**
  * Gambar unggahan.

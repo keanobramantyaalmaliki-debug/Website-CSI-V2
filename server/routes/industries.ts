@@ -43,7 +43,7 @@ const asText = (v: unknown): string => (typeof v === "string" ? v : "");
 /** JSON mentah → `IndustryInput`. Semua isian dipaksa ke bentuknya, tidak
  *  dipercaya: satu `null` di tempat string sudah cukup membuat `.trim()`
  *  melempar dan endpoint membalas 500 tanpa keterangan berguna. */
-function parseIndustryInput(raw: unknown): IndustryInput {
+export function parseIndustryInput(raw: unknown): IndustryInput {
   const body = (raw ?? {}) as Record<string, unknown>;
 
   const state = INDUSTRY_STATES.includes(body.state as IndustryState)

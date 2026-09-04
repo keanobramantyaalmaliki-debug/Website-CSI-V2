@@ -57,7 +57,7 @@ function parseSocial(raw: unknown): CrewSocial[] {
 /** JSON mentah → `CrewInput`. Semua isian dipaksa ke bentuknya, tidak
  *  dipercaya: satu `null` di tempat string sudah cukup membuat `.trim()`
  *  melempar dan endpoint membalas 500 tanpa keterangan berguna. */
-function parseCrewInput(raw: unknown): CrewInput {
+export function parseCrewInput(raw: unknown): CrewInput {
   const body = (raw ?? {}) as Record<string, unknown>;
 
   const state = CREW_STATES.includes(body.state as CrewState)

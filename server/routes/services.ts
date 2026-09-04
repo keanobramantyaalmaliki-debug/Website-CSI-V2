@@ -39,7 +39,7 @@ const asTextList = (v: unknown): string[] =>
 
 /** JSON mentah → `ServiceInput`. Semua isian dipaksa ke bentuknya, tidak
  *  dipercaya — lihat alasan yang sama di `routes/values.ts`. */
-function parseServiceInput(raw: unknown): ServiceInput {
+export function parseServiceInput(raw: unknown): ServiceInput {
   const body = (raw ?? {}) as Record<string, unknown>;
 
   const state = SERVICE_STATES.includes(body.state as ServiceState)

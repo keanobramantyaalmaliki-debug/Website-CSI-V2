@@ -12,9 +12,15 @@ import { tayangkan } from "./api";
 
 export function BarPublish({
   pending,
+  onReview,
   onSelesai,
 }: {
   pending: number;
+  /** Ke layar Review. Duduk di sini, tepat di sebelah Publish, karena di
+   *  sinilah pertanyaan "sebentar, ini yang mana saja?" muncul: satu detik
+   *  sebelum tombol Publish ditekan. Menaruhnya hanya di menu sisi berarti
+   *  jawabannya ada di layar lain dari pertanyaannya. */
+  onReview: () => void;
   onSelesai: (pesan: string) => void;
 }) {
   const [sedang, setSedang] = useState(false);
@@ -99,14 +105,27 @@ export function BarPublish({
             </strong>
           )}
         </span>
-        <button
-          type="button"
-          className="utama"
-          onClick={() => void publish()}
-          disabled={sedang || pending === 0}
-        >
-          {sedang ? "Menayangkan…" : "Publish"}
-        </button>
+        {/* Dua tombol dibungkus jadi satu: bar-nya `space-between`, dan anak
+            ketiga yang berdiri sendiri akan mendarat di TENGAH bar, jauh dari
+            tombol yang seharusnya ia dampingi. */}
+        <div className="bar-tombol">
+          {/* Sengaja TIDAK dimatikan saat tidak ada yang menunggu. Tombol mati
+              di sebelah kalimat "Semua perubahan sudah terpublish" tidak
+              menambah apa pun yang belum terbaca, sedangkan tombol hidup yang
+              membuka layar berisi kalimat yang sama menjawab keraguan orang
+              yang belum percaya pada angkanya. */}
+          <button type="button" onClick={onReview}>
+            Review
+          </button>
+          <button
+            type="button"
+            className="utama"
+            onClick={() => void publish()}
+            disabled={sedang || pending === 0}
+          >
+            {sedang ? "Menayangkan…" : "Publish"}
+          </button>
+        </div>
       </div>
     </div>
   );

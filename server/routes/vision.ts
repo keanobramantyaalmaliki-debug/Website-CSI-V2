@@ -30,7 +30,7 @@ const asText = (v: unknown): string => (typeof v === "string" ? v : "");
 /** JSON mentah → `VisionInput`. Semua isian dipaksa ke bentuknya, tidak
  *  dipercaya: satu `null` di tempat string sudah cukup membuat `.trim()`
  *  melempar dan endpoint membalas 500 tanpa keterangan berguna. */
-function parseVisionInput(raw: unknown): VisionInput {
+export function parseVisionInput(raw: unknown): VisionInput {
   const body = (raw ?? {}) as Record<string, unknown>;
   return {
     statement: asText(body.statement),

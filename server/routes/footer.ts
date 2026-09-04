@@ -40,7 +40,7 @@ function parseSocials(raw: unknown): FooterSocial[] {
 /** JSON mentah → `FooterInput`. Semua isian dipaksa ke bentuknya, tidak
  *  dipercaya: satu `null` di tempat string sudah cukup membuat `.trim()`
  *  melempar dan endpoint membalas 500 tanpa keterangan berguna. */
-function parseFooterInput(raw: unknown): FooterInput {
+export function parseFooterInput(raw: unknown): FooterInput {
   const body = (raw ?? {}) as Record<string, unknown>;
   return {
     email: asText(body.email),

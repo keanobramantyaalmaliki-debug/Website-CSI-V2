@@ -35,7 +35,7 @@ const asText = (v: unknown): string => (typeof v === "string" ? v : "");
 /** JSON mentah → `TestimonialInput`. Semua isian dipaksa ke bentuknya, tidak
  *  dipercaya: satu `null` di tempat string sudah cukup membuat `.trim()`
  *  melempar dan endpoint membalas 500 tanpa keterangan berguna. */
-function parseTestimonialInput(raw: unknown): TestimonialInput {
+export function parseTestimonialInput(raw: unknown): TestimonialInput {
   const body = (raw ?? {}) as Record<string, unknown>;
 
   const state = TESTIMONIAL_STATES.includes(body.state as TestimonialState)

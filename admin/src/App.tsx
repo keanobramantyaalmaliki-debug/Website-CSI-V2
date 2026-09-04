@@ -73,6 +73,8 @@ import { FormLayanan } from "./FormLayanan";
 import { FormTestimoni } from "./FormTestimoni";
 import { FormVisi } from "./FormVisi";
 import { Masuk } from "./Masuk";
+import { Review } from "./Review";
+import { Riwayat } from "./Riwayat";
 import { Sidebar } from "./Sidebar";
 import { TombolTema } from "./Tema";
 import { Kabar } from "./ui";
@@ -80,8 +82,27 @@ import { findEntry } from "@shared/contentMap";
 
 type Rute =
   | { nama: "beranda" }
+  | { nama: "review" }
+  | { nama: "riwayat" }
   | { nama: "daftar"; entitas: string }
   | { nama: "form"; entitas: string; id: string | null };
+
+/**
+ * Entitas yang layar utamanya LANGSUNG form, tanpa daftar di depannya — visi
+ * dan footer, karena datanya masing-masing satu baris.
+ *
+ * Bentuk `.../baru` dan `.../ubah/<id>` tidak punya arti untuk mereka, dan
+ * membiarkannya lolos bukan sekadar tidak berguna: rantai pemilihan komponen
+ * di bawah berakhir di form lowongan, jadi `#/visi/baru` akan membuka form
+ * LOWONGAN di alamat yang menjanjikan visi. Persis jenis kerusakan yang
+ * dijaga pemeriksaan `siap()` di `bacaRute`, cuma dari arah lain.
+ *
+ * Di ruang modul, bukan di dalam `bacaRute`, karena tombol "Buka" di layar
+ * Review menyusun alamat dan harus tahu hal yang sama.
+ */
+function tanpaDaftar(key: string): boolean {
+  return key === "visi" || key === "footer";
+}
 
 function bacaRute(): Rute {
   const h = window.location.hash.replace(/^#/, "");
@@ -93,17 +114,13 @@ function bacaRute(): Rute {
      membuka form lowongan dengan alamat yang menjanjikan hal lain. */
   const siap = (key: string) => findEntry(key)?.entry.status === "siap";
 
-  /**
-   * Entitas yang layar utamanya LANGSUNG form, tanpa daftar di depannya —
-   * visi dan footer, karena datanya masing-masing satu baris.
-   *
-   * Bentuk `.../baru` dan `.../ubah/<id>` tidak punya arti untuk mereka, dan
-   * membiarkannya lolos bukan sekadar tidak berguna: rantai pemilihan
-   * komponen di bawah berakhir di form lowongan, jadi `#/visi/baru` akan
-   * membuka form LOWONGAN di alamat yang menjanjikan visi. Persis jenis
-   * kerusakan yang dijaga pemeriksaan `siap()` di atas, cuma dari arah lain.
-   */
-  const tanpaDaftar = (key: string) => key === "visi" || key === "footer";
+  /* Diperiksa SEBELUM pola generik di bawah: "riwayat" dan "review" bukan
+     entri konten, jadi `siap()` akan menolak keduanya dan `#/riwayat`
+     berakhir di beranda. Keduanya memang bukan konten — yang ditampilkannya
+     adalah catatan tentang konten, dan karena itu pula keduanya tidak ada di
+     `CONTENT_GROUPS`. */
+  if (h === "/riwayat") return { nama: "riwayat" };
+  if (h === "/review") return { nama: "review" };
 
   const baru = /^\/([a-z-]+)\/baru$/.exec(h);
   if (baru && siap(baru[1]))
@@ -249,10 +266,18 @@ export function App() {
    *  Menyimpan satu lowongan hampir selalu diikuti melihat lowongan lain. */
   function selesai(kabar: string) {
     setPesan(kabar);
-    /* Cabang "beranda" tidak pernah terjadi — beranda tidak punya form yang
-       bisa selesai. Ia ada semata supaya TypeScript bisa menyempitkan union
-       `Rute`, yang cuma sebagian anggotanya punya `entitas`. */
-    pergi(rute.nama === "beranda" ? "/" : `/${rute.entitas}`);
+    /* Cabang "beranda", "riwayat", dan "review" tidak pernah terjadi —
+       ketiganya tidak punya form yang bisa selesai, dan dua yang terakhir
+       memang cuma baca. Ketiganya ada semata supaya TypeScript bisa
+       menyempitkan union `Rute`, yang cuma sebagian anggotanya punya
+       `entitas`. */
+    pergi(
+      rute.nama === "beranda" ||
+        rute.nama === "riwayat" ||
+        rute.nama === "review"
+        ? "/"
+        : `/${rute.entitas}`,
+    );
     void muat();
   }
 
@@ -383,7 +408,13 @@ export function App() {
 
       <div className="rangka">
         <Sidebar
-          aktif={rute.nama === "beranda" ? null : rute.entitas}
+          aktif={
+            rute.nama === "beranda"
+              ? null
+              : rute.nama === "riwayat" || rute.nama === "review"
+                ? rute.nama
+                : rute.entitas
+          }
           onBeranda={() => {
             setPesan(null);
             pergi("/");
@@ -392,13 +423,41 @@ export function App() {
             setPesan(null);
             pergi(`/${key}`);
           }}
+          onReview={() => {
+            setPesan(null);
+            pergi("/review");
+          }}
+          onRiwayat={() => {
+            setPesan(null);
+            pergi("/riwayat");
+          }}
         />
 
         <main className="isi">
           {galat ? <Kabar tegas anak={galat} /> : null}
           {pesan ? <Kabar anak={pesan} /> : null}
 
-          {rute.nama === "beranda" ? (
+          {rute.nama === "riwayat" ? (
+            <Riwayat pending={pending} />
+          ) : rute.nama === "review" ? (
+            <Review
+              pending={pending}
+              /* Bukan cuma angka bilah: benda yang barusan dikembalikan harus
+                 muncul lagi di daftar entitasnya, dan yang barusan dibuang
+                 harus hilang dari sana. `muat()` menyegarkan keduanya sekali
+                 jalan. */
+              onSegarkan={() => void muat()}
+              onBuka={(key, id) => {
+                setPesan(null);
+                /* Visi dan kaki halaman tidak punya `/ubah/<id>`. Alamat
+                   seperti itu memang tetap mendarat di form yang benar
+                   (`bacaRute` menormalkannya), tapi yang tertulis di bilah
+                   alamat lalu berbohong tentang di mana kita berada, dan
+                   alamat itulah yang orang salin ke teman. */
+                pergi(id && !tanpaDaftar(key) ? `/${key}/ubah/${id}` : `/${key}`);
+              }}
+            />
+          ) : rute.nama === "beranda" ? (
             <Beranda
               keterangan={keterangan}
               onBuka={(key) => {
@@ -632,6 +691,10 @@ export function App() {
 
       <BarPublish
         pending={pending}
+        onReview={() => {
+          setPesan(null);
+          pergi("/review");
+        }}
         onSelesai={(kabar) => {
           setPesan(kabar);
           void muat();

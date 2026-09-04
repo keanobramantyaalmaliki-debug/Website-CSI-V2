@@ -19,6 +19,7 @@ import type { Testimonial } from "@shared/testimonial";
 import type { Vision } from "@shared/vision";
 import type { Footer } from "@shared/footer";
 import type { ProcessStep } from "@shared/processStep";
+import type { PeristiwaRiwayat, PeristiwaTertahan } from "@shared/riwayat";
 import type { CrewFieldErrors, CrewInput } from "@shared/validateCrew";
 import type { JobFieldErrors, JobInput } from "@shared/validateJob";
 import type { ValueFieldErrors, ValueInput } from "@shared/validateValue";
@@ -591,4 +592,71 @@ export const tayangkan = () =>
   }>(
     "/api/publish",
     { method: "POST" },
+  );
+
+/* ── riwayat ────────────────────────────────────────────────────────── */
+
+/**
+ * Riwayat perubahan, terbaru dulu.
+ *
+ * Cuma baca: tidak ada pasangan simpan/hapus di sini, dan memang tidak boleh
+ * ada. Riwayat yang bisa disunting dari panel yang sama dengan yang dicatatnya
+ * berhenti jadi bukti tentang apa yang pernah terjadi.
+ *
+ * `lewati` dipakai tombol "Muat lebih banyak"; `adaLagi` yang memberi tahu
+ * apakah tombolnya masih perlu ditampilkan, jadi panel tidak perlu menebak
+ * dari jumlah baris yang diterima.
+ */
+export const ambilRiwayat = (opsi: {
+  entitas?: string | null;
+  limit?: number;
+  lewati?: number;
+} = {}) => {
+  const q = new URLSearchParams();
+  if (opsi.entitas) q.set("entitas", opsi.entitas);
+  if (opsi.limit) q.set("limit", String(opsi.limit));
+  if (opsi.lewati) q.set("lewati", String(opsi.lewati));
+
+  const tanya = q.toString();
+  return minta<{
+    riwayat: PeristiwaRiwayat[];
+    adaLagi: boolean;
+    /* Jenis konten yang BENAR-BENAR pernah tercatat, bukan seluruh isi kamus:
+       penyaring yang menawarkan sepuluh pilihan dan sembilan di antaranya
+       kosong lebih menyesatkan daripada membantu. */
+    jenis: string[];
+  }>(`/api/riwayat${tanya ? `?${tanya}` : ""}`);
+};
+
+/**
+ * Perubahan yang sudah disimpan tapi belum ditekan Publish, dikelompokkan per
+ * benda. Isi layar Review.
+ *
+ * Tanpa halaman, tidak seperti riwayat: seluruh gunanya justru melihat
+ * semuanya sekaligus sebelum menekan Publish, dan daftar yang harus dibuka
+ * per tiga puluh baris mengembalikan persis pencarian satu per satu yang
+ * layar ini ada untuk menghapusnya. `terpotong` cuma menyala di keadaan yang
+ * tidak wajar (ratusan penyimpanan tanpa satu Publish pun), dan panel
+ * mengatakannya alih-alih diam.
+ */
+export const ambilTertahan = () =>
+  minta<{ tertahan: PeristiwaTertahan[]; terpotong: boolean }>(
+    "/api/riwayat/tertahan",
+  );
+
+/**
+ * Batalkan satu perubahan yang belum terpublish.
+ *
+ * Ditaruh di kelompok riwayat walau ia MENULIS ke tabel konten, karena yang
+ * dipeluknya adalah satu baris di layar Review, bukan sebuah entitas: ia tidak
+ * perlu tahu bentuk isian nilai maupun lowongan, cukup dua kolom yang sudah
+ * ada di baris itu. Server yang mencari isi lamanya.
+ *
+ * `entitasId` boleh `null` — visi dan kaki halaman memang dicatat tanpa id
+ * karena id-nya angka 1, bukan uuid.
+ */
+export const batalkanPerubahan = (entitas: string, entitasId: string | null) =>
+  minta<{ aksi: string; judul: string }>(
+    "/api/batal",
+    kirimJson("POST", { entitas, entitasId }),
   );

@@ -36,7 +36,7 @@ const asList = (v: unknown): string[] =>
  * diharapkan sudah cukup untuk membuat `.trim()` melempar dan endpoint-nya
  * membalas 500 tanpa keterangan berguna.
  */
-function parseJobInput(raw: unknown): JobInput {
+export function parseJobInput(raw: unknown): JobInput {
   const body = (raw ?? {}) as Record<string, unknown>;
 
   const state = JOB_STATES.includes(body.state as JobState)
