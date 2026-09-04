@@ -92,3 +92,7 @@ matterjs-lab.html
 
 # Keluaran default scripts/shoot.mjs.
 /shot.png
+
+# CMS (Agu 2026) — /dist-admin & /uploads sudah diabaikan di blok "vite output"
+# di atas; di sini cuma pengecualian contoh env supaya ikut ter-commit.
+!.env.example

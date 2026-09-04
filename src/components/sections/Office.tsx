@@ -1,9 +1,12 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "motion/react";
 import TestimonialSpotlight from "@/components/sections/TestimonialSpotlight";
 import LineMask from "@/components/motion/LineMask";
 import ServicesTicker from "@/components/canvas/ServicesTicker";
+import { sectionHeading, sectionSubheading } from "@/data/sectionTexts";
+import { services } from "@/data/services";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -13,59 +16,23 @@ const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
  *
  * Sejak 21 Agu daftarnya tampil sebagai sabuk teks 3D (ServicesTicker, ala
  * panel Lusion) — accordion Disclosure + foto Unsplash + PinnedServiceStack
- * dicabut. `desc`/`subs` tetap di sini untuk daftar sr-only (pembaca layar
+ * dicabut. `desc`/`subs` tetap ikut untuk daftar sr-only (pembaca layar
  * & SEO; teks troika di canvas tidak terbaca mesin).
+ *
+ * Sejak 2 Sep daftarnya datang dari CMS lewat `@/data/services` — literal
+ * `SERVICES` yang dulu di sini pindah ke `src/data/servicesFallback.ts`.
+ * Nomor "01"–"09"-nya ditinggalkan di sana: ia tidak pernah dicetak ke layar,
+ * cuma jadi `key` React, dan judul layanan sudah unik.
  */
-const SERVICES: { num: string; title: string; desc: string; subs?: string[] }[] = [
-  {
-    num: "01",
-    title: "Custom Software Development",
-    desc: "Software built around your processes, not the other way around.",
-  },
-  {
-    num: "02",
-    title: "Web Application Development",
-    desc: "Fast, secure web apps built to scale with you.",
-  },
-  {
-    num: "03",
-    title: "Mobile App Development",
-    desc: "Native and cross-platform apps for Android and iOS.",
-  },
-  {
-    num: "04",
-    title: "Artificial Intelligence Solutions",
-    desc: "AI that automates workflows and surfaces opportunities in your data.",
-    subs: ["Jenna.ai", "Knowledge Assistants", "Process Automation", "AI-Powered Analytics", "Custom AI Integration"],
-  },
-  {
-    num: "05",
-    title: "Enterprise Solutions",
-    desc: "Platforms that connect departments and sharpen decisions org-wide.",
-  },
-  {
-    num: "06",
-    title: "System Integration",
-    desc: "Secure API integrations that connect your existing systems.",
-  },
-  {
-    num: "07",
-    title: "UI/UX Design",
-    desc: "User-centered interfaces people actually enjoy using.",
-  },
-  {
-    num: "08",
-    title: "Cloud & DevOps",
-    desc: "Cloud infrastructure and DevOps built for reliability at scale.",
-  },
-  {
-    num: "09",
-    title: "Maintenance & Technical Support",
-    desc: "Ongoing support that keeps your systems secure and current.",
-  },
-];
-
 export default function Office() {
+  /* ⚠️ DI DALAM komponen, bukan di ruang modul: `content.json` baru mendarat
+     sesudah `loadContent()` di main.tsx, jadi konstanta modul akan membekukan
+     isi cadangan selamanya tanpa satu pun error. Lihat catatan lengkapnya di
+     `src/data/services.ts`. */
+  const daftar = useMemo(() => services(), []);
+  const baris = useMemo(() => sectionHeading("services-lead"), []);
+  const paragraf = useMemo(() => sectionSubheading("services-lead"), []);
+
   return (
     <section
       id="services"
@@ -87,43 +54,57 @@ export default function Office() {
             skalanya harus terbaca setara (20 Agu). Eyebrow "Services" dicabut
             bersamaan: navbar sudah menyebut nama halamannya. */}
         <h2 className="max-w-5xl text-4xl font-semibold tracking-tight text-zinc-100 sm:text-6xl lg:text-7xl">
-          <LineMask>Where Software Becomes Intelligence.</LineMask>
+          {baris.map((line, i) => (
+            <LineMask key={i} delay={i * 0.06}>
+              {line}
+            </LineMask>
+          ))}
         </h2>
 
         {/* Overview — [what we build] + [impact on audience] + [who we serve, X to Y] */}
-        <motion.p
-          /* mt mobile 18px = standar judul→subteks 28 Agu (PeopleIntro);
-             ≥sm kembali 24px. */
-          className="mt-[18px] max-w-2xl text-base leading-relaxed text-zinc-400 sm:mt-6 sm:text-lg"
-          initial={{ opacity: 0, y: 8 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
-        >
-          We build the software, AI, and cloud infrastructure that turn
-          complex operations into decisions your team can act on for
-          government agencies and enterprises across Indonesia.
-        </motion.p>
+        {paragraf.length > 0 && (
+          <motion.p
+            /* mt mobile 18px = standar judul→subteks 28 Agu (PeopleIntro);
+               ≥sm kembali 24px. */
+            className="mt-[18px] max-w-2xl text-base leading-relaxed text-zinc-400 sm:mt-6 sm:text-lg"
+            initial={{ opacity: 0, y: 8 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
+          >
+            {paragraf[0]}
+          </motion.p>
+        )}
       </div>
 
       {/* Panel putih ala Lusion — satu-satunya bidang terang di halaman,
-          berisi sabuk teks 3D 9 layanan (lihat ServicesTicker.tsx). */}
-      <ServicesTicker
-        className="mt-16"
-        items={SERVICES.map(({ num, title }) => ({ num, title }))}
-      />
+          berisi sabuk teks 3D layanan (lihat ServicesTicker.tsx).
 
-      {/* Daftar layanan yang terbaca mesin. Teks troika di canvas tidak masuk
-          accessibility tree ataupun terindeks — konten sesungguhnya (termasuk
-          desc + subs yang dulunya di accordion) hidup di sini. */}
-      <ul className="sr-only">
-        {SERVICES.map((s) => (
-          <li key={s.num}>
-            {s.title}: {s.desc}
-            {s.subs ? ` (${s.subs.join(", ")})` : ""}
-          </li>
-        ))}
-      </ul>
+          Digerbangi daftar kosong, dan itu bukan kehati-hatian berlebihan:
+          `beltX()` membagi dengan `slot * count`, jadi nol layanan bukan panel
+          kosong melainkan panel putih setinggi 45svh berisi NaN. Editor yang
+          menghapus semua layanannya memang meminta bagian ini hilang, bukan
+          menyisakan bidang terang tanpa isi. */}
+      {daftar.length > 0 && (
+        <>
+          <ServicesTicker
+            className="mt-16"
+            items={daftar.map(({ title }) => ({ title }))}
+          />
+
+          {/* Daftar layanan yang terbaca mesin. Teks troika di canvas tidak
+              masuk accessibility tree ataupun terindeks — konten sesungguhnya
+              (termasuk desc + subs yang dulunya di accordion) hidup di sini. */}
+          <ul className="sr-only">
+            {daftar.map((s) => (
+              <li key={s.title}>
+                {s.title}: {s.desc}
+                {s.subs.length ? ` (${s.subs.join(", ")})` : ""}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
 
       {/* Testimonial — redesain 20 Agu: kartu blockquote lama diganti
           spotlight gaya basement.studio (quote raksasa di tengah + hairline

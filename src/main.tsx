@@ -21,16 +21,28 @@ import "@fontsource-variable/archivo/wdth.css";
 import "./index.css";
 import App from "./App";
 import { initShellMax } from "./lib/shellMax";
+import { loadContent } from "./lib/content/store";
 
 /* Sebelum render: isi `--shell-max` (plafon dinamis section-shell, §4bh)
    supaya frame pertama di monitor >1920px sudah full-bleed, bukan melompat
    dari fallback 1920. */
 initShellMax();
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </StrictMode>
-);
+/* Konten CMS diambil SEBELUM render, bukan di dalam efek: `jobPostings()` dan
+   kawan-kawannya sinkron, jadi isinya harus sudah ada saat komponen pertama
+   dirender. `loadContent` tidak pernah melempar dan punya batas waktu 1,5
+   detik — kalau gagal, situs lanjut dengan isi bawaan bundle.
+
+   Sengaja `.then()`, BUKAN top-level await: target build (`chrome87`/`safari14`,
+   bawaan Vite) belum mengenal TLA, dan esbuild menggagalkan `bun run build`
+   dengan "Top-level await is not available". Menaikkan target demi satu baris
+   ini akan melebarkan syarat peramban seluruh bundle. */
+loadContent().then(() => {
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </StrictMode>
+  );
+});

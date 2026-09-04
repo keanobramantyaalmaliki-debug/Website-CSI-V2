@@ -12,7 +12,9 @@
  * replays the reveal instead of only firing once per mount.
  */
 
+import type { ReactElement } from "react";
 import { motion } from "motion/react";
+import type { ProcessGlyphKey } from "@/data/processStepsFallback";
 import { makeContainer, makeDraw, makePop, makeFade, makeGrowX } from "./glyphMotion";
 
 type GlyphProps = { play: boolean; reduced: boolean; className?: string };
@@ -181,6 +183,18 @@ export function DeploymentGlyph({ play, reduced, className = BASE }: GlyphProps)
   );
 }
 
+/**
+ * Keenamnya sebagai larik, dipakai `ProcessGlyphs.test.tsx` untuk memeriksa
+ * semuanya sekaligus tanpa menyebut satu per satu.
+ *
+ * ⚠️ INI BUKAN LAGI CARA MEMILIH GAMBAR. Sampai 2 Sep 2026 `Process.tsx`
+ * mengambil `PROCESS_GLYPHS[i]` — gambar dipasangkan menurut POSISI kartu.
+ * Begitu langkahnya bisa dihapus dan diurutkan dari panel CMS, pasangan itu
+ * bergeser diam-diam: "Design" naik satu baris dan tiba-tiba bergambar radar,
+ * tanpa seorang pun mengubah gambar apa pun dan tanpa satu pun galat. Yang
+ * dipakai sekarang `PROCESS_GLYPHS_BY_KEY` di bawah, dan kuncinya disimpan di
+ * kolom `glyph` milik langkahnya.
+ */
 export const PROCESS_GLYPHS = [
   DiscoveryGlyph,
   StrategyGlyph,
@@ -189,3 +203,27 @@ export const PROCESS_GLYPHS = [
   TestingGlyph,
   DeploymentGlyph,
 ];
+
+/**
+ * Peta kunci → komponen, satu-satunya jalan sah dari data ke gambar.
+ *
+ * `Record<ProcessGlyphKey, ...>` dan bukan objek biasa: begitu ada kunci
+ * ketujuh ditambahkan di `shared/processStep.ts` (dan enum Postgres-nya),
+ * TypeScript menolak berkas ini sampai gambarnya benar-benar dibuat — jadi
+ * mustahil ada nilai tersimpan yang tidak punya gambar.
+ *
+ * Tipenya diambil dari `@/data/processStepsFallback`, bukan dari `shared/`,
+ * dengan sengaja: berkas itu literal murni tanpa satu pun impor, jadi
+ * mengambilnya dari sana tidak menarik apa pun yang lain ikut ke bundle.
+ */
+export const PROCESS_GLYPHS_BY_KEY: Record<
+  ProcessGlyphKey,
+  (props: GlyphProps) => ReactElement
+> = {
+  discovery: DiscoveryGlyph,
+  strategy: StrategyGlyph,
+  design: DesignGlyph,
+  development: DevelopmentGlyph,
+  testing: TestingGlyph,
+  deployment: DeploymentGlyph,
+};

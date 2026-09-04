@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion, type Variants } from "motion/react";
 import {
@@ -14,7 +14,7 @@ import { ACTIVE_KEYS } from "@/components/canvas/CameraController";
 import MagneticButton from "@/components/motion/MagneticButton";
 import { scrollToTop, setScrollLocked } from "@/lib/smoothScroll";
 import { isJobPath } from "@/data/jobs";
-import { SOCIALS } from "@/data/socials";
+import { footer } from "@/data/footer";
 import { ID_ZONES, useZoneClocks } from "@/lib/hooks/useZoneClocks";
 import { useNarrowViewport } from "@/lib/hooks/useNarrowViewport";
 
@@ -708,6 +708,19 @@ function MobileMenu({
   /** Dipanggil setelah overlay benar-benar selesai memudar dan lepas dari DOM. */
   onGone: () => void;
 }) {
+  /**
+   * Tautan sosialnya milik KAKI HALAMAN, dan itu disengaja: sampai 2 Sep
+   * keduanya membaca satu literal (`src/data/socials.ts`), dan sifat itu
+   * dipertahankan waktu kaki halaman masuk CMS. Daftar terpisah berarti editor
+   * mengubah URL Instagram di panel lalu menu HP tetap menunjuk yang lama —
+   * tanpa satu pun galat, dan tanpa cara menebak sebabnya.
+   *
+   * ⚠️ `useMemo` di DALAM komponen, bukan konstanta modul: `content.json` baru
+   * mendarat sesudah `loadContent()`, jadi konstanta modul membekukan isi
+   * cadangan selamanya. Lihat `src/data/footer.ts`.
+   */
+  const socials = useMemo(() => footer().socials, []);
+
   return (
     <AnimatePresence onExitComplete={onGone}>
       {open && (
@@ -786,8 +799,10 @@ function MobileMenu({
           </motion.div>
 
           <motion.ul variants={itemV} className="mt-8 flex flex-wrap gap-x-7 gap-y-3">
-            {SOCIALS.map((s) => (
-              <li key={s.label}>
+            {socials.map((s, i) => (
+              /* Kunci berikut nomornya: `label` teks bebas dari CMS sejak 2
+                 Sep, jadi dua "Instagram" bukan lagi hal yang mustahil. */
+              <li key={`${i}-${s.label}`}>
                 <a
                   href={s.href}
                   target="_blank"

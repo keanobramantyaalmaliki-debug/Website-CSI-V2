@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import TheCrew from "./TheCrew";
-import { TEAM_MEMBERS } from "@/data/people";
+import { FALLBACK_CREW } from "@/data/crewFallback";
 
 // jsdom lacks IntersectionObserver; motion's whileInView/useInView need it.
 // Fires the callback immediately so in-view reveals resolve on mount.
@@ -58,7 +58,7 @@ describe("TheCrew", () => {
     }
 
     // Setiap orang dari setiap kategori ada di DOM tanpa klik apa pun.
-    for (const member of TEAM_MEMBERS) {
+    for (const member of FALLBACK_CREW) {
       expect(screen.getAllByText(member.name).length).toBeGreaterThanOrEqual(1);
     }
   });
@@ -96,7 +96,7 @@ describe("TheCrew", () => {
     expect(within(box).getByText("A-Z")).toBeInTheDocument();
 
     for (const cat of ["Management", "Developer", "R & D"] as const) {
-      const namesInCat = TEAM_MEMBERS.filter((m) => m.category === cat).map(
+      const namesInCat = FALLBACK_CREW.filter((m) => m.category === cat).map(
         (m) => m.name,
       );
       // Urutan render dibaca dari posisi tiap <h3> di dalam indeks nama.
@@ -131,11 +131,11 @@ describe("TheCrew", () => {
     // di sini cuma kartu orang pertama saat mount — sisanya dicapai dengan
     // menggeser/autoplay yang memutar penuh (dijamin oleh test loop di
     // TheCrewMobileCarousel.test.tsx).
-    for (const member of TEAM_MEMBERS) {
+    for (const member of FALLBACK_CREW) {
       expect(screen.getAllByText(member.name).length).toBeGreaterThanOrEqual(1);
     }
     expect(
-      within(mobileCarousel).getByText(TEAM_MEMBERS[0].name),
+      within(mobileCarousel).getByText(FALLBACK_CREW[0].name),
     ).toBeInTheDocument();
   });
 
@@ -143,7 +143,7 @@ describe("TheCrew", () => {
     const user = userEvent.setup();
     render(<TheCrew />);
 
-    const firstMember = TEAM_MEMBERS[0];
+    const firstMember = FALLBACK_CREW[0];
     const heading = screen.getAllByText(firstMember.name)[0];
     const row = heading.closest("[tabindex]") as HTMLElement;
     expect(row).toBeTruthy();
@@ -180,8 +180,8 @@ describe("TheCrew", () => {
     const user = userEvent.setup();
     render(<TheCrew />);
 
-    const target = TEAM_MEMBERS[1];
-    const other = TEAM_MEMBERS[0];
+    const target = FALLBACK_CREW[1];
+    const other = FALLBACK_CREW[0];
     const row = screen
       .getAllByText(target.name)[0]
       .closest("[tabindex]") as HTMLElement;
@@ -208,8 +208,8 @@ describe("TheCrew", () => {
     const user = userEvent.setup();
     render(<TheCrew />);
 
-    const target = TEAM_MEMBERS[2];
-    const other = TEAM_MEMBERS[0];
+    const target = FALLBACK_CREW[2];
+    const other = FALLBACK_CREW[0];
     const curtain = screen.getByTestId("crew-spotlight");
     expect(curtain.dataset.active).toBe("false");
     expect(curtain.className).toMatch(/pointer-events-none/);
@@ -241,7 +241,7 @@ describe("TheCrew", () => {
     render(<TheCrew />);
 
     const row = screen
-      .getAllByText(TEAM_MEMBERS[1].name)[0]
+      .getAllByText(FALLBACK_CREW[1].name)[0]
       .closest("[tabindex]") as HTMLElement;
     const curtain = screen.getByTestId("crew-spotlight");
 
@@ -266,7 +266,7 @@ describe("TheCrew", () => {
       screen.getByRole("heading", { name: "The Crew" }),
     ).toBeInTheDocument();
     await waitFor(
-      () => expect(screen.getByText(String(TEAM_MEMBERS.length))).toBeInTheDocument(),
+      () => expect(screen.getByText(String(FALLBACK_CREW.length))).toBeInTheDocument(),
       { timeout: 5000 },
     );
   });

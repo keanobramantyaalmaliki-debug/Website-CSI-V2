@@ -1,44 +1,30 @@
 "use client";
 
-import DeploymentCard, { type DeploymentData } from "@/components/sections/DeploymentCard";
+import { useMemo } from "react";
+
+import DeploymentCard from "@/components/sections/DeploymentCard";
 import DeploymentCta from "@/components/sections/DeploymentCta";
 import LineMask from "@/components/motion/LineMask";
 import { FadeUpList } from "@/components/motion/FadeUp";
-
-const DEPLOYMENTS: DeploymentData[] = [
-  {
-    num: "01",
-    sector: "Public Services",
-    region: "Indonesia",
-    desc: "Citizens reach government services online, and every agency works from the same information at the same time.",
-  },
-  {
-    num: "02",
-    sector: "Infrastructure",
-    region: "Indonesia",
-    desc: "Physical assets and field crews report in as they work, so issues show up while there's still time to act.",
-  },
-  {
-    num: "03",
-    sector: "Logistics",
-    region: "International",
-    desc: "Every shipment stays visible from origin to delivery. Routine handoffs run on their own, and crews in the field decide with data that is actually current.",
-  },
-  {
-    num: "04",
-    sector: "Hospitality",
-    region: "Southeast Asia",
-    desc: "Property operations and guest service share one system, with revenue reporting built into the same view.",
-  },
-  {
-    num: "05",
-    sector: "Communities",
-    region: "Indonesia",
-    desc: "A single platform ties residents to their local administrators and services, working the same way online and in person.",
-  },
-];
+import { deployments } from "@/data/deployments";
+import { sectionHeading } from "@/data/sectionTexts";
 
 export default function Deployments() {
+  /* Dipanggil DI DALAM komponen, bukan di ruang modul. `deployments()` membaca
+     content.json yang baru terisi setelah `loadContent()` selesai; kalau
+     hasilnya dibekukan jadi `const` di atas berkas, section ini akan
+     menampilkan isi cadangan bundle selamanya TANPA satu pun error —
+     lihat memori `cms-data-module-scope-gotcha`. */
+  const kartu = useMemo(() => deployments(), []);
+  const baris = useMemo(() => sectionHeading("deployments"), []);
+
+  /* Daftar kosong = section hilang seluruhnya, dan itu aman untuk aturan
+     jarak 80px: section ini `pt-0 pb-20`, CsiHero di atasnya sudah `pb-20`,
+     dan Process di bawahnya `pt-0`. Jadi begitu section ini absen, celah
+     CsiHero→Process tetap persis 80px dari satu angka yang sama. (Beda dengan
+     Visi, yang WAJIB selalu render karena dialah pemilik celahnya.) */
+  if (kartu.length === 0) return null;
+
   return (
     <section
       id="deployments"
@@ -63,15 +49,31 @@ export default function Deployments() {
           tampilan diamnya tidak berubah sedikit pun. Eyebrow "DEPLOYMENTS"
           sudah dihapus lebih dulu 18 Agu (judulnya menyebut isinya sendiri). */}
       <h2 className="relative max-w-xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
-        <LineMask>
-          Built for real-world environments where decisions matter.
-        </LineMask>
+        {/* Satu `LineMask` per baris judul, tersusul 60ms — idiom yang sama
+            dengan MeetingLead. Judul satu baris tetap lewat map ini dan
+            menghasilkan markup yang persis sama seperti sebelumnya. */}
+        {baris.map((line, i) => (
+          <LineMask key={i} delay={i * 0.06}>
+            {line}
+          </LineMask>
+        ))}
       </h2>
 
       {/* Deployment cards with stagger entrance */}
       <FadeUpList className="relative mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {DEPLOYMENTS.map((d) => (
-          <DeploymentCard key={d.num} d={d} />
+        {/* Nomor "01"–"05" DITURUNKAN dari posisi, tidak pernah disimpan:
+            editor yang menghapus kartu ke-2 tidak boleh meninggalkan urutan
+            01, 03, 04. Cadangan bundle pun sudah tanpa kolom `num`.
+            Kuncinya pasangan sektor·wilayah — pasangan itulah yang unik di
+            basis data (`deployments_sector_region_alive`), bukan sektornya
+            sendiri; "Logistics · Indonesia" dan "Logistics · International"
+            memang dua kartu berbeda. Indeks TIDAK dipakai sebagai key supaya
+            urutan yang berubah tidak menukar state animasi antar kartu. */}
+        {kartu.map((d, i) => (
+          <DeploymentCard
+            key={`${d.sector} · ${d.region}`}
+            d={{ ...d, num: String(i + 1).padStart(2, "0") }}
+          />
         ))}
         <DeploymentCta />
       </FadeUpList>

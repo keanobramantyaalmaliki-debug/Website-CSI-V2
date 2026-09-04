@@ -1,7 +1,27 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, within, fireEvent } from "@testing-library/react";
 import Industries from "./Industries";
-import { INDUSTRIES } from "@/data/industries";
+import { industries, type IndustryContent } from "@/data/industries";
+
+/**
+ * Sektornya pindah ke CMS 2 Sep, jadi test ini tidak lagi bisa mengimpor
+ * satu literal. Mock-nya membungkus modul asli alih-alih menggantinya:
+ * selama `daftarUji` null, `industries()` menjawab apa adanya (di jsdom
+ * `content.json` tidak pernah dimuat, jadi itu daftar cadangan bundle) —
+ * yang membuat semua test di bawah tetap menguji data yang SUNGGUHAN
+ * tayang. Overrideannya cuma dipakai satu test, yang menguji daftar kosong.
+ */
+let daftarUji: IndustryContent[] | null = null;
+
+vi.mock("@/data/industries", async (importOriginal) => {
+  const asli = await importOriginal<typeof import("@/data/industries")>();
+  return {
+    ...asli,
+    industries: () => daftarUji ?? asli.industries(),
+  };
+});
+
+const INDUSTRIES = industries();
 
 // jsdom lacks IntersectionObserver; motion's useInView needs it.
 class IntersectionObserverStub {
@@ -45,6 +65,7 @@ const originalMatchMedia = window.matchMedia;
 
 afterEach(() => {
   window.matchMedia = originalMatchMedia;
+  daftarUji = null;
 });
 
 /**
@@ -103,6 +124,16 @@ describe("Industries", () => {
     );
     const coreCount = INDUSTRIES.filter((s) => s.tier === "core").length;
     expect(tagged).toHaveLength(coreCount);
+  });
+
+  /* Editor berhak mendraftkan semua sektor. Yang tidak boleh terjadi adalah
+     strip putih setinggi layar berisi tumpukan nol plank — lengkap dengan
+     heading yang menjanjikan sesuatu. */
+  it("renders nothing at all when every sector is a draft", () => {
+    mockMatchMedia();
+    daftarUji = [];
+    const { container } = render(<Industries />);
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("respects prefers-reduced-motion: still renders, nothing crashes", () => {

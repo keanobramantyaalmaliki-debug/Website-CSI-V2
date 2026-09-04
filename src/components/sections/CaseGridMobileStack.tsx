@@ -3,15 +3,12 @@
 import { useRef, useState, type UIEvent } from "react";
 import Disclosure from "@/components/motion/Disclosure";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
+import type { WorkProjectContent } from "@/data/work";
 
-export type CaseProject = {
-  title: string;
-  client: string;
-  year: string;
-  tags: string[];
-  image: string;
-  outcome?: string;
-};
+/* Bentuknya milik `src/data/workProjectsFallback.ts` — satu definisi dipakai
+   situs, skrip seed, dan CMS. Nama lamanya dipertahankan sebagai alias supaya
+   `CaseGrid.tsx` tidak perlu tahu isinya sekarang datang dari CMS. */
+export type CaseProject = WorkProjectContent;
 
 /**
  * Swipeable mobile card list. Uses native CSS scroll-snap (no drag library) so

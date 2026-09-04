@@ -1,12 +1,13 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useReducedMotion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
 import CrewAvatar from "@/components/sections/CrewAvatar";
 import TheCrewMobileCarousel from "@/components/sections/TheCrewMobileCarousel";
-import { TEAM_MEMBERS } from "@/data/people";
+import { crew } from "@/data/people";
+import { sectionHeading } from "@/data/sectionTexts";
 import type { TeamMember } from "@/data/people";
 
 /** Departemen tampil dalam urutan hierarki ini, bukan urutan abjad. */
@@ -105,21 +106,28 @@ const ROW_GRID =
  * departemen — persis basement, di mana "A-Z" adalah judul kolom nama, bukan
  * urutan global yang mengaduk departemen jadi satu tumpukan.
  *
- * Dihitung di tingkat modul, bukan `useMemo`: sumbernya konstanta impor, jadi
- * hasilnya tak pernah berubah sepanjang umur aplikasi.
+ * Urutan A–Z dihitung DI SINI dan bukan diambil dari urutan database: "A-Z"
+ * itu tercetak sebagai judul kolom di halaman ini, jadi ia janji ke pembaca,
+ * bukan preferensi yang boleh diatur dari CMS. Lihat catatan senada di
+ * `server/db/schema.ts` soal kenapa `crew_members` tidak punya `sortOrder`.
+ *
+ * ⚠️ DIHITUNG DI DALAM KOMPONEN, bukan di tingkat modul seperti dulu.
+ *
+ * Sumbernya kini `crew()`, yang membaca `content.json`, dan berkas itu baru
+ * mendarat sesudah `loadContent()` di `main.tsx`. Sebuah `const GROUPED = ...`
+ * di tingkat modul dihitung saat modulnya diimpor — sebelum itu — jadi ia akan
+ * membekukan isi cadangan bundle selamanya. Yang terlihat: CMS tersimpan
+ * benar, Publish berhasil, `content.json` benar, dan halamannya tetap
+ * menampilkan nama-nama lama. Tanpa satu pun error.
  */
-const GROUPED = CATEGORIES.map((cat) => ({
-  cat,
-  members: TEAM_MEMBERS.filter((m) => m.category === cat).sort((a, b) =>
-    a.name.localeCompare(b.name),
-  ),
-})).filter((g) => g.members.length > 0);
-
-/**
- * Dinding foto & korsel HP memakai urutan yang sama dengan daftar kiri, supaya
- * hover di satu sisi menunjuk kotak yang sejajar di sisi lain.
- */
-const ORDERED = GROUPED.flatMap((g) => g.members);
+function kelompokkan(people: TeamMember[]) {
+  return CATEGORIES.map((cat) => ({
+    cat,
+    members: people
+      .filter((m) => m.category === cat)
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  })).filter((g) => g.members.length > 0);
+}
 
 /**
  * Baris/kotak yang sedang disorot diangkat ke atas tirai gelap. Nilainya
@@ -136,6 +144,18 @@ export default function TheCrew() {
   const [activeName, setActiveName] = useState<string | null>(null);
   const reduced = !!useReducedMotion();
   const spotlightOn = activeName !== null;
+
+  /* `useMemo` dengan daftar kebergantungan KOSONG, dan itu disengaja: `crew()`
+     membaca store yang sudah terisi sebelum React merender apa pun, jadi
+     hasilnya tetap sepanjang umur aplikasi — yang berubah cuma "kapan"
+     dihitungnya, dari saat impor jadi saat render pertama. Itulah seluruh
+     perbaikannya. */
+  const GROUPED = useMemo(() => kelompokkan(crew()), []);
+  const baris = useMemo(() => sectionHeading("the-crew"), []);
+
+  /* Dinding foto & korsel HP memakai urutan yang sama dengan daftar kiri,
+     supaya hover di satu sisi menunjuk kotak yang sejajar di sisi lain. */
+  const ORDERED = useMemo(() => GROUPED.flatMap((g) => g.members), [GROUPED]);
 
   return (
     <section
@@ -174,7 +194,11 @@ export default function TheCrew() {
         <div aria-hidden="true" className="hidden lg:block" />
         <div className="flex items-baseline justify-between gap-4">
           <h2 className="text-[clamp(2.5rem,6vw,5rem)] font-semibold leading-[0.95] tracking-tight text-zinc-100">
-            <LineMask>The Crew</LineMask>
+            {baris.map((line, i) => (
+              <LineMask key={i} delay={i * 0.06}>
+                {line}
+              </LineMask>
+            ))}
           </h2>
           {/* Angkanya berdiri sendiri, tanpa kata "people": pada masthead
               seperti ini angka di sebelah "The Crew" sudah terbaca sebagai

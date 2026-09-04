@@ -1,56 +1,16 @@
 "use client";
 
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { motion, useScroll, useTransform, useReducedMotion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
 import Disclosure from "@/components/motion/Disclosure";
 import { FadeUpList, FadeUpItem } from "@/components/motion/FadeUp";
+import { caseStudies, type CaseStudyContent } from "@/data/caseStudies";
+import { sectionHeading } from "@/data/sectionTexts";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-type Spotlight = {
-  client: string;
-  year: string;
-  industry: string;
-  scope: string[];
-  outcome: string;
-  title: string;
-  quote: string;
-  desc: string;
-  image: string;
-};
-
-// PLACEHOLDER — copy/outcomes are illustrative; images are curated Unsplash
-// stock (same hotlink pattern as Office.tsx) keyed to each story's subject.
-// Replace with actual CSI case studies + screenshots when available.
-const SPOTLIGHTS: Spotlight[] = [
-  {
-    client: "Regional Government",
-    year: "2024",
-    industry: "Public Sector",
-    scope: ["Web Platform", "SIPD Integration", "Staff Training"],
-    outcome: "67% faster turnaround",
-    title: "Citizen Service Portal",
-    quote:
-      "Thousands of requests a month, permits, letters, complaints, still processed by hand at a counter.",
-    desc: "This regional government handles thousands of service requests every month: permits, official letters, complaints, all processed manually through physical counters. The process was slow, opaque, and required in-person attendance.\n\nCogniti designed a unified portal connecting every department under one interface. Citizens submit requests online, the system routes them to the right office, and they can track status in real time. Average processing time dropped from 5 days to under 2 days.",
-    image: "https://images.unsplash.com/photo-1611639936963-b6d13dc44dbe?w=1400&q=80&auto=format&fit=crop",
-  },
-  {
-    client: "State-Owned Infrastructure Co.",
-    year: "2023",
-    industry: "Infrastructure",
-    scope: ["Mobile App", "Real-time Monitoring", "API Integration"],
-    outcome: "30% cost reduction",
-    title: "Field Operations Suite",
-    quote:
-      "Field teams across hundreds of sites, coordinating by phone, with information that arrived too late to matter.",
-    desc: "Field teams spread across hundreds of sites, with no centralized visibility: coordination relied on phone calls and messaging apps. Incidents were frequently delayed because information never reached the right people in time.\n\nCogniti built a real-time monitoring and dispatch platform that links crew locations, asset data, and incident logs in a single workspace. Supervisors can see the full operation from one screen and dispatch teams within minutes.",
-    image: "https://images.unsplash.com/photo-1742112125567-3e8967bad60f?w=1400&q=80&auto=format&fit=crop",
-  },
-];
-
-function SpotlightItem({ spotlight }: { spotlight: Spotlight }) {
+function SpotlightItem({ spotlight }: { spotlight: CaseStudyContent }) {
   const imageRef = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
 
@@ -94,9 +54,14 @@ function SpotlightItem({ spotlight }: { spotlight: Spotlight }) {
               <h3 className="text-lg font-semibold tracking-tight text-zinc-50 sm:text-xl lg:text-2xl">
                 {spotlight.title}
               </h3>
-              <p className="font-mono text-base font-bold text-zinc-50 sm:text-lg">
-                {spotlight.outcome}
-              </p>
+              {/* Digerbangi walau `outcome` wajib untuk cerita yang tayang:
+                  `content.json` bisa ditulis versi server yang lebih tua, dan
+                  baris kosong bercetak tebal terbaca sebagai kerusakan. */}
+              {spotlight.outcome ? (
+                <p className="font-mono text-base font-bold text-zinc-50 sm:text-lg">
+                  {spotlight.outcome}
+                </p>
+              ) : null}
               <span className="text-xs uppercase tracking-widest text-zinc-300">
                 {open ? "Show less" : "Read the full story"} {open ? "−" : "+"}
               </span>
@@ -137,21 +102,26 @@ function SpotlightItem({ spotlight }: { spotlight: Spotlight }) {
               <span className="text-sm text-zinc-200">{spotlight.industry}</span>
             </div>
           </div>
-          <div className="flex flex-col gap-1.5">
-            <span className="font-mono text-[9px] tracking-[0.18em] text-zinc-500 uppercase">
-              Scope
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {spotlight.scope.map((t) => (
-                <span
-                  key={t}
-                  className="rounded-sm border border-white/[0.08] px-1.5 py-0.5 font-mono text-[10px] text-zinc-400"
-                >
-                  {t}
-                </span>
-              ))}
+          {/* Judul "Scope" ikut digerbangi, bukan cuma daftarnya: judul yang
+              berdiri sendiri di atas ruang kosong lebih buruk daripada tidak
+              ada bagian ini sama sekali. */}
+          {spotlight.scope.length > 0 ? (
+            <div className="flex flex-col gap-1.5">
+              <span className="font-mono text-[9px] tracking-[0.18em] text-zinc-500 uppercase">
+                Scope
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {spotlight.scope.map((t) => (
+                  <span
+                    key={t}
+                    className="rounded-sm border border-white/[0.08] px-1.5 py-0.5 font-mono text-[10px] text-zinc-400"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
       </Disclosure>
     </FadeUpItem>
@@ -159,6 +129,17 @@ function SpotlightItem({ spotlight }: { spotlight: Spotlight }) {
 }
 
 export default function CaseStudySpotlight() {
+  /* ⚠️ DI DALAM komponen, bukan di ruang modul. `content.json` baru mendarat
+     sesudah `loadContent()` di `main.tsx`; sebuah `const SPOTLIGHTS =
+     caseStudies()` di atas sana akan membeku pada isi cadangan selamanya,
+     tanpa satu pun error. Lihat catatan lengkapnya di `src/data/caseStudies.ts`. */
+  const items = useMemo(() => caseStudies(), []);
+  const baris = useMemo(() => sectionHeading("case-studies"), []);
+
+  /* Daftar kosong = seksinya tidak ada, bukan judul "Case Studies" di atas
+     ruang kosong. Editor yang menghapus semua ceritanya memang meminta itu. */
+  if (items.length === 0) return null;
+
   return (
     <section
       id="case-spotlight"
@@ -170,13 +151,17 @@ export default function CaseStudySpotlight() {
       {/* Section header */}
       <div className="mb-12">
         <h2 className="text-[clamp(1.875rem,4.5vw,2.25rem)] font-semibold tracking-tight text-zinc-100 leading-[1.05]">
-          <LineMask>Case Studies</LineMask>
+          {baris.map((line, i) => (
+            <LineMask key={i} delay={i * 0.06}>
+              {line}
+            </LineMask>
+          ))}
         </h2>
       </div>
 
       {/* Spotlights */}
       <FadeUpList className="flex flex-col gap-10 lg:gap-16">
-        {SPOTLIGHTS.map((s) => (
+        {items.map((s) => (
           <SpotlightItem key={s.title} spotlight={s} />
         ))}
       </FadeUpList>

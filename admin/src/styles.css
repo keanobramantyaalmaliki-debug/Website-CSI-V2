@@ -1,0 +1,883 @@
+/*
+ * Dua tema, keduanya hitam-putih, dan tanpa animasi. "Tanpa animasi" adalah
+ * permintaan eksplisit, dan kebetulan juga keputusan yang tepat untuk panel
+ * yang dipakai orang non-teknis: tidak ada warna yang harus ditafsirkan, dan
+ * tidak ada elemen yang bergerak saat sedang dibaca.
+ *
+ * Tidak ada satu pun `transition`, `animation`, atau `transform` di berkas ini.
+ * Kalau nanti tergoda menambahkannya: jangan. Itu termasuk saat mengganti
+ * tema — pergantiannya seketika, bukan melunak selama 200ms.
+ *
+ * SEMUA warna di berkas ini lewat token di bawah. Tidak ada satu pun `#fff`,
+ * `#000`, atau `rgba()` yang ditulis langsung di aturan mana pun, dan itulah
+ * satu-satunya alasan tema gelap cukup ditulis sekali sebagai daftar token
+ * pengganti. Menulis warna langsung di sebuah aturan berarti aturan itu diam-
+ * diam hanya benar di salah satu tema.
+ *
+ * Tokennya dinamai menurut PERANnya (`--teks`, `--dasar`), bukan menurut
+ * warnanya. Dulu namanya `--hitam` dan `--putih`; nama itu berhenti jujur
+ * begitu ada tema yang isinya justru kebalikannya.
+ */
+
+:root {
+  --teks: #000;
+  --dasar: #fff;
+  --garis: #d4d4d4;
+  --garis-tegas: #000;
+  --abu: #f4f4f4;
+  --redup: #595959;
+  --tirai: rgba(0, 0, 0, 0.4);
+  --sela: 16px;
+  color-scheme: light;
+  /* Radio dan checkbox digambar peramban, dan bawaannya biru. Satu baris ini
+     yang membuat "hitam-putih" benar-benar hitam-putih — tanpanya seluruh
+     grup status memakai warna yang tidak ada di mana pun lagi di panel.
+     `color-scheme` di atasnya mengurus sisanya: bilah gulir, pemilih di
+     `<select>`, dan warna teks bayangan di isian kosong. */
+  accent-color: var(--teks);
+}
+
+/*
+ * Tema gelap. Atributnya dipasang di <html> oleh skrip kecil di `index.html`
+ * SEBELUM berkas ini dimuat — kalau menunggu React, panel sempat berkedip
+ * putih sepersekian detik setiap kali dimuat ulang.
+ *
+ * Dasarnya hitam penuh, cermin dari putih penuh di tema terang. Yang TIDAK
+ * ikut dibalik cuma teksnya: #fff di atas #000 menyilaukan dan meninggalkan
+ * jejak saat mata berpindah baris di paragraf panjang, jadi ia ditarik satu
+ * langkah ke dalam. Tetap abu-abu murni (R=G=B) seperti seluruh token di
+ * berkas ini — tidak ada satu pun yang punya rona.
+ */
+:root[data-tema="gelap"] {
+  --teks: #ededed;
+  --dasar: #000;
+  /* Garis tipis terang di atas dasar gelap terbaca lebih lemah daripada garis
+     tipis gelap di atas putih pada kontras yang sama persis, jadi angkanya
+     sedikit di atas padanan terangnya (1,8:1 lawan 1,5:1) — supaya pemisah
+     baris tabel sama-sama terlihat di kedua tema. */
+  --garis: #3a3a3a;
+  --garis-tegas: #ededed;
+  --abu: #1c1c1c;
+  --redup: #9a9a9a;
+  /* Lebih pekat daripada di tema terang: hitam 40% di atas dasar yang sudah
+     nyaris hitam nyaris tidak mengubah apa pun, dan latar di belakang dialog
+     berhenti terbaca sebagai "sedang tidak aktif". */
+  --tirai: rgba(0, 0, 0, 0.7);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--dasar);
+  color: var(--teks);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* 16px penuh: panel ini dipakai untuk membaca dan mengetik teks panjang,
+     bukan untuk memuat sebanyak mungkin di satu layar. */
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+a {
+  color: var(--teks);
+}
+
+/*
+ * Cincin fokus keyboard. Alasannya sama persis dengan `accent-color` di atas:
+ * peramban menggambarnya sendiri, dan bawaannya biru — rgb(0,95,204) di tema
+ * terang, rgb(153,200,255) di tema gelap. Itu satu-satunya warna berona yang
+ * tersisa di panel, dan ia justru muncul di tempat yang paling terlihat:
+ * mengelilingi apa pun yang sedang dipakai.
+ *
+ * `:focus-visible`, bukan `:focus` — kalau tidak, cincinnya ikut muncul
+ * setiap kali sebuah tombol DIKLIK, dan orang yang memakai tetikus melihat
+ * bingkai yang tidak pernah dia minta.
+ *
+ * 2px, bukan 1px seperti bawaannya: tanpa warna, ketebalan yang membedakan
+ * "sedang di sini" dari garis tepi biasa.
+ */
+:focus-visible {
+  outline: 2px solid var(--teks);
+  outline-offset: 2px;
+}
+
+.bungkus {
+  padding: 32px 18px 140px;
+}
+
+/* ── kepala halaman ─────────────────────────────────────────────────── */
+
+.kepala {
+  border-bottom: 2px solid var(--garis-tegas);
+  padding-bottom: 12px;
+  margin-bottom: 28px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.kepala h1 {
+  font-size: 22px;
+  margin: 0;
+}
+
+.kepala .siapa {
+  font-size: 14px;
+  color: var(--redup);
+}
+
+/*
+ * Tombol tema. Menumpang di baris nama, bukan di menu sisi: menu sisi adalah
+ * peta konten situs, dan tema bukan salah satu halamannya.
+ *
+ * `inline-flex` + `vertical-align: middle`, BUKAN flexbox di `.siapa`.
+ * `.kepala` menyejajarkan anak-anaknya pada garis alas huruf, dan garis alas
+ * sebuah flex container diambil dari anak pertamanya — yang di sini cuma
+ * sebuah ikon tanpa huruf. Menjadikan `.siapa` flex berarti seluruh baris
+ * nama ikut bergeser terhadap judul di sebelahnya.
+ */
+.tombol-tema {
+  display: inline-flex;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  margin-right: 8px;
+  border: 1px solid var(--garis);
+  background: var(--dasar);
+  color: var(--redup);
+}
+
+.tombol-tema:hover {
+  background: var(--abu);
+  color: var(--teks);
+}
+
+/* Ikonnya digambar dengan garis, bukan bidang penuh: pada 16px bulan sabit
+   yang diisi penuh berubah jadi gumpalan tanpa bentuk di tema terang. */
+.tombol-tema svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+h2 {
+  font-size: 18px;
+  margin: 32px 0 12px;
+}
+
+/* ── tombol ─────────────────────────────────────────────────────────── */
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--garis-tegas);
+  background: var(--dasar);
+  color: var(--teks);
+  padding: 8px 16px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  border-color: var(--garis);
+  color: var(--redup);
+}
+
+button.utama {
+  background: var(--teks);
+  color: var(--dasar);
+}
+
+button.utama:disabled {
+  background: var(--abu);
+  color: var(--redup);
+  border-color: var(--garis);
+}
+
+button.polos {
+  border: 0;
+  padding: 4px 8px;
+  text-decoration: underline;
+}
+
+button.kecil {
+  padding: 4px 10px;
+  font-size: 14px;
+}
+
+/* Jalan pulang di kepala form. Sengaja tanpa bingkai: kalau ia seberat
+   "Simpan", ia ikut terbaca sebagai salah satu tindakan atas isi form —
+   padahal ia justru meninggalkannya. */
+button.kembali {
+  border: 0;
+  padding: 4px 8px 4px 0;
+  margin-bottom: 4px;
+  font-size: 14px;
+  color: var(--redup);
+}
+
+button.kembali:hover:not(:disabled) {
+  color: var(--teks);
+}
+
+/* ── isian ──────────────────────────────────────────────────────────── */
+
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.petunjuk {
+  font-size: 14px;
+  color: var(--redup);
+  margin: 0 0 6px;
+}
+
+/* Catatan bahwa suntingan terakhir belum sampai ke pengunjung. Tempatnya di
+   kolom "Terakhir diubah", menempel di bawah tanggalnya. Dulu ia berdiri di
+   kolom Status, persis di bawah penanda "Live", dan dua label bertumpuk itu
+   terbaca saling membantah padahal keduanya benar dan bicara soal dua hal
+   yang berbeda: "Live" adalah status baris ini, yang satunya adalah nasib
+   suntingannya. Di bawah tanggal, subjeknya tidak bisa salah baca lagi, yang
+   belum terpublish adalah perubahan bertanggal itu.
+   Kata "terpublish", bukan "tayang": ia menunjuk tombol Publish di bar bawah,
+   satu-satunya cara memindahkan keadaan ini, sekaligus melepaskan kata
+   "tayang" untuk arti yang satunya lagi di panel ini (tampil di situs).
+   nowrap karena kolomnya sempit: dipatahkan jadi "belum" / "terpublish", ia
+   kembali terbaca sebagai label kedua, bukan keterangan. */
+.belum-terpublish {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--redup);
+  white-space: nowrap;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea,
+select {
+  font: inherit;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--garis-tegas);
+  background: var(--dasar);
+  color: var(--teks);
+  border-radius: 0;
+}
+
+textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.isian {
+  margin-bottom: 24px;
+}
+
+.galat {
+  margin: 6px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  /* Tidak ada merah: temanya hitam-putih. Yang menandai galat adalah garis
+     tebal di sisi kiri, dan itu tetap terbaca oleh siapa pun. */
+  border-left: 4px solid var(--teks);
+  padding-left: 8px;
+}
+
+.bergalat input[type="text"],
+.bergalat textarea {
+  border-width: 2px;
+}
+
+/* ── pilihan status ─────────────────────────────────────────────────── */
+
+.pilihan {
+  border: 1px solid var(--garis);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.pilihan.terpilih {
+  border: 2px solid var(--garis-tegas);
+  padding: 9px 11px;
+}
+
+.pilihan input {
+  margin-top: 5px;
+}
+
+.pilihan label {
+  margin: 0;
+}
+
+.pilihan .keterangan {
+  font-size: 14px;
+  color: var(--redup);
+  font-weight: 400;
+}
+
+/* ── daftar baris (keahlian, poin) ──────────────────────────────────── */
+
+.baris {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: flex-start;
+}
+
+.baris .nomor {
+  min-width: 22px;
+  padding-top: 9px;
+  font-size: 14px;
+  color: var(--redup);
+}
+
+/* ── tabel ──────────────────────────────────────────────────────────── */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  /* Rapat. Barisnya tinggal satu baris teks, dan tombolnya (.kecil, 14px)
+     yang menentukan tinggi minimumnya — bantalan setebal baris teks lagi
+     cuma menjauhkan garis pemisahnya tanpa menambah apa pun yang terbaca. */
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--garis);
+  vertical-align: middle;
+}
+
+th {
+  border-bottom: 2px solid var(--garis-tegas);
+  font-size: 14px;
+}
+
+tr.draf td {
+  color: var(--redup);
+}
+
+.penanda {
+  display: inline-block;
+  border: 1px solid var(--garis-tegas);
+  padding: 0 6px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.penanda.tegas {
+  background: var(--teks);
+  color: var(--dasar);
+}
+
+/* ── riwayat ────────────────────────────────────────────────────────── */
+
+.riwayat-saring {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--redup);
+}
+
+/* Baris perbandingan menempel pada baris yang membukanya: garis atasnya
+   dihapus supaya keduanya terbaca sebagai satu blok, bukan dua baris tabel
+   yang kebetulan bersebelahan. */
+.riwayat-isi > td {
+  border-top: 0;
+  background: var(--abu);
+  padding: 12px;
+}
+
+table.banding {
+  border: 1px solid var(--garis);
+  background: var(--dasar);
+  /* Lebar kolom ditentukan di muka, bukan oleh isinya. Dengan tata letak
+     otomatis, kolom yang isinya kebetulan lebih panjang jadi lebih lebar —
+     dan di tabel yang seluruh gunanya membandingkan dua sisi, lebar yang
+     tidak sama membuat sisi yang lebih banyak berubah terlihat lebih penting
+     padahal yang beda cuma jumlah hurufnya. */
+  table-layout: fixed;
+}
+
+table.banding th,
+table.banding td {
+  font-size: 14px;
+  vertical-align: top;
+  /* Ketiga kolomnya berdampingan dan isinya panjang. Garis tegak inilah yang
+     membuat mata tahu di mana "sebelum" berhenti dan "sesudah" mulai — tanpa
+     itu dua blok teks abu-abu bersebelahan terbaca seperti satu paragraf. */
+  border-right: 1px solid var(--garis);
+}
+
+table.banding th:last-child,
+table.banding td:last-child {
+  border-right: 0;
+}
+
+/* `pre` untuk menjaga baris bernomor yang dibentuk `nilaiJadiTeks`, tapi
+   TANPA perilaku `pre` yang lain: teks panjang tetap harus melipat, kalau
+   tidak satu paragraf penjelasan akan memaksa seluruh tabel melebar dan
+   memunculkan bilah gulir mendatar di halaman. */
+table.banding pre {
+  margin: 0;
+  font: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Isi lama diredupkan, isi baru ditegaskan. Ini satu-satunya petunjuk arah
+   yang ada: kedua kolom berisi teks yang bentuknya sama persis, dan tanpa
+   beda tebal, membaca mana yang menggantikan mana bergantung pada judul
+   kolom saja. */
+.banding-lama {
+  color: var(--redup);
+}
+
+.banding-baru {
+  color: var(--teks);
+  font-weight: 600;
+}
+
+/* Penanda sel yang memang kosong, bukan teks yang kebetulan pendek. */
+.banding-lama span,
+.banding-baru span {
+  color: var(--redup);
+  font-weight: 400;
+  font-style: italic;
+}
+
+/* ── tab bahasa ─────────────────────────────────────────────────────── */
+
+.tab {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--garis-tegas);
+  margin-bottom: 20px;
+}
+
+.tab button {
+  border: 1px solid var(--garis);
+  border-bottom: 0;
+  margin-bottom: -1px;
+  background: var(--abu);
+}
+
+.tab button.aktif {
+  background: var(--dasar);
+  border-color: var(--garis-tegas);
+  border-bottom: 1px solid var(--dasar);
+  font-weight: 600;
+}
+
+/* ── pemilih foto ───────────────────────────────────────────────────── */
+
+.foto-daftar {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.foto {
+  border: 1px solid var(--garis);
+  padding: 4px;
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+
+.foto.terpilih {
+  border: 3px solid var(--garis-tegas);
+  padding: 2px;
+}
+
+.foto img {
+  width: 100%;
+  height: 80px;
+  object-fit: cover;
+  display: block;
+  background: var(--abu);
+}
+
+.foto .nama {
+  font-size: 12px;
+  color: var(--redup);
+  word-break: break-all;
+}
+
+/* ── bar publish ────────────────────────────────────────────────────── */
+
+.bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--dasar);
+  border-top: 2px solid var(--garis-tegas);
+  padding: 12px 18px;
+}
+
+.bar .dalam {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Review + Publish berdampingan, dan tetap berdampingan saat barnya melipat
+   di layar sempit: keduanya satu keputusan ("lihat dulu, lalu tayangkan"),
+   bukan dua tujuan yang berjauhan. */
+.bar-tombol {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* ── dialog konfirmasi ──────────────────────────────────────────────── */
+
+dialog {
+  border: 2px solid var(--garis-tegas);
+  padding: 24px;
+  max-width: 480px;
+  color: var(--teks);
+  background: var(--dasar);
+}
+
+dialog::backdrop {
+  background: var(--tirai);
+}
+
+.tombol-baris {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.kabar {
+  border: 1px solid var(--garis-tegas);
+  padding: 10px 12px;
+  margin-bottom: 20px;
+}
+
+.kabar.tegas {
+  border-width: 2px;
+}
+
+.kosong {
+  border: 1px dashed var(--garis);
+  padding: 32px;
+  text-align: center;
+  color: var(--redup);
+}
+
+fieldset {
+  border: 1px solid var(--garis);
+  padding: 16px;
+  margin: 0 0 24px;
+}
+
+legend {
+  font-weight: 600;
+  padding: 0 6px;
+}
+
+details {
+  border: 1px solid var(--garis);
+  padding: 12px;
+  margin-bottom: 24px;
+}
+
+summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+details[open] summary {
+  margin-bottom: 16px;
+}
+
+.masuk {
+  max-width: 380px;
+  margin: 80px auto;
+  padding: 0 18px;
+}
+
+/* ── rangka: menu sisi + isi ────────────────────────────────────────── */
+
+/*
+ * `align-items: start` bukan hiasan: tanpanya kolom menu diregangkan setinggi
+ * kolom isi, dan `position: sticky` di dalamnya tidak akan pernah menempel
+ * karena elemennya sudah setinggi wadahnya.
+ */
+.rangka {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.isi {
+  min-width: 0;
+}
+
+.sisi {
+  width: 232px;
+  position: sticky;
+  top: 24px;
+  border-right: 1px solid var(--garis);
+  padding-right: 14px;
+  /* Garisnya tetap punya panjang saat menu terlipat — kalau tidak, tombol
+     lipatnya menggantung di ruang kosong tanpa apa pun yang menjelaskan bahwa
+     ada kolom yang sedang disembunyikan. */
+  min-height: 220px;
+}
+
+/* Tersisa garis dan tombolnya saja. Bukan `width: 0`: kolom grid selebar nol
+   membuat tombol yang menumpang di tepinya ikut bergeser ke dalam isi. */
+.sisi.ringkas {
+  width: 1px;
+  padding-right: 0;
+}
+
+.sisi-daftar,
+.sisi-anak {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sisi-daftar {
+  margin-top: 2px;
+  /* Ruang untuk cincin fokus (2px tebal + 2px offset). `overflow-y: auto` di
+     bawah membuat peramban menghitung `overflow-x` jadi `auto` juga, jadi
+     cincin di tombol yang selebar kolom akan memunculkan bilah gulir mendatar
+     setiap kali menu ini dijelajahi dengan Tab. Margin negatifnya persis
+     membatalkan bantalannya: anak-anaknya tetap di tempat dan tetap selebar
+     kolom, yang bertambah cuma ruang di dalam wadah yang bisa bergulir. */
+  padding-inline: 4px;
+  margin-inline: -4px;
+  /* Yang bergulir daftarnya, bukan `.sisi`: `overflow` di pembungkus akan ikut
+     memotong tombol lipat yang justru sengaja menjorok keluar tepinya. */
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+}
+
+/* Semua tombol di menu ini melawan gaya tombol umum (kotak bergaris, rata
+   tengah). Di sini yang dibutuhkan justru baris teks selebar kolom. */
+.sisi button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 0;
+  padding: 8px 10px;
+  text-align: left;
+  background: none;
+  color: var(--teks);
+}
+
+.sisi button:hover {
+  background: var(--abu);
+}
+
+.sisi-judul {
+  font-weight: 600;
+}
+
+.sisi-tanda {
+  font-size: 13px;
+}
+
+.sisi .sisi-item {
+  display: block;
+  padding: 7px 10px 7px 22px;
+  font-size: 15px;
+}
+
+/* Anak-anaknya menjorok DAN bergaris di tepi kiri. Menjorok saja sudah cukup
+   untuk mata yang sabar, tapi garisnya yang membuat "ini isi dari grup di
+   atas" terbaca sekilas, tanpa perlu membandingkan lekukan. */
+.sisi-anak {
+  border-left: 1px solid var(--garis);
+  margin: 2px 0 6px 10px;
+}
+
+.sisi button.aktif {
+  background: var(--teks);
+  color: var(--dasar);
+}
+
+.sisi button.aktif:hover {
+  background: var(--teks);
+}
+
+/* Riwayat bukan salah satu halaman situs, jadi ia dipisah dari daftar di
+   atasnya alih-alih menyambung sebagai baris keenam. */
+.sisi-pisah {
+  border-top: 1px solid var(--garis);
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.sisi-item.mati {
+  color: var(--redup);
+  cursor: default;
+}
+
+.sisi-catatan {
+  display: block;
+  font-size: 12px;
+  font-style: normal;
+}
+
+/* Menumpang tepat di garis pemisah: lebar 28px dengan tepi kanan −14px
+   membuat titik tengahnya jatuh persis di garis. Tegaknya dipusatkan lewat
+   `top/bottom: 0` + `margin-block: auto`, bukan `transform` — berkas ini tidak
+   memakai transform sama sekali (lihat catatan di kepala). */
+.sisi .sisi-lipat {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -14px;
+  margin-block: auto;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  justify-content: center;
+  border: 1px solid var(--garis);
+  background: var(--dasar);
+  font-size: 15px;
+  line-height: 1;
+  color: var(--redup);
+}
+
+.sisi .sisi-lipat:hover {
+  background: var(--abu);
+  color: var(--teks);
+}
+
+@media (max-width: 860px) {
+  .rangka {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  /* `relative`, bukan `static`: tombol lipatnya tetap butuh sesuatu untuk
+     ditempeli. Garisnya sekarang di bawah, jadi tombolnya ikut pindah ke sana
+     — idenya sama, tepinya saja yang beda. */
+  .sisi,
+  .sisi.ringkas {
+    width: auto;
+    position: relative;
+    top: auto;
+    min-height: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--garis);
+    padding: 0 0 12px;
+  }
+
+  .sisi-daftar {
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .sisi .sisi-lipat {
+    top: auto;
+    bottom: -14px;
+    right: 10px;
+    margin-block: 0;
+  }
+}
+
+/* ── layar depan ────────────────────────────────────────────────────── */
+
+.pengantar {
+  margin: 0 0 12px;
+  max-width: 62ch;
+}
+
+.pengantar:first-of-type {
+  margin-bottom: 24px;
+}
+
+.kotak {
+  border: 1px solid var(--garis-tegas);
+  padding: 16px 18px 18px;
+  margin-bottom: 24px;
+}
+
+.kotak-kepala {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.kotak-kepala h2 {
+  margin: 0;
+}
+
+/* Halaman situs tempat konten ini tinggal. Teks, bukan tautan: di lokal panel
+   hidup di port lain dan sebagian besar path ini tidak diteruskan ke sana,
+   jadi tautannya akan mati justru di tempat ia paling sering diklik. */
+.alamat {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 14px;
+  color: var(--redup);
+}
+
+.entri-daftar {
+  border-top: 1px solid var(--garis);
+  margin-top: 14px;
+}
+
+.entri {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--garis);
+}
+
+.entri:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.entri-teks {
+  flex: 1 1 320px;
+}
+
+.entri-teks .petunjuk {
+  margin: 2px 0 0;
+}
+
+.entri-aksi {
+  flex: 0 0 auto;
+  padding-top: 2px;
+}

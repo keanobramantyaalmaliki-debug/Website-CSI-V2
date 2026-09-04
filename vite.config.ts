@@ -1,5 +1,5 @@
 /// <reference types="vitest/config" />
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
@@ -9,7 +9,9 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
+  readFileSync,
   statSync,
+  writeFileSync,
 } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -56,6 +58,38 @@ function serveLocalModels(): Plugin {
   };
   return {
     name: "serve-local-models",
+    configureServer(server) {
+      server.middlewares.use(middleware);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(middleware);
+    },
+  };
+}
+
+// content.json ditulis oleh CMS ke dist/ (lihat server/publish.ts) supaya
+// perubahan tayang tanpa rebuild. Di dev, dist/ tidak disajikan sama sekali —
+// tanpa middleware ini `bun run dev` selalu jatuh ke konten bawaan bundle dan
+// hasil edit di panel admin tidak pernah kelihatan sampai di-build.
+const CONTENT_FILE = fileURLToPath(new URL("dist/content.json", import.meta.url));
+
+function serveContentJson(): Plugin {
+  const middleware = (
+    req: IncomingMessage,
+    res: ServerResponse,
+    next: () => void,
+  ) => {
+    if ((req.url ?? "").split("?")[0] !== "/content.json") return next();
+    // Belum pernah dipublish → biarkan 404. Situs memang dirancang jatuh ke
+    // konten bundle di kasus ini, dan menyembunyikannya di dev berarti jalur
+    // fallback tidak pernah teruji sebelum produksi.
+    if (!existsSync(CONTENT_FILE)) return next();
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Cache-Control", "no-cache");
+    createReadStream(CONTENT_FILE).pipe(res);
+  };
+  return {
+    name: "serve-content-json",
     configureServer(server) {
       server.middlewares.use(middleware);
     },
@@ -140,6 +174,114 @@ function copyLocalModels(): Plugin {
 }
 
 /**
+ * Penjaga hasil Publish melewati build.
+ *
+ * `publish.ts` menulis content.json langsung ke dist/ (CONTENT_FILE di atas),
+ * sedangkan `vite build` mengosongkan dist/ — jadi tiap build diam-diam
+ * membuang hasil Publish terakhir, dan situs jatuh balik ke konten bundle
+ * sampai Publish ditekan sekali lagi. Rutinitas "habis build/deploy wajib
+ * Publish" itu gampang terlupa dan gagalnya tanpa galat: situs tetap tampil,
+ * cuma isinya konten lama.
+ *
+ * Plugin ini memotret isi content.json SEBELUM Vite menghapus dist
+ * (buildStart) dan menempelkannya kembali sesudah dist selesai ditulis
+ * (closeBundle). Yang dipulihkan persis hasil Publish terakhir — kalau file
+ * memang belum pernah ada (clone baru, CI), tidak ada yang dipotret dan
+ * perilaku lama (fallback bundle) tetap berlaku.
+ */
+function preserveContentJson(): Plugin {
+  let outDir = "dist";
+  let potret: Buffer | null = null;
+  return {
+    name: "preserve-content-json",
+    apply: "build",
+    configResolved(config) {
+      outDir = path.resolve(config.root, config.build.outDir);
+    },
+    buildStart() {
+      const file = path.join(outDir, "content.json");
+      potret = existsSync(file) ? readFileSync(file) : null;
+    },
+    closeBundle() {
+      if (!potret) return;
+      writeFileSync(path.join(outDir, "content.json"), potret);
+      console.log(
+        `[preserve-content-json] content.json dipulihkan ke dist/ ` +
+          `(${(potret.length / 1024).toFixed(1)} kB)`,
+      );
+    },
+  };
+}
+
+/* Port panel admin saat dev. Env override cuma untuk skrip test yang perlu
+   menyalakan instance kedua tanpa menyentuh :5174 yang sedang dipakai —
+   pemakaian sehari-hari dan produksi tidak mengenalnya sama sekali. */
+const ADMIN_DEV_PORT = Number(process.env.ADMIN_DEV_PORT ?? 5174);
+
+/**
+ * Menyalakan panel admin dari dalam dev server situs.
+ *
+ * Janji fitur "satu port" adalah :3000/admin — tapi proxy /admin di bawah
+ * hanya hidup kalau ada yang menjawab di :5174, dan sebelum plugin ini itu
+ * berarti MENGINGAT untuk menjalankan `bun run admin:dev` di terminal kedua.
+ * Lupa satu itu dan :3000/admin menjawab 503 — persis kegagalan pertama yang
+ * ditemui waktu fitur ini dicoba. Sekarang `bun dev` membawa panelnya sendiri:
+ * satu perintah, dua app Vite, satu port.
+ *
+ * `bun run admin:dev` manual tetap dihormati: kalau :5174 sudah ditempati,
+ * plugin mundur dan proxy memakai yang sudah ada. strictPort di sini wajib —
+ * tanpa itu instance kedua diam-diam pindah ke :5175 dan proxy tetap menembak
+ * :5174 milik orang lain.
+ *
+ * Vitest ikut memuat config ini (project "situs"), jadi ada penjaga VITEST
+ * supaya setiap worker test tidak ikut menyeret server panel.
+ */
+function bootAdminPanel(): Plugin {
+  return {
+    name: "boot-admin-panel",
+    apply: "serve",
+    async configureServer(server) {
+      if (process.env.VITEST) return;
+      const { createServer } = await import("vite");
+      const log = server.config.logger;
+      /* Edit vite.config.ts → Vite me-restart server situs: admin lama baru
+         ditutup lewat event "close" di bawah, dan penutupannya asinkron. Coba
+         beberapa kali sebelum menyimpulkan port-nya memang milik proses lain. */
+      for (let percobaan = 1; percobaan <= 5; percobaan++) {
+        const admin = await createServer({
+          configFile: fileURLToPath(new URL("admin/vite.config.ts", import.meta.url)),
+          server: {
+            port: ADMIN_DEV_PORT,
+            strictPort: true,
+            hmr: { protocol: "ws", host: "localhost", port: ADMIN_DEV_PORT },
+          },
+        });
+        try {
+          await admin.listen();
+          server.httpServer?.once("close", () => void admin.close());
+          log.info(
+            `[boot-admin-panel] panel admin ikut menyala di :${ADMIN_DEV_PORT} — buka lewat /admin`,
+          );
+          return;
+        } catch (err) {
+          await admin.close();
+          if (!/EADDRINUSE|already in use/i.test(String(err))) {
+            /* Bukan soal port (config panel rusak, dsb.) → bilang keras-keras
+               tapi biarkan situsnya tetap jalan; /admin jatuh ke pesan 503. */
+            log.error(`[boot-admin-panel] panel admin gagal menyala: ${String(err)}`);
+            return;
+          }
+          if (percobaan < 5) await new Promise((r) => setTimeout(r, 300));
+        }
+      }
+      log.info(
+        `[boot-admin-panel] :${ADMIN_DEV_PORT} sudah ditempati (admin:dev manual?) — memakai yang sudah ada`,
+      );
+    },
+  };
+}
+
+/**
  * Daftar dependensi yang WAJIB di-prebundle di ronde pertama.
  *
  * ── Kenapa ditulis manual ────────────────────────────────────────────────────
@@ -203,12 +345,104 @@ export default defineConfig({
     tailwindcss(),
     tsconfigPaths(),
     serveLocalModels(),
+    serveContentJson(),
     copyLocalModels(),
+    preserveContentJson(),
+    bootAdminPanel(),
   ],
+  server: {
+    port: 3000,
+    /* Frontend SELALU memakai path relatif (`/api/...`, `/uploads/...`).
+       Proxy inilah yang membuat kode-nya identik antara lokal dan produksi —
+       di produksi reverse proxy yang mengerjakan hal yang sama. Alternatifnya
+       (URL absolut + variabel env) berarti ada jalur yang tidak pernah dijalani
+       sampai deploy. */
+    proxy: {
+      "/api": { target: "http://localhost:3001", changeOrigin: false },
+      "/uploads": { target: "http://localhost:3001", changeOrigin: false },
+      /* Panel admin: satu alamat, sama seperti di produksi.
+         Di produksi panel ikut terbit di dalam dist/ (lihat outDir di
+         admin/vite.config.ts), jadi `/admin` dilayani proses yang sama dengan
+         situs. Di dev ia proses Vite tersendiri di :5174 — proxy inilah yang
+         menyamakan keduanya, supaya alamat yang dipakai sehari-hari
+         (`:3000/admin`) sama persis dengan yang nanti dibuka di server dan
+         tidak ada jalur yang baru dijalani pertama kali saat deploy. */
+      "/admin": {
+        target: `http://localhost:${ADMIN_DEV_PORT}`,
+        changeOrigin: false,
+        /* `/admin` telanjang, tanpa garis miring penutup. Vite dev menolaknya
+           dengan 404 "did you mean /admin/?" karena `base` panel memang
+           `/admin/`. Di produksi `serve.json` sudah memetakan `/admin` ke
+           `dist/admin/index.html`, jadi tanpa baris ini alamat yang dipakai
+           sehari-hari (`:3000/admin`) berperilaku beda dari alamat yang
+           dipakai di server. Dibetulkan di sini, bukan dengan redirect,
+           supaya alamat di bilah peramban tetap apa adanya. */
+        rewrite: (path) => (path === "/admin" ? "/admin/" : path),
+        /* HMR panel menembak langsung ke :5174 (lihat admin/vite.config.ts),
+           jadi ini bukan untuk HMR — melainkan supaya websocket apa pun yang
+           lewat sini tidak dijawab sebagai HTML. */
+        ws: true,
+        configure(proxy) {
+          /* Panel tidak menjawab → jawab dengan kalimatnya, bukan dengan galat
+             proxy mentah yang menyebut ECONNREFUSED tanpa menyebut apa yang
+             harus dinyalakan. Normalnya bootAdminPanel sudah menyalakannya,
+             jadi mendarat di sini berarti boot-nya gagal (lihat log). */
+          proxy.on("error", (_err, _req, res) => {
+            if (!("writeHead" in res)) return;
+            res.writeHead(503, { "Content-Type": "text/plain; charset=utf-8" });
+            res.end(
+              `Panel admin tidak menjawab di :${ADMIN_DEV_PORT}.\n` +
+                "Biasanya ia ikut menyala bersama `bun dev` — cek log dev server,\n" +
+                "atau nyalakan manual: bun run admin:dev\n",
+            );
+          });
+        },
+      },
+    },
+  },
+  /**
+   * Dua kelompok test yang tidak bisa hidup di satu lingkungan.
+   *
+   * Test situs butuh jsdom beserta setup Testing Library; test server butuh
+   * Node asli — `src/test/setup.ts` menyentuh `window` dan akan melempar di
+   * sana. Dipisah jadi dua project supaya masing-masing dapat lingkungannya
+   * sendiri, bukan dengan menaruh penjaga `typeof window` di berkas setup yang
+   * lama-lama jadi tidak jelas untuk siapa.
+   */
   test: {
-    environment: "jsdom",
-    globals: true,
-    setupFiles: ["./src/test/setup.ts"],
-    css: false,
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "situs",
+          environment: "jsdom",
+          globals: true,
+          setupFiles: ["./src/test/setup.ts"],
+          css: false,
+          include: ["src/**/*.test.{ts,tsx}", "shared/**/*.test.ts"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "server",
+          environment: "node",
+          globals: true,
+          include: ["server/**/*.test.ts"],
+          /**
+           * `.env` tidak terbaca sendiri di sini — Vite hanya memuat variabel
+           * ber-prefix `VITE_` ke `import.meta.env`, sementara `server/env.ts`
+           * membaca `process.env`. Tanpa baris ini test server gagal start
+           * dengan keluhan `TEST_DATABASE_URL` kosong, padahal isinya ada.
+           * Prefix "" = muat semuanya.
+           */
+          env: loadEnv("", process.cwd(), ""),
+          /* Semua berkas menumpang satu database test yang sama dan saling
+             mengosongkan tabelnya. Jalan bersamaan = saling menghapus baris di
+             tengah test tetangga. */
+          fileParallelism: false,
+        },
+      },
+    ],
   },
 });

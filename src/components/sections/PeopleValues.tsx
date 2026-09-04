@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import { VALUES } from "@/data/people";
+import { peopleValues, type Value } from "@/data/people";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -15,7 +15,7 @@ const STICKY_TOP = "sticky top-[calc(4rem+38px)] sm:top-[calc(4rem+42px)]";
 
 /**
  * Satu nilai = satu panel selebar layar. Dipisah jadi komponennya sendiri
- * supaya `whileInView` per panel tidak dirakit ulang setiap `VALUES` berubah.
+ * supaya `whileInView` per panel tidak dirakit ulang setiap daftarnya berubah.
  *
  * Panel dibungkus `<li>` sticky; latarnya WAJIB opaque (`bg-background`) —
  * itu yang membuat panel berikutnya benar-benar menutupi panel di atasnya
@@ -25,7 +25,7 @@ function ValuePanel({
   value,
   reduced,
 }: {
-  value: (typeof VALUES)[number];
+  value: Value;
   reduced: boolean;
 }) {
   // Tinggi panel = tinggi kontennya, dengan sela 10px ke garis batas atas dan
@@ -52,8 +52,10 @@ function ValuePanel({
           </p>
         </div>
 
-        {/* Tengah — ruang foto. `value.photo` masih kosong di data, jadi yang
-            tampil bingkainya: begitu fotonya ada, tinggal isi field-nya. */}
+        {/* Tengah — ruang foto. Nilai yang tayang lewat CMS SELALU punya foto
+            (validator menolak `live` tanpa foto), jadi bingkai kosong di bawah
+            praktis cuma terlihat kalau isinya datang dari cadangan bundle yang
+            fotonya belum ada. */}
         <div className="relative aspect-square w-full overflow-hidden border border-white/[0.09] bg-white/[0.02]">
           {value.photo ? (
             <img
@@ -112,6 +114,14 @@ function ValuePanel({
  */
 export default function PeopleValues() {
   const reduced = !!useReducedMotion();
+  const values = peopleValues();
+
+  /* Tanpa satu pun nilai, yang tersisa cuma label "What We Stand For"
+     menggantung di atas ruang kosong — dan labelnya sticky, jadi ia ikut
+     mengambang sepanjang seksi. Keadaan ini bisa terjadi sungguhan: editor
+     boleh menghapus semua nilai lewat CMS. Yang benar adalah seksinya hilang,
+     bukan menyisakan judul tanpa isi. */
+  if (values.length === 0) return null;
 
   return (
     <section
@@ -169,7 +179,7 @@ export default function PeopleValues() {
             `pb-[12vh]` label menggantung sendirian 272px di atas The Crew
             setelah panel terakhir lewat). */}
         <ol className="list-none">
-          {VALUES.map((value) => (
+          {values.map((value) => (
             <ValuePanel key={value.title} value={value} reduced={reduced} />
           ))}
         </ol>

@@ -1,0 +1,2 @@
+DROP INDEX "deployments_sector_region_alive";--> statement-breakpoint
+CREATE UNIQUE INDEX "deployments_sector_region_alive" ON "deployments" USING btree ("sector","region") WHERE "deployments"."deleted_at" is null and "deployments"."region" <> '';

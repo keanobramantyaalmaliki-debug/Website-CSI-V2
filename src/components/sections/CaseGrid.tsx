@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import LineMask from "@/components/motion/LineMask";
 import CaseGridMobileStack, {
   type CaseProject,
 } from "@/components/sections/CaseGridMobileStack";
+import { workProjects } from "@/data/work";
+import { sectionHeading } from "@/data/sectionTexts";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -45,76 +47,6 @@ type FanScale = {
   height: number;
 };
 
-// PLACEHOLDER — copy/outcomes are illustrative; images are curated Unsplash
-// stock (same hotlink pattern as Office.tsx) keyed to each project's subject.
-// Replace with actual CSI project screenshots when available.
-const PROJECTS: CaseProject[] = [
-  {
-    title: "Citizen Service Portal",
-    client: "Regional Government",
-    year: "2024",
-    tags: ["Web Platform", "Next.js", "PostgreSQL"],
-    image: "https://images.unsplash.com/photo-1611639906810-4a29ece1b847?w=1200&q=80&auto=format&fit=crop",
-    outcome: "67% faster turnaround",
-  },
-  {
-    title: "SIPD Implementation",
-    client: "District Government",
-    year: "2023",
-    tags: ["Gov Platform", "Training"],
-    image: "https://images.unsplash.com/photo-1758270704925-fa59d93119c1?w=1200&q=80&auto=format&fit=crop",
-    outcome: "200+ staff trained",
-  },
-  {
-    title: "Field Operations Suite",
-    client: "State-Owned Infrastructure Co.",
-    year: "2023",
-    tags: ["Real-time", "Mobile + Web"],
-    image: "https://images.unsplash.com/photo-1646082276009-bb35409086ed?w=1200&q=80&auto=format&fit=crop",
-    outcome: "30% cost reduction",
-  },
-  {
-    title: "Cloud Infrastructure Migration",
-    client: "Manufacturing Group",
-    year: "2024",
-    tags: ["Cloud", "DevOps", "Docker"],
-    image: "https://images.unsplash.com/photo-1784652852605-6945598f2af3?w=1200&q=80&auto=format&fit=crop",
-    outcome: "99.9% uptime achieved",
-  },
-  {
-    title: "Knowledge Assistant",
-    client: "Financial Services Firm",
-    year: "2024",
-    tags: ["LLM", "RAG", "React"],
-    image: "https://images.unsplash.com/photo-1739036868260-c26b292cd85d?w=1200&q=80&auto=format&fit=crop",
-    outcome: "5,000+ queries/month",
-  },
-  {
-    title: "Analytics Dashboard",
-    client: "Government Agency",
-    year: "2024",
-    tags: ["Data Viz", "Python"],
-    image: "https://images.unsplash.com/photo-1516383274235-5f42d6c6426d?w=1200&q=80&auto=format&fit=crop",
-    outcome: "50+ data sources unified",
-  },
-  {
-    title: "Procurement Portal",
-    client: "Enterprise Corporation",
-    year: "2023",
-    tags: ["ERP Integration", "TypeScript"],
-    image: "https://images.unsplash.com/photo-1716363340859-e2a0ab1396a5?w=1200&q=80&auto=format&fit=crop",
-    outcome: "100% paperless",
-  },
-  {
-    title: "API Gateway & Middleware",
-    client: "Telecommunications",
-    year: "2024",
-    tags: ["API", "Node.js", "Legacy Bridge"],
-    image: "https://images.unsplash.com/photo-1698668975271-2ba9a323be6b?w=1200&q=80&auto=format&fit=crop",
-    outcome: "Zero-downtime migration",
-  },
-];
-
 function FanCard({
   project,
   offset,
@@ -133,7 +65,10 @@ function FanCard({
   scale: FanScale;
 }) {
   const { biggestWidth, smallestWidth, revealStep } = scale;
-  const t = offset / (total - 1);
+  // `total - 1` is 0 when the CMS is down to a single project — dividing by it
+  // makes every derived value NaN and the card renders at width/opacity NaN,
+  // i.e. invisible. Unreachable while the list was a hard-coded array of 8.
+  const t = total > 1 ? offset / (total - 1) : 0;
   const width = biggestWidth - t * (biggestWidth - smallestWidth);
   const opacity = MAX_OPACITY - t * (MAX_OPACITY - MIN_OPACITY);
   const brightness = MAX_BRIGHTNESS - t * (MAX_BRIGHTNESS - MIN_BRIGHTNESS);
@@ -180,7 +115,10 @@ function FanSlider({
   reduced: boolean;
 }) {
   const total = projects.length;
-  const activeProject = projects[active];
+  // Clamped, not indexed raw: a CMS list that shrank under a stale `active`
+  // yields `undefined` here, and every read below it throws. CaseGrid never
+  // renders this with an empty list, so a project always exists at index 0.
+  const activeProject = projects[Math.min(active, total - 1)];
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -276,16 +214,29 @@ function FanSlider({
 export default function CaseGrid() {
   const [active, setActive] = useState(0);
   const reduced = !!useReducedMotion();
-  const total = PROJECTS.length;
+
+  /* Dibaca DI DALAM komponen, bukan sebagai konstanta modul: `content.json`
+     baru mendarat sesudah `loadContent()` di `main.tsx`, jadi daftar yang
+     dihitung saat modulnya diimpor akan membeku pada isi cadangan selamanya —
+     tanpa satu pun error. Lihat catatan lengkapnya di `src/data/work.ts`. */
+  const projects = useMemo(() => workProjects(), []);
+  const baris = useMemo(() => sectionHeading("selected-work"), []);
+  const total = projects.length;
 
   // Re-arms on every `active` change (timer tick or click) — avoids stale closures.
   useEffect(() => {
-    if (reduced) return;
+    if (reduced || total === 0) return;
     const id = setInterval(() => {
       setActive((prev) => (prev + 1) % total);
     }, AUTO_ADVANCE_MS);
     return () => clearInterval(id);
   }, [active, reduced, total]);
+
+  /* Daftar kosong = seksinya tidak ada, bukan seksi kosong berjudul "Selected
+     Work" di atas ruang hampa. Editor yang menghapus semua proyeknya memang
+     meminta itu; yang penting seksinya tidak MENABRAK, dan tanpa gerbang ini
+     ia menabrak — `FanSlider` membaca `projects[0].title`. */
+  if (total === 0) return null;
 
   return (
     <section
@@ -300,7 +251,11 @@ export default function CaseGrid() {
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-zinc-100 sm:text-3xl">
-            <LineMask>Selected Work</LineMask>
+            {baris.map((line, i) => (
+              <LineMask key={i} delay={i * 0.06}>
+                {line}
+              </LineMask>
+            ))}
           </h2>
         </div>
         <motion.span
@@ -317,13 +272,13 @@ export default function CaseGrid() {
       {/* Desktop — staggered fan slider */}
       <div className="hidden lg:block">
         <FanSlider
-          projects={PROJECTS}
+          projects={projects}
           active={active}
           onSelect={setActive}
           reduced={reduced}
         />
         <div className="mt-4 flex gap-1.5">
-          {PROJECTS.map((project, index) => (
+          {projects.map((project, index) => (
             <button
               key={project.title}
               type="button"
@@ -339,7 +294,7 @@ export default function CaseGrid() {
 
       {/* Mobile — swipeable scroll-snap stack, no auto-rotate */}
       <div className="lg:hidden" data-testid="mobile-stack">
-        <CaseGridMobileStack projects={PROJECTS} />
+        <CaseGridMobileStack projects={projects} />
       </div>
     </section>
   );
