@@ -219,6 +219,18 @@ async function minta<T>(path: string, init: RequestInit = {}): Promise<Hasil<T>>
 
   const isi = await res.json().catch(() => null);
 
+  /* 200 tapi badan bukan JSON berarti yang menjawab BUKAN API-nya — biasanya
+     server statis/proxy membalas index.html untuk rute yang tak dikenalnya.
+     Semua endpoint API di sini SELALU membalas JSON saat sukses, jadi `isi`
+     null pada 2xx adalah anomali. Tanpa cabang ini `data` menjadi null dan
+     pemanggil (`h.data.user`) meledak dengan "Cannot read properties of null". */
+  if (res.ok && isi === null) {
+    return {
+      ok: false,
+      pesan: "Server membalas format yang tidak dikenali. Coba muat ulang halaman.",
+    };
+  }
+
   if (res.ok) return { ok: true, data: isi as T };
 
   /* Badan bukan-JSON pada galat 5xx berarti yang menjawab BUKAN API-nya,

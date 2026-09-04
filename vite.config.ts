@@ -18,9 +18,10 @@ import path from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 // office.glb tinggal di /3d/models (root, di luar git & public/ — lihat .gitignore).
-// Plugin ini menyajikannya di URL /3d/models/* untuk dev & vite preview; di produksi
-// path yang sama diambil alih reverse proxy (MinIO). GLB kecil lain tetap lewat
-// public/ — middleware ini hanya menangkap file yang benar-benar ada di foldernya.
+// Plugin ini menyajikannya di URL /3d/models/* saat `bun dev`; di produksi file
+// itu sudah disalin ke dist/3d/models/ oleh copyLocalModels dan dilayani `serve`
+// langsung. GLB kecil lain tetap lewat public/ — middleware ini hanya menangkap
+// file yang benar-benar ada di foldernya.
 const LOCAL_MODELS_DIR = fileURLToPath(new URL("3d/models", import.meta.url));
 const MODELS_URL_PREFIX = "/3d/models/";
 
@@ -61,9 +62,6 @@ function serveLocalModels(): Plugin {
     configureServer(server) {
       server.middlewares.use(middleware);
     },
-    configurePreviewServer(server) {
-      server.middlewares.use(middleware);
-    },
   };
 }
 
@@ -91,9 +89,6 @@ function serveContentJson(): Plugin {
   return {
     name: "serve-content-json",
     configureServer(server) {
-      server.middlewares.use(middleware);
-    },
-    configurePreviewServer(server) {
       server.middlewares.use(middleware);
     },
   };
@@ -282,35 +277,6 @@ function bootAdminPanel(): Plugin {
 }
 
 /**
- * Fallback /admin untuk `vite preview` (`bun start`) — tiruan serve.json.
- *
- * Preview menyajikan dist/, dan panel memang sudah ada di dist/admin — tapi
- * fallback SPA bawaan preview cuma mengenal SATU index.html, milik situs.
- * Deep-link seperti /admin/lowongan/xyz akan jatuh ke sana dan membuka scene
- * 3D, bukan panel. Di produksi dua baris pertama public/serve.json yang
- * menangani ini; middleware ini padanannya untuk preview: path /admin yang
- * bukan file nyata diarahkan ke dist/admin/index.html.
- */
-function previewAdminFallback(): Plugin {
-  return {
-    name: "preview-admin-fallback",
-    configurePreviewServer(server) {
-      const dist = fileURLToPath(new URL("dist", import.meta.url));
-      server.middlewares.use((req, _res, next) => {
-        const url = (req.url ?? "").split("?")[0];
-        if (url === "/admin" || url.startsWith("/admin/")) {
-          const file = path.join(dist, url);
-          if (!existsSync(file) || statSync(file).isDirectory()) {
-            req.url = "/admin/index.html";
-          }
-        }
-        next();
-      });
-    },
-  };
-}
-
-/**
  * Daftar dependensi yang WAJIB di-prebundle di ronde pertama.
  *
  * ── Kenapa ditulis manual ────────────────────────────────────────────────────
@@ -378,7 +344,6 @@ export default defineConfig({
     copyLocalModels(),
     preserveContentJson(),
     bootAdminPanel(),
-    previewAdminFallback(),
   ],
   server: {
     port: 3000,
@@ -428,24 +393,6 @@ export default defineConfig({
           });
         },
       },
-    },
-  },
-  /**
-   * `vite preview` (`bun start`) MEWARISI server.proxy kalau blok ini tidak
-   * ada (resolvePreviewOptions: `preview?.proxy ?? server.proxy`) — termasuk
-   * aturan /admin → :5174 di atas, lengkap dengan 503 kustomnya. Padahal
-   * bootAdminPanel memakai configureServer, yang tidak pernah dipanggil di
-   * preview: tidak ada yang menyalakan :5174, dan :3000/admin mati dengan
-   * pesan dev walau dist/admin-nya utuh. Blok eksplisit ini memutus warisan
-   * itu — /api & /uploads tetap diteruskan (perannya reverse proxy di
-   * produksi), /admin SENGAJA tidak ada supaya jatuh ke berkas statis dist/
-   * lewat previewAdminFallback di atas.
-   */
-  preview: {
-    port: 3000,
-    proxy: {
-      "/api": { target: "http://localhost:3001", changeOrigin: false },
-      "/uploads": { target: "http://localhost:3001", changeOrigin: false },
     },
   },
   /**
